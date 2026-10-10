@@ -17,11 +17,11 @@ Claude reviews inline, in the orchestrating session. No subagent. A fresh subage
 was measured at 1-3 minutes per round on a three-file docs diff, almost all of it
 cold-start reading rather than judgement.
 
-Independence comes from the split of labour, not from a separate process: Codex
-writes the repository code, so Claude reading that diff is already a second pair of
-eyes. For a change Claude authored itself — a trivial edit, docs, a fallback
-implementation — the review is weaker and Claude should say so in the verdict, but it
-still runs.
+Independence comes from the split of labour, not from a separate process: Codex or
+`haiku-edit` writes the repository change, so Claude reading that diff is already a
+second pair of eyes. For a change Claude authored itself — a small direct edit, a
+workflow rule change, docs, a fallback implementation — the review is weaker and
+Claude should say so in the verdict, but it still runs.
 
 The review reads only:
 
@@ -85,9 +85,9 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
   Claude performs one diff review for accuracy against the code described, links, and
   scope. A finding goes back through the handoff or, if Claude authored the change,
   is fixed directly and re-pushed. There is no formal three-round loop.
-- **Trivial docs** — typo- or formatting-only Markdown with no meaning change. Claude
-  edits directly under `CLAUDE.md`'s trivial-edit rule, self-reviews the diff, posts a
-  review comment with tier `trivial`, and merges when `gate` is green.
+- **Trivial docs** — typo- or formatting-only Markdown with no meaning change, made
+  under `CLAUDE.md` **Mechanical edits**. Claude reviews the diff, posts a review
+  comment with tier `trivial`, and merges when `gate` is green.
 
 ## What the reviewer does not do
 
@@ -146,7 +146,7 @@ gh pr comment <pr> --body "$(cat <<'EOF'
 - Axes judged: ...
 - CI: gate <result>, jobs run: <list>
 - Findings: <none | path:line — problem — fix | N/A — blocker — required input, one per line>
-- Authorship: <Codex | Claude — independence weaker>
+- Authorship: <Codex | haiku-edit | Claude — independence weaker>
 EOF
 )"
 ```
@@ -169,6 +169,9 @@ Only when all of these hold:
 
 Something concrete must change. Route each finding by ownership:
 
+- **finding in a `haiku-edit` change** → Claude corrects it directly if it is still
+  mechanical, or routes it to Codex if fixing it needs logic. Haiku sessions are not
+  resumed.
 - **repository code finding** → Claude turns it into a fix request and sends it to
   Codex by **resuming the original handoff session** with
   `node scripts/codex/run-handoff.mjs --resume <thread_id> --model gpt-5.6-luna --sandbox workspace-write --prompt "<all findings>"`

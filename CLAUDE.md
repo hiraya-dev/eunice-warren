@@ -6,11 +6,13 @@ repository owns everything that ships. See `README.md` for the app overview and
 
 ## Agent roles
 
-Claude orchestrates; Codex implements repository code.
+Claude orchestrates; Codex implements repository code that has logic in it; Haiku
+subagents handle read-only lookups and mechanical edits.
 
 ```
 Claude: classify → branch → delegate → wait → validate → commit → push → PR
 Codex:  inspect → implement → add tests → report
+Haiku:  look up or make a fully specified edit → report
 ```
 
 **Claude owns** reading designs from Paper (the Paper MCP plugin), turning them into
@@ -21,6 +23,12 @@ push, PR, review, merge, cleanup — and every check Codex cannot run.
 **Codex owns** writing repository code: Astro pages, layouts and components,
 styles, client scripts, content-collection schemas, utilities, tests, build config,
 refactors, and bug fixes. It reports; it does not commit, push, or open a PR.
+
+**Haiku owns** nothing on its own authority. Two subagents in `.claude/agents/` run
+on Claude Haiku 5.5 and do work Claude specifies completely: `haiku-lookup` answers
+read-only questions, `haiku-edit` makes mechanical edits. Their tool lists enforce
+the boundary — neither has Bash, so neither can touch Git, run a build, or install
+anything. See **Task routing**.
 
 ### What Codex cannot do here
 
@@ -85,66 +93,81 @@ See `docs/claude-codex-handoff-resolution.md` for how this contract was arrived 
 
 ### Models
 
-Claude Opus orchestrates, plans, reviews, and merges. Every Codex task runs on
-`gpt-5.6-luna` (`gpt-6-luna` is rejected on ChatGPT-account Codex). The sandbox, not
-the model, sets the boundary: a task that modifies repository files runs with
-`--sandbox workspace-write`; read-only, non-intensive tasks — inspection, summaries,
-inventory, log triage — run with `--sandbox read-only`. A read-only task never
-expands into a repository mutation: if it finds files need to change, it ends with a
-recommendation and Claude starts a fresh workspace-write task or resumes the branch's
-existing session. Fix rounds use a new launcher invocation with
+Claude Opus orchestrates, plans, reviews, and merges. Mechanical work runs on Claude
+Haiku 5.5 (`claude-haiku-5-5`, pinned in each agent file with `effort: low`). Spawn
+those agents without a per-call `model` override — it would replace the pinned model.
+
+Every Codex task runs on `gpt-5.6-luna` (`gpt-6-luna` is rejected on ChatGPT-account
+Codex). The sandbox, not the model, sets the boundary: a task that modifies
+repository files runs with `--sandbox workspace-write`; a read-only task that needs
+to run commands — reproducing a failing build, triaging with real output — runs with
+`--sandbox read-only`. Questions answerable by reading alone go to `haiku-lookup`
+instead. A read-only task never expands into a repository mutation: if it finds
+files need to change, it ends with a recommendation and Claude starts a fresh
+workspace-write task or resumes the branch's existing session. Fix rounds use a new launcher invocation with
 `--resume <thread_id>`; the launcher supplies Codex's different resume syntax. See
 `skills/codex-handoff/SKILL.md`.
 
 ## Task routing
 
-Classify before implementing.
+Classify before implementing. One question decides between Haiku and Codex: **does
+the change need any logic, or an understanding of the code around it?** No → Haiku.
+Yes → Codex. Judgment, Git, and every gate stay with Claude.
+
+| Lane | Takes | Examples |
+| --- | --- | --- |
+| **Claude** (Opus, inline) | judgment, gates, Paper, Git | classifying, acceptance criteria, reading Paper, visual QA against an artboard, every review and merge, workflow rule changes, a one-line edit cheaper to make than to delegate |
+| **`haiku-lookup`** | read-only questions answerable by reading | where X is defined or used, summaries of files or a diff, inventories (assets, tokens, pages missing alt text or metadata), the failure in a CI or Playwright log Claude saved to `.context/` |
+| **`haiku-edit`** | mechanical edits Claude can specify completely | content entries that need no schema change, copy and wording, typos, alt text, a token value or class name, Markdown lint fixes, config values, dependency pins — including batches of these |
+| **Codex** | anything with logic or behavior | new pages, sections, or components; client scripts and animation; content-schema changes; tests; bug fixes that need a root cause; refactors; build config with logic in it; the code half of design → code |
 
 - **Design** — reading a Paper artboard, extracting tokens, spacing, type, and
   assets, and writing them into a task description. Claude does it directly, per
   `skills/astro-component/SKILL.md` **From Paper**. Claude never edits the Paper file
   unless the task asks for it.
-- **Code** — pages, components, layouts, styles, client scripts, content schemas,
-  tests, build config. Claude hands off to Codex, unless it is **trivial** (below).
 - **Design → code** — Claude reads Paper and writes the acceptance criteria, Codex
   implements, Claude validates the rendered result against the Paper artboard at
   each breakpoint.
-- **Trivial** — a mechanical repo edit Claude makes directly, without Codex. See
-  **When Codex does not run**.
 
-### When Codex does not run
+### Mechanical edits
 
-A delegated run is a full inspect-implement-validate cycle — measured at ~10
+A delegated Codex run is a full inspect-implement-validate cycle — measured at ~10
 minutes for a real component, of which only seconds are process start-up. Do not pay
-that for a change that has no behavior in it. Claude edits directly when **all** of
-these hold:
+that for a change that has no behavior in it. An edit is **mechanical** when **both**
+of these hold:
 
-- at most two files
-- no new logic — no new branch, loop, listener, component prop, island, or route;
-  no change to what an existing one does
+- no new logic — no new branch, loop, listener, component prop, island, route, or
+  schema field; no change to what an existing one does
 - the whole diff can be written from the task description alone, without reading
   around it to understand the code
 
-Typical trivial edits: copy or a content-collection entry that needs no schema
-change, a design-token value, a selector or class name, docs, a typo or wording fix
-in `skills/`, `CLAUDE.md`, or `AGENTS.md`, a CI YAML value with no logic in it,
-config values, dependency pins.
+A mechanical edit goes to `haiku-edit`, with an instruction naming every file and
+value. Claude makes it directly instead when it is at most two files and a few lines
+— a subagent starts cold, and for an edit that small, delegating costs more than
+doing it. If `haiku-edit` returns `BLOCKED`, the edit was not mechanical: route it to
+Codex.
 
 Workflow instructions — `AGENTS.md`, `CLAUDE.md`, `SETUP.md`, `skills/**`,
 `.github/**`, `scripts/ci/**`, `scripts/codex/**`, `.claude/**`, `.mcp.json`,
-`.conductor/**` — are operational code, not prose. A
-trivial edit to them skips the handoff, never the focused workflow review in
-`skills/review-pr/SKILL.md` **Review tiers**. A change that adds or alters a rule, a
-step, an owner, or a CI condition is not trivial.
+`.conductor/**` — are operational code, not prose. A typo or wording fix in them is
+mechanical. A change that adds or alters a rule, a step, an owner, a model, or a CI
+condition is not: Claude writes it, because it is a process decision rather than
+code to implement. Neither kind skips the focused workflow review in
+`skills/review-pr/SKILL.md` **Review tiers**.
 
-Everything else goes to Codex: new pages or components, client-side behavior,
-animation, data loading, content schemas, tests, refactors, bug fixes that need a
-root cause, build config that has logic in it. If unsure whether an edit is trivial,
+Everything with logic in it goes to Codex. If unsure whether an edit is mechanical,
 it is not.
 
-A trivial edit still gets a branch, a PR, CI, an inline review, and a merge per
-**Git** — only the handoff is skipped. Say in the PR body that Claude implemented it
-directly and why.
+A mechanical edit still gets a branch, a PR, CI, an inline review, and a merge per
+**Git** — only the Codex handoff is skipped. Claude reads Haiku's diff before
+committing it, exactly as it reads Codex's. Say in the PR body who implemented it
+(`haiku-edit` or Claude directly) and why it qualified as mechanical.
+
+### One writer at a time
+
+Only one agent edits the checkout at a time: never run `haiku-edit` while a Codex
+launcher is alive, or the reverse. `haiku-lookup` may run alongside either, since it
+only reads.
 
 ## Approval
 
@@ -184,8 +207,8 @@ For every feature, fix, refactor, or maintenance task:
    `refactor/` code restructuring, `chore/` maintenance.
 5. Keep the branch focused on one logical change.
 6. Define the acceptance criteria and get the user's OK (see **Approval**).
-7. Route the work: design reading to Claude, repository code to Codex via
-   `skills/codex-handoff/SKILL.md`. For a bug fix, the draft PR from
+7. Route the work per **Task routing**: design reading to Claude, mechanical edits
+   to `haiku-edit`, code with logic to Codex via `skills/codex-handoff/SKILL.md`. For a bug fix, the draft PR from
    `skills/fix-bug/SKILL.md` step 4 exists before the handoff; for other work it may
    be opened after the first push.
 8. Review the returned diff, then run the checks Codex could not — `npm run test:e2e`

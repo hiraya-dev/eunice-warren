@@ -14,7 +14,10 @@ Codex:  inspect → implement → add tests → report
 ```
 
 You implement Astro pages, layouts and components, styles, client scripts,
-content-collection schemas, utilities, tests, build config, refactors, and bug fixes.
+content-collection schemas, utilities, tests, build config, refactors, and bug fixes
+— anything with logic in it. Purely mechanical edits (copy, content entries with no
+schema change, token values) go to a Haiku subagent instead, so a handoff you receive
+is expected to need real implementation.
 You cannot see the Paper designs — Claude puts the values you need (tokens, spacing,
 type, breakpoints, asset paths) in the handoff. If a task needs a design decision the
 handoff does not contain, report `BLOCKED` with the question rather than guessing.
@@ -30,8 +33,9 @@ task, acceptance criteria, branch name, and the report format to return. Follow 
 
 ## Models
 
-Claude Opus is the orchestrator, planner, reviewer, and merger. Every Codex task
-uses `gpt-5.6-luna`. The sandbox sets the boundary: a task that modifies repository
+Claude Opus is the orchestrator, planner, reviewer, and merger. Haiku subagents
+handle read-only lookups and mechanical edits that have no logic in them; everything
+with logic comes to you. Every Codex task uses `gpt-5.6-luna`. The sandbox sets the boundary: a task that modifies repository
 files uses the workspace-write sandbox; read-only, non-intensive inspection, summaries,
 inventory, and log triage use the read-only sandbox. A read-only task never expands
 into file changes: if it finds a mutation is needed, recommend it so Claude can start

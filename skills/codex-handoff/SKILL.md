@@ -22,12 +22,16 @@ node scripts/codex/run-handoff.mjs --model gpt-5.6-luna --sandbox workspace-writ
 
 Claude Opus is the orchestrator, planner, reviewer, and merger. Every task runs on
 `gpt-5.6-luna`; the sandbox sets the boundary. A task that modifies repository files
-uses `--sandbox workspace-write`. Read-only, non-intensive inspection, summaries,
-inventory, and log triage instead run as:
+uses `--sandbox workspace-write`. A read-only task that needs to run commands —
+reproducing a failing build, triaging with real output — instead runs as:
 
 ```bash
 node scripts/codex/run-handoff.mjs --model gpt-5.6-luna --sandbox read-only --timeout-seconds 540 --prompt "<question>"
 ```
+
+A question answerable by reading alone — where something is used, a summary, an
+inventory, a saved log — goes to the `haiku-lookup` subagent instead; it is faster
+and does not hold the checkout. See `CLAUDE.md` **Task routing**.
 
 The read-only sandbox enforces the boundary. A read-only task must not expand into a
 repository mutation; if it finds changes are needed, it ends with a recommendation
@@ -69,8 +73,9 @@ While a launcher is alive: no edits to repository files, no Git writes, and no b
 Reading Paper may continue because it does not touch the checkout. After any non-zero
 result, confirm no `codex` process survives before editing files.
 
-Do not hand off at all for a trivial edit — see **When Codex does not run** in
-`CLAUDE.md`.
+Do not hand off a mechanical edit — it goes to `haiku-edit` or Claude directly; see
+**Mechanical edits** in `CLAUDE.md`. Never run `haiku-edit` while a launcher is
+alive: one writer at a time.
 
 **Never delegate through the Agent tool** (`subagent_type: codex:codex-rescue`) **or
 the `/codex:rescue` command.** The Agent tool is background-only in Claude Code, its

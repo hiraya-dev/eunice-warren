@@ -8,11 +8,12 @@ code through a supervised launcher, and CI routes every PR by the paths it chang
 
 | Path | Purpose |
 | --- | --- |
-| `CLAUDE.md` | Claude's contract: roles, routing, approval, Git lifecycle, traps |
+| `CLAUDE.md` | Claude's contract: roles, routing (Claude / Haiku / Codex), approval, Git lifecycle, traps |
 | `AGENTS.md` | Codex's contract: what it owns, what its sandbox cannot do |
 | `skills/` | `astro-component`, `codex-handoff`, `fix-bug`, `review-pr` |
 | `.claude/skills` | symlink to `skills/` so Claude Code discovers them |
 | `.claude/settings.json` | Paper + Chrome DevTools plugins; registers the hook that blocks `codex-rescue` via the Agent tool |
+| `.claude/agents/` | `haiku-lookup` and `haiku-edit`, the Claude Haiku 5.5 subagents for read-only lookups and mechanical edits |
 | `.claude/hooks/` | that hook (`block-codex-rescue.mjs`, fails closed) and its test |
 | `scripts/codex/run-handoff.mjs` | supervised `codex exec` launcher (closes stdin, JSONL lifecycle, timeouts, process-group kill, `--resume`) |
 | `scripts/ci/classify-paths.mjs` | routes changed paths to `runtime` / `workflow` / `docs` |
