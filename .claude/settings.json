@@ -1,0 +1,27 @@
+{
+  "enabledPlugins": {
+    "chrome-devtools-mcp@claude-plugins-official": true,
+    "paper-desktop@paper": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-codex-rescue.mjs\""
+          }
+        ]
+      }
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "paper": {
+      "source": {
+        "source": "github",
+        "repo": "paper-design/agent-plugins"
+      }
+    }
+  }
+}

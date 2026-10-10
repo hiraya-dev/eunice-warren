@@ -1,0 +1,15 @@
+{
+  // Lightweight docs check for markdown-only PRs. Structural problems only;
+  // prose style is not linted.
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": { "siblings_only": true },
+    "MD033": false,
+    "MD040": false,
+    "MD041": false
+  },
+  // src/** is site content (content collections), rendered by the build, not
+  // workflow prose.
+  "ignores": [".claude/**", "src/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
+}
