@@ -184,7 +184,8 @@ off.
 | 6 | Every acceptance criterion is met by a measured check | A committed spec, or a measurement recorded in the PR body with command, viewport, and numbers. "Looked fixed" is not a measurement. |
 | 7 | The root cause is inside this repo | A root cause in hosting, a third-party service, or the design itself hands off. |
 
-**If all gates pass:** `gh pr merge <pr> --squash --delete-branch`, then report what
+**If all gates pass:** `gh pr merge <pr> --squash` (never `--delete-branch` — see
+`CLAUDE.md` **Traps**), then report what
 merged, which gates passed, and the CI run link.
 
 **If any gate fails:** mark the PR ready, stop, and report the PR link plus exactly
@@ -194,8 +195,8 @@ which gate failed and why.
 
 ```bash
 gh pr view <pr> --json state,mergedAt    # state MERGED, mergedAt non-null
+git push origin --delete fix/<branch>
 git fetch origin --prune
-git push origin --delete fix/<branch>   # if not deleted automatically
 git status --porcelain
 ```
 

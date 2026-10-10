@@ -206,11 +206,16 @@ A posted `PASS` comment on the PR's head commit plus green `gate` authorizes Cla
 to merge:
 
 ```bash
-gh pr merge <pr> --squash --delete-branch
+gh pr merge <pr> --squash
 ```
+
+Never add `--delete-branch`: it switches the local checkout to `main`, which in a
+worktree blocks every other workspace (`CLAUDE.md` **Traps**).
 
 Confirm it landed with `gh pr view <pr> --json state,mergedAt` before cleaning up —
 a `CLOSED` PR with no `mergedAt` did not merge, and its branch must not be deleted.
+Then delete the remote branch with `git push origin --delete <branch>` and follow
+`CLAUDE.md` **Git** step 12.
 
 A bug fix must additionally pass every gate in `skills/fix-bug/SKILL.md` step 10. A
 `PASS` here does not replace any of them.

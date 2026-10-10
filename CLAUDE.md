@@ -220,14 +220,15 @@ For every feature, fix, refactor, or maintenance task:
     with `gh pr comment <pr> --body` — the review is not done until that comment
     exists.
 11. Merge the PR yourself once the posted review says `PASS` and the `gate` check
-    is green on the PR's head commit (`gh pr merge <pr> --squash --delete-branch`).
+    is green on the PR's head commit (`gh pr merge <pr> --squash` — never
+    `--delete-branch`; see **Traps**).
     No review comment on the head commit means no merge. A bug fix must
     additionally pass every gate in `skills/fix-bug/SKILL.md`. A `CHANGES_REQUIRED`
     or `BLOCKED` verdict, a red or pending check, or a failed bug-fix gate means
     hand the PR to the user instead — never merge past one.
 12. After the merge: confirm it landed (`gh pr view <pr> --json state,mergedAt`),
-    run `git fetch origin --prune`, and delete the remote branch if it was not
-    deleted automatically. In a Conductor workspace, leave the worktree on the merged
+    delete the remote branch (`git push origin --delete <branch>`), and run
+    `git fetch origin --prune`. In a Conductor workspace, leave the worktree on the merged
     branch — archiving the workspace removes it. Elsewhere, `git switch --detach
     origin/main` and then delete the local branch. A `CLOSED` PR is not a merged PR —
     never clean up a branch whose PR did not merge.
@@ -283,8 +284,15 @@ Bug fixes use `fix/` branches and follow `skills/fix-bug/SKILL.md`. The short fo
 
 ## Traps
 
-Learned the hard way on the project this workflow came from. Each one cost a
-false green or a lost edit.
+Learned the hard way, mostly on the project this workflow came from. Each one cost a
+false green, a lost edit, or a blocked checkout.
+
+- **`gh pr merge --delete-branch` switches the checkout to `main`.** Run from the
+  PR's branch, it deletes the local branch and checks out `main` to do it — in a
+  worktree, that claims `main` and blocks every other workspace (see **Git** step
+  3). It happened merging this workflow's own PR. Merge with
+  `gh pr merge <pr> --squash` and delete the remote branch with
+  `git push origin --delete <branch>`.
 
 - **Shared ports across worktrees.** Conductor runs several checkouts of this repo at
   once and a port is machine-wide. A hardcoded Playwright port with
