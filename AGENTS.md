@@ -57,6 +57,10 @@ Write or update Playwright specs, but do not run `npm run test:e2e`, `npm run de
 or `npm run preview`: each binds a port and your sandbox refuses with `EPERM`.
 Claude runs the suite.
 
+Do not `npm install`: your sandbox has no network. Claude installs any dependency the
+task needs before the handoff. If you find you need one that is not installed, report
+`BLOCKED` with the package name.
+
 Never claim a check passed unless it ran. If a check cannot run, say why.
 
 Codex self-validation is evidence for Claude's review, never merge authorization.

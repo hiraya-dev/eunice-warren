@@ -14,9 +14,13 @@ const RUNTIME_FILES = new Set([
 
 const RUNTIME_DIRECTORIES = ["src", "public", "tests"];
 
+// Agent instructions and agent tooling config are operational code: .mcp.json
+// wires tools into every session, and Conductor settings can run setup scripts.
 const WORKFLOW_FILES = new Set([
   "AGENTS.md",
   "CLAUDE.md",
+  "SETUP.md",
+  ".mcp.json",
   ".markdownlint-cli2.jsonc",
 ]);
 
@@ -26,9 +30,10 @@ const WORKFLOW_DIRECTORIES = [
   ".github",
   "scripts/codex",
   "scripts/ci",
+  ".conductor",
 ];
 
-const DOCS_FILES = new Set([".gitignore", ".gitkeep", ".mcp.json"]);
+const DOCS_FILES = new Set([".gitignore", ".gitkeep"]);
 
 function isUnder(path, directory) {
   return path.startsWith(`${directory}/`);
@@ -68,8 +73,7 @@ export function classifyPaths(files) {
     if (
       file.endsWith(".md") ||
       DOCS_FILES.has(file) ||
-      isNoise(file) ||
-      isUnder(file, ".conductor")
+      isNoise(file)
     ) {
       docs = true;
       continue;

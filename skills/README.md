@@ -14,9 +14,11 @@ skills/
     *             optional supporting files (templates, scripts, references)
 ```
 
-`SKILL.md` should stay plain markdown with no tool-specific frontmatter beyond a
-short description line, so it reads the same whether it's loaded by Claude Code's
-Skill tool or pulled in by Codex via AGENTS.md.
+`SKILL.md` starts with YAML frontmatter carrying only `name` (the folder name) and
+`description` — what the skill does and when to use it. Claude Code decides when to
+load a skill from that description alone, so name the triggers. Below the
+frontmatter it stays plain markdown, so it reads the same whether it's loaded by
+Claude Code's Skill tool or pulled in by Codex via AGENTS.md.
 
 ## Wiring
 

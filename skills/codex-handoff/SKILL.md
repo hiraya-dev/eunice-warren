@@ -1,3 +1,8 @@
+---
+name: codex-handoff
+description: Hand repository code work to Codex through scripts/codex/run-handoff.mjs. Use for any code task or the code half of a design-to-code task, for fix rounds after CHANGES_REQUIRED, and when reading the report Codex returns.
+---
+
 # Codex Handoff
 
 How Claude hands repository code work to Codex, and what Codex returns.
@@ -90,6 +95,7 @@ on a new machine):
 | `git status` | exit 0 |
 | `git config --local` | exit 255, `could not lock config file .git/config: Operation not permitted` |
 | Bind `127.0.0.1:4199` | `EPERM` |
+| Network (`npm install`, `npm view`) | expected to fail — no network by default; the `SETUP.md` probe confirms |
 
 `astro dev`, `astro preview`, and Playwright's `webServer` all bind a port, so none of
 them can run inside Codex. Do not ask for them. Do not ask for a commit, a push, or a

@@ -1,3 +1,8 @@
+---
+name: astro-component
+description: Build or change an Astro page, layout, or component, or implement a Paper design. Covers how Claude reads Paper artboards into a handoff and the conventions Codex follows for components, images, content, and client scripts.
+---
+
 # Astro Component
 
 How pages and components are built in this repo, and how Claude turns a Paper design

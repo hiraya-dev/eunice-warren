@@ -28,7 +28,10 @@ Measured with `codex exec --sandbox workspace-write` (in the project this setup 
 extracted from; re-run the probe in `SETUP.md` to confirm on this machine): writing a
 workspace file and a production build both succeed, but `git config --local` fails
 with `could not lock config file .git/config: Operation not permitted`, and binding
-`127.0.0.1:4199` fails with `EPERM`.
+`127.0.0.1:4199` fails with `EPERM`. The workspace-write sandbox also has no network
+by default (not yet measured here — the probe checks it), so Codex cannot
+`npm install`: Claude installs dependencies, and a handoff that needs a new package
+says the package is already installed.
 
 `astro dev`, `astro preview`, and Playwright all bind a port, so **`npm run test:e2e`
 can never run inside Codex.** The split is forced by capability, not preference.
@@ -127,8 +130,9 @@ change, a design-token value, a selector or class name, docs, a typo or wording 
 in `skills/`, `CLAUDE.md`, or `AGENTS.md`, a CI YAML value with no logic in it,
 config values, dependency pins.
 
-Workflow instructions — `AGENTS.md`, `CLAUDE.md`, `skills/**`, `.github/**`,
-`scripts/ci/**`, `scripts/codex/**`, `.claude/**` — are operational code, not prose. A
+Workflow instructions — `AGENTS.md`, `CLAUDE.md`, `SETUP.md`, `skills/**`,
+`.github/**`, `scripts/ci/**`, `scripts/codex/**`, `.claude/**`, `.mcp.json`,
+`.conductor/**` — are operational code, not prose. A
 trivial edit to them skips the handoff, never the focused workflow review in
 `skills/review-pr/SKILL.md` **Review tiers**. A change that adds or alters a rule, a
 step, an owner, or a CI condition is not trivial.
@@ -169,9 +173,13 @@ Feature-branch workflow. Never make feature commits directly on `main`.
 
 For every feature, fix, refactor, or maintenance task:
 
-1. Start from `main`.
-2. Pull the latest changes from `origin/main`.
-3. Create a branch from `main`.
+1. Fetch the latest `origin/main`: `git fetch origin`.
+2. Create the task branch from it without checking out `main`:
+   `git switch -c <prefix>/<name> origin/main`.
+3. Never check out `main` itself. Git lets a branch be checked out in only one
+   worktree, and Conductor runs several — a workspace sitting on `main` makes
+   `git switch main` fail in every other one. Diff against `origin/main`, not a local
+   `main` that nothing keeps current.
 4. Prefix the branch by kind: `feat/` new features, `fix/` bug fixes,
    `refactor/` code restructuring, `chore/` maintenance.
 5. Keep the branch focused on one logical change.
@@ -195,12 +203,15 @@ For every feature, fix, refactor, or maintenance task:
     or `BLOCKED` verdict, a red or pending check, or a failed bug-fix gate means
     hand the PR to the user instead — never merge past one.
 12. After the merge: confirm it landed (`gh pr view <pr> --json state,mergedAt`),
-    switch back to `main`, pull the latest `origin/main`, delete the local branch,
-    and delete the remote branch if it was not deleted automatically. A `CLOSED`
-    PR is not a merged PR — never clean up a branch whose PR did not merge.
+    run `git fetch origin --prune`, and delete the remote branch if it was not
+    deleted automatically. In a Conductor workspace, leave the worktree on the merged
+    branch — archiving the workspace removes it. Elsewhere, `git switch --detach
+    origin/main` and then delete the local branch. A `CLOSED` PR is not a merged PR —
+    never clean up a branch whose PR did not merge.
 
-If `main` already has uncommitted changes, branch first and carry those changes
-into the new branch before committing.
+If the working tree already has uncommitted changes when a task starts,
+`git switch -c` carries them onto the new branch; keep them out of the task's commits
+unless they belong to it.
 
 If a feature branch already has commits for the task at hand, keep using it
 rather than opening another branch for the same logical change.
@@ -214,12 +225,12 @@ rather than opening another branch for the same logical change.
   did not succeed. Routes: `runtime` (`src/**`, `public/**`, `tests/**`,
   `package.json`, lockfile, Astro, TypeScript and Playwright config) runs `build`
   (`astro check` + `astro build`) and `e2e` in parallel; `workflow` (`AGENTS.md`,
-  `CLAUDE.md`, `skills/**`, `.claude/**`, `.github/**`, `scripts/ci/**`,
-  `scripts/codex/**`) runs `docs` and `workflow` (routing and launcher tests +
+  `CLAUDE.md`, `SETUP.md`, `skills/**`, `.claude/**`, `.github/**`, `scripts/ci/**`,
+  `scripts/codex/**`, `.mcp.json`, `.conductor/**`) runs `docs` and `workflow` (routing and launcher tests +
   actionlint); `docs` (other Markdown) runs `docs` only. Unknown paths route
   `runtime`. A skipped job is not a pass: `gate` treats a skipped required job as a
   failure. Check locally with
-  `git diff --name-only main...HEAD | node scripts/ci/classify-paths.mjs`.
+  `git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs`.
 - `main` has no branch protection. Nothing on GitHub enforces the merge gates — they
   are self-enforced, so never merge past a red or pending check.
 - Deploying is a separate act from merging. Claude may check the host's preview

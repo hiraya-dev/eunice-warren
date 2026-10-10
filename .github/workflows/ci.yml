@@ -10,6 +10,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -36,10 +39,14 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git diff --name-only "$BASE_SHA...${{ github.sha }}" > changed-files.txt
-          elif [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
-            git diff --name-only HEAD~1 "${{ github.sha }}" > changed-files.txt
-          else
+          elif [[ ! "$BEFORE_SHA" =~ ^0+$ ]] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
             git diff --name-only "$BEFORE_SHA" "${{ github.sha }}" > changed-files.txt
+          elif git rev-parse --verify --quiet "${{ github.sha }}~1" > /dev/null; then
+            # New branch, or a force-push left the old tip unreachable.
+            git diff --name-only "${{ github.sha }}~1" "${{ github.sha }}" > changed-files.txt
+          else
+            # Root commit: everything in the tree is new.
+            git ls-tree -r --name-only "${{ github.sha }}" > changed-files.txt
           fi
           echo "Changed files:"
           cat changed-files.txt
@@ -140,6 +147,8 @@ jobs:
         run: node --test scripts/ci/classify-paths.test.mjs
       - name: Test Codex handoff lifecycle
         run: node --test scripts/codex/run-handoff.test.mjs
+      - name: Test the codex-rescue hook
+        run: node --test .claude/hooks/block-codex-rescue.test.mjs
       - name: Validate workflow YAML
         env:
           ACTIONLINT_VERSION: 1.7.7

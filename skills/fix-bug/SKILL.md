@@ -1,3 +1,8 @@
+---
+name: fix-bug
+description: Fix a reported bug in the site (local, preview deploy, or production). Restate the bug and acceptance criteria, branch fix/, open a draft PR, reproduce, hand the fix to Codex, validate, and merge or hand off through the bug-fix gates.
+---
+
 # Fix a Bug
 
 Use this whenever a bug is reported against the site — locally, on a preview deploy,
@@ -7,7 +12,7 @@ or in production. It is the detailed procedure behind the short Git rules in
 Do not start editing code before step 4. The point of this skill is that the branch,
 the acceptance criteria, and the PR exist before the fix does.
 
-**Ownership:** Claude owns requirements, acceptance criteria, clean `main`, the
+**Ownership:** Claude owns requirements, acceptance criteria, a current `origin/main`, the
 branch and draft PR, all browser / E2E / deploy-preview validation, review, Git,
 merge, and cleanup. Codex owns repository inspection, root-cause diagnosis,
 implementation, regression specs, applicable check/build/routing checks, self-review,
@@ -28,23 +33,25 @@ Before touching git, write a short summary back to the user covering:
 Ask for the missing pieces if the report is thin. The acceptance criteria are the
 contract for the rest of the workflow.
 
-### 2. Prepare a clean `main` — Claude
+### 2. Fetch the latest `origin/main` — Claude
 
 ```bash
 git status --porcelain    # must be empty, or see below
-git checkout main
-git pull origin main
+git fetch origin
 ```
 
+Never check out `main` itself — see `CLAUDE.md` **Git**: in a Conductor worktree it
+blocks every other workspace from doing the same.
+
 If the working tree has unrelated uncommitted changes, **preserve them**. Do not
-stash-and-forget, reset, or check out over them. Create the branch from the current
-state so the changes are carried along, tell the user those changes are present, and
-keep them out of the bug-fix commit.
+stash-and-forget, reset, or check out over them. `git switch -c` in step 3 carries
+them onto the branch; tell the user those changes are present, and keep them out of
+the bug-fix commit.
 
 ### 3. Branch — Claude
 
 ```bash
-git checkout -b fix/<short-kebab-description>
+git switch -c fix/<short-kebab-description> origin/main
 ```
 
 Name it after the symptom, not the guessed cause: `fix/mobile-nav-overflow`. One bug
@@ -142,7 +149,7 @@ git diff HEAD
 git diff --stat HEAD
 ```
 
-`git diff main...HEAD` misses the changes Codex left in the working tree. Remove
+`git diff origin/main...HEAD` misses the changes Codex left in the working tree. Remove
 anything accidental: `console.log`, commented-out experiments, debug outlines,
 unrelated files, `test-results/`.
 
@@ -171,8 +178,8 @@ off.
 | --- | --- | --- |
 | 1 | CI is green on the PR | `gh pr checks <pr>`. Never merge past a red or pending run. |
 | 2 | A regression spec fails on `main` and passes on the branch | Both results recorded in the PR, from step 7. A flaky-spec fix, where this cannot apply, hands off. |
-| 3 | The diff touches only `src/` and `tests/` (plus `public/` if the bug is an asset) | `git diff --name-only main...HEAD`. Any change to `package.json`, lockfile, Astro / TS / Playwright config, `.github/`, `skills/`, or `docs/` disqualifies. |
-| 4 | The source diff is at most 50 changed lines, excluding `tests/` | `git diff --shortstat main...HEAD -- src`. |
+| 3 | The diff touches only `src/` and `tests/` (plus `public/` if the bug is an asset) | `git diff --name-only origin/main...HEAD`. Any change to `package.json`, lockfile, Astro / TS / Playwright config, `.github/`, `skills/`, or `docs/` disqualifies. |
+| 4 | The source diff is at most 50 changed lines, excluding `tests/` | `git diff --shortstat origin/main...HEAD -- src`. |
 | 5 | The acceptance criteria came from the user | Criteria you inferred do not count — ask, or hand off. |
 | 6 | Every acceptance criterion is met by a measured check | A committed spec, or a measurement recorded in the PR body with command, viewport, and numbers. "Looked fixed" is not a measurement. |
 | 7 | The root cause is inside this repo | A root cause in hosting, a third-party service, or the design itself hands off. |
@@ -187,12 +194,14 @@ which gate failed and why.
 
 ```bash
 gh pr view <pr> --json state,mergedAt    # state MERGED, mergedAt non-null
-git checkout main
-git pull origin main
-git branch -d fix/<branch>
+git fetch origin --prune
 git push origin --delete fix/<branch>   # if not deleted automatically
 git status --porcelain
 ```
+
+In a Conductor workspace, leave the worktree on the merged branch — archiving the
+workspace removes it. Elsewhere, `git switch --detach origin/main` and then
+`git branch -d fix/<branch>`.
 
 ## Never
 

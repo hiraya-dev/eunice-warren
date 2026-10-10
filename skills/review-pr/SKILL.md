@@ -1,3 +1,8 @@
+---
+name: review-pr
+description: Review an open pull request after CI settles. Picks the review tier from the classify route, judges the diff, posts a PASS / CHANGES_REQUIRED / BLOCKED verdict on the PR, runs fix rounds, and authorizes the merge.
+---
+
 # Review a Pull Request
 
 Every PR gets a review before it is considered complete. This skill defines who
@@ -60,7 +65,7 @@ Use the CI `classify` route from `gh run view` / the `classify` job log, or clas
 the committed diff locally:
 
 ```bash
-git diff --name-only main...HEAD | node scripts/ci/classify-paths.mjs
+git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
 ```
 
 - **Full (`runtime`)** — `src/**`, `public/**`, `tests/**`, Astro / TypeScript /
@@ -68,8 +73,9 @@ git diff --name-only main...HEAD | node scripts/ci/classify-paths.mjs
   judge every applicable axis, and allow up to three rounds. Bug-fix gates still
   apply. Claude performs browser and responsive verification where the diff reaches
   them, comparing against the Paper artboard for visual work.
-- **Workflow (`workflow`)** — `AGENTS.md`, `CLAUDE.md`, `skills/**`, `.claude/**`,
-  `.github/**`, `scripts/ci/**`, or `scripts/codex/**`. Run one focused mandatory
+- **Workflow (`workflow`)** — `AGENTS.md`, `CLAUDE.md`, `SETUP.md`, `skills/**`,
+  `.claude/**`, `.github/**`, `scripts/ci/**`, `scripts/codex/**`, `.mcp.json`, or
+  `.conductor/**`. Run one focused mandatory
   review after `gate` is green. Check internal consistency between the agent files
   and skills, explicit ownership for every step, that Codex is never told to exceed
   its sandbox, fail-closed CI routing, and the model policy. Do not browser-test

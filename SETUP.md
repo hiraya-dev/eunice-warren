@@ -12,7 +12,8 @@ code through a supervised launcher, and CI routes every PR by the paths it chang
 | `AGENTS.md` | Codex's contract: what it owns, what its sandbox cannot do |
 | `skills/` | `astro-component`, `codex-handoff`, `fix-bug`, `review-pr` |
 | `.claude/skills` | symlink to `skills/` so Claude Code discovers them |
-| `.claude/settings.json` | Paper + Chrome DevTools plugins; hook that blocks `codex-rescue` via the Agent tool |
+| `.claude/settings.json` | Paper + Chrome DevTools plugins; registers the hook that blocks `codex-rescue` via the Agent tool |
+| `.claude/hooks/` | that hook (`block-codex-rescue.mjs`, fails closed) and its test |
 | `scripts/codex/run-handoff.mjs` | supervised `codex exec` launcher (closes stdin, JSONL lifecycle, timeouts, process-group kill, `--resume`) |
 | `scripts/ci/classify-paths.mjs` | routes changed paths to `runtime` / `workflow` / `docs` |
 | `.github/workflows/ci.yml` | `classify` → `build` + `e2e` / `docs` + `workflow` → `gate` |
@@ -21,7 +22,7 @@ code through a supervised launcher, and CI routes every PR by the paths it chang
 
 ## Prerequisites
 
-- Node 22, `gh` (authenticated), `jq` (the settings hook uses it)
+- Node 22 (the settings hook runs on it), `gh` (authenticated)
 - Codex CLI, logged in: `codex login`. Model `gpt-5.6-luna` (ChatGPT-account Codex
   rejects `gpt-6-luna`).
 - The Paper desktop app and the `paper-desktop@paper` Claude Code plugin. The project
@@ -29,6 +30,11 @@ code through a supervised launcher, and CI routes every PR by the paths it chang
   first time Claude Code opens the repo.
 
 ## 1. Scaffold the Astro app
+
+Land this workflow on `main` first, on its own (step 7), and scaffold on a fresh
+branch from `origin/main` afterwards. Claude runs the scaffold directly rather than
+handing it to Codex: `npm create` and `npm install` need the network, which Codex's
+workspace-write sandbox does not have by default (step 6 confirms).
 
 `npm create astro` will not scaffold cleanly into a non-empty directory, so create it
 beside the repo and copy it in:
@@ -163,20 +169,27 @@ test-results/
 `CLAUDE.md` states what Codex cannot do. Confirm it here once:
 
 ```bash
-node scripts/codex/run-handoff.mjs --model gpt-5.6-luna --sandbox workspace-write --timeout-seconds 300 --prompt "Run each and report the exact exit code and error: (1) git config --local probe.x 1  (2) node -e \"require('net').createServer().listen(4199,'127.0.0.1',()=>{console.log('bound');process.exit(0)}).on('error',e=>{console.log(e.code);process.exit(1)})\"  (3) npm run build. Do not change any files."
+node scripts/codex/run-handoff.mjs --model gpt-5.6-luna --sandbox workspace-write --timeout-seconds 300 --prompt "Run each and report the exact exit code and error: (1) git config --local probe.x 1  (2) node -e \"require('net').createServer().listen(4199,'127.0.0.1',()=>{console.log('bound');process.exit(0)}).on('error',e=>{console.log(e.code);process.exit(1)})\"  (3) npm run build  (4) npm view astro version. Do not change any files."
 ```
 
-Expect `could not lock config file`, `EPERM`, and a successful build. If a result
-differs, update **What Codex cannot do here** in `CLAUDE.md` and the table in
-`skills/codex-handoff/SKILL.md`.
+The probe passes `--sandbox workspace-write` explicitly: that is the sandbox handoffs
+write in, and the launcher defaults to `read-only`.
+
+Expect `could not lock config file`, `EPERM`, a successful build, and a network
+failure from `npm view`. If a result differs, update **What Codex cannot do here** in
+`CLAUDE.md` and the table in `skills/codex-handoff/SKILL.md`.
 
 ## 7. Land it
 
-Commit on a `chore/` branch, open the PR, and let CI run. The first PR is `runtime`
-(the scaffold), so `build` and `e2e` must both go green before merge.
+Two PRs, in order:
+
+1. **The workflow alone** — these files, no app. It routes `workflow`, whose jobs call
+   `node --test` directly and so pass before `package.json` exists.
+2. **The scaffold** (steps 1–5) — routes `runtime`, so `build` and `e2e` must both go
+   green before merge. It is the first PR to run the full chain.
 
 ```bash
-git diff --name-only main...HEAD | node scripts/ci/classify-paths.mjs
+git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
 npm run test:routing && npm run test:codex-handoff
 ```
 

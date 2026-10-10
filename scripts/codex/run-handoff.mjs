@@ -17,7 +17,8 @@ function positiveNumber(value, flag) {
 export function parseArgs(argv) {
   const options = {
     model: "gpt-5.6-luna",
-    sandbox: "workspace-write",
+    // A write task must ask for workspace-write explicitly.
+    sandbox: "read-only",
     timeoutMs: DEFAULT_TIMEOUT_MS,
     exitGraceMs: DEFAULT_EXIT_GRACE_MS,
   };

@@ -47,7 +47,7 @@ test("builds a resumed command with config sandbox syntax", () => {
 test("parses safe defaults and rejects an unsupported sandbox", () => {
   assert.deepEqual(parseArgs(["--prompt", "inspect"]), {
     model: "gpt-5.6-luna",
-    sandbox: "workspace-write",
+    sandbox: "read-only",
     timeoutMs: 1800000,
     exitGraceMs: 10000,
     prompt: "inspect",

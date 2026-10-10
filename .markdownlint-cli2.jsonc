@@ -9,5 +9,7 @@
     "MD040": false,
     "MD041": false
   },
-  "ignores": [".claude/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
+  // src/** is site content (content collections), rendered by the build, not
+  // workflow prose.
+  "ignores": [".claude/**", "src/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
 }
