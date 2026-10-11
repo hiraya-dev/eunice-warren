@@ -38,7 +38,8 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
 </html>
 
 <script>
-  import { initScroll } from "@/scripts/scroll.ts";
+  import { initGlobalParallax, initScroll } from "@/scripts/scroll.ts";
 
   initScroll();
+  initGlobalParallax();
 </script>
