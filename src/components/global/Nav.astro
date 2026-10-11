@@ -75,8 +75,15 @@ const links = [
   </>
 )}
 
-<!-- Keep the navigation links available when JavaScript is disabled. -->
-<noscript><style>.navigation { visibility: visible; pointer-events: auto; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }.navigation_link { transform: translateY(0) rotate(0.001deg); }</style></noscript>
+<!-- Without JavaScript the menu can't open, so render the panel in normal flow below the bar
+     (not as a fixed overlay, which would cover the page) and hide the toggle. -->
+<noscript><style>
+  .nav_toggle { display: none; }
+  .navigation { position: static; visibility: visible; pointer-events: auto; clip-path: none; overflow: visible; }
+  .navigation_inner { min-height: 0; padding-top: 0; }
+  .navigation_link { transform: none; }
+  .navigation_palm { opacity: 1; }
+</style></noscript>
 
 <script>
   const initNavigation = () => {
