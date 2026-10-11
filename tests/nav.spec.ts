@@ -19,6 +19,10 @@ const waitForPanelTransition = async (page: import("@playwright/test").Page, ope
   }
 };
 
+const waitForRootBackground = async (page: import("@playwright/test").Page, color: string) => {
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), { timeout: 3000 }).toBe(color);
+};
+
 test.describe("Eunice & Warren navigation", () => {
   for (const width of [1440, 390]) {
     test(`opens, closes, and traps focus at ${width}px`, async ({ page }) => {
@@ -89,7 +93,31 @@ test.describe("Eunice & Warren navigation", () => {
     await page.locator('[data-navigation-toggle="toggle"]').click();
     const panel = page.locator("#site-navigation-panel");
     await expect(panel).toHaveCSS("clip-path", "polygon(0px 0px, 100% 0px, 100% 100%, 0px 100%)");
+    await waitForRootBackground(page, "rgb(31, 47, 92)");
     await expect(panel.locator(".navigation_link").first()).toBeFocused();
+    await page.locator('[data-navigation-toggle="toggle"]').click();
+    await waitForRootBackground(page, "rgb(245, 239, 227)");
+  });
+
+  test("changes the root background only after the normal-motion wipe settles", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+
+    const panel = page.locator("#site-navigation-panel");
+    const toggle = page.locator('[data-navigation-toggle="toggle"]');
+    await toggle.click();
+    await expect.poll(() => panel.evaluate((element) => {
+      const match = getComputedStyle(element).clipPath.match(/100% ([\d.]+)%/);
+      const bottom = match ? Number(match[1]) : 100;
+      return bottom > 5 && bottom < 90;
+    }), { timeout: 3000 }).toBe(true);
+    await expect(page.locator("html")).toHaveCSS("background-color", "rgb(245, 239, 227)");
+
+    await waitForPanelTransition(page, true);
+    await waitForRootBackground(page, "rgb(31, 47, 92)");
+
+    await toggle.click();
+    await waitForRootBackground(page, "rgb(245, 239, 227)");
   });
 
   test("keeps the expected link destinations in the full-screen panel", async ({ page }) => {
