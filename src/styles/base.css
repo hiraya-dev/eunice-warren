@@ -286,6 +286,7 @@
   color-scheme: light;
 
   --background: var(--light-100);
+  --background-texture: url("../assets/textures/grain-light.jpg");
   --background-2: var(--light-200);
   --background-3: var(--light-300);
   --background-skeleton: color-mix(in lab, currentcolor 10%, transparent);
@@ -307,9 +308,9 @@
   --button-2-background: transparent;
   --button-2-border: var(--border);
   --button-2-text: var(--text);
-  --button-2-background-hover: var(--text);
-  --button-2-border-hover: var(--button-2-background-hover);
-  --button-2-text-hover: var(--background);
+  --button-2-background-hover: transparent;
+  --button-2-border-hover: transparent;
+  --button-2-text-hover: var(--accent-500);
 
   --link-text: var(--text);
   --link-border: var(--border);
@@ -322,6 +323,7 @@
   color-scheme: dark;
 
   --background: var(--dark-900);
+  --background-texture: url("../assets/textures/grain-dark.jpg");
   --background-2: var(--dark-800);
   --background-3: var(--dark-700);
   --background-skeleton: color-mix(in lab, currentcolor 10%, transparent);
@@ -343,9 +345,9 @@
   --button-2-background: transparent;
   --button-2-border: var(--border);
   --button-2-text: var(--text);
-  --button-2-background-hover: var(--text);
-  --button-2-border-hover: var(--button-2-background-hover);
-  --button-2-text-hover: var(--background);
+  --button-2-background-hover: transparent;
+  --button-2-border-hover: transparent;
+  --button-2-text-hover: var(--brand-500);
 
   --link-text: var(--text);
   --link-border: var(--border);
@@ -357,6 +359,7 @@
   color-scheme: dark;
 
   --background: var(--brand-500);
+  --background-texture: url("../assets/textures/grain-brand.jpg");
   --background-2: color-mix(in lab, var(--background) 90%, var(--text));
   --background-3: color-mix(in lab, var(--background) 80%, var(--text));
   --background-skeleton: color-mix(in lab, currentcolor 10%, transparent);
@@ -378,9 +381,9 @@
   --button-2-background: transparent;
   --button-2-border: var(--border);
   --button-2-text: var(--text);
-  --button-2-background-hover: var(--light-100);
-  --button-2-border-hover: var(--button-2-background-hover);
-  --button-2-text-hover: var(--dark-900);
+  --button-2-background-hover: transparent;
+  --button-2-border-hover: transparent;
+  --button-2-text-hover: var(--accent-500);
 
   --link-text: var(--text);
   --link-border: var(--border);
@@ -391,6 +394,10 @@
 :root,
 [class*="theme-"] {
   background-color: var(--background);
+  background-image: var(--background-texture);
+  background-size: 32rem 32rem;
+  background-position: 50%;
+  background-repeat: repeat;
   color: var(--text);
 }
 
