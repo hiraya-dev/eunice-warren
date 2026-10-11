@@ -58,8 +58,12 @@ test.describe("invitation section", () => {
   test("shows the complete note and circle with reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    for (const word of await page.locator(".invitation_word").all()) {
-      await expect(word).toHaveCSS("color", "rgb(31, 47, 92)");
+    const paragraphs = page.locator(".invitation_note p");
+    await expect(paragraphs).toHaveCount(2);
+    for (const paragraph of await paragraphs.all()) {
+      await expect(paragraph).toHaveCSS("color", "rgb(31, 47, 92)");
+      // SplitText's char wrappers: nothing is split when motion is reduced.
+      expect(await paragraph.locator("[data-highlight-text] > div > div").count()).toBe(0);
     }
     await expect(page.locator(".invitation_circle")).toBeVisible();
     const circle = await page.locator(".invitation_circle").evaluate((svg) => {
@@ -120,17 +124,36 @@ test.describe("invitation section", () => {
     expect(backward[backward.length - 1]).toBeLessThan(0.2);
   });
 
-  test("reveals note words progressively during scrolling", async ({ page }) => {
+  test("reveals note characters progressively during scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 700 });
     await page.goto("/");
-    const note = page.locator(".invitation_note");
-    await note.scrollIntoViewIfNeeded();
-    const samples: string[][] = [];
-    for (let index = 0; index < 12; index += 1) {
-      samples.push(await page.locator(".invitation_word").evaluateAll((words) => words.map((word) => getComputedStyle(word).color)));
-      await page.mouse.wheel(0, 45);
+    const sentences = [
+      "We fell for Boracay on our first trip together, and we've wanted to share it with you ever since.",
+      "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
+    ];
+    const chars = page.locator(".invitation_note [data-highlight-text] > div > div");
+    await expect.poll(() => chars.count()).toBeGreaterThan(100);
+    // Screen readers get each sentence once, from the sr-only copy; the split copy is hidden.
+    const snapshot = await page.locator(".invitation_note").ariaSnapshot();
+    for (const sentence of sentences) expect(snapshot).toContain(sentence);
+    await expect(page.locator(".invitation_note [data-highlight-text]").first()).toHaveAttribute("aria-hidden", "true");
+
+    await page.evaluate(() => {
+      const note = document.querySelector(".invitation_note")!;
+      window.scrollTo(0, Math.max(0, note.getBoundingClientRect().top + window.scrollY - window.innerHeight));
+    });
+    await page.waitForTimeout(300);
+
+    const samples: number[][] = [];
+    // Wheel steps move less under mobile emulation, so give the scroll room on every project.
+    for (let index = 0; index < 32; index += 1) {
+      samples.push(await chars.evaluateAll((chars) => chars.map((char) => Number(getComputedStyle(char).opacity))));
+      await page.mouse.wheel(0, 60);
       await page.waitForTimeout(20);
     }
-    expect(new Set(samples.flat()).size).toBeGreaterThan(1);
+    const means = samples.map((sample) => sample.reduce((total, opacity) => total + opacity, 0) / sample.length);
+    expect(means[0]).toBeLessThan(0.5);
+    expect(means.at(-1)).toBeGreaterThan(0.85);
+    expect(samples.some((sample) => sample.some((opacity) => opacity > 0.35 && opacity < 0.95) && sample.some((opacity) => opacity >= 0.95))).toBeTruthy();
   });
 });
