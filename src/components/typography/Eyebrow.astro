@@ -31,7 +31,7 @@ const content = await slotContent(Astro.slots);
       {variant === "default" && (
         <span class="eyebrow_marker" aria-hidden="true" />
       )}
-      <Tag class="eyebrow_text text-style-small">
+      <Tag class="eyebrow_text text-style-eyebrow">
         <Fragment set:html={content} />
       </Tag>
     </div>
