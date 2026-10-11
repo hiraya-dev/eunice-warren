@@ -38,8 +38,11 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
 </html>
 
 <script>
+  import { initDrawPathOnScroll } from "@/scripts/draw-path.ts";
   import { initGlobalParallax, initScroll } from "@/scripts/scroll.ts";
 
   initScroll();
   initGlobalParallax();
+  initDrawPathOnScroll();
+  document.addEventListener("astro:page-load", initDrawPathOnScroll);
 </script>
