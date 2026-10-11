@@ -1,0 +1,302 @@
+---
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import circle14 from "@/assets/images/invitation/circle-14.png";
+import inkArrived from "@/assets/images/invitation/ink-arrived.png";
+import postmark from "@/assets/images/invitation/postmark-ticket.png";
+import palm from "@/assets/images/hero/stamp-palm.png";
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Venue shown in the invitation facts. */
+  venue?: string;
+  /** RSVP deadline shown in the invitation facts. */
+  deadline?: string;
+  /** Calendar event destination. */
+  calendarHref?: string;
+  /** Map destination. */
+  mapsHref?: string;
+  /** RSVP destination. */
+  rsvpHref?: string;
+}
+
+const {
+  venue = "[Venue]",
+  deadline = "[Deadline]",
+  calendarHref = "#",
+  mapsHref = "#",
+  rsvpHref = "#",
+  class: className,
+  ...rest
+} = Astro.props;
+
+const welcomeParagraphs = [
+  "We fell for Boracay on our first trip together, and we've wanted to share it with you ever since.",
+  "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
+];
+
+const words = (paragraph: string) => paragraph.split(" ");
+---
+
+<section id="invitation" class:list={["invitation_wrap", className]} {...rest}>
+  <div class="invitation_layout">
+    <div class="invitation_left">
+      <h2 class="invitation_title">Pack light. Bring your dancing shoes.</h2>
+
+      <div class="invitation_facts">
+        <div class="invitation_fact">
+          <span class="invitation_fact-label">WHEN</span>
+          <div class="invitation_fact-content">
+            <span class="invitation_fact-value">Thu, Jan 14, 2027</span>
+            <span class="invitation_fact-detail">Ceremony at 3:00 PM</span>
+            <a class="invitation_fact-link" href={calendarHref}>ADD TO CALENDAR <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="invitation_fact">
+          <span class="invitation_fact-label">WHERE</span>
+          <div class="invitation_fact-content">
+            <span class="invitation_fact-value">{venue}</span>
+            <span class="invitation_fact-detail">White Beach, Boracay</span>
+            <a class="invitation_fact-link" href={mapsHref}>OPEN IN MAPS <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="invitation_fact">
+          <span class="invitation_fact-label">RSVP BY</span>
+          <div class="invitation_fact-content">
+            <span class="invitation_fact-value">{deadline}</span>
+            <span class="invitation_fact-detail">Takes about a minute</span>
+            <a class="invitation_fact-link" href={rsvpHref}>RSVP NOW <span aria-hidden="true">↘</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="invitation_calendar">
+        <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>13</strong><span>WED · JAN</span></div>
+        <div class="invitation_date invitation_date-current" aria-hidden="true">
+          <strong>14</strong><span>THU · JAN</span>
+          <Image class="invitation_circle" src={circle14} alt="" width={190} height={158} widths={[190, 380]} sizes="(min-width: 62rem) 190px, 134px" />
+        </div>
+        <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>15</strong><span>FRI · JAN</span></div>
+        <span class="sr-only">January 13–15, 2027</span>
+      </div>
+    </div>
+
+    <div class="invitation_right">
+      <div class="invitation_note">
+        {welcomeParagraphs.map((paragraph) => (
+          <p>{words(paragraph).map((word, index) => <span class="invitation_word">{word}{index < words(paragraph).length - 1 ? " " : ""}</span>)}</p>
+        ))}
+      </div>
+
+      <div class="invitation_ticket-wrap" data-parallax="trigger" data-parallax-start="6" data-parallax-end="-6" data-parallax-disable="mobileLandscape">
+        <div class="invitation_ticket-group" data-parallax="target">
+          <div class="invitation_ticket">
+            <div class="invitation_ticket-main">
+              <div class="invitation_ticket-row invitation_ticket-header"><span>PASSAGE TICKET</span><span>Nº 011427</span></div>
+              <div class="invitation_route">
+                <span class="invitation_airport">MNL</span><span class="invitation_dash"></span><span class="invitation_via">via Caticlan</span><span class="invitation_dash"></span><span class="invitation_airport">MPH</span>
+              </div>
+              <div class="invitation_ticket-meta">
+                <div><span>ARRIVE BY</span><strong>Wed, Jan 13</strong></div>
+                <div><span>THEN</span><strong><span class="invitation_then-full">Boat to Cagban · 15 min</span><span class="invitation_then-short">Boat · 15 min</span></strong></div>
+              </div>
+            </div>
+            <div class="invitation_perforation" aria-hidden="true"></div>
+            <div class="invitation_ticket-stub">
+              <span>ADMIT ONE</span>
+              <Image src={postmark} alt="" width={100} height={77} widths={[100, 200]} sizes="(min-width: 62rem) 100px, 76px" />
+              <span>Nº 011427</span>
+            </div>
+          </div>
+          <Image class="invitation_palm" src={palm} alt="" width={96} height={120} widths={[96, 192]} sizes="(min-width: 62rem) 96px, 60px" />
+        </div>
+      </div>
+
+      <div class="invitation_ink-wrap" data-parallax="trigger" data-parallax-start="20" data-parallax-end="-20" data-parallax-disable="mobileLandscape">
+        <Image class="invitation_ink" data-parallax="target" src={inkArrived} alt="" width={170} height={92} widths={[170, 340]} sizes="(min-width: 62rem) 170px, 130px" />
+      </div>
+    </div>
+  </div>
+
+  <div class="invitation_scallop" aria-hidden="true"></div>
+</section>
+
+<script is:inline>
+  if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+    document.querySelector("#invitation")?.setAttribute("data-invitation-motion", "");
+  }
+</script>
+
+<script>
+  import { gsap, ScrollTrigger } from "@/scripts/scroll.ts";
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const initInvitation = () => {
+    const section = document.querySelector<HTMLElement>("#invitation");
+    if (!section || section.dataset.invitationInitialized === "true") return;
+    section.dataset.invitationInitialized = "true";
+
+    const media = gsap.matchMedia();
+    const words = section.querySelectorAll<HTMLElement>(".invitation_word");
+    const circle = section.querySelector<HTMLElement>(".invitation_circle");
+    const calendar = section.querySelector<HTMLElement>(".invitation_calendar");
+
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      const context = gsap.context(() => {
+        gsap.fromTo(words, { color: "var(--_muted)" }, {
+          color: "var(--dark-900)",
+          stagger: 0.08,
+          ease: "none",
+          scrollTrigger: { trigger: section.querySelector(".invitation_note"), start: "top 82%", end: "bottom 30%", scrub: true },
+        });
+        gsap.fromTo(circle, { clipPath: "inset(0 100% 0 0)" }, {
+          clipPath: "inset(0 0% 0 0)",
+          duration: 0.9,
+          ease: "power2.out",
+          scrollTrigger: { trigger: calendar, start: "top 80%", once: true },
+        });
+      }, section);
+      section.removeAttribute("data-invitation-motion");
+      return () => context.revert();
+    });
+
+    const cleanup = () => {
+      media.revert();
+      section.removeAttribute("data-invitation-initialized");
+      section.removeAttribute("data-invitation-motion");
+    };
+    document.addEventListener("astro:before-swap", cleanup, { once: true });
+  };
+
+  initInvitation();
+  document.addEventListener("astro:page-load", initInvitation);
+</script>
+
+<style>
+  @layer components {
+    .invitation_wrap { --_muted: #aeb4c2; position: relative; overflow: clip; padding: var(--section-space-small) var(--site-margin) var(--section-space-large); background-color: var(--light-100); background-image: var(--background-texture); background-size: 32rem 32rem; color: var(--dark-900); }
+    .invitation_layout { display: grid; gap: var(--space-7); grid-template-areas: "heading" "note" "facts" "calendar" "ticket"; }
+    .invitation_left, .invitation_right { display: contents; }
+    .invitation_title { grid-area: heading; }
+    .invitation_note { grid-area: note; }
+    .invitation_facts { grid-area: facts; }
+    .invitation_calendar { grid-area: calendar; }
+    .invitation_ticket-wrap { grid-area: ticket; min-width: 0; }
+    .invitation_title { margin: 0; font: var(--secondary-regular) var(--h2) / 1 var(--secondary-family); font-style: normal; letter-spacing: var(--letter-spacing-snug); }
+    .invitation_note { display: flex; flex-direction: column; gap: var(--space-3); }
+    .invitation_note p { margin: 0; font: var(--primary-regular) var(--text-large) / var(--line-height-huge) var(--primary-family); --_trim-top: 0; --_trim-bottom: 0; }
+    .invitation_word { color: var(--dark-900); }
+    #invitation[data-invitation-motion] .invitation_word { color: var(--_muted); }
+    .invitation_facts { border-top: 0.09375rem solid var(--dark-900); }
+    .invitation_fact { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: var(--space-4); padding-block: var(--space-4); border-bottom: 0.0625rem solid var(--light-300); }
+    .invitation_fact-label, .invitation_fact-link, .invitation_ticket-header, .invitation_ticket-meta > div > span, .invitation_ticket-stub { font: var(--primary-regular) var(--eyebrow) / 1.1 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
+    .invitation_fact-label { padding-top: var(--space-1); color: var(--dark-700); }
+    .invitation_fact-content { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+    .invitation_fact-value { font: var(--secondary-regular) var(--h6) / 1.18 var(--secondary-family); }
+    .invitation_fact-detail { color: var(--dark-700); font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--primary-family); }
+    .invitation_fact-link { width: fit-content; padding-top: var(--space-2); color: var(--dark-900); }
+    .invitation_fact-link:focus-visible { outline-color: var(--dark-900); outline-offset: var(--focus-offset); }
+    .invitation_calendar { display: flex; align-items: end; justify-content: center; padding-top: var(--space-3); }
+    .invitation_date { position: relative; text-align: center; }
+    .invitation_date strong { display: block; }
+    .invitation_date span { display: block; font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family); letter-spacing: 0.14em; white-space: nowrap; }
+    .invitation_date-muted { width: 6.25rem; color: var(--_muted); }
+    .invitation_date-muted strong { font: var(--secondary-ultralight) 4rem / 1 var(--secondary-family); }
+    .invitation_date-current { width: 8.125rem; border-inline-start: 0.0625rem solid var(--light-300); border-inline-end: 0.0625rem solid var(--light-300); color: var(--dark-900); }
+    .invitation_date-current strong { font: var(--secondary-regular) 5.5rem / 0.97 var(--secondary-family); }
+    .invitation_date-current > span { color: var(--accent-500); }
+    .invitation_circle { position: absolute; z-index: 1; top: -2.125rem; left: -0.25rem; width: 11.875rem; height: 9.875rem; object-fit: fill; pointer-events: none; }
+    .invitation_ticket-wrap { position: relative; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 10%)) drop-shadow(0 0.375rem 0.875rem rgb(31 47 92 / 10%)) drop-shadow(0 1.375rem 2.5rem rgb(31 47 92 / 8%)); }
+    .invitation_ticket-group { position: relative; }
+    .invitation_ticket { display: flex; height: 13.75rem; overflow: hidden; background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat; transform: rotate(-1.5deg); -webkit-mask-image: radial-gradient(circle at calc(100% - 8.3125rem) 0, transparent 0.8125rem, #000 0.84375rem), radial-gradient(circle at calc(100% - 8.3125rem) 100%, transparent 0.8125rem, #000 0.84375rem); mask-image: radial-gradient(circle at calc(100% - 8.3125rem) 0, transparent 0.8125rem, #000 0.84375rem), radial-gradient(circle at calc(100% - 8.3125rem) 100%, transparent 0.8125rem, #000 0.84375rem); -webkit-mask-size: 100% 50%; mask-size: 100% 50%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%; }
+    .invitation_ticket-main { display: flex; flex: 1; flex-direction: column; justify-content: space-between; min-width: 0; margin: var(--space-2) 0 var(--space-2) var(--space-2); padding: var(--space-3) var(--space-4); border-top: 0.0625rem solid var(--dark-900); border-bottom: 0.0625rem solid var(--dark-900); border-left: 0.0625rem solid var(--dark-900); }
+    .invitation_ticket-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+    .invitation_ticket-header { color: var(--accent-500); letter-spacing: var(--letter-spacing-wider); white-space: nowrap; }
+    .invitation_ticket-header span:last-child { color: var(--dark-900); letter-spacing: var(--letter-spacing-wide); }
+    .invitation_route { display: flex; align-items: center; gap: var(--space-2); }
+    .invitation_airport { font: var(--secondary-regular) 3rem / 1 var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }
+    .invitation_dash { flex: 1; min-width: 1rem; border-top: 0.09375rem dashed var(--dark-900); }
+    .invitation_via { font: italic var(--secondary-ultralight) 1.25rem / 1.2 var(--secondary-family); white-space: nowrap; }
+    .invitation_ticket-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); padding-top: var(--space-2); border-top: 0.0625rem solid var(--dark-900); }
+    .invitation_ticket-meta > div { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+    .invitation_ticket-meta > div > span { color: #4a5a85; letter-spacing: var(--letter-spacing-wider); }
+    .invitation_ticket-meta strong { font: var(--primary-regular) 1rem / 1.25 var(--mono-family); font-weight: var(--primary-regular); white-space: nowrap; }
+    .invitation_perforation { flex: 0 0 0.125rem; margin-block: var(--space-3); border-left: 0.125rem dashed var(--light-100); }
+    .invitation_ticket-stub { display: flex; width: 7.5rem; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); margin: var(--space-2) var(--space-2) var(--space-2) 0; color: var(--dark-900); letter-spacing: 0.14em; text-align: center; }
+    .invitation_ticket-stub img { width: 6.25rem; height: 4.375rem; object-fit: contain; mix-blend-mode: multiply; transform: rotate(-10deg); }
+    .invitation_ticket-stub span:last-child { letter-spacing: var(--letter-spacing-wide); }
+    .invitation_palm { position: absolute; z-index: 1; top: -2.625rem; right: -1.25rem; width: 6rem; height: 7.5rem; object-fit: contain; transform: rotate(7deg); transform-origin: 0 0; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 18%)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 14%)); }
+    .invitation_ink-wrap { position: absolute; top: calc(100% + 1.875rem); right: 4.75rem; width: 10.625rem; height: 5.8125rem; transform: rotate(7deg); transform-origin: 0 0; pointer-events: none; mix-blend-mode: multiply; opacity: 0.75; }
+    .invitation_ink { width: 100%; height: 100%; object-fit: fill; }
+    .invitation_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 1.375rem; background: linear-gradient(var(--brand-500) 0 0) bottom / 100% 0.125rem no-repeat, repeating-radial-gradient(circle at 1.125rem 0, var(--brand-500) 0 0.6875rem, transparent 0.75rem 1.125rem) 0 0 / 2.25rem 1.375rem repeat-x; }
+    .invitation_then-short { display: none; }
+  }
+
+  @media (min-width: 62rem) {
+    .invitation_wrap { padding-block: var(--section-space-medium); }
+    .invitation_layout { grid-template-areas: none; grid-template-columns: minmax(0, 630fr) minmax(0, 586fr); gap: var(--space-8); align-items: start; }
+    .invitation_left, .invitation_right { display: flex; min-width: 0; flex-direction: column; }
+    .invitation_left { grid-column: 1; gap: var(--space-4); }
+    .invitation_right { position: relative; grid-column: 2; gap: var(--space-5); padding-top: 2.5rem; }
+    .invitation_facts { margin-top: 3.5rem; }
+    .invitation_fact { display: flex; flex: 1; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-bottom: 0; border-left: 0.0625rem solid var(--light-300); }
+    .invitation_facts { display: flex; }
+    .invitation_fact:first-child { padding-left: 0; border-left: 0; }
+    .invitation_fact:last-child { padding-right: 0; }
+    .invitation_fact-value { font-size: 1.5rem; line-height: 1.167; }
+    .invitation_fact-link { padding-top: var(--space-1); }
+    .invitation_calendar { justify-content: flex-start; padding-top: var(--space-5); }
+    .invitation_ticket { height: 13.75rem; }
+    .invitation_date-muted { width: 9.375rem; }
+    .invitation_date-muted strong { font-size: 6rem; line-height: 1; }
+    .invitation_date-current { width: 11.25rem; }
+    .invitation_date-current strong { font-size: 7.5rem; line-height: 0.9667; }
+    .invitation_circle { top: -2.125rem; left: -0.25rem; width: 11.875rem; height: 9.875rem; }
+    .invitation_airport { font-size: clamp(1.75rem, calc(4.464vw - 1.04rem), 3rem); }
+  }
+
+  @media (max-width: 61.999rem) {
+    .invitation_facts { margin-top: 0; }
+    .invitation_palm { top: -1.875rem; right: -0.5rem; width: 3.75rem; height: 4.6875rem; }
+    .invitation_ink-wrap { top: auto; right: 1.5rem; bottom: 2.125rem; width: 8.125rem; height: 4.4375rem; }
+    .invitation_ticket { height: auto; padding: var(--space-2); }
+    .invitation_ticket-main { margin: 0; padding: var(--space-4) var(--space-4) var(--space-3); gap: var(--space-4); }
+    .invitation_ticket-stub { width: 5.75rem; margin: 0; }
+    .invitation_ticket-stub img { width: 4.75rem; height: 3.375rem; }
+    .invitation_ticket { -webkit-mask-image: radial-gradient(circle at calc(100% - 6.3125rem) 0, transparent 0.6875rem, #000 0.71875rem), radial-gradient(circle at calc(100% - 6.3125rem) 100%, transparent 0.6875rem, #000 0.71875rem); mask-image: radial-gradient(circle at calc(100% - 6.3125rem) 0, transparent 0.6875rem, #000 0.71875rem), radial-gradient(circle at calc(100% - 6.3125rem) 100%, transparent 0.6875rem, #000 0.71875rem); }
+    .invitation_airport { font-size: 1.75rem; }
+    .invitation_route { flex-wrap: wrap; justify-content: center; }
+    .invitation_route .invitation_dash:nth-of-type(4) { display: none; }
+    .invitation_via { order: 5; width: 100%; font-size: 1rem; text-align: center; }
+    .invitation_ticket-meta { column-gap: var(--space-4); }
+    .invitation_ticket-meta strong { font-size: 0.75rem; line-height: 1.333; }
+    .invitation_then-full { display: none; }
+    .invitation_then-short { display: inline; }
+    .invitation_circle { top: -1.5rem; left: -0.125rem; width: 8.375rem; height: 7rem; }
+    .invitation_date-muted { width: 6.25rem; }
+    .invitation_date-muted strong { font-size: 4rem; }
+    .invitation_date-current { width: 8.125rem; }
+    .invitation_date-current strong { font-size: 5.5rem; }
+  }
+
+  @media (max-width: 22.499rem) {
+    .invitation_date-muted { width: 5rem; }
+    .invitation_date-current { width: 6.5rem; }
+    .invitation_date-muted strong { font-size: 3rem; }
+    .invitation_date-current strong { font-size: 4.5rem; }
+    .invitation_date span { font-size: 0.625rem; letter-spacing: 0.08em; }
+    .invitation_route { flex-wrap: wrap; }
+    .invitation_airport { font-size: 1.5rem; }
+    .invitation_ticket-header { font-size: 0.625rem; letter-spacing: 0.04em; }
+    .invitation_ticket-meta { column-gap: var(--space-2); }
+    .invitation_ticket-meta > div > span { white-space: nowrap; }
+    .invitation_ticket-stub { width: 4.75rem; font-size: 0.625rem; }
+    .invitation_ticket-stub img { width: 4rem; height: 2.875rem; }
+    .invitation_ticket-stub span:first-child { letter-spacing: 0.04em; white-space: nowrap; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #invitation .invitation_word { color: var(--dark-900); }
+    #invitation .invitation_circle { clip-path: none !important; }
+  }
+</style>
