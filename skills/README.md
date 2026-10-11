@@ -39,3 +39,12 @@ Claude Code's Skill tool or pulled in by Codex via AGENTS.md.
   it reads, the verdict posted on the PR, fix rounds, and merge authorization.
 - `fix-bug/` — the owner-tagged bug workflow: acceptance criteria, `fix/` branch,
   early draft PR, reproduce-then-fix, validation, review, and cleanup.
+
+### Lumos skills
+
+Shipped with Lumos for Astro. The source lives in `.agents/skills/`; each entry
+here is a symlink to it, so a Lumos upgrade updates one copy.
+
+- `lumos-audit-props/` — checks component prop order and tooltip consistency.
+- `lumos-scaling-graphic/` — builds an editable graphic that scales as one piece.
+- `lumos-upgrade-version/` — upgrades Lumos without losing customizations.

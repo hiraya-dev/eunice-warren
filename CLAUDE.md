@@ -190,6 +190,12 @@ PR review, check `skills/` for a relevant `SKILL.md` and follow it. Start with
 - Handing repo work to Codex → `skills/codex-handoff/SKILL.md`
 - Reviewing a PR → `skills/review-pr/SKILL.md`
 
+The site is built on Lumos for Astro. `LUMOS.md` holds its page, component, and CSS
+conventions, and applies to every page or component handoff alongside
+`skills/astro-component/SKILL.md`. Its skills (`lumos-audit-props`,
+`lumos-scaling-graphic`, `lumos-upgrade-version`) live in `.agents/skills/` and are
+linked into `skills/`.
+
 ## Git
 
 Feature-branch workflow. Never make feature commits directly on `main`.

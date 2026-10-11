@@ -1,0 +1,42 @@
+{
+  "name": "eunice-warren",
+  "type": "module",
+  "version": "0.0.1",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "check": "astro check",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "format": "prettier --write .",
+    "test:codex-handoff": "node --test scripts/codex/run-handoff.test.mjs",
+    "test:routing": "node --test scripts/ci/classify-paths.test.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:install": "playwright install chromium chromium-headless-shell"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.3.8",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^0.14.1",
+    "wrangler": "^4.123.0"
+  },
+  "lumos": {
+    "version": "0.0.5",
+    "commit": "0e32ded964de80d62636346c2e0e3fb3a701beda",
+    "scaffolded": "2026-10-11"
+  },
+  "private": true
+}
