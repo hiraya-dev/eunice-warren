@@ -175,7 +175,7 @@ const words = (paragraph: string) => paragraph.split(" ");
 <style>
   @layer components {
     .invitation_wrap { --_muted: #aeb4c2; position: relative; overflow: clip; padding: var(--section-space-small) var(--site-margin) var(--section-space-large); background-color: var(--light-100); background-image: var(--background-texture); background-size: 32rem 32rem; color: var(--dark-900); }
-    .invitation_layout { display: grid; gap: var(--space-7); grid-template-areas: "heading" "note" "facts" "calendar" "ticket"; }
+    .invitation_layout { display: grid; width: 100%; max-width: var(--max-width-main); margin-inline: auto; gap: var(--space-7); grid-template-areas: "heading" "note" "facts" "calendar" "ticket"; }
     .invitation_left, .invitation_right { display: contents; }
     .invitation_title { grid-area: heading; }
     .invitation_note { grid-area: note; }
@@ -228,7 +228,7 @@ const words = (paragraph: string) => paragraph.split(" ");
     .invitation_palm { position: absolute; z-index: 1; top: -2.625rem; right: -1.25rem; width: 6rem; height: 7.5rem; object-fit: contain; transform: rotate(7deg); transform-origin: 0 0; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 18%)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 14%)); }
     .invitation_ink-wrap { position: absolute; top: calc(100% + 1.875rem); right: 4.75rem; width: 10.625rem; height: 5.8125rem; transform: rotate(7deg); transform-origin: 0 0; pointer-events: none; mix-blend-mode: multiply; opacity: 0.75; }
     .invitation_ink { width: 100%; height: 100%; object-fit: fill; }
-    .invitation_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 1.375rem; background: linear-gradient(var(--brand-500) 0 0) bottom / 100% 0.125rem no-repeat, repeating-radial-gradient(circle at 1.125rem 0, var(--brand-500) 0 0.6875rem, transparent 0.75rem 1.125rem) 0 0 / 2.25rem 1.375rem repeat-x; }
+    .invitation_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--brand-500) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--brand-500) 0.6875rem, transparent calc(0.6875rem + 0.5px)) 0 0 / 2.25rem 0.6875rem repeat-x; }
     .invitation_then-short { display: none; }
   }
 
