@@ -1,7 +1,6 @@
 ---
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
-import circle14 from "@/assets/images/invitation/circle-14.png";
 import inkArrived from "@/assets/images/invitation/ink-arrived.png";
 import postmark from "@/assets/images/invitation/postmark-ticket.png";
 import palm from "@/assets/images/hero/stamp-palm.png";
@@ -69,11 +68,13 @@ const words = (paragraph: string) => paragraph.split(" ");
         </div>
       </div>
 
-      <div class="invitation_calendar">
+      <div class="invitation_calendar" data-draw-scroll-wrap>
         <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>13</strong><span>WED · JAN</span></div>
         <div class="invitation_date invitation_date-current" aria-hidden="true">
           <strong>14</strong><span>THU · JAN</span>
-          <Image class="invitation_circle" src={circle14} alt="" width={190} height={158} widths={[190, 380]} sizes="(min-width: 62rem) 190px, 134px" />
+          <svg class="invitation_circle" data-draw-scroll-desktop viewBox="0 0 900 780" fill="none" aria-hidden="true" focusable="false">
+            <path data-draw-scroll-path d="M835 232C800 175 740 120 600 102C470 92 330 125 240 175C170 215 130 290 122 380C112 470 120 560 175 610C240 670 330 688 410 688C520 688 640 620 720 545C800 470 855 390 857 300C860 220 800 120 700 85C620 58 480 68 380 98C270 130 190 190 150 260C138 285 130 310 128 335" stroke="var(--accent-500)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
         </div>
         <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>15</strong><span>FRI · JAN</span></div>
         <span class="sr-only">January 13–15, 2027</span>
@@ -138,8 +139,6 @@ const words = (paragraph: string) => paragraph.split(" ");
 
     const media = gsap.matchMedia();
     const words = section.querySelectorAll<HTMLElement>(".invitation_word");
-    const circle = section.querySelector<HTMLElement>(".invitation_circle");
-    const calendar = section.querySelector<HTMLElement>(".invitation_calendar");
 
     media.add("(prefers-reduced-motion: no-preference)", () => {
       const context = gsap.context(() => {
@@ -148,12 +147,6 @@ const words = (paragraph: string) => paragraph.split(" ");
           stagger: 0.08,
           ease: "none",
           scrollTrigger: { trigger: section.querySelector(".invitation_note"), start: "top 82%", end: "bottom 30%", scrub: true },
-        });
-        gsap.fromTo(circle, { clipPath: "inset(0 100% 0 0)" }, {
-          clipPath: "inset(0 0% 0 0)",
-          duration: 0.9,
-          ease: "power2.out",
-          scrollTrigger: { trigger: calendar, start: "top 80%", once: true },
         });
       }, section);
       section.removeAttribute("data-invitation-motion");
@@ -205,7 +198,7 @@ const words = (paragraph: string) => paragraph.split(" ");
     .invitation_date-current { width: 8.125rem; border-inline-start: 0.0625rem solid var(--light-300); border-inline-end: 0.0625rem solid var(--light-300); color: var(--dark-900); }
     .invitation_date-current strong { font: var(--secondary-regular) 5.5rem / 0.97 var(--secondary-family); }
     .invitation_date-current > span { color: var(--accent-500); }
-    .invitation_circle { position: absolute; z-index: 1; top: -2.125rem; left: -0.25rem; width: 11.875rem; height: 9.875rem; object-fit: fill; pointer-events: none; }
+    .invitation_circle { position: absolute; z-index: 1; top: -2.125rem; left: -0.25rem; width: 11.875rem; height: 9.875rem; pointer-events: none; }
     .invitation_ticket-wrap { position: relative; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 10%)) drop-shadow(0 0.375rem 0.875rem rgb(31 47 92 / 10%)) drop-shadow(0 1.375rem 2.5rem rgb(31 47 92 / 8%)); }
     .invitation_ticket-group { position: relative; }
     .invitation_ticket { display: flex; height: 13.75rem; overflow: hidden; background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat; transform: rotate(-1.5deg); -webkit-mask-image: radial-gradient(circle at calc(100% - 8.3125rem) 0, transparent 0.8125rem, #000 0.84375rem), radial-gradient(circle at calc(100% - 8.3125rem) 100%, transparent 0.8125rem, #000 0.84375rem); mask-image: radial-gradient(circle at calc(100% - 8.3125rem) 0, transparent 0.8125rem, #000 0.84375rem), radial-gradient(circle at calc(100% - 8.3125rem) 100%, transparent 0.8125rem, #000 0.84375rem); -webkit-mask-size: 100% 50%; mask-size: 100% 50%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%; }
@@ -297,6 +290,5 @@ const words = (paragraph: string) => paragraph.split(" ");
 
   @media (prefers-reduced-motion: reduce) {
     #invitation .invitation_word { color: var(--dark-900); }
-    #invitation .invitation_circle { clip-path: none !important; }
   }
 </style>
