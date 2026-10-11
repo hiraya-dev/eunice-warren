@@ -10,6 +10,10 @@
     "not_found_handling": "404-page",
   },
 
+  // Required by `npx wrangler preview`, the deploy command Workers Builds runs
+  // for non-production branches. Empty: previews inherit the settings above.
+  "previews": {},
+
   // Add a `routes` entry to serve this on your own domain. Until then it is
   // reachable at https://eunice-warren.<your-subdomain>.workers.dev.
 
