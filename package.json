@@ -25,6 +25,7 @@
     "@astrojs/check": "^0.9.10",
     "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.3.8",
+    "motion": "^14.1.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
