@@ -49,6 +49,22 @@ are in `skills/astro-component/SKILL.md`.
 
 When a bug is reported, follow `skills/fix-bug/SKILL.md`.
 
+## Lumos for Astro
+
+The site is built on **Lumos for Astro** (version and commit in `package.json` under
+`lumos`), an Astro component framework styled with plain CSS and custom properties.
+Do not apply conventions from **Lumos for Webflow**. Read `LUMOS.md` before adding a
+page, component, or style: compose pages from the existing components in
+`src/components/`, and add CSS only through the checklist there.
+
+Lumos ships its own skills in `.agents/skills/`: `lumos-audit-props`,
+`lumos-scaling-graphic`, and `lumos-upgrade-version`. They are linked into
+`skills/` so both agents find them. The Figma and Webflow import skills were removed
+because the designs live in Paper.
+
+Read the relevant [Astro documentation](https://docs.astro.build) guide before
+routing, components, framework islands, content collections, styling, or i18n work.
+
 ## Validation
 
 Run `npm run check` and `npm run build` whenever a change touches `src/**`,

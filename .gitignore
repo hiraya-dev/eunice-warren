@@ -8,3 +8,7 @@ playwright-report/
 test-results/
 .context/
 .DS_Store
+.wrangler/
+.idea/
+.claude/settings.local.json
+npm-debug.log*

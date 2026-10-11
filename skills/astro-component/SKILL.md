@@ -31,6 +31,10 @@ Claude does not edit the Paper file unless the task asks for it.
 
 ## Conventions — Codex
 
+The site is built on Lumos for Astro: `LUMOS.md` at the repo root is the detailed
+rulebook for composing pages from its components, creating custom components, and
+adding CSS. Where it is more specific than the list below, follow it.
+
 - **Zero JS by default.** Static `.astro` markup and CSS first. Add a `<script>` or a
   framework island only for behavior that needs it, and choose the laziest
   `client:*` directive that works (`client:visible` over `client:load`).
