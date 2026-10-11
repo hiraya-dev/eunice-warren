@@ -115,7 +115,8 @@ const {
 
 const isLink = element === "link";
 const Tag = isLink ? "a" : "button";
-const isButton016 = variant === "main" && shape === "pill";
+// Osmo Button 016 (text roll + bg colour) is the primary pill; other pills keep the plain style.
+const isButton016 = variant === "main" && shape === "pill" && emphasis === "primary";
 const tagAttrs = isLink
   ? { href: href || "#" }
   : { type: type === "submit" ? undefined : type };
