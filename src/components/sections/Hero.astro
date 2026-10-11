@@ -1,0 +1,161 @@
+---
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import couple from "@/assets/images/hero/polaroid-couple.jpg";
+import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
+import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
+import paraw from "@/assets/images/hero/stamp-paraw.png";
+import palm from "@/assets/images/hero/stamp-palm.png";
+import postmark from "@/assets/images/hero/postmark-received.png";
+import note from "@/assets/images/hero/note-thats-us.png";
+
+interface Props extends HTMLAttributes<"section"> {
+  /** RSVP destination. */
+  rsvpHref?: string;
+  /** Weekend details destination. */
+  weekendHref?: string;
+}
+
+const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.props;
+---
+
+<section id="hero" class:list={["hero", className]} {...rest}>
+  <div class="hero_collage">
+    <div class="hero_keepsake hero_couple" data-hero-keepsake>
+      <div class="hero_polaroid">
+        <Image src={couple} alt="Eunice and Warren walking hand in hand on the beach at sunset" width={206} height={230} widths={[206, 412]} sizes="(min-width: 62rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
+      </div>
+    </div>
+    <div class="hero_keepsake hero_white-beach" data-hero-keepsake>
+      <div class="hero_polaroid"><Image src={whiteBeach} alt="" width={186} height={200} widths={[186, 372]} sizes="(min-width: 62rem) 12.92vw, 134px" loading="eager" fetchpriority="low" /></div>
+    </div>
+    <div class="hero_keepsake hero_sunset" data-hero-keepsake>
+      <div class="hero_polaroid"><Image src={sunsetSail} alt="" width={176} height={200} widths={[176, 352]} sizes="(min-width: 62rem) 12.22vw, 176px" loading="eager" fetchpriority="low" /></div>
+    </div>
+    <Image class="hero_keepsake hero_paraw" data-hero-keepsake src={paraw} alt="" width={120} height={150} widths={[120, 240]} sizes="(min-width: 62rem) 8.33vw, 72px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_palm" data-hero-keepsake src={palm} alt="" width={96} height={120} widths={[96, 192]} sizes="(min-width: 62rem) 6.67vw, 96px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_postmark" data-hero-keepsake src={postmark} alt="" width={195} height={120} widths={[195, 390]} sizes="(min-width: 62rem) 13.54vw, 130px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_note" data-hero-keepsake src={note} alt="" width={190} height={114} widths={[190, 380]} sizes="(min-width: 62rem) 13.19vw, 120px" loading="eager" fetchpriority="low" />
+  </div>
+
+  <div class="hero_content">
+    <p class="hero_date" data-hero-text-item>
+      <span class="hero_date-full">01 · 14 · 2027 — BORACAY, PHILIPPINES</span>
+      <span class="hero_date-short">01 · 14 · 2027 — BORACAY, PH</span>
+    </p>
+    <h1 class="hero_title" data-hero-text-item><span>Eunice</span> <span>&amp; Warren</span></h1>
+    <p class="hero_subtitle" data-hero-text-item>are getting married by the sea</p>
+    <div class="hero_actions" data-hero-text-item>
+      <a class="hero_rsvp" href={rsvpHref}>RSVP by December</a>
+      <a class="hero_weekend" href={weekendHref} aria-label="See the weekend">SEE THE WEEKEND <span aria-hidden="true">↓</span></a>
+    </div>
+  </div>
+</section>
+
+<script is:inline>
+  if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+    document.querySelector("#hero")?.setAttribute("data-hero-motion", "");
+  }
+</script>
+
+<script>
+  import { gsap } from "gsap";
+
+  const initHero = () => {
+    const hero = document.querySelector<HTMLElement>("#hero");
+    if (!hero || hero.dataset.heroInitialized === "true") return;
+    hero.dataset.heroInitialized = "true";
+    const textItems = hero.querySelectorAll<HTMLElement>("[data-hero-text-item]");
+    const keepsakes = hero.querySelectorAll<HTMLElement>("[data-hero-keepsake]");
+    const media = gsap.matchMedia();
+
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      const timeline = gsap.timeline();
+      timeline.from(textItems, { autoAlpha: 0, y: 16, duration: 0.8, stagger: 0.08, ease: "power3.out" });
+      timeline.from(keepsakes, { autoAlpha: 0, y: -24, scale: 1.06, rotation: (_index, element) => element.matches(".hero_couple, .hero_sunset, .hero_palm, .hero_postmark, .hero_note") ? "-=4" : "+=4", duration: 0.9, stagger: 0.07, ease: "power3.out" }, "<0.25");
+      // The from() tweens have already rendered their hidden start state inline, so the
+      // CSS pre-paint gate can go; otherwise they would animate towards `visibility: hidden`.
+      hero.removeAttribute("data-hero-motion");
+      timeline.eventCallback("onComplete", () => {
+        gsap.set([textItems, keepsakes], { clearProps: "transform,opacity,visibility" });
+      });
+      return () => timeline.kill();
+    });
+
+    const cleanup = () => {
+      media.revert();
+      gsap.set([textItems, keepsakes], { clearProps: "transform,opacity,visibility" });
+      hero.removeAttribute("data-hero-motion");
+      hero.removeAttribute("data-hero-initialized");
+    };
+    document.addEventListener("astro:before-swap", cleanup, { once: true });
+  };
+
+  initHero();
+  document.addEventListener("astro:page-load", initHero);
+</script>
+
+<style>
+  @layer components {
+    .hero { position: relative; display: grid; align-items: center; min-height: max(min(51.25rem, 56.944vw), calc(100svh - var(--nav-height))); padding: 2.5rem var(--site-margin); overflow: clip; color: var(--dark-900); isolation: isolate; }
+    .hero_collage { position: absolute; z-index: 0; top: 50%; left: 50%; width: min(100%, 90rem); aspect-ratio: 1440 / 820; container-type: inline-size; transform: translate(-50%, -50%); pointer-events: none; }
+    .hero_keepsake { position: absolute; transform-origin: 0 0; }
+    .hero_polaroid { background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 0.875rem 2rem rgb(31 47 92 / 16%); }
+    .hero_polaroid img { display: block; width: 100%; height: auto; object-fit: cover; }
+    .hero_couple .hero_polaroid img { aspect-ratio: 206 / 230; }
+    .hero_white-beach .hero_polaroid img { aspect-ratio: 186 / 200; }
+    .hero_sunset .hero_polaroid img { aspect-ratio: 176 / 200; }
+    .hero_couple { top: 4.861cqw; left: 4.444cqw; transform: rotate(-7deg); }
+    .hero_couple .hero_polaroid { width: 15.972cqw; padding: 0.833cqw 0.833cqw 2.778cqw; }
+    .hero_white-beach { top: 4.167cqw; left: 79.861cqw; transform: rotate(6deg); }
+    .hero_white-beach .hero_polaroid { width: 14.583cqw; padding: 0.833cqw 0.833cqw 2.778cqw; }
+    .hero_sunset { top: 36.111cqw; left: 77.778cqw; transform: rotate(-4deg); }
+    .hero_sunset .hero_polaroid { width: 13.889cqw; padding: 0.833cqw 0.833cqw 2.222cqw; }
+    .hero_paraw { top: 36.111cqw; left: 10.417cqw; width: 8.333cqw; height: 10.417cqw; object-fit: contain; transform: rotate(8deg); }
+    .hero_palm { top: 20.833cqw; left: 90cqw; width: 6.667cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-9deg); }
+    .hero_postmark { top: 44.444cqw; left: 17.361cqw; width: 13.542cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-10deg); opacity: 0.9; }
+    .hero_note { top: 4.722cqw; left: 21.597cqw; width: 13.194cqw; height: 7.917cqw; object-fit: fill; transform: rotate(-8deg); }
+    .hero_content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); text-align: center; }
+    .hero_date { margin: 0; color: var(--dark-700); font: var(--primary-regular) var(--eyebrow) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .hero_date-short { display: none; }
+    .hero_title { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--dark-900); font: var(--secondary-ultralight) var(--display) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tighter); }
+    .hero_title span { display: inline; }
+    .hero_subtitle { margin: 0; color: var(--dark-900); font: italic var(--secondary-ultralight) clamp(1.5rem, calc(1.1429rem + 1.984vw), 2.5rem) / 1.1 var(--secondary-family); }
+    .hero_actions { display: flex; align-items: center; gap: var(--space-4); padding-top: var(--space-3); }
+    .hero_rsvp { display: inline-flex; padding: var(--space-3) var(--space-4); border-radius: var(--radius-round); background: var(--accent-500); color: var(--light-100); font: var(--primary-medium) 1rem / 1.25 var(--primary-family); text-decoration: none; }
+    .hero_weekend { padding-bottom: 0.25rem; border-bottom: 1px solid var(--dark-900); color: var(--dark-900); font: var(--primary-regular) 1rem / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wide); text-decoration: none; }
+  }
+
+  /* Between 62rem and 90rem the fluid display size outgrows the scaled collage and the title
+     runs into the polaroids, so cap it at 8.9vw (it reaches the 128px token max at 1440). */
+  @media (min-width: 62rem) {
+    .hero_title { font-size: min(var(--display), 8.9vw); }
+  }
+
+  @media (max-width: 61.999rem) {
+    .hero { display: block; min-height: 0; padding: 19rem var(--site-margin) 9.5rem; }
+    .hero_collage { top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
+    .hero_polaroid { box-shadow: 0 0.75rem 1.75rem rgb(31 47 92 / 16%); }
+    .hero_couple { top: 2.5rem; left: 1.75rem; transform: rotate(-6deg); }
+    .hero_couple .hero_polaroid { width: 11rem; padding: 0.5rem 0.5rem 2rem; }
+    .hero_couple .hero_polaroid img { aspect-ratio: 160 / 170; }
+    .hero_white-beach { top: 2.75rem; left: 12.875rem; transform: rotate(7deg); }
+    .hero_white-beach .hero_polaroid { width: 9.375rem; padding: 0.5rem 0.5rem 1.5rem; }
+    .hero_white-beach .hero_polaroid img { aspect-ratio: 134 / 144; }
+    .hero_note { top: 14.25rem; left: 9.375rem; width: 7.5rem; height: 4.5rem; transform: rotate(-8deg); }
+    .hero_sunset, .hero_palm { display: none; }
+    .hero_paraw { top: auto; bottom: 1.75rem; left: 1.125rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); }
+    .hero_postmark { top: auto; right: 1rem; bottom: 2.5rem; left: auto; width: 8.125rem; height: 5rem; transform: rotate(-10deg); }
+    .hero_date-full { display: none; }
+    .hero_date-short { display: inline; }
+    .hero_title { line-height: var(--line-height-tight); }
+    .hero_title span { display: block; }
+    .hero_actions { flex-direction: column; gap: var(--space-4); }
+    .hero_rsvp { padding: var(--space-4) var(--space-5); }
+    .hero_weekend { font-size: var(--eyebrow); }
+  }
+
+  #hero[data-hero-motion] :is([data-hero-text-item], [data-hero-keepsake]) {
+    visibility: hidden;
+  }
+</style>
