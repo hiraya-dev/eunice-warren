@@ -1,6 +1,45 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("keepsakes hero", () => {
+  for (const viewport of [{ width: 768, height: 1024 }, { width: 991, height: 760 }]) {
+    test(`uses the desktop composition at ${viewport.width}px tablet width`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto("/");
+
+      const metrics = await page.evaluate(() => {
+        const box = (element: Element) => {
+          const { top, right, bottom, left, height } = element.getBoundingClientRect();
+          return { top, right, bottom, left, height };
+        };
+        const hero = document.querySelector<HTMLElement>("#hero")!.getBoundingClientRect();
+        const text = [...document.querySelectorAll<HTMLElement>(".hero_date, .hero_title, .hero_subtitle, .hero_actions")].map(box);
+        const keepsakes = [...document.querySelectorAll<HTMLElement>("[data-hero-keepsake]")].map(box);
+        const rsvp = box(document.querySelector<HTMLElement>(".hero_rsvp")!);
+        const weekend = box(document.querySelector<HTMLElement>(".hero_weekend")!);
+        const intersects = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        const titleSpans = [...document.querySelectorAll<HTMLElement>(".hero_title span")].map(box);
+        return {
+          hero: { top: hero.top, right: hero.right, bottom: hero.bottom, left: hero.left, height: hero.height },
+          text,
+          keepsakes,
+          intersectsText: keepsakes.some((keepsake) => text.some((textBox) => intersects(keepsake, textBox))),
+          actionsCentreDelta: Math.abs(rsvp.top + rsvp.height / 2 - (weekend.top + weekend.height / 2)),
+          titleSingleLine: Math.abs(titleSpans[0].top - titleSpans[1].top) < 1,
+        };
+      });
+
+      for (const keepsake of await page.locator("[data-hero-keepsake]").all()) await expect(keepsake).toBeVisible();
+      await expect(page.locator(".hero_date-full")).toBeVisible();
+      await expect(page.locator(".hero_date-short")).toBeHidden();
+      expect(metrics.actionsCentreDelta).toBeLessThanOrEqual(4);
+      expect(metrics.titleSingleLine).toBe(true);
+      expect(metrics.intersectsText).toBe(false);
+      expect(metrics.keepsakes.every((keepsake) => keepsake.left >= metrics.hero.left && keepsake.right <= metrics.hero.right && keepsake.top >= metrics.hero.top && keepsake.bottom <= metrics.hero.bottom)).toBe(true);
+      expect(metrics.hero.height).toBeLessThanOrEqual(0.56944 * viewport.width + 80 + 2);
+    });
+  }
+
   test("shows the desktop composition", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });

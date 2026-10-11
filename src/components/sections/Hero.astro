@@ -24,19 +24,19 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
   <div class="hero_collage">
     <div class="hero_keepsake hero_couple" data-hero-keepsake>
       <div class="hero_polaroid">
-        <Image src={couple} alt="Eunice and Warren walking hand in hand on the beach at sunset" width={206} height={230} widths={[206, 412]} sizes="(min-width: 62rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
+        <Image src={couple} alt="Eunice and Warren walking hand in hand on the beach at sunset" width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
       </div>
     </div>
     <div class="hero_keepsake hero_white-beach" data-hero-keepsake>
-      <div class="hero_polaroid"><Image src={whiteBeach} alt="" width={186} height={200} widths={[186, 372]} sizes="(min-width: 62rem) 12.92vw, 134px" loading="eager" fetchpriority="low" /></div>
+      <div class="hero_polaroid"><Image src={whiteBeach} alt="" width={186} height={200} widths={[186, 372]} sizes="(min-width: 48rem) 12.92vw, 134px" loading="eager" fetchpriority="low" /></div>
     </div>
     <div class="hero_keepsake hero_sunset" data-hero-keepsake>
-      <div class="hero_polaroid"><Image src={sunsetSail} alt="" width={176} height={200} widths={[176, 352]} sizes="(min-width: 62rem) 12.22vw, 176px" loading="eager" fetchpriority="low" /></div>
+      <div class="hero_polaroid"><Image src={sunsetSail} alt="" width={176} height={200} widths={[176, 352]} sizes="(min-width: 48rem) 12.22vw, 176px" loading="eager" fetchpriority="low" /></div>
     </div>
-    <Image class="hero_keepsake hero_paraw" data-hero-keepsake src={paraw} alt="" width={120} height={150} widths={[120, 240]} sizes="(min-width: 62rem) 8.33vw, 72px" loading="eager" fetchpriority="low" />
-    <Image class="hero_keepsake hero_palm" data-hero-keepsake src={palm} alt="" width={96} height={120} widths={[96, 192]} sizes="(min-width: 62rem) 6.67vw, 96px" loading="eager" fetchpriority="low" />
-    <Image class="hero_keepsake hero_postmark" data-hero-keepsake src={postmark} alt="" width={195} height={120} widths={[195, 390]} sizes="(min-width: 62rem) 13.54vw, 130px" loading="eager" fetchpriority="low" />
-    <Image class="hero_keepsake hero_note" data-hero-keepsake src={note} alt="" width={190} height={114} widths={[190, 380]} sizes="(min-width: 62rem) 13.19vw, 120px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_paraw" data-hero-keepsake src={paraw} alt="" width={120} height={150} widths={[120, 240]} sizes="(min-width: 48rem) 8.33vw, 72px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_palm" data-hero-keepsake src={palm} alt="" width={96} height={120} widths={[96, 192]} sizes="(min-width: 48rem) 6.67vw, 96px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_postmark" data-hero-keepsake src={postmark} alt="" width={195} height={120} widths={[195, 390]} sizes="(min-width: 48rem) 13.54vw, 130px" loading="eager" fetchpriority="low" />
+    <Image class="hero_keepsake hero_note" data-hero-keepsake src={note} alt="" width={190} height={114} widths={[190, 380]} sizes="(min-width: 48rem) 13.19vw, 120px" loading="eager" fetchpriority="low" />
   </div>
 
   <div class="hero_content">
@@ -103,7 +103,7 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
 
 <style>
   @layer components {
-    .hero { position: relative; display: grid; align-items: center; min-height: max(min(51.25rem, 56.944vw), calc(100svh - var(--nav-height))); padding: 2.5rem var(--site-margin); overflow: clip; color: var(--dark-900); isolation: isolate; }
+    .hero { position: relative; display: grid; align-items: center; min-height: calc(56.944vw + 5rem); padding: 2.5rem var(--site-margin); overflow: clip; color: var(--dark-900); isolation: isolate; }
     .hero_collage { position: absolute; z-index: 0; top: 50%; left: 50%; width: min(100%, 90rem); aspect-ratio: 1440 / 820; container-type: inline-size; transform: translate(-50%, -50%); pointer-events: none; }
     .hero_keepsake { position: absolute; transform-origin: 0 0; }
     .hero_polaroid { background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 0.875rem 2rem rgb(31 47 92 / 16%); }
@@ -136,13 +136,22 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     .hero_weekend :global(.button-016__inner) { padding: 0; }
   }
 
-  /* Between 62rem and 90rem the fluid display size outgrows the scaled collage and the title
-     runs into the polaroids, so cap it at 8.9vw (it reaches the 128px token max at 1440). */
-  @media (min-width: 62rem) {
+  /* From 48rem up the fluid display size outgrows the scaled collage and the title runs into
+     the polaroids, so cap it at 8.9vw (it reaches the 128px token max at 1440). */
+  @media (min-width: 48rem) {
     .hero_title { font-size: min(var(--display), 8.9vw); }
   }
 
-  @media (max-width: 61.999rem) {
+  /* Keep the scaled postmark clear of the fixed-size tablet actions row. */
+  @media (min-width: 48rem) and (max-width: 61.999rem) {
+    .hero_postmark { top: 47.5cqw; }
+  }
+
+  @media (min-width: 62rem) {
+    .hero { min-height: max(min(51.25rem, 56.944vw), calc(100svh - var(--nav-height))); }
+  }
+
+  @media (max-width: 47.999rem) {
     .hero { display: block; min-height: 0; padding: 19rem var(--site-margin) 9.5rem; }
     .hero_collage { top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
     .hero_polaroid { box-shadow: 0 0.75rem 1.75rem rgb(31 47 92 / 16%); }
