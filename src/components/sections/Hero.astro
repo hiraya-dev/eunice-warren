@@ -8,6 +8,7 @@ import paraw from "@/assets/images/hero/stamp-paraw.png";
 import palm from "@/assets/images/hero/stamp-palm.png";
 import postmark from "@/assets/images/hero/postmark-received.png";
 import note from "@/assets/images/hero/note-thats-us.png";
+import Button from "@/components/Button.astro";
 
 interface Props extends HTMLAttributes<"section"> {
   /** RSVP destination. */
@@ -46,8 +47,13 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     <h1 class="hero_title" data-hero-text-item><span>Eunice</span> <span>&amp; Warren</span></h1>
     <p class="hero_subtitle" data-hero-text-item>are getting married by the sea</p>
     <div class="hero_actions" data-hero-text-item>
-      <a class="hero_rsvp" href={rsvpHref}>RSVP by December</a>
-      <a class="hero_weekend" href={weekendHref} aria-label="See the weekend">SEE THE WEEKEND <span aria-hidden="true">↓</span></a>
+      <Button class="hero_rsvp" element="link" href={rsvpHref} shape="pill">RSVP by December</Button>
+      <a class="hero_weekend" data-button-016 href={weekendHref} aria-label="See the weekend">
+        <span class="button-016__inner">
+          <span class="button-016__text">SEE THE WEEKEND</span>
+        </span>
+        <span aria-hidden="true">↓</span>
+      </a>
     </div>
   </div>
 </section>
@@ -122,8 +128,12 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     .hero_title span { display: inline; }
     .hero_subtitle { margin: 0; color: var(--dark-900); font: italic var(--secondary-ultralight) clamp(1.5rem, calc(1.1429rem + 1.984vw), 2.5rem) / 1.1 var(--secondary-family); }
     .hero_actions { display: flex; align-items: center; gap: var(--space-4); padding-top: var(--space-3); }
-    .hero_rsvp { display: inline-flex; padding: var(--space-3) var(--space-4); border-radius: var(--radius-round); background: var(--accent-500); color: var(--light-100); font: var(--primary-medium) 1rem / 1.25 var(--primary-family); text-decoration: none; }
-    .hero_weekend { padding-bottom: 0.25rem; border-bottom: 1px solid var(--dark-900); color: var(--dark-900); font: var(--primary-regular) 1rem / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wide); text-decoration: none; }
+    .hero_rsvp { --button-016-color-background: var(--accent-500); --button-016-color: var(--light-100); --button-016-hover-color: var(--light-100); --button-016-hover-color-background: var(--dark-900); --button-016-color-focus: var(--dark-900); padding: 0; font-size: 1rem; }
+    /* Keep the hero pill's 1.25 line height (52px tall, as before). */
+    .hero_rsvp :global(.button-016__inner) { padding: var(--space-3) var(--space-4); line-height: 1.25; }
+    .hero_weekend { display: inline-flex; align-items: baseline; gap: 0.35em; padding-bottom: 0.25rem; border-bottom: 1px solid var(--dark-900); color: var(--dark-900); font: var(--primary-regular) 1rem / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wide); text-decoration: none; }
+    .hero_weekend { --button-016-color: var(--dark-900); --button-016-hover-color: var(--dark-900); --button-016-color-background: transparent; --button-016-hover-color-background: transparent; --button-016-color-focus: var(--dark-900); }
+    .hero_weekend :global(.button-016__inner) { padding: 0; }
   }
 
   /* Between 62rem and 90rem the fluid display size outgrows the scaled collage and the title
@@ -151,7 +161,7 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     .hero_title { line-height: var(--line-height-tight); }
     .hero_title span { display: block; }
     .hero_actions { flex-direction: column; gap: var(--space-4); }
-    .hero_rsvp { padding: var(--space-4) var(--space-5); }
+    .hero_rsvp :global(.button-016__inner) { padding: var(--space-4) var(--space-5); }
     .hero_weekend { font-size: var(--eyebrow); }
   }
 
