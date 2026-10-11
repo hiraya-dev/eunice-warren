@@ -33,7 +33,6 @@ const welcomeParagraphs = [
   "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
 ];
 
-const words = (paragraph: string) => paragraph.split(" ");
 ---
 
 <section id="invitation" class:list={["invitation_wrap", className]} {...rest}>
@@ -84,7 +83,7 @@ const words = (paragraph: string) => paragraph.split(" ");
     <div class="invitation_right">
       <div class="invitation_note">
         {welcomeParagraphs.map((paragraph) => (
-          <p>{words(paragraph).map((word, index) => <span class="invitation_word">{word}{index < words(paragraph).length - 1 ? " " : ""}</span>)}</p>
+          <p><span class="sr-only">{paragraph}</span><span class="invitation_note-text" data-highlight-text data-highlight-fade="0.3" aria-hidden="true">{paragraph}</span></p>
         ))}
       </div>
 
@@ -121,50 +120,6 @@ const words = (paragraph: string) => paragraph.split(" ");
   <div class="invitation_scallop" aria-hidden="true"></div>
 </section>
 
-<script is:inline>
-  if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-    document.querySelector("#invitation")?.setAttribute("data-invitation-motion", "");
-  }
-</script>
-
-<script>
-  import { gsap, ScrollTrigger } from "@/scripts/scroll.ts";
-
-  gsap.registerPlugin(ScrollTrigger);
-
-  const initInvitation = () => {
-    const section = document.querySelector<HTMLElement>("#invitation");
-    if (!section || section.dataset.invitationInitialized === "true") return;
-    section.dataset.invitationInitialized = "true";
-
-    const media = gsap.matchMedia();
-    const words = section.querySelectorAll<HTMLElement>(".invitation_word");
-
-    media.add("(prefers-reduced-motion: no-preference)", () => {
-      const context = gsap.context(() => {
-        gsap.fromTo(words, { color: "var(--_muted)" }, {
-          color: "var(--dark-900)",
-          stagger: 0.08,
-          ease: "none",
-          scrollTrigger: { trigger: section.querySelector(".invitation_note"), start: "top 82%", end: "bottom 30%", scrub: true },
-        });
-      }, section);
-      section.removeAttribute("data-invitation-motion");
-      return () => context.revert();
-    });
-
-    const cleanup = () => {
-      media.revert();
-      section.removeAttribute("data-invitation-initialized");
-      section.removeAttribute("data-invitation-motion");
-    };
-    document.addEventListener("astro:before-swap", cleanup, { once: true });
-  };
-
-  initInvitation();
-  document.addEventListener("astro:page-load", initInvitation);
-</script>
-
 <style>
   @layer components {
     .invitation_wrap { --_muted: #aeb4c2; position: relative; overflow: clip; padding: var(--section-space-small) var(--site-margin) var(--section-space-large); background-color: var(--light-100); background-image: var(--background-texture); background-size: 32rem 32rem; color: var(--dark-900); }
@@ -178,8 +133,9 @@ const words = (paragraph: string) => paragraph.split(" ");
     .invitation_title { margin: 0; font: var(--secondary-regular) var(--h2) / 1 var(--secondary-family); font-style: normal; letter-spacing: var(--letter-spacing-snug); }
     .invitation_note { display: flex; flex-direction: column; gap: var(--space-3); }
     .invitation_note p { margin: 0; font: var(--primary-regular) var(--text-large) / var(--line-height-huge) var(--primary-family); --_trim-top: 0; --_trim-bottom: 0; }
-    .invitation_word { color: var(--dark-900); }
-    #invitation[data-invitation-motion] .invitation_word { color: var(--_muted); }
+    /* Visual copy for the highlight reveal; the sr-only copy beside it is what screen readers read
+       (SplitText labels the split element, and a <p> cannot carry a name). */
+    .invitation_note-text { display: block; }
     .invitation_facts { border-top: 0.09375rem solid var(--dark-900); }
     .invitation_fact { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: var(--space-4); padding-block: var(--space-4); border-bottom: 0.0625rem solid var(--light-300); }
     .invitation_fact-label, .invitation_fact-link, .invitation_ticket-header, .invitation_ticket-meta > div > span, .invitation_ticket-stub { font: var(--primary-regular) var(--eyebrow) / 1.1 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -288,7 +244,4 @@ const words = (paragraph: string) => paragraph.split(" ");
     .invitation_ticket-stub span:first-child { letter-spacing: 0.04em; white-space: nowrap; }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    #invitation .invitation_word { color: var(--dark-900); }
-  }
 </style>
