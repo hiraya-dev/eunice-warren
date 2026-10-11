@@ -63,10 +63,7 @@ const stampPath =
 }
 
 <script>
-  import { gsap } from "gsap";
-  import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-  gsap.registerPlugin(ScrollTrigger);
+  import { gsap } from "@/scripts/scroll.ts";
 
   const initFooterParallax = () => {
     if (document.documentElement.dataset.footerParallaxInitialized === "true") return;
