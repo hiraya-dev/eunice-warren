@@ -96,6 +96,7 @@ const links = [
     let previousOverflow = "";
     let previousBodyPaddingRight = "";
     let previousScrollbarCompensation = "";
+    let previousBackgroundPosition = "";
     let unlockTimer: number | undefined;
     let lockActive = false;
     const unlockScroll = () => {
@@ -106,6 +107,7 @@ const links = [
       if (previousScrollbarCompensation) document.documentElement.style.setProperty("--scrollbar-compensation", previousScrollbarCompensation);
       else document.documentElement.style.removeProperty("--scrollbar-compensation");
       document.body.style.paddingRight = previousBodyPaddingRight;
+      document.documentElement.style.backgroundPosition = previousBackgroundPosition;
       lockActive = false;
     };
     navigation.addEventListener("transitionend", (event) => {
@@ -130,6 +132,10 @@ const links = [
           document.documentElement.style.overflow = "hidden";
           document.documentElement.style.setProperty("--scrollbar-compensation", `${scrollbar}px`);
           document.body.style.paddingRight = "var(--scrollbar-compensation, 0px)";
+          // The page texture is centred on the root, which widens by the scrollbar's width when
+          // the scrollbar goes away; pull it back by half that so the grain doesn't jump.
+          previousBackgroundPosition = document.documentElement.style.backgroundPosition;
+          document.documentElement.style.backgroundPosition = `calc(50% - ${scrollbar / 2}px) 50%`;
           lockActive = true;
         }
         // The panel can still compute as `visibility: hidden` on the first frame (the global

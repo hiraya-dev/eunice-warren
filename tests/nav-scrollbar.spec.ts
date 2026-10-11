@@ -92,3 +92,28 @@ test.describe("classic scrollbar navigation", () => {
     }, before), { timeout: 3000 }).toBe(true);
   });
 });
+
+test("keeps the page texture still when the scroll lock removes the scrollbar", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  // A strip of bare page texture at the bottom, clear of the hero's keepsakes.
+  const strip = { x: 600, y: 860, width: 200, height: 30 };
+  const before = await page.screenshot({ clip: strip });
+  // Open and freeze the panel fully clipped, so the strip still shows the page behind it.
+  await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>("#site-navigation-panel")!;
+    panel.style.transition = "none";
+    document.querySelector<HTMLButtonElement>('[data-navigation-toggle="toggle"]')!.click();
+    panel.style.clipPath = "polygon(0 0, 100% 0, 100% 0, 0 0)";
+  });
+  expect(await page.evaluate(() => document.documentElement.clientWidth)).toBe(1440);
+  expect((await page.screenshot({ clip: strip })).equals(before)).toBe(true);
+
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>("#site-navigation-panel")!.style.removeProperty("clip-path");
+    document.querySelector<HTMLButtonElement>('[data-navigation-toggle="toggle"]')!.click();
+  });
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.backgroundPosition)).toBe("");
+  expect((await page.screenshot({ clip: strip })).equals(before)).toBe(true);
+});
