@@ -115,6 +115,8 @@ const {
 
 const isLink = element === "link";
 const Tag = isLink ? "a" : "button";
+// Osmo Button 016 (text roll + bg colour) is the primary pill; other pills keep the plain style.
+const isButton016 = variant === "main" && shape === "pill" && emphasis === "primary";
 const tagAttrs = isLink
   ? { href: href || "#" }
   : { type: type === "submit" ? undefined : type };
@@ -144,14 +146,18 @@ const named = {
       ]}
       aria-label={isWritten ? undefined : (label ?? named[variant])}
       aria-pressed={variant === "play" ? pressed : undefined}
+      data-button-016={isButton016 ? "" : undefined}
       {...tagAttrs}
       {...rest}
     >
-      {isWritten && (
-        <span class="button_text">
-          <Fragment set:html={content} />
+      {isWritten && isButton016 ? (
+        <span class="button-016__inner">
+          <span class="button-016__text"><Fragment set:html={content} /></span>
         </span>
-      )}
+        <span class="button-016__bg" aria-hidden="true"></span>
+      ) : isWritten ? (
+        <span class="button_text"><Fragment set:html={content} /></span>
+      ) : null}
       {variant === "play" && (
         <Fragment>
           <Icon class="button_mark button_play" src={play} variant="small" />
@@ -191,7 +197,7 @@ const named = {
         color var(--hover-duration) var(--hover-ease),
         border-color var(--hover-duration) var(--hover-ease);
       @media (hover: hover) {
-        &:hover:not(:disabled) {
+        &:not(.pill):hover:not(:disabled) {
           background-color: var(--button-background-hover);
           color: var(--button-text-hover);
           border-color: var(--button-border-hover);
@@ -208,7 +214,13 @@ const named = {
         background-color: transparent;
         border: 0;
       }
-      &.pill {
+      &:where(.pill) {
+        --button-016-color: var(--light-100);
+        --button-016-color-background: var(--accent-500);
+        --button-016-hover-color: var(--light-100);
+        --button-016-hover-color-background: var(--dark-900);
+        --button-016-color-focus: var(--dark-900);
+        --button-016-text-duplicate-distance: 2lh;
         border-radius: var(--radius-round);
         padding-block: var(--space-2);
         line-height: 1;
@@ -283,6 +295,37 @@ const named = {
         cursor: not-allowed;
         opacity: 0.5;
       }
+    }
+
+    [data-button-016] {
+      /* Defined here, not only on pills, so non-pill uses (the hero's weekend link) roll too. */
+      --button-016-text-duplicate-distance: 2lh;
+      position: relative;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      color: var(--button-016-color);
+      background: transparent;
+      line-height: 1;
+      transition: color 0.325s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+    }
+    [data-button-016]::after {
+      position: absolute;
+      inset: -0.125em;
+      border-radius: var(--radius-round);
+      pointer-events: none;
+      content: "";
+      transition: box-shadow 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    [data-button-016]:focus-visible::after { box-shadow: 0 0 0 0.125em var(--button-016-color-focus); }
+    /* :where() keeps these at one-class specificity so a consumer (.hero_rsvp .button-016__inner) can set its own padding. */
+    :where([data-button-016]) .button-016__inner { z-index: 1; grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; overflow: clip; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--radius-round); pointer-events: none; }
+    :where([data-button-016]) .button-016__text { text-shadow: 0 2lh 0 currentColor; transition: translate 0.3s cubic-bezier(0.785, 0.135, 0.15, 0.86); }
+    :where([data-button-016]) .button-016__bg { z-index: 0; grid-area: 1 / 1; width: 100%; height: 100%; border-radius: var(--radius-round); background: var(--button-016-color-background); pointer-events: none; transition: background-color 0.325s cubic-bezier(0.785, 0.135, 0.15, 0.86); }
+    .button_wrap:where(.pill[data-button-016]) { display: inline-grid; gap: 0; padding: 0; background: transparent; }
+    @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+      [data-button-016]:is(:hover, :focus-visible) { color: var(--button-016-hover-color); }
+      [data-button-016]:is(:hover, :focus-visible) .button-016__text { translate: 0 calc(var(--button-016-text-duplicate-distance) * -1) 0; }
+      [data-button-016]:is(:hover, :focus-visible) .button-016__bg { background-color: var(--button-016-hover-color-background); }
     }
   }
 </style>
