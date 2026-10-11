@@ -1,7 +1,9 @@
 ---
-import Icon from "@/components/media/Icon.astro";
-import logo from "@/assets/logo/logo.svg";
-import { SITE_NAME } from "@/consts.ts";
+import { Image } from "astro:assets";
+import stampIsland from "@/assets/images/footer/stamp-island.jpg";
+import stampSunset from "@/assets/images/footer/stamp-sunset.jpg";
+import stampEw from "@/assets/images/footer/stamp-ew.png";
+import postmark from "@/assets/images/footer/postmark.png";
 
 interface Props {
   /** Set to `false` to omit the component. */
@@ -9,117 +11,334 @@ interface Props {
 }
 
 const { render = true } = Astro.props;
+
+const stampPath =
+  "M0 0L3 0A3.5 3.5 0 0 0 10 0L14 0A3.5 3.5 0 0 0 21 0L25 0A3.5 3.5 0 0 0 32 0L36 0A3.5 3.5 0 0 0 43 0L47 0A3.5 3.5 0 0 0 54 0L58 0A3.5 3.5 0 0 0 65 0L68 0L68 5.5A3.5 3.5 0 0 0 68 12.5L68 16.5A3.5 3.5 0 0 0 68 23.5L68 27.5A3.5 3.5 0 0 0 68 34.5L68 38.5A3.5 3.5 0 0 0 68 45.5L68 49.5A3.5 3.5 0 0 0 68 56.5L68 60.5A3.5 3.5 0 0 0 68 67.5L68 71.5A3.5 3.5 0 0 0 68 78.5L68 84L65 84A3.5 3.5 0 0 0 58 84L54 84A3.5 3.5 0 0 0 47 84L43 84A3.5 3.5 0 0 0 36 84L32 84A3.5 3.5 0 0 0 25 84L21 84A3.5 3.5 0 0 0 14 84L10 84A3.5 3.5 0 0 0 3 84L0 84L0 78.5A3.5 3.5 0 0 0 0 71.5L0 67.5A3.5 3.5 0 0 0 0 60.5L0 56.5A3.5 3.5 0 0 0 0 49.5L0 45.5A3.5 3.5 0 0 0 0 38.5L0 34.5A3.5 3.5 0 0 0 0 27.5L0 23.5A3.5 3.5 0 0 0 0 16.5L0 12.5A3.5 3.5 0 0 0 0 5.5Z";
 ---
 
 {
   render && (
-    <footer class="footer_wrap">
-      <div class="footer_inner">
-        <div class="footer_top">
-          <a class="footer_logo" href="/" aria-label={SITE_NAME}>
-            <Icon src={logo} variant="full-width" />
-          </a>
-          <nav aria-label="Footer">
-            <ul class="footer_links">
-              <li>
-                <a class="footer_link" href="/">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a class="footer_link" href="/example-components">
-                  Example Components
-                </a>
-              </li>
-            </ul>
-          </nav>
+    <div data-footer-parallax class="footer-wrap">
+      <footer data-footer-parallax-inner class="footer_footer">
+        <p class="footer_signoff">
+          <span>From</span>
+          <span class="footer_stamp footer_stamp-island">
+            <svg viewBox="0 0 68 84" preserveAspectRatio="none" aria-hidden="true">
+              <path d={stampPath} fill="var(--light-200)" stroke="var(--light-300)" />
+            </svg>
+            <Image src={stampIsland} alt="" width={400} height={300} />
+          </span>
+          <span class="footer_highlight footer_highlight-brand">island hopping</span>
+          <span>to</span>
+          <span class="footer_stamp footer_stamp-sunset">
+            <svg viewBox="0 0 68 84" preserveAspectRatio="none" aria-hidden="true">
+              <path d={stampPath} fill="var(--light-200)" stroke="var(--light-300)" />
+            </svg>
+            <Image src={stampSunset} alt="" width={333} height={520} />
+          </span>
+          <span class="footer_highlight footer_highlight-accent">sunset vows,</span>
+          <span>see you in Boracay ↘</span>
+        </p>
+
+        <p class="footer_date">01.14.27</p>
+
+        <div class="footer_cluster" aria-hidden="true">
+          <Image class="footer_cluster-stamp" src={stampEw} alt="" width={506} height={640} />
+          <Image class="footer_cluster-postmark" src={postmark} alt="" width={640} height={491} />
         </div>
-        <div class="footer_bottom">
-          <p class="footer_copyright text-style-small">
-            &copy; <span id="year">{new Date().getFullYear()}</span>&#160;
-            {SITE_NAME}
+
+        <div class="footer_meta">
+          <p class="footer_contact text-style-small">
+            Questions? [Contact name] · [email / Viber]
           </p>
+          <div class="footer_meta-links">
+            <p class="footer_hashtag">#EuniceAndWarren</p>
+            <a class="footer_top-link button_wrap link" href="#">Back to top ↑</a>
+          </div>
         </div>
-      </div>
-    </footer>
+      </footer>
+      <div data-footer-parallax-dark class="footer-wrap__dark" aria-hidden="true"></div>
+    </div>
   )
 }
 
 <script>
-  const year = document.querySelector<HTMLSpanElement>("#year");
+  import { gsap } from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-  if (year) {
-    year.textContent = new Date().getFullYear().toString();
-  }
+  gsap.registerPlugin(ScrollTrigger);
+
+  const initFooterParallax = () => {
+    if (document.documentElement.dataset.footerParallaxInitialized === "true") return;
+    document.documentElement.dataset.footerParallaxInitialized = "true";
+
+    const footerWrap = document.querySelector<HTMLElement>("[data-footer-parallax]");
+    const inner = footerWrap?.querySelector<HTMLElement>("[data-footer-parallax-inner]");
+    const dark = footerWrap?.querySelector<HTMLElement>("[data-footer-parallax-dark]");
+    if (!footerWrap || !inner || !dark) return;
+
+    const media = gsap.matchMedia();
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      const timeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: footerWrap,
+          start: "clamp(top bottom)",
+          end: "clamp(top top)",
+          scrub: true,
+        },
+      });
+
+      timeline.from(inner, { yPercent: -25, ease: "linear" });
+      timeline.from(dark, { opacity: 0.5, ease: "linear" }, "<");
+
+      return () => timeline.kill();
+    });
+  };
+
+  initFooterParallax();
 </script>
 
 <style is:global>
   @layer components {
-    .footer_wrap {
-      display: flex;
-      justify-content: center;
-      padding-block: var(--section-space-small);
-      padding-inline: var(--site-margin);
-      background-color: var(--background);
-      color: var(--text);
-      border-top: var(--border-width) solid var(--border);
+    .footer-wrap {
+      position: relative;
+      overflow: hidden;
     }
 
-    .footer_inner {
-      width: 100%;
-      max-width: var(--max-width-main);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
+    .footer_footer {
+      position: relative;
+      z-index: 1;
+      padding: var(--section-space-small) var(--site-margin) 3rem;
+      background-color: var(--light-100);
+      background-image: url("../../assets/textures/grain-light.jpg");
+      background-position: 50%;
+      background-repeat: repeat;
+      background-size: 32rem 32rem;
+      color: var(--dark-900);
     }
 
-    .footer_top {
+    .footer-wrap__dark {
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: var(--dark-900);
+    }
+
+    .footer_signoff {
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
+      column-gap: var(--space-3);
+      row-gap: var(--space-2);
+      max-width: 100%;
+      color: var(--dark-900);
+      font-family: var(--secondary-family);
+      font-size: var(--h3);
+      font-weight: var(--secondary-regular);
+      line-height: var(--line-height-snug);
+      letter-spacing: var(--letter-spacing-snug);
+      &::before,
+      &::after { display: none; }
+    }
+
+    .footer_highlight {
+      padding-inline: var(--space-2);
+      font-weight: var(--secondary-ultralight);
+      font-style: italic;
+    }
+
+    .footer_highlight-brand {
+      background: var(--brand-500);
+      color: var(--dark-900);
+    }
+
+    .footer_highlight-accent {
+      background: var(--accent-500);
+      color: var(--light-100);
+    }
+
+    .footer_stamp {
+      position: relative;
+      display: inline-block;
+      flex: 0 0 auto;
+      width: 3.75rem;
+      height: 4.625rem;
+      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 0.18)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 0.14));
+    }
+
+    .footer_stamp svg,
+    .footer_stamp img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .footer_stamp img {
+      inset: 0.375rem;
+      width: calc(100% - 0.75rem);
+      height: calc(100% - 0.75rem);
+      object-fit: cover;
+      clip-path: inset(0 round 0.0625rem);
+    }
+
+    .footer_stamp-island { rotate: -5deg; }
+    .footer_stamp-sunset { rotate: 6deg; }
+
+    .footer_date {
+      margin-top: 5rem;
+      color: var(--dark-900);
+      font-family: var(--secondary-family);
+      font-size: min(30.5vw, 21rem);
+      font-weight: var(--secondary-regular);
+      line-height: 0.8333;
+      letter-spacing: -0.05em;
+      white-space: nowrap;
+    }
+
+    .footer_cluster {
+      position: absolute;
+      top: 18.75rem;
+      right: var(--site-margin);
+      width: 23.75rem;
+      height: 18.75rem;
+    }
+
+    .footer_cluster-stamp,
+    .footer_cluster-postmark {
+      position: absolute;
+      object-fit: contain;
+    }
+
+    .footer_cluster-stamp {
+      top: 0;
+      left: 9.375rem;
+      width: 12rem;
+      height: 15rem;
+      transform: rotate(5deg);
+      transform-origin: top left;
+      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 0.18)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 0.14));
+    }
+
+    .footer_cluster-postmark {
+      top: 9.375rem;
+      left: 0;
+      width: 12.5rem;
+      height: 9.5625rem;
+      transform: rotate(-8deg);
+      transform-origin: top left;
+      mix-blend-mode: multiply;
+    }
+
+    .footer_meta {
+      display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: var(--space-4) var(--space-6);
-    }
-
-    .footer_logo {
-      display: block;
-      width: 7.5rem;
-      max-width: 100%;
-      transition: opacity var(--hover-duration) var(--hover-ease);
-      @media (hover: hover) {
-        &:hover {
-          opacity: 0.6;
-        }
-      }
-    }
-
-    .footer_links {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
       gap: var(--space-4);
-      font-size: var(--text-small);
-      font-weight: var(--primary-medium);
+      margin-top: 1.5rem;
+      padding-top: var(--space-4);
+      border-top: var(--border-width) solid var(--light-300);
+      color: var(--dark-700);
     }
 
-    .footer_link {
-      color: var(--text-2);
-      text-decoration: none;
-      transition: color var(--hover-duration) var(--hover-ease);
-      @media (hover: hover) {
-        &:hover {
-          color: var(--text);
-        }
+    .footer_contact,
+    .footer_hashtag,
+    .footer_top-link {
+      margin: 0;
+    }
+
+    .footer_meta-links { display: contents; }
+
+    .footer_hashtag,
+    .footer_top-link {
+      font-family: var(--mono-family);
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+
+    .footer_top-link {
+      color: var(--dark-900);
+      text-transform: uppercase;
+    }
+
+    .footer_top-link.button_wrap.link {
+      font-size: 1rem;
+      line-height: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    @media (width < 75rem) {
+      .footer_cluster {
+        position: relative;
+        top: auto;
+        right: auto;
+        width: 100%;
+        height: 9.375rem;
+        margin-top: var(--space-6);
+      }
+
+      .footer_cluster-stamp {
+        left: 9.375rem;
+        width: 7rem;
+        height: 8.75rem;
+      }
+
+      .footer_cluster-postmark {
+        top: 3.75rem;
+        left: 4.125rem;
+        width: 7.5rem;
+        height: 5.75rem;
       }
     }
 
-    .footer_bottom {
-      padding-top: var(--space-4);
-      border-top: var(--border-width) solid var(--border);
-    }
+    @media (width < 48rem) {
+      .footer_footer {
+        padding-bottom: 2.5rem;
+      }
 
-    .footer_copyright {
-      color: var(--text-2);
+      .footer_stamp {
+        width: 2.5rem;
+        height: 3.0625rem;
+      }
+
+      .footer_stamp img {
+        inset: 0.25rem;
+        width: calc(100% - 0.5rem);
+        height: calc(100% - 0.5rem);
+      }
+
+      .footer_date {
+        margin-top: var(--space-6);
+      }
+
+      .footer_meta {
+        align-items: stretch;
+        flex-direction: column;
+        gap: var(--space-3);
+        margin-top: var(--space-6);
+        padding-top: var(--space-5);
+      }
+
+      .footer_meta-links {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+      }
+
+      .footer_meta-links > :is(.footer_hashtag, .footer_top-link) {
+        font-size: var(--eyebrow);
+        line-height: 1rem;
+        letter-spacing: var(--letter-spacing-wide);
+      }
+
+      .footer_meta-links > .footer_top-link.button_wrap.link {
+        font-size: var(--eyebrow);
+        line-height: 1rem;
+        letter-spacing: var(--letter-spacing-wide);
+      }
     }
   }
 </style>
