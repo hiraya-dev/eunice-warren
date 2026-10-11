@@ -47,7 +47,8 @@ test.describe("Paper footer", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/example-components");
     const footerTop = await page.locator("[data-footer-parallax]").evaluate((element) => element.getBoundingClientRect().top + scrollY);
-    await page.mouse.wheel(0, Math.max(0, footerTop - 900));
+    const devicePixelRatio = await page.evaluate(() => window.devicePixelRatio);
+    await page.mouse.wheel(0, Math.max(0, footerTop - 900) * devicePixelRatio);
 
     const samples: Array<{ y: number; opacity: number }> = [];
     for (let index = 0; index < 24; index += 1) {
@@ -59,14 +60,27 @@ test.describe("Paper footer", () => {
           opacity: Number(getComputedStyle(document.querySelector("[data-footer-parallax-dark]")!).opacity),
         };
       }));
-      await page.mouse.wheel(0, 80);
+      await page.mouse.wheel(0, 80 * devicePixelRatio);
       await page.waitForTimeout(20);
     }
 
     const footerHeight = await page.locator("[data-footer-parallax-inner]").evaluate((element) => element.getBoundingClientRect().height);
+    await expect.poll(() => page.locator("[data-footer-parallax-inner]").evaluate((inner) => {
+      const transform = getComputedStyle(inner).transform;
+      const match = transform.match(/^matrix\([^,]+, [^,]+, [^,]+, [^,]+, [^,]+, ([^)]+)\)$/);
+      return match ? Number(match[1]) : 0;
+    }), { timeout: 3000 }).toBeGreaterThan(-footerHeight * 0.02);
+    const settled = await page.locator("[data-footer-parallax-inner]").evaluate((inner) => {
+      const transform = getComputedStyle(inner).transform;
+      const match = transform.match(/^matrix\([^,]+, [^,]+, [^,]+, [^,]+, [^,]+, ([^)]+)\)$/);
+      return {
+        y: match ? Number(match[1]) : 0,
+        opacity: Number(getComputedStyle(document.querySelector("[data-footer-parallax-dark]")!).opacity),
+      };
+    });
     expect(samples[0].y).toBeLessThan(-footerHeight * 0.1);
-    expect(samples.at(-1)?.y).toBeGreaterThan(-footerHeight * 0.02);
-    expect(samples.at(-1)?.opacity).toBeLessThan(samples[0].opacity);
+    expect(settled.y).toBeGreaterThan(-footerHeight * 0.02);
+    expect(settled.opacity).toBeLessThan(samples[0].opacity);
     for (let index = 1; index < samples.length; index += 1) {
       expect(samples[index].y).toBeGreaterThanOrEqual(samples[index - 1].y - 3);
     }

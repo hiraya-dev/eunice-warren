@@ -401,6 +401,10 @@
   color: var(--text);
 }
 
+html {
+  scroll-padding-block-start: calc(var(--nav-height) + 2rem);
+}
+
 /* 3. Reset & base */
 *,
 ::before,
@@ -499,10 +503,6 @@ label {
 
 select:has(option[value=""]:checked) {
   color: color-mix(in lab, currentcolor 60%, transparent);
-}
-
-:target {
-  scroll-margin-block: 2rem;
 }
 
 :focus-visible {

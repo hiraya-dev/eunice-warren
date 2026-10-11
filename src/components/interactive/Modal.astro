@@ -55,7 +55,7 @@ if (import.meta.env.DEV && render && content && !id) {
           emphasis="secondary"
           data-modal-close
         />
-        <div class="modal_scroll" data-modal-scroll>
+        <div class="modal_scroll" data-modal-scroll data-lenis-prevent>
           <div class="modal_body margin-trim">
             <Fragment set:html={content} />
           </div>

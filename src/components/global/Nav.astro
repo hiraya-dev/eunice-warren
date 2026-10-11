@@ -48,7 +48,7 @@ const links = [
       </div>
     </header>
 
-    <nav id="site-navigation-panel" data-navigation-status="not-active" data-navigation-toggle="close" class="navigation theme-dark" aria-label="Main" aria-hidden="true">
+    <nav id="site-navigation-panel" data-navigation-status="not-active" data-navigation-toggle="close" data-lenis-prevent class="navigation theme-dark" aria-label="Main" aria-hidden="true">
       <div class="navigation_inner">
         <ul class="navigation_links">
           {links.map(([label, href], index) => (
@@ -86,6 +86,8 @@ const links = [
 </style></noscript>
 
 <script>
+  import { lenis } from "@/scripts/scroll.ts";
+
   const initNavigation = () => {
     const navigation = document.querySelector<HTMLElement>("#site-navigation-panel");
     const header = document.querySelector<HTMLElement>(".nav_wrap");
@@ -108,6 +110,7 @@ const links = [
       else document.documentElement.style.removeProperty("--scrollbar-compensation");
       document.body.style.paddingRight = previousBodyPaddingRight;
       document.documentElement.style.backgroundPosition = previousBackgroundPosition;
+      lenis?.start();
       lockActive = false;
     };
     navigation.addEventListener("transitionend", (event) => {
@@ -138,6 +141,7 @@ const links = [
           document.documentElement.style.backgroundPosition = `calc(50% - ${scrollbar / 2}px) 50%`;
           lockActive = true;
         }
+        lenis?.stop();
         // The panel can still compute as `visibility: hidden` on the first frame (the global
         // reduced-motion rule turns its visibility switch into a tiny transition), so retry
         // until the first link actually takes focus.

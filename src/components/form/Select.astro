@@ -182,6 +182,7 @@ const text = label ?? wording.label;
       <span class="form-select_control">
         <select
           class="field-control form-select_field text-style-main"
+          data-lenis-prevent
           name={name ?? slug(text)}
           required={required || undefined}
           {...rest}

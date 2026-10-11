@@ -1,5 +1,6 @@
 ---
 import "@/styles/global.css";
+import "lenis/dist/lenis.css";
 import BaseHead from "@/components/utility/BaseHead.astro";
 import SkipLink from "@/components/global/SkipLink.astro";
 import Nav from "@/components/global/Nav.astro";
@@ -35,3 +36,9 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
     <Footer />
   </body>
 </html>
+
+<script>
+  import { initScroll } from "@/scripts/scroll.ts";
+
+  initScroll();
+</script>
