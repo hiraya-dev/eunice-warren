@@ -1,0 +1,103 @@
+---
+import { getCollection } from "astro:content";
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import stamp from "@/assets/images/hero/stamp-paraw.png";
+
+interface Props extends HTMLAttributes<"section"> {}
+
+const { class: className, ...rest } = Astro.props;
+const [{ data }] = await getCollection("entourage");
+---
+
+<section id="entourage" class:list={["entourage_wrap", className]} {...rest}>
+  <Image class="entourage_stamp" src={stamp} alt="" width={104} height={130} aria-hidden="true" />
+  <div class="entourage_layout">
+    <header class="entourage_header" data-fade-in>
+      <h2 class="entourage_title" data-fade-in-item>The ones who<br />stand with us</h2>
+      <p class="entourage_intro" data-fade-in-item>Our parents, our ninongs and ninangs, and the friends who'll walk the sand ahead of us. Salamat — we couldn't do this without you.</p>
+    </header>
+
+    <div class="entourage_programme">
+      {data.groups.map((group) => (
+        <div class:list={["entourage_block", `entourage_${group.id}`]} data-fade-in>
+          {group.title && (
+            <h3 class="entourage_group-title" data-fade-in-item>
+              <span>{group.title}</span>{group.italic && <em>{group.italic}</em>}
+            </h3>
+          )}
+          <div class="entourage_rows">
+            {group.rows.map((row, rowIndex) => (
+              <div class="entourage_row" data-fade-in-item>
+                {row.roles.map((role, roleIndex) => {
+                  const labelId = `${group.id}-row-${rowIndex}-role-${roleIndex}`;
+                  return (
+                    <div class="entourage_role">
+                      <h4 id={labelId}>{role.label}</h4>
+                      <ul aria-labelledby={labelId}>
+                        {role.names.map((name) => <li>{name}</li>)}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+  <div class="entourage_scallop" aria-hidden="true"></div>
+</section>
+
+<style>
+  @layer components {
+    .entourage_wrap { position: relative; overflow: clip; padding: var(--section-space-medium) var(--site-margin); background: var(--light-100) var(--background-texture) center / 32rem repeat; color: var(--dark-900); }
+    .entourage_layout { display: flex; width: 100%; max-width: var(--max-width-main); margin-inline: auto; flex-direction: column; align-items: center; gap: var(--space-8); }
+    .entourage_header { display: flex; flex-direction: column; align-items: center; gap: var(--space-5); text-align: center; }
+    .entourage_title { margin: 0; font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); font-size: min(var(--h1), calc((100vw - 2 * var(--site-margin)) / 5.6)); letter-spacing: var(--letter-spacing-tight); }
+    .entourage_intro { max-width: 31.25rem; margin: 0; font: var(--primary-regular) var(--text-main) / var(--line-height-huge) var(--primary-family); }
+    .entourage_programme { display: flex; width: 100%; max-width: 60rem; flex-direction: column; gap: 4.5rem; text-align: center; }
+    .entourage_block { display: flex; flex-direction: column; align-items: center; gap: var(--space-7); }
+    .entourage_officiant, .entourage_parents { gap: 0; }
+    .entourage_principal-sponsors, .entourage_secondary-sponsors { gap: 2.5rem; }
+    .entourage_bridal-party { gap: 3.5rem; }
+    .entourage_group-title { display: flex; align-items: baseline; justify-content: center; gap: var(--space-3); margin: 0; font: var(--secondary-regular) var(--h4) / 1.25 var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }
+    .entourage_group-title em { font-weight: var(--secondary-ultralight); }
+    .entourage_rows { display: flex; width: 100%; flex-direction: column; gap: var(--space-7); }
+    .entourage_row { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+    .entourage_officiant .entourage_row { grid-template-columns: 1fr; }
+    .entourage_bridal-party .entourage_row:first-child { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .entourage_bridal-party .entourage_rows { gap: 3.5rem; }
+    .entourage_secondary-sponsors .entourage_row, .entourage_bridal-party .entourage_row:last-child { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .entourage_bridal-party .entourage_row:last-child { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .entourage_role { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: var(--space-1); }
+    .entourage_role h4 { margin: 0; color: var(--dark-700); font: italic 400 1.25rem / 1.4 var(--secondary-family); }
+    .entourage_role ul { display: flex; margin: 0; padding: 0; flex-direction: column; list-style: none; color: var(--dark-900); font: var(--secondary-regular) var(--text-large) / 1.5 var(--secondary-family); }
+    .entourage_stamp { position: absolute; top: 9.375rem; left: calc(50% + 21.25rem); width: 6.5rem; height: 8.125rem; object-fit: contain; transform: rotate(6deg); transform-origin: top left; }
+    .entourage_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--dark-900) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--dark-900) 0.6875rem, transparent calc(0.6875rem + 0.5px)) 0 0 / 2.25rem 0.6875rem repeat-x; }
+  }
+
+  @media (max-width: 61.999rem) {
+    .entourage_wrap { padding-block: var(--section-space-medium); }
+    .entourage_stamp { top: var(--space-5); right: var(--site-margin); left: auto; width: 3rem; height: 3.75rem; }
+    .entourage_programme { gap: var(--space-7); }
+    .entourage_block { gap: var(--space-5); }
+    .entourage_officiant, .entourage_parents { gap: 0; }
+    .entourage_principal-sponsors, .entourage_secondary-sponsors, .entourage_bridal-party { gap: var(--space-5); }
+    .entourage_bridal-party .entourage_rows { gap: var(--space-5); }
+    .entourage_group-title { gap: var(--space-2); line-height: 1.125; }
+    .entourage_rows { gap: var(--space-5); }
+    .entourage_row { gap: var(--space-4) var(--space-2); }
+    .entourage_role h4 { font-size: 1rem; line-height: 1.5; }
+    .entourage_role ul { font-size: 1.25rem; line-height: 1.6; }
+    .entourage_principal-sponsors .entourage_row { grid-template-columns: 1fr; gap: var(--space-5); }
+    .entourage_secondary-sponsors .entourage_row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .entourage_secondary-sponsors .entourage_role:last-child { grid-column: 1 / -1; justify-self: center; }
+    .entourage_bridal-party .entourage_row:first-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(1) { grid-column: 1; grid-row: 1; }
+    .entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+    .entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(3) { grid-column: 2; grid-row: 1; }
+    .entourage_bridal-party .entourage_row:last-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
