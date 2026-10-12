@@ -1,0 +1,74 @@
+{
+  "groups": [
+    {
+      "id": "officiant",
+      "rows": [{ "roles": [{ "label": "Officiant", "names": ["To be announced"] }] }]
+    },
+    {
+      "id": "parents",
+      "rows": [
+        {
+          "roles": [
+            { "label": "Parents of the groom", "names": ["Eduardo M. Reyes", "Liza C. Reyes"] },
+            { "label": "Parents of the bride", "names": ["Ramon D. Santos", "Teresita L. Santos"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "principal-sponsors",
+      "title": "Principal",
+      "italic": "sponsors",
+      "rows": [
+        {
+          "roles": [
+            { "label": "Ninongs", "names": ["Hon. Antonio R. Villanueva", "Benjamin S. Cruz", "Engr. Danilo P. Mendoza", "Atty. Francisco G. Bautista", "Gregorio T. Aquino", "Rogelio C. Tan", "Capt. Manuel V. Navarro (RET)", "Arturo L. Domingo"] },
+            { "label": "Ninangs", "names": ["Dra. Carmela A. Villanueva", "Rosario M. Cruz", "Josefina D. Mendoza", "Imelda R. Bautista", "Lourdes F. Aquino", "Marivic S. Tan", "Corazon B. Navarro", "Gloria E. Domingo"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "secondary-sponsors",
+      "title": "Secondary",
+      "italic": "sponsors",
+      "rows": [
+        {
+          "roles": [
+            { "label": "Candle", "names": ["Paolo D. Santos", "Bea M. Reyes"] },
+            { "label": "Veil", "names": ["Miguel A. Cruz", "Andrea P. Lim"] },
+            { "label": "Cord", "names": ["Rafael T. Mendoza", "Kat R. Bautista"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bridal-party",
+      "title": "Bridal",
+      "italic": "party",
+      "rows": [
+        {
+          "roles": [
+            { "label": "Best man", "names": ["Joaquin E. Reyes"] },
+            { "label": "Matron of honor", "names": ["Camille S. Ocampo"] },
+            { "label": "Maid of honor", "names": ["Patricia L. Santos"] }
+          ]
+        },
+        {
+          "roles": [
+            { "label": "Groomsmen", "names": ["Carlo B. Dizon", "Nico J. Ramos", "JP A. Villanueva", "Marco T. Lim", "Enzo R. Garcia", "Paulo M. Castillo"] },
+            { "label": "Bridesmaids", "names": ["Bianca C. Tan", "Mika D. Aquino", "Sofia R. Cruz", "Ella P. Mendoza", "Jasmine L. Uy", "Nicole A. Ramirez"] }
+          ]
+        },
+        {
+          "roles": [
+            { "label": "Ring & Bible bearer", "names": ["Lucas D. Reyes"] },
+            { "label": "Coin bearer", "names": ["Gabriel S. Santos"] },
+            { "label": "Junior groomsman", "names": ["Mateo L. Cruz"] },
+            { "label": "Flower girls", "names": ["Sophia M. Tan", "Isabel C. Aquino"] }
+          ]
+        }
+      ]
+    }
+  ]
+}

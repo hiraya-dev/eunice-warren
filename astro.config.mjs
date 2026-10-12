@@ -67,6 +67,11 @@ export default defineConfig({
             style: "normal",
             src: ["./src/assets/fonts/PPEditorialNew-Regular.woff2"],
           },
+          {
+            weight: 400,
+            style: "italic",
+            src: ["./src/assets/fonts/PPEditorialNew-Italic.woff2"],
+          },
         ],
       },
     },
