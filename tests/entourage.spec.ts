@@ -33,9 +33,18 @@ test.describe("entourage section", () => {
 
     const heading = await page.locator("#entourage h2").evaluate((element) => {
       const style = getComputedStyle(element);
-      return { height: element.getBoundingClientRect().height, lineHeight: parseFloat(style.lineHeight) };
+      const section = element.closest("section")!;
+      return {
+        height: element.getBoundingClientRect().height,
+        lineHeight: parseFloat(style.lineHeight),
+        fontSize: style.fontSize,
+        headingWidth: element.scrollWidth,
+        sectionWidth: section.clientWidth,
+      };
     });
     expect(heading.height).toBeLessThan(heading.lineHeight * 2.5);
+    expect(heading.headingWidth).toBeLessThanOrEqual(heading.sectionWidth);
+    expect(heading.fontSize).toBe("120px");
   });
 
   test("matches the mobile programme layout", async ({ page }) => {
@@ -57,24 +66,23 @@ test.describe("entourage section", () => {
     expect(positions.veil.left).toBeGreaterThan(positions.candle.left);
   });
 
-  test("keeps the heading to two lines at mobile width", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
-    const heading = await page.locator("#entourage h2").evaluate((element) => {
-      const style = getComputedStyle(element);
-      return { height: element.getBoundingClientRect().height, lineHeight: parseFloat(style.lineHeight) };
-    });
-    expect(heading.height).toBeLessThan(heading.lineHeight * 2.5);
-  });
-
-  test("keeps the heading inside the section at the narrowest viewport", async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 800 });
-    await page.goto("/");
-    const dimensions = await page.locator("#entourage").evaluate((section) => ({
-      sectionWidth: section.clientWidth,
-      headingWidth: section.querySelector("h2")!.scrollWidth,
-    }));
-    expect(dimensions.headingWidth).toBeLessThanOrEqual(dimensions.sectionWidth);
+  test("keeps the heading to two lines and inside the section below desktop", async ({ page }) => {
+    for (const width of [320, 390, 768]) {
+      await page.setViewportSize({ width, height: width === 320 ? 800 : 844 });
+      await page.goto("/");
+      const dimensions = await page.locator("#entourage").evaluate((section) => {
+        const heading = section.querySelector("h2")!;
+        const style = getComputedStyle(heading);
+        return {
+          height: heading.getBoundingClientRect().height,
+          lineHeight: parseFloat(style.lineHeight),
+          headingWidth: heading.scrollWidth,
+          sectionWidth: section.clientWidth,
+        };
+      });
+      expect(dimensions.height).toBeLessThan(dimensions.lineHeight * 2.5);
+      expect(dimensions.headingWidth).toBeLessThanOrEqual(dimensions.sectionWidth);
+    }
   });
 
   test("fades groups in on scroll and stays visible for reduced motion", async ({ page }) => {

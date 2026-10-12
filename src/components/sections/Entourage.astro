@@ -55,7 +55,7 @@ const [{ data }] = await getCollection("entourage");
     .entourage_wrap { position: relative; overflow: clip; padding: var(--section-space-medium) var(--site-margin); background: var(--light-100) var(--background-texture) center / 32rem repeat; color: var(--dark-900); }
     .entourage_layout { display: flex; width: 100%; max-width: var(--max-width-main); margin-inline: auto; flex-direction: column; align-items: center; gap: var(--space-8); }
     .entourage_header { display: flex; flex-direction: column; align-items: center; gap: var(--space-5); text-align: center; }
-    .entourage_title { margin: 0; font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
+    .entourage_title { margin: 0; font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); font-size: min(var(--h1), calc((100vw - 2 * var(--site-margin)) / 5.6)); letter-spacing: var(--letter-spacing-tight); }
     .entourage_intro { max-width: 31.25rem; margin: 0; font: var(--primary-regular) var(--text-main) / var(--line-height-huge) var(--primary-family); }
     .entourage_programme { display: flex; width: 100%; max-width: 60rem; flex-direction: column; gap: 4.5rem; text-align: center; }
     .entourage_block { display: flex; flex-direction: column; align-items: center; gap: var(--space-7); }
