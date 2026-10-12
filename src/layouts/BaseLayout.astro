@@ -41,11 +41,14 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
   import { initDrawPathOnScroll } from "@/scripts/draw-path.ts";
   import { initHighlightText } from "@/scripts/highlight-text.ts";
   import { initGlobalParallax, initScroll } from "@/scripts/scroll.ts";
+  import { initTabSystem } from "@/scripts/tab-system.ts";
 
   initScroll();
   initGlobalParallax();
   initDrawPathOnScroll();
   initHighlightText();
+  initTabSystem();
   document.addEventListener("astro:page-load", initDrawPathOnScroll);
   document.addEventListener("astro:page-load", initHighlightText);
+  document.addEventListener("astro:page-load", initTabSystem);
 </script>

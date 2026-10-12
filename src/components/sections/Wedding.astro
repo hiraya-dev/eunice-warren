@@ -1,0 +1,193 @@
+---
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import arch from "@/assets/images/wedding/polaroid-arch.jpg";
+import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
+import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Calendar event destination. */
+  calendarHref?: string;
+}
+
+const { calendarHref = "#", class: className, ...rest } = Astro.props;
+
+const schedule = [
+  {
+    number: "01",
+    title: "Ceremony",
+    time: "3:00 PM",
+    location: "[Location]",
+    mapLabel: "Map for Ceremony",
+    image: arch,
+    alt: "A white wedding arch draped in fabric and flowers on the sand by the water",
+    caption: "Where we'll say yes — White Beach, 3 PM",
+  },
+  {
+    number: "02",
+    title: "Sunset",
+    italic: "cocktails",
+    time: "5:00 PM",
+    location: "[Location]",
+    mapLabel: "Map for Sunset cocktails",
+    image: sunsetSail,
+    alt: "A sailboat on the water at sunset",
+    caption: "Where we'll toast — [Location], 5 PM",
+  },
+  {
+    number: "03",
+    title: "Reception &",
+    italic: "dancing",
+    time: "7:00 PM",
+    location: "[Location]",
+    mapLabel: "Map for Reception and dancing",
+    image: whiteBeach,
+    alt: "White Beach, Boracay",
+    caption: "Where we'll dance — [Location], 7 PM",
+  },
+];
+---
+
+<section id="wedding" class:list={["wedding_wrap", className]} {...rest}>
+  <div class="wedding_layout">
+    <h2 class="wedding_title">One day<br />by the sea</h2>
+
+    <div class="wedding_body" data-tabs="wrapper" data-tabs-autoplay="true" data-tabs-autoplay-duration="5000">
+      <div class="wedding_visual-column">
+        <div class="wedding_polaroid" data-tabs="visual-wrapper">
+          <div class="wedding_visual" data-tabs="visual-list">
+            {schedule.map((item, index) => (
+              <div class:list={["wedding_visual-item", index === 0 && "is-active"]} id={`wedding-panel-${index + 1}`} data-tabs="visual-item" role="tabpanel" aria-labelledby={`wedding-tab-${index + 1}`} hidden={index !== 0}>
+                <Image src={item.image} alt={item.alt} width={680} height={680} widths={[560, 680]} sizes="(min-width: 62rem) 21.25rem, 15.75rem" loading="lazy" />
+                <span class="wedding_caption">{item.caption}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div class="wedding_content">
+        <div class="wedding_schedule">
+          <div class="wedding_tablist" role="tablist" aria-label="Wedding schedule">
+            {schedule.map((item, index) => (
+              <div class:list={["wedding_row", index === 0 && "is-active"]} data-tabs="content-item">
+                <button class="wedding_tab" id={`wedding-tab-${index + 1}`} type="button" role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`wedding-panel-${index + 1}`} tabindex={index === 0 ? 0 : -1}>
+                  <span class="wedding_number">({item.number})</span>
+                  <span class="wedding_tab-title"><span>{item.title}</span>{item.italic && <em>{item.italic}</em>}</span>
+                </button>
+                <div class="wedding_meta">
+                  <span class="wedding_time">{item.time}</span>
+                  <span class="wedding_location">{item.location} · <a href="#" aria-label={item.mapLabel}>Map <span aria-hidden="true">↗</span></a></span>
+                </div>
+                <span class="wedding_progress" data-tabs="item-progress" aria-hidden="true"></span>
+              </div>
+            ))}
+          </div>
+          <div class="wedding_footer">
+            <span>All times Philippine Time (GMT+8)</span>
+            <a href={calendarHref}>ADD THE DAY TO YOUR CALENDAR <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+
+        <div class="wedding_dress-wrap">
+          <div class="wedding_dress">
+            <span class="wedding_dress-eyebrow">DRESS CODE</span>
+            <h3>Island formal</h3>
+            <p>Light linen and cotton, flat or block heels — the ceremony is on the sand. Wear the couple's blues if you like; please skip all-white.</p>
+            <div class="wedding_swatches" aria-label="Suggested colours: sky blue, cream, sand, navy">
+              <span class="wedding_swatch wedding_swatch-blue" aria-hidden="true"></span>
+              <span class="wedding_swatch wedding_swatch-cream" aria-hidden="true"></span>
+              <!-- One-off raw value from the Paper design: sand. -->
+              <span class="wedding_swatch wedding_swatch-sand" aria-hidden="true"></span>
+              <span class="wedding_swatch wedding_swatch-navy" aria-hidden="true"></span>
+            </div>
+            <div class="wedding_torn" aria-hidden="true">
+              <svg viewBox="0 0 663 18" preserveAspectRatio="none"><path d="M0.0 0.0 L0.0 9.6 L5.9 13.2 L11.3 11.9 L18.5 6.6 L26.6 6.4 L34.2 6.8 L39.7 10.7 L49.7 7.4 L56.0 12.9 L66.7 12.3 L74.1 16.7 L79.4 15.4 L86.1 7.6 L91.8 9.4 L101.7 8.0 L110.2 13.0 L117.4 12.0 L122.8 6.7 L129.0 13.5 L136.6 9.5 L145.1 11.0 L151.9 14.7 L161.1 8.7 L169.6 11.8 L179.8 14.0 L186.5 16.8 L192.3 10.6 L201.8 7.7 L209.7 6.4 L218.7 14.4 L227.2 15.6 L234.1 13.6 L242.6 12.4 L250.4 15.2 L261.0 11.2 L270.0 6.7 L279.2 13.1 L290.2 15.0 L296.9 10.2 L305.9 6.2 L313.7 7.8 L319.4 6.6 L329.0 7.4 L335.5 10.3 L345.7 6.9 L353.4 12.0 L363.7 15.0 L373.9 9.1 L381.4 9.9 L391.7 16.5 L397.6 7.9 L404.0 8.6 L411.9 12.5 L418.5 6.0 L426.0 10.1 L434.4 16.5 L443.5 11.7 L452.2 13.4 L457.5 15.9 L467.2 15.6 L477.0 10.3 L484.4 7.1 L493.2 6.7 L498.6 8.3 L504.6 9.7 L509.9 6.0 L515.8 7.1 L523.0 6.3 L533.2 12.8 L539.1 8.8 L546.2 10.0 L552.0 15.3 L562.9 11.1 L570.8 6.9 L576.4 9.8 L583.0 15.1 L589.0 6.3 L599.7 11.8 L605.6 12.0 L610.7 11.8 L621.6 15.5 L630.8 8.9 L638.0 7.8 L647.6 11.9 L657.3 9.6 L663.0 14.9 L663.0 0.0 Z" /></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="wedding_scallop" aria-hidden="true"></div>
+</section>
+
+<style>
+  @layer components {
+    .wedding_wrap { --_muted: color-mix(in srgb, var(--dark-900) 50%, transparent); position: relative; overflow: clip; padding: var(--section-space-small) var(--site-margin) var(--section-space-medium); background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat; color: var(--dark-900); }
+    .wedding_layout { width: 100%; max-width: var(--max-width-main); margin-inline: auto; }
+    .wedding_title { margin: 0 0 var(--space-7); font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
+    .wedding_body { display: flex; flex-direction: column; gap: var(--space-7); }
+    .wedding_visual-column { display: flex; justify-content: center; }
+    .wedding_polaroid { width: 17.5rem; padding: var(--space-2) var(--space-2) var(--space-3); background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; border: var(--border-width) solid #d9d9d9; box-shadow: 0 0.0625rem 0.0625rem rgb(31 47 92 / 10%), 0 0.375rem 0.875rem rgb(31 47 92 / 10%), 0 1.375rem 2.5rem rgb(31 47 92 / 8%); transform: rotate(-3deg); }
+    .wedding_visual { position: relative; height: 17rem; }
+    .wedding_visual-item { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; opacity: 0; transform: translateX(3%); }
+    .wedding_visual-item.is-active { opacity: 1; transform: translateX(0); }
+    .wedding_visual-item[hidden] { display: none; }
+    .wedding_visual-item img { display: block; width: 100%; height: 15.625rem; object-fit: cover; }
+    .wedding_caption { display: block; font: italic var(--secondary-regular) 1rem / 1.25 var(--secondary-family); }
+    .wedding_schedule { width: 100%; }
+    .wedding_tablist { border-top: 0.09375rem solid var(--dark-900); }
+    .wedding_row { display: grid; grid-template-columns: minmax(0, 1fr) 6rem; align-items: start; column-gap: var(--space-3); position: relative; padding-block: var(--space-4); border-bottom: var(--border-width) solid var(--_muted); color: var(--_muted); transition: color 0.25s ease; }
+    .wedding_row.is-active { color: var(--dark-900); }
+    .wedding_tab { display: grid; grid-column: 1; grid-template-columns: 2.125rem minmax(0, 1fr); align-items: start; gap: var(--space-3); width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+    .wedding_tab:focus-visible, .wedding_meta a:focus-visible, .wedding_footer a:focus-visible { outline-color: var(--dark-900); outline-offset: var(--focus-offset); }
+    .wedding_number { padding-top: 0.75rem; font: var(--primary-regular) 0.75rem / 1rem var(--mono-family); letter-spacing: 0.04em; }
+    .wedding_tab-title { display: flex; flex-direction: column; font: var(--secondary-regular) var(--h4) / 1 var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }
+    .wedding_tab-title em { font-weight: var(--secondary-ultralight); }
+    .wedding_meta { grid-column: 2; display: flex; align-items: end; flex-direction: column; gap: 0.25rem; padding-top: 0.25rem; font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--primary-family); text-align: right; }
+    .wedding_time { font: var(--primary-regular) 0.75rem / 1rem var(--mono-family); letter-spacing: 0.04em; }
+    .wedding_location { color: var(--dark-700); }
+    .wedding_row:not(.is-active) .wedding_location { color: inherit; }
+    .wedding_meta a, .wedding_footer a { color: inherit; text-decoration: none; }
+    .wedding_meta a:hover, .wedding_meta a:focus-visible { text-decoration: underline; text-underline-offset: 0.2em; }
+    .wedding_progress { position: absolute; right: 0; bottom: -0.0625rem; left: 0; height: var(--border-width); background: var(--dark-900); transform: scaleX(0); transform-origin: left; }
+    .wedding_footer { display: flex; align-items: start; flex-direction: column; gap: var(--space-4); padding-top: var(--space-3); font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--primary-family); color: var(--dark-700); }
+    .wedding_content { display: flex; flex-direction: column; gap: var(--space-7); }
+    .wedding_footer a { padding-bottom: var(--space-1); border-bottom: var(--border-width) solid var(--dark-900); color: var(--dark-900); font: var(--primary-regular) var(--eyebrow) / var(--line-height-medium) var(--mono-family); letter-spacing: 0.04em; }
+    .wedding_dress-wrap { position: relative; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 10%)) drop-shadow(0 0.375rem 0.875rem rgb(31 47 92 / 10%)) drop-shadow(0 1.375rem 2.5rem rgb(31 47 92 / 8%)); }
+    .wedding_dress { position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-5); background: var(--light-100) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; }
+    .wedding_dress-eyebrow { color: var(--dark-700); font: var(--primary-regular) var(--eyebrow) / var(--line-height-medium) var(--mono-family); letter-spacing: 0.04em; }
+    .wedding_dress h3 { margin: 0; color: var(--dark-900); font: var(--secondary-regular) 1.5rem / 1.167 var(--secondary-family); }
+    .wedding_dress p { margin: 0; color: var(--dark-900); font: var(--primary-regular) var(--text-main) / var(--line-height-large) var(--primary-family); }
+    .wedding_swatches { display: flex; gap: var(--space-2); padding-top: var(--space-1); }
+    .wedding_swatch { width: 1.875rem; height: 1.875rem; border-radius: 50%; }
+    .wedding_swatch-blue { border: var(--border-width) solid var(--dark-900); background: var(--brand-500); }
+    .wedding_swatch-cream { border: var(--border-width) solid var(--dark-900); background: var(--light-100); }
+    .wedding_swatch-sand { background: #d9c4a3; }
+    .wedding_swatch-navy { background: var(--dark-900); }
+    .wedding_torn { position: absolute; top: calc(100% - 0.625rem); right: 0; left: 0; height: 1.125rem; }
+    .wedding_torn svg { display: block; width: 100%; height: 100%; fill: var(--light-100); }
+    .wedding_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--light-100) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--light-100) 0.6875rem, transparent calc(0.6875rem + 0.5px)) 0 0 / 2.25rem 0.6875rem repeat-x; }
+  }
+
+  @media (min-width: 62rem) {
+    .wedding_wrap { padding-block: var(--section-space-medium); }
+    .wedding_title { margin-bottom: 3.5rem; }
+    .wedding_body { flex-direction: row; align-items: start; gap: var(--space-8); }
+    .wedding_visual-column { flex: 1 1 0; padding-top: var(--space-4); }
+    .wedding_content { flex: 1.2 1 0; gap: 2.5rem; min-width: 0; }
+    .wedding_polaroid { width: 23.75rem; }
+    .wedding_visual { height: 23rem; }
+    .wedding_visual-item img { height: 21.25rem; }
+    .wedding_row { grid-template-columns: minmax(0, 1fr) 9.375rem; align-items: center; column-gap: var(--space-4); }
+    .wedding_tab { grid-template-columns: 2.75rem minmax(0, 1fr); align-items: center; gap: var(--space-4); }
+    .wedding_number { padding-top: 0; font-size: 1rem; line-height: 1.25; }
+    .wedding_tab-title { flex-direction: row; align-items: baseline; gap: var(--space-2); font-size: var(--h4); line-height: 1.25; }
+    .wedding_meta { padding-top: 0; }
+    .wedding_time { font-size: 1rem; line-height: 1.25; }
+    .wedding_footer { align-items: center; flex-direction: row; justify-content: space-between; gap: var(--space-4); padding-bottom: 0.25rem; }
+    .wedding_dress { padding: var(--space-4) var(--space-4) var(--space-5); }
+    .wedding_swatch { width: 2rem; height: 2rem; }
+  }
+
+  @media (max-width: 61.999rem) {
+    .wedding_row { align-items: start; }
+    .wedding_meta { padding-top: 0.25rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wedding_row, .wedding_tab { transition: none; }
+    .wedding_visual-item { transform: none; transition: none; }
+  }
+</style>
