@@ -94,10 +94,14 @@ test.describe("wedding dress card", () => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
-      await expect(page.locator(".wedding_torn")).toHaveCount(0);
 
       const dress = page.locator(".wedding_dress");
-      const screenshot = (await dress.screenshot()).toString("base64");
+      await dress.scrollIntoViewIfNeeded();
+      const box = await dress.boundingBox();
+      if (!box) throw new Error("Dress card is not visible");
+      const screenshot = (await page.screenshot({
+        clip: { x: box.x, y: box.y, width: box.width, height: box.height + 24 },
+      })).toString("base64");
       const luminance = await page.evaluate(async ({ screenshot }) => {
         const image = new Image();
         image.src = `data:image/png;base64,${screenshot}`;
@@ -109,27 +113,37 @@ test.describe("wedding dress card", () => {
         if (!context) throw new Error("Canvas 2D context unavailable");
         context.drawImage(image, 0, 0);
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-        const rect = document.querySelector<HTMLElement>(".wedding_dress")!.getBoundingClientRect();
-        const scaleY = canvas.height / rect.height;
-        const tearStart = Math.round((rect.height - 18) * scaleY);
+        const columns = Array.from({ length: Math.round(canvas.width * 0.4) }, (_, index) => Math.round(canvas.width * 0.55) + index);
+        const readLuminance = (x: number, y: number) => {
+          const offset = (y * canvas.width + x) * 4;
+          return 0.2126 * pixels[offset] + 0.7152 * pixels[offset + 1] + 0.0722 * pixels[offset + 2];
+        };
+        const boundaries = columns.map((x) => {
+          for (let y = canvas.height - 1; y >= 0; y -= 1) {
+            if (readLuminance(x, y) > 228) return y;
+          }
+          throw new Error("Could not find the paper edge");
+        });
+        const boundary = [...boundaries].sort((a, b) => a - b)[Math.floor(boundaries.length / 2)];
         const mean = (start: number, end: number) => {
           let total = 0;
           let count = 0;
-          const left = Math.round(canvas.width * 0.05);
-          const right = Math.round(canvas.width * 0.95);
           for (let y = start; y < end; y += 1) {
-            for (let x = left; x < right; x += 1) {
-              const offset = (y * canvas.width + x) * 4;
-              total += 0.2126 * pixels[offset] + 0.7152 * pixels[offset + 1] + 0.0722 * pixels[offset + 2];
+            for (const x of columns) {
+              total += readLuminance(x, y);
               count += 1;
             }
           }
           return total / count;
         };
-        return { body: mean(tearStart - Math.round(24 * scaleY), tearStart - Math.round(8 * scaleY)), tear: mean(tearStart, tearStart + Math.round(4 * scaleY)) };
+        // Sample each column just inside its own edge; the tear is jagged, so a shared row would hit background.
+        const edgeSamples = columns.flatMap((x, index) => [4, 5, 6].map((inset) => readLuminance(x, boundaries[index] - inset)));
+        const edge = edgeSamples.reduce((total, value) => total + value, 0) / edgeSamples.length;
+        return { body: mean(boundary - 36, boundary - 30), edge };
       }, { screenshot });
 
-      expect(Math.abs(luminance.body - luminance.tear), `texture discontinuity at ${width}px`).toBeLessThan(4);
+      expect(Math.abs(luminance.body - luminance.edge), `texture discontinuity at ${width}px`).toBeLessThan(3);
+      await expect(page.locator(".wedding_torn")).toHaveCount(0);
     }
   });
 });
