@@ -22,6 +22,7 @@ const schedule = [
     image: arch,
     alt: "A white wedding arch draped in fabric and flowers on the sand by the water",
     caption: "Where we'll say yes — White Beach, 3 PM",
+    tilt: -3,
   },
   {
     number: "02",
@@ -33,6 +34,7 @@ const schedule = [
     image: sunsetSail,
     alt: "A sailboat on the water at sunset",
     caption: "Where we'll toast — [Location], 5 PM",
+    tilt: 2.5,
   },
   {
     number: "03",
@@ -44,6 +46,7 @@ const schedule = [
     image: whiteBeach,
     alt: "White Beach, Boracay",
     caption: "Where we'll dance — [Location], 7 PM",
+    tilt: -1.5,
   },
 ];
 ---
@@ -54,15 +57,13 @@ const schedule = [
 
     <div class="wedding_body" data-tabs="wrapper" data-tabs-autoplay="true" data-tabs-autoplay-duration="5000">
       <div class="wedding_visual-column">
-        <div class="wedding_polaroid" data-tabs="visual-wrapper">
-          <div class="wedding_visual" data-tabs="visual-list">
-            {schedule.map((item, index) => (
-              <div class:list={["wedding_visual-item", index === 0 && "is-active"]} id={`wedding-panel-${index + 1}`} data-tabs="visual-item" role="tabpanel" aria-labelledby={`wedding-tab-${index + 1}`} hidden={index !== 0}>
-                <Image src={item.image} alt={item.alt} width={680} height={680} widths={[560, 680]} sizes="(min-width: 62rem) 21.25rem, 15.75rem" loading="lazy" />
-                <span class="wedding_caption">{item.caption}</span>
-              </div>
-            ))}
-          </div>
+        <div class="wedding_visual" data-tabs="visual-list">
+          {schedule.map((item, index) => (
+            <div class:list={["wedding_visual-item", index === 0 && "is-active"]} id={`wedding-panel-${index + 1}`} data-tabs="visual-item" data-tilt={item.tilt} style={`--_tilt: ${item.tilt}deg`} role="tabpanel" aria-labelledby={`wedding-tab-${index + 1}`} hidden={index !== 0}>
+              <Image src={item.image} alt={item.alt} width={680} height={680} widths={[560, 680]} sizes="(min-width: 62rem) 21.25rem, 15.75rem" loading="lazy" />
+              <span class="wedding_caption">{item.caption}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -119,9 +120,9 @@ const schedule = [
     .wedding_title { margin: 0 0 var(--space-7); font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
     .wedding_body { display: flex; flex-direction: column; gap: var(--space-7); }
     .wedding_visual-column { display: flex; justify-content: center; }
-    .wedding_polaroid { width: 17.5rem; padding: var(--space-2) var(--space-2) var(--space-3); background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; border: var(--border-width) solid #d9d9d9; box-shadow: 0 0.0625rem 0.0625rem rgb(31 47 92 / 10%), 0 0.375rem 0.875rem rgb(31 47 92 / 10%), 0 1.375rem 2.5rem rgb(31 47 92 / 8%); transform: rotate(-3deg); }
-    .wedding_visual { position: relative; height: 17rem; }
-    .wedding_visual-item { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; opacity: 0; transform: translateX(3%); }
+    .wedding_visual { display: grid; width: max-content; max-width: 100%; }
+    .wedding_visual-item { grid-area: 1 / 1; display: flex; flex-direction: column; gap: var(--space-2); width: 17.5rem; padding: var(--space-2) var(--space-2) var(--space-3); background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; border: var(--border-width) solid #d9d9d9; box-shadow: 0 0.0625rem 0.0625rem rgb(31 47 92 / 10%), 0 0.375rem 0.875rem rgb(31 47 92 / 10%), 0 1.375rem 2.5rem rgb(31 47 92 / 8%); rotate: var(--_tilt); opacity: 0; transform: translateX(3%); }
+    .wedding_visual-item[data-tabs-ready] { rotate: none; }
     .wedding_visual-item.is-active { opacity: 1; transform: translateX(0); }
     .wedding_visual-item[hidden] { display: none; }
     .wedding_visual-item img { display: block; width: 100%; height: 15.625rem; object-fit: cover; }
@@ -167,8 +168,7 @@ const schedule = [
     .wedding_body { flex-direction: row; align-items: start; gap: var(--space-8); }
     .wedding_visual-column { flex: 1 1 0; padding-top: var(--space-4); }
     .wedding_content { flex: 1.2 1 0; gap: 2.5rem; min-width: 0; }
-    .wedding_polaroid { width: 23.75rem; }
-    .wedding_visual { height: 23rem; }
+    .wedding_visual-item { width: 23.75rem; }
     .wedding_visual-item img { height: 21.25rem; }
     .wedding_row { grid-template-columns: minmax(0, 1fr) 9.375rem; align-items: center; column-gap: var(--space-4); }
     .wedding_tab { grid-template-columns: 2.75rem minmax(0, 1fr); align-items: center; gap: var(--space-4); }

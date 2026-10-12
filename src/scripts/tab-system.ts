@@ -27,13 +27,21 @@ export function initTabSystem() {
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let activeIndex = tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+    activeIndex = activeIndex < 0 ? 0 : activeIndex;
     let isAnimating = false;
     let inView = false;
     let interactionPaused = false;
     let progressTween: gsap.core.Tween | null = null;
     let switchTween: gsap.core.Timeline | null = null;
 
-    const setActive = (index: number, keepPanels = false) => {
+    const getTilt = (panel: HTMLElement) => Number.parseFloat(panel.dataset.tilt || getComputedStyle(panel).getPropertyValue("--_tilt")) || 0;
+
+    panels.forEach((panel) => {
+      panel.dataset.tabsReady = "true";
+      gsap.set(panel, { rotation: getTilt(panel), xPercent: 0, autoAlpha: panel.classList.contains("is-active") ? 1 : 0 });
+    });
+
+    const setActive = (index: number) => {
       activeIndex = index;
       tabs.forEach((tab, itemIndex) => {
         const active = itemIndex === index;
@@ -41,7 +49,7 @@ export function initTabSystem() {
         tab.tabIndex = active ? 0 : -1;
         rows[itemIndex].classList.toggle("is-active", active);
         panels[itemIndex].classList.toggle("is-active", active);
-        panels[itemIndex].hidden = keepPanels ? false : !active;
+        panels[itemIndex].hidden = !active;
       });
     };
 
@@ -71,6 +79,7 @@ export function initTabSystem() {
         if (!userInitiated) return;
         switchTween?.progress(1);
         switchTween?.kill();
+        panels.forEach((panel, panelIndex) => { panel.hidden = panelIndex !== activeIndex; });
         isAnimating = false;
       }
       isAnimating = true;
@@ -79,10 +88,12 @@ export function initTabSystem() {
       const incoming = panels[index];
       const outgoingBar = progress[activeIndex];
       const nextBar = progress[index];
+      setActive(index);
       outgoing.hidden = false;
       incoming.hidden = false;
-      setActive(index, true);
       if (reducedMotion) {
+        gsap.set(outgoing, { autoAlpha: 0, xPercent: 0, rotation: getTilt(outgoing) });
+        gsap.set(incoming, { autoAlpha: 1, xPercent: 0, rotation: getTilt(incoming) });
         outgoing.hidden = true;
         isAnimating = false;
         startProgress();
@@ -95,8 +106,8 @@ export function initTabSystem() {
       });
       switchTween
         .to(outgoingBar, { scaleX: 0, transformOrigin: "right", duration: 0.3 }, 0)
-        .to(outgoing, { autoAlpha: 0, xPercent: 3 }, 0)
-        .fromTo(incoming, { autoAlpha: 0, xPercent: 3 }, { autoAlpha: 1, xPercent: 0 }, 0.3)
+        .to(outgoing, { autoAlpha: 0, xPercent: 3, rotation: getTilt(outgoing) }, 0)
+        .fromTo(incoming, { autoAlpha: 0, xPercent: 3, rotation: getTilt(incoming) + 4 }, { autoAlpha: 1, xPercent: 0, rotation: getTilt(incoming) }, 0.3)
         .set(nextBar, { scaleX: 0, transformOrigin: "left" }, 0);
     };
 
@@ -131,7 +142,7 @@ export function initTabSystem() {
     tablist.addEventListener("focusin", onFocusIn);
     tablist.addEventListener("focusout", onFocusOut);
     observer.observe(wrapper);
-    setActive(activeIndex < 0 ? 0 : activeIndex);
+    setActive(activeIndex);
     startProgress();
 
     cleanups.push(() => {

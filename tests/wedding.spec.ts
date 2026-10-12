@@ -28,6 +28,40 @@ test.describe("wedding schedule tabs", () => {
     await expect(page.locator("#wedding-tab-1")).toHaveAttribute("aria-selected", "true");
   });
 
+  test("swaps the complete polaroid at each tab's resting tilt", async ({ page }) => {
+    await page.locator("#wedding").scrollIntoViewIfNeeded();
+    const expectedTilts = [-3, 2.5, -1.5, -3];
+    const waitForSettledPanel = (panelNumber: number) => expect.poll(async () => page.locator('[role="tabpanel"][data-tabs="visual-item"]').evaluateAll((panels) => {
+      const visiblePanels = panels.filter((panel) => !(panel as HTMLElement).hidden);
+      const activePanel = visiblePanels[0] as HTMLElement | undefined;
+      return {
+        count: visiblePanels.length,
+        id: activePanel?.id,
+        opacity: activePanel ? getComputedStyle(activePanel).opacity : "",
+      };
+    }), { timeout: 5000 }).toEqual({ count: 1, id: `wedding-panel-${panelNumber}`, opacity: "1" });
+    const readTilt = (panelNumber: number) => page.locator(`#wedding-panel-${panelNumber}`).evaluate((el) => {
+      const transform = getComputedStyle(el).transform;
+      if (transform === "none") return 0;
+      const values = transform.match(/matrix(?:3d)?\(([^)]+)\)/)?.[1].split(",").map(Number) ?? [];
+      return Math.atan2(values[1], values[0]) * (180 / Math.PI);
+    });
+
+    await waitForSettledPanel(1);
+    const tilts = [await readTilt(1)];
+    for (const tabNumber of [2, 3, 1]) {
+      await page.locator(`#wedding-tab-${tabNumber}`).click();
+      await expect(page.locator(`#wedding-tab-${tabNumber}`)).toHaveAttribute("aria-selected", "true");
+      await waitForSettledPanel(tabNumber);
+      tilts.push(await readTilt(tabNumber));
+    }
+
+    tilts.forEach((tilt, index) => expect(Math.abs(tilt - expectedTilts[index])).toBeLessThanOrEqual(0.5));
+    expect(tilts[0]).not.toBeCloseTo(tilts[1], 1);
+    expect(tilts[1]).not.toBeCloseTo(tilts[2], 1);
+    expect(tilts[2]).not.toBeCloseTo(tilts[3], 1);
+  });
+
   test("stacks the visual above the schedule below desktop", async ({ page }) => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
