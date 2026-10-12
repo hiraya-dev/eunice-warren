@@ -57,6 +57,26 @@ test.describe("entourage section", () => {
     expect(positions.veil.left).toBeGreaterThan(positions.candle.left);
   });
 
+  test("keeps the heading to two lines at mobile width", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    const heading = await page.locator("#entourage h2").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { height: element.getBoundingClientRect().height, lineHeight: parseFloat(style.lineHeight) };
+    });
+    expect(heading.height).toBeLessThan(heading.lineHeight * 2.5);
+  });
+
+  test("keeps the heading inside the section at the narrowest viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/");
+    const dimensions = await page.locator("#entourage").evaluate((section) => ({
+      sectionWidth: section.clientWidth,
+      headingWidth: section.querySelector("h2")!.scrollWidth,
+    }));
+    expect(dimensions.headingWidth).toBeLessThanOrEqual(dimensions.sectionWidth);
+  });
+
   test("fades groups in on scroll and stays visible for reduced motion", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
