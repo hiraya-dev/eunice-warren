@@ -86,3 +86,50 @@ test.describe("wedding schedule tabs", () => {
     await expect(page.locator("#wedding-tab-3")).toHaveAttribute("aria-selected", "true");
   });
 });
+
+test.describe("wedding dress card", () => {
+  test("keeps the paper texture continuous through the torn edge", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await expect(page.locator(".wedding_torn")).toHaveCount(0);
+
+      const dress = page.locator(".wedding_dress");
+      const screenshot = (await dress.screenshot()).toString("base64");
+      const luminance = await page.evaluate(async ({ screenshot }) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${screenshot}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas 2D context unavailable");
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const rect = document.querySelector<HTMLElement>(".wedding_dress")!.getBoundingClientRect();
+        const scaleY = canvas.height / rect.height;
+        const tearStart = Math.round((rect.height - 18) * scaleY);
+        const mean = (start: number, end: number) => {
+          let total = 0;
+          let count = 0;
+          const left = Math.round(canvas.width * 0.05);
+          const right = Math.round(canvas.width * 0.95);
+          for (let y = start; y < end; y += 1) {
+            for (let x = left; x < right; x += 1) {
+              const offset = (y * canvas.width + x) * 4;
+              total += 0.2126 * pixels[offset] + 0.7152 * pixels[offset + 1] + 0.0722 * pixels[offset + 2];
+              count += 1;
+            }
+          }
+          return total / count;
+        };
+        return { body: mean(tearStart - Math.round(24 * scaleY), tearStart - Math.round(8 * scaleY)), tear: mean(tearStart, tearStart + Math.round(4 * scaleY)) };
+      }, { screenshot });
+
+      expect(Math.abs(luminance.body - luminance.tear), `texture discontinuity at ${width}px`).toBeLessThan(4);
+    }
+  });
+});
