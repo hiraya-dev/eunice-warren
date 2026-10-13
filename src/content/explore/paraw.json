@@ -1,0 +1,11 @@
+{
+  "order": 1,
+  "title": "Paraw at golden hour",
+  "tag": "SUNSET",
+  "body": "Book the 5 PM sail at Station 1. Bring a dry bag.",
+  "image": "../../assets/images/explore/paraw.jpg",
+  "alt": "A paraw sailboat pulled up on the sand at golden hour",
+  "sticker": "sun",
+  "tilt": -2.5,
+  "offset": "none"
+}

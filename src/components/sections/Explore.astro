@@ -1,0 +1,695 @@
+---
+import { getCollection } from "astro:content";
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import Arrow from "@/assets/icons/arrow-full.svg";
+import stamp from "@/assets/images/explore/stamp-shell.png";
+import boatSticker from "@/assets/images/explore/sticker-boat.svg?raw";
+import fishSticker from "@/assets/images/explore/sticker-fish.svg?raw";
+import shellSticker from "@/assets/images/explore/sticker-shell.svg?raw";
+import sunSticker from "@/assets/images/explore/sticker-sun.svg?raw";
+
+interface Props extends HTMLAttributes<"section"> {}
+
+const { class: className, ...rest } = Astro.props;
+const notes = (await getCollection("explore")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const stickers = {
+  sun: sunSticker,
+  shell: shellSticker,
+  fish: fishSticker,
+  boat: boatSticker,
+};
+---
+
+<section
+  id="explore"
+  class:list={["explore_wrap", "theme-light", className]}
+  {...rest}
+>
+  <div class="explore_layout">
+    <div
+      class="explore_slider"
+      data-gsap-slider-init
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Field notes"
+    >
+      <header class="explore_header" data-fade-in>
+        <h2 class="explore_title" data-fade-in-item>
+          Field notes<br />on Boracay
+        </h2>
+        <Image
+          class="explore_stamp"
+          src={stamp}
+          alt=""
+          aria-hidden="true"
+          width={112}
+          height={140}
+          loading="lazy"
+        />
+        <div
+          class="explore_controls explore_controls-header"
+          data-gsap-slider-controls
+        >
+          <button
+            class="explore_control explore_control-prev"
+            type="button"
+            data-gsap-slider-control="prev"
+            aria-label="Previous note"
+          >
+            <span class="explore_control-icon" aria-hidden="true"
+              ><Arrow /></span
+            >
+          </button>
+          <button
+            class="explore_control explore_control-next"
+            type="button"
+            data-gsap-slider-control="next"
+            aria-label="Next note"
+          >
+            <span class="explore_control-icon" aria-hidden="true"
+              ><Arrow /></span
+            >
+          </button>
+        </div>
+      </header>
+
+      <div class="explore_collection" data-gsap-slider-collection>
+        <div class="explore_list gsap-slider__list" data-gsap-slider-list>
+          {
+            notes.map((note) => (
+              <div class="explore_item gsap-slider__item" data-gsap-slider-item>
+                <article
+                  class:list={[
+                    "explore_card",
+                    `explore_card-offset-${note.data.offset}`,
+                  ]}
+                  style={`--_tilt: ${note.data.tilt}deg`}
+                >
+                  <div class="explore_photo">
+                    <Image
+                      src={note.data.image}
+                      alt={note.data.alt}
+                      width={400}
+                      height={400}
+                      widths={[280, 400]}
+                      sizes="(min-width: 64rem) 25rem, 18.125rem"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div class="explore_card-title-row">
+                    <h3>{note.data.title}</h3>
+                    <span class="explore_tag">{note.data.tag}</span>
+                  </div>
+                  <p>{note.data.body}</p>
+                  <span
+                    class="explore_sticker"
+                    data-sticker={note.data.sticker}
+                    aria-hidden="true"
+                    set:html={stickers[note.data.sticker]}
+                  />
+                </article>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <footer class="explore_footer">
+        <span class="explore_counter" aria-live="polite"
+          >-- / -- <span aria-hidden="true">· SWIPE →</span></span
+        >
+        <div
+          class="explore_controls explore_controls-footer"
+          data-gsap-slider-controls
+        >
+          <button
+            class="explore_control explore_control-prev"
+            type="button"
+            data-gsap-slider-control="prev"
+            aria-label="Previous note"
+          >
+            <span class="explore_control-icon" aria-hidden="true"
+              ><Arrow /></span
+            >
+          </button>
+          <button
+            class="explore_control explore_control-next"
+            type="button"
+            data-gsap-slider-control="next"
+            aria-label="Next note"
+          >
+            <span class="explore_control-icon" aria-hidden="true"
+              ><Arrow /></span
+            >
+          </button>
+        </div>
+      </footer>
+    </div>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .explore_wrap {
+      position: relative;
+      overflow: clip;
+      padding: var(--section-space-medium) 0 var(--section-space-medium)
+        var(--site-margin);
+      background: var(--light-100) var(--background-texture) center / 32rem
+        repeat;
+      color: var(--dark-900);
+    }
+    .explore_layout {
+      width: 100%;
+    }
+    .explore_slider {
+      --slider-status: on;
+      --slider-gap: 1.5rem;
+      width: 100%;
+    }
+    .explore_header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: var(--space-5);
+      padding-right: var(--space-7);
+    }
+    .explore_title {
+      margin: 0;
+      color: var(--dark-900);
+      font: var(--secondary-regular) var(--h1) / var(--line-height-medium)
+        var(--secondary-family);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+    .explore_stamp {
+      position: absolute;
+      top: 6rem;
+      left: calc(var(--site-margin) + 33.5rem);
+      width: 7rem;
+      height: 8.75rem;
+      rotate: -8deg;
+      transform-origin: 0 0;
+      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 18%))
+        drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 14%));
+    }
+    .explore_controls {
+      display: flex;
+      flex: none;
+      gap: var(--space-2);
+    }
+    .explore_control {
+      display: grid;
+      width: 3.25rem;
+      height: 3.25rem;
+      flex: none;
+      place-items: center;
+      padding: 0;
+      border: 0.09375rem solid var(--dark-900);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--dark-900);
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .explore_control-next {
+      border-color: var(--dark-900);
+      background: var(--dark-900);
+      color: var(--light-100);
+    }
+    .explore_control-icon {
+      display: block;
+      width: 1.25rem;
+      height: 1rem;
+    }
+    .explore_control-icon svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .explore_control-prev .explore_control-icon {
+      rotate: 180deg;
+    }
+    .explore_control:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+    [data-gsap-slider-control-status="not-active"] {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .explore_collection {
+      width: calc(100vw - var(--site-margin));
+      margin-top: var(--space-6);
+      overflow-x: clip;
+      overflow-y: visible;
+    }
+    .explore_list {
+      display: flex;
+      align-items: flex-start;
+      padding: var(--space-5) 0 var(--space-4) var(--space-1);
+      user-select: none;
+      will-change: transform;
+      touch-action: pan-y;
+      backface-visibility: hidden;
+    }
+    [data-gsap-slider-list-status="grab"] {
+      cursor: grab;
+    }
+    [data-gsap-slider-list-status="grabbing"] {
+      cursor: grabbing;
+    }
+    .explore_item {
+      width: 25rem;
+      margin-right: var(--slider-gap);
+      flex: none;
+    }
+    [data-gsap-slider-item]:last-child {
+      margin-right: 0;
+    }
+    .explore_card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-3) var(--space-4);
+      background: var(--light-200)
+        url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat;
+      box-shadow: 0 1.125rem 2.5rem rgb(31 47 92 / 16%);
+      transform-origin: center;
+      rotate: var(--_tilt, 0deg);
+    }
+    .explore_card-offset-space-5 {
+      margin-top: var(--space-5);
+    }
+    .explore_card-offset-space-6 {
+      margin-top: var(--space-6);
+    }
+    .explore_photo {
+      width: 100%;
+      height: 25rem;
+      overflow: clip;
+    }
+    .explore_photo img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .explore_card-title-row {
+      display: flex;
+      align-items: last baseline;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+    .explore_card h3 {
+      --_trim-top: 0.5lh;
+      --_trim-bottom: 0.5lh;
+      min-width: 0;
+      margin: 0;
+      color: var(--dark-900);
+      font: italic var(--secondary-ultralight) var(--h6) / 1.15
+        var(--secondary-family);
+    }
+    .explore_tag {
+      flex: none;
+      color: var(--accent-500);
+      font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .explore_card p {
+      --_trim-top: 0.5lh;
+      --_trim-bottom: 0.5lh;
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--text-main) / 1.5 var(--primary-family);
+    }
+    .explore_sticker {
+      position: absolute;
+      z-index: 1;
+      display: grid;
+      width: 8.125rem;
+      height: 8.125rem;
+      place-items: center;
+      filter: drop-shadow(0 0.1875rem 0.25rem rgb(31 47 92 / 20%));
+      transform-origin: 0 0;
+    }
+    .explore_sticker :global(svg) {
+      width: 80%;
+      height: 80%;
+    }
+    .explore_sticker[data-sticker="sun"] {
+      top: -3.125rem;
+      right: -3.125rem;
+      rotate: 12deg;
+    }
+    .explore_sticker[data-sticker="shell"] {
+      bottom: 5.625rem;
+      left: -3rem;
+      rotate: -14deg;
+    }
+    .explore_sticker[data-sticker="fish"] {
+      top: 18.75rem;
+      right: -2.875rem;
+      rotate: -8deg;
+    }
+    .explore_sticker[data-sticker="boat"] {
+      top: -3.25rem;
+      left: -2.75rem;
+      rotate: -10deg;
+    }
+    .explore_footer {
+      display: none;
+    }
+    [data-gsap-slider-status="not-active"] [data-gsap-slider-controls] {
+      display: none;
+    }
+  }
+
+  @media (max-width: 63.999rem) {
+    .explore_wrap {
+      padding-top: var(--section-space-small);
+      padding-bottom: var(--section-space-medium);
+    }
+    .explore_header {
+      padding-right: var(--site-margin);
+    }
+    .explore_title {
+      line-height: var(--line-height-small);
+    }
+    .explore_stamp {
+      top: 4.375rem;
+      right: 1.75rem;
+      left: auto;
+      width: 4rem;
+      height: 5rem;
+    }
+    .explore_controls-header {
+      display: none;
+    }
+    .explore_collection {
+      margin-top: var(--space-6);
+    }
+    .explore_item {
+      width: min(18.125rem, calc(100vw - 2.5rem));
+    }
+    .explore_card {
+      padding: var(--space-3) var(--space-3) var(--space-4);
+    }
+    .explore_photo {
+      height: 17.5rem;
+    }
+    .explore_sticker {
+      width: 5.75rem;
+      height: 5.75rem;
+    }
+    .explore_sticker[data-sticker="sun"] {
+      top: -2.125rem;
+      right: -1.75rem;
+    }
+    .explore_sticker[data-sticker="fish"] {
+      top: 13.125rem;
+      right: -1.75rem;
+    }
+    .explore_sticker[data-sticker="boat"] {
+      top: -2.25rem;
+      left: -1.875rem;
+    }
+    .explore_footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-6) var(--site-margin) 0 0;
+    }
+    .explore_counter {
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family);
+      letter-spacing: var(--letter-spacing-wide);
+      white-space: nowrap;
+    }
+    .explore_control {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+  }
+
+  @media (max-width: 24rem) {
+    .explore_item {
+      width: 17.5rem;
+    }
+    .explore_photo {
+      height: 16.875rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explore_control {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from "gsap";
+  import { Draggable } from "gsap/Draggable";
+  import { InertiaPlugin } from "gsap/InertiaPlugin";
+
+  gsap.registerPlugin(Draggable, InertiaPlugin);
+
+  type SliderState = {
+    draggable: Draggable;
+    abort: AbortController;
+    tween?: gsap.core.Tween;
+  };
+
+  const states = new WeakMap<HTMLElement, SliderState>();
+
+  function initBasicGSAPSlider() {
+    document
+      .querySelectorAll<HTMLElement>("[data-gsap-slider-init]")
+      .forEach((root) => {
+        const previous = states.get(root);
+        previous?.tween?.kill();
+        previous?.draggable.kill();
+        previous?.abort.abort();
+
+        const collection = root.querySelector<HTMLElement>(
+          "[data-gsap-slider-collection]",
+        );
+        const track = root.querySelector<HTMLElement>(
+          "[data-gsap-slider-list]",
+        );
+        const items = Array.from(
+          root.querySelectorAll<HTMLElement>("[data-gsap-slider-item]"),
+        );
+        const controls = Array.from(
+          root.querySelectorAll<HTMLButtonElement>(
+            "[data-gsap-slider-control]",
+          ),
+        );
+        const counter = root.querySelector<HTMLElement>(".explore_counter");
+        if (!collection || !track || !items.length) return;
+
+        root.setAttribute("role", "region");
+        root.setAttribute("aria-roledescription", "carousel");
+        root.setAttribute("aria-label", "Field notes");
+        collection.setAttribute("role", "group");
+        collection.setAttribute("aria-roledescription", "Slides List");
+        collection.setAttribute("aria-label", "Slides");
+        items.forEach((slide, index) => {
+          slide.setAttribute("role", "group");
+          slide.setAttribute("aria-roledescription", "Slide");
+          slide.setAttribute(
+            "aria-label",
+            `Slide ${index + 1} of ${items.length}`,
+          );
+          slide.setAttribute("aria-hidden", "true");
+          slide.setAttribute("aria-selected", "false");
+          slide.setAttribute("tabindex", "-1");
+        });
+
+        const abort = new AbortController();
+        controls.forEach((button) => {
+          button.setAttribute("role", "button");
+          button.disabled = true;
+          button.setAttribute("aria-disabled", "true");
+        });
+
+        const styles = getComputedStyle(root);
+        const statusVar = styles.getPropertyValue("--slider-status").trim();
+        const rect = items[0].getBoundingClientRect();
+        const marginRight = parseFloat(getComputedStyle(items[0]).marginRight);
+        const slideW = rect.width + marginRight;
+        const spv = Math.max(
+          1,
+          Math.min(collection.clientWidth / slideW, items.length),
+        );
+        const sliderEnabled = statusVar === "on" && spv < items.length;
+        root.setAttribute(
+          "data-gsap-slider-status",
+          sliderEnabled ? "active" : "not-active",
+        );
+        if (!sliderEnabled) return;
+
+        track.onmouseenter = () =>
+          track.setAttribute("data-gsap-slider-list-status", "grab");
+        track.onmouseleave = () =>
+          track.removeAttribute("data-gsap-slider-list-status");
+
+        const vw = collection.clientWidth;
+        const tw = track.scrollWidth;
+        const maxScroll = Math.max(tw - vw, 0);
+        const minX = -maxScroll;
+        const maxX = 0;
+        const maxIndex = maxScroll / slideW;
+        const full = Math.floor(maxIndex);
+        const snapPoints: number[] = [];
+        for (let index = 0; index <= full; index += 1)
+          snapPoints.push(-index * slideW);
+        if (full < maxIndex) snapPoints.push(-maxIndex * slideW);
+
+        let activeIndex = 0;
+        let announcedIndex = -1;
+        let collectionRect = collection.getBoundingClientRect();
+        const setX = gsap.quickSetter(track, "x", "px");
+        const reducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+
+        function updateStatus(x: number) {
+          if (x > maxX || x < minX) return;
+          const calcX = Math.max(minX, Math.min(maxX, x));
+          let closest = snapPoints[0];
+          snapPoints.forEach((point) => {
+            if (Math.abs(point - calcX) < Math.abs(closest - calcX))
+              closest = point;
+          });
+          activeIndex = snapPoints.indexOf(closest);
+          items.forEach((slide, index) => {
+            const slideRect = slide.getBoundingClientRect();
+            const leftEdge = slideRect.left - collectionRect.left;
+            const inView =
+              leftEdge + slideRect.width / 2 > 0 &&
+              leftEdge + slideRect.width / 2 < collectionRect.width;
+            const status =
+              index === activeIndex
+                ? "active"
+                : inView
+                  ? "inview"
+                  : "not-active";
+            slide.setAttribute("data-gsap-slider-item-status", status);
+            slide.setAttribute(
+              "aria-selected",
+              index === activeIndex ? "true" : "false",
+            );
+            slide.setAttribute("aria-hidden", inView ? "false" : "true");
+            slide.setAttribute("tabindex", index === activeIndex ? "0" : "-1");
+          });
+          controls.forEach((button) => {
+            const canMove =
+              button.dataset.gsapSliderControl === "prev"
+                ? activeIndex > 0
+                : activeIndex < snapPoints.length - 1;
+            button.disabled = !canMove;
+            button.setAttribute("aria-disabled", canMove ? "false" : "true");
+            button.setAttribute(
+              "data-gsap-slider-control-status",
+              canMove ? "active" : "not-active",
+            );
+          });
+          if (
+            counter &&
+            activeIndex !== announcedIndex &&
+            counter.firstChild?.nodeType === Node.TEXT_NODE
+          ) {
+            announcedIndex = activeIndex;
+            counter.firstChild.textContent = `${String(activeIndex + 1).padStart(2, "0")} / ${String(snapPoints.length).padStart(2, "0")} `;
+          }
+        }
+
+        controls.forEach((button) => {
+          button.addEventListener(
+            "click",
+            () => {
+              if (button.disabled) return;
+              const delta =
+                button.dataset.gsapSliderControl === "next" ? 1 : -1;
+              const target = activeIndex + delta;
+              const tween = gsap.to(track, {
+                duration: reducedMotion ? 0 : 0.4,
+                x: snapPoints[target],
+                onUpdate: () =>
+                  updateStatus(gsap.getProperty(track, "x") as number),
+              });
+              states.set(root, { draggable, abort, tween });
+            },
+            { signal: abort.signal },
+          );
+        });
+
+        const draggable = Draggable.create(track, {
+          type: "x",
+          inertia: !reducedMotion,
+          bounds: { minX, maxX },
+          throwResistance: 2000,
+          dragResistance: 0.05,
+          maxDuration: 0.6,
+          minDuration: 0.2,
+          edgeResistance: 0.75,
+          snap: { x: snapPoints },
+          onPress() {
+            track.setAttribute("data-gsap-slider-list-status", "grabbing");
+            collectionRect = collection.getBoundingClientRect();
+          },
+          onDrag() {
+            setX(this.x);
+            updateStatus(this.x);
+          },
+          onThrowUpdate() {
+            setX(this.x);
+            updateStatus(this.x);
+          },
+          onThrowComplete() {
+            setX(this.endX);
+            updateStatus(this.endX);
+            track.setAttribute("data-gsap-slider-list-status", "grab");
+          },
+          onRelease() {
+            setX(this.x);
+            updateStatus(this.x);
+            track.setAttribute("data-gsap-slider-list-status", "grab");
+          },
+        })[0];
+
+        states.set(root, { draggable, abort });
+        setX(0);
+        updateStatus(0);
+      });
+  }
+
+  function debounceOnWidthChange(fn: () => void, ms: number) {
+    let last = window.innerWidth;
+    let timer: number | undefined;
+    return () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (window.innerWidth !== last) {
+          last = window.innerWidth;
+          fn();
+        }
+      }, ms);
+    };
+  }
+
+  initBasicGSAPSlider();
+  window.addEventListener(
+    "resize",
+    debounceOnWidthChange(initBasicGSAPSlider, 200),
+  );
+  document.addEventListener("astro:page-load", initBasicGSAPSlider);
+</script>

@@ -1,0 +1,11 @@
+{
+  "order": 4,
+  "title": "Crystal Cove",
+  "tag": "ISLAND HOP",
+  "body": "Half-day island hop. The cave is worth the climb.",
+  "image": "../../assets/images/explore/crystal-cove.jpg",
+  "alt": "Crystal Cove’s coves and turquoise shallows seen from above",
+  "sticker": "boat",
+  "tilt": 3,
+  "offset": "space-5"
+}

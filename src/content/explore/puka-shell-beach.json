@@ -1,0 +1,11 @@
+{
+  "order": 2,
+  "title": "Puka Shell Beach",
+  "tag": "BEACHES",
+  "body": "Quieter than White Beach. Go before noon.",
+  "image": "../../assets/images/explore/puka.jpg",
+  "alt": "Clear turquoise water and dark rocks at Puka Shell Beach",
+  "sticker": "shell",
+  "tilt": 2,
+  "offset": "space-6"
+}
