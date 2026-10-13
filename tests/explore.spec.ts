@@ -25,6 +25,35 @@ test.describe("explore section", () => {
     ).toHaveAttribute("aria-label", "Field notes");
   });
 
+  test("lets advanced cards bleed into the left margin", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await page
+      .locator("#explore [data-gsap-slider-list]")
+      .scrollIntoViewIfNeeded();
+    await page
+      .locator(
+        "#explore .explore_controls-header [data-gsap-slider-control=next]",
+      )
+      .click();
+    const card = page.locator("#explore .explore_card").first();
+    await expect
+      .poll(() =>
+        card.evaluate((element) => element.getBoundingClientRect().left),
+      )
+      .toBeLessThan(0);
+    const box = (await card.locator(".explore_photo").boundingBox())!;
+    const hit = await page.evaluate(
+      ([x, y]) =>
+        !!document.elementFromPoint(x, y)?.closest("#explore .explore_card"),
+      [16, box.y + box.height / 2],
+    );
+    expect(hit).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(1440);
+  });
+
   test("uses header controls on desktop and moves the track", async ({
     page,
   }) => {
