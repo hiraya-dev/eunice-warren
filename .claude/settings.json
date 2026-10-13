@@ -1,7 +1,8 @@
 {
   "enabledPlugins": {
     "chrome-devtools-mcp@claude-plugins-official": true,
-    "paper-desktop@paper": true
+    "paper-desktop@paper": true,
+    "context7@claude-plugins-official": false
   },
   "hooks": {
     "PreToolUse": [
