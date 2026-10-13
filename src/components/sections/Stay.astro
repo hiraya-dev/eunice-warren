@@ -1,0 +1,144 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"section"> {}
+
+const { class: className, ...rest } = Astro.props;
+
+const steps = [
+  {
+    number: "1",
+    title: "Fly to Caticlan",
+    body: "Caticlan (MPH) is the closest airport — about 1 hr from Manila or Cebu. Kalibo (KLO) has more flights but adds ~2 hrs by van to the jetty port.",
+    detail: "~1 hr flight · MNL / CEB → MPH",
+  },
+  {
+    number: "2",
+    title: "Cross by boat",
+    body: "From Caticlan Jetty Port, take the 15-min boat to Cagban Port. Pay the terminal and environmental fees at the counter, and bring a valid ID.",
+    detail: "~15 min · Boats run 5 AM – 7 PM",
+  },
+  {
+    number: "3",
+    title: "Ride to White Beach",
+    body: "Grab an e-trike from Cagban to Station [X] — about 20 mins. The ceremony is right on the sand, steps from the main path.",
+    detail: "~20 min · Cagban → Station [X]",
+  },
+];
+---
+
+<section id="stay" class:list={["stay_wrap", "theme-dark", className]} {...rest}>
+  <div class="stay_layout">
+    <header class="stay_header" data-fade-in>
+      <div class="stay_intro">
+        <h2 class="stay_title" data-fade-in-item>Make it a<br />weekend</h2>
+        <p class="stay_description" data-fade-in-item>Three days, one island. Here’s how to get here — the field notes below cover what to do once you land.</p>
+      </div>
+      <div class="stay_map stay_map-desktop" aria-hidden="true">
+        <svg width="558" height="372" viewBox="-24 0 558 372" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
+          <path d="M-24 258.213C17.577 247.271 61.341 245.083 85.412 250.554 102.918 254.93 117.141 246.177 130.271 236.33 143.4 226.483 157.624 228.671 169.659 238.518 182.788 248.366 195.918 246.177 210.141 240.707 232.024 234.142 250.624 247.271 267.035 282.283 252.812 311.824 229.835 331.518 207.953 339.177H-24Z" fill="#2A3A6B" stroke="#BCD3E8" />
+          <path d="M-8.682 282.283C30.706 273.53 74.471 273.53 107.294 280.095 140.118 286.66 172.941 277.907 205.765 269.154" fill="none" stroke="#BCD3E838" stroke-width="0.8" />
+          <path d="M-13.059 306.354C28.518 297.601 76.659 299.789 113.859 306.354 151.059 312.918 190.447 304.166 229.835 293.224" fill="none" stroke="#BCD3E829" stroke-width="0.8" />
+          <path d="M395.047 37.201C419.118 37.201 430.059 55.801 428.965 76.589 427.871 98.471 430.059 120.354 434.435 142.236 438.812 164.118 434.435 181.624 427.871 198.036 423.494 215.542 427.871 231.954 430.059 248.366 432.247 270.248 414.741 284.471 395.047 284.471 374.259 284.471 361.13 270.248 361.13 250.554 361.13 229.766 360.035 207.883 358.941 186.001 357.847 164.118 361.13 142.236 361.13 120.354 361.13 98.471 356.753 83.154 358.941 68.93 362.224 50.33 374.259 37.201 395.047 37.201Z" fill="#2A3A6B" stroke="#BCD3E8" />
+          <path d="M395.047 52.518C411.459 52.518 418.024 65.648 416.93 80.966 415.835 102.848 419.118 126.918 422.4 146.613 424.588 164.118 420.212 181.624 414.741 199.13 411.459 216.636 415.835 234.142 416.93 249.46 418.024 262.589 408.177 271.342 395.047 271.342" fill="none" stroke="#BCD3E838" stroke-width="0.8" stroke-dasharray="2 3" />
+          <path d="M65.718 135.671C140.118 133.483 218.894 161.93 299.859 225.389 332.682 251.648 356.753 269.154 376.447 283.377" fill="none" stroke="#E3B5AC" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="6 5" />
+          <path d="M376.447 281.189C376.447 242.895 378.635 188.189 384.106 153.177" fill="none" stroke="#E3B5AC" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="0.1 5" />
+          <path d="M46.024 126.918L67.906 135.671 46.024 144.424 51.494 135.671Z" fill="#E3B5AC" />
+          <path d="M384.106 149.895C384.106 149.895 372.071 142.236 372.071 133.483 372.071 128.669 375.791 125.824 379.292 125.824 381.699 125.824 383.34 127.247 384.106 128.888 384.872 127.247 386.513 125.824 388.92 125.824 392.421 125.824 396.141 128.669 396.141 133.483 396.141 142.236 384.106 149.895 384.106 149.895Z" fill="#E3B5AC" />
+          <circle cx="376.447" cy="283.377" r="3.282" fill="#1F2F5C" stroke="#E3B5AC" stroke-width="1.4" />
+          <circle cx="485.859" cy="56.895" r="15.318" fill="none" stroke="#F5EFE3" stroke-width="1.2" />
+          <path d="M485.859 43.766V70.024M478.2 56.895H493.518M485.859 43.766L481.482 50.33M485.859 43.766L490.235 50.33" fill="none" stroke="#F5EFE3" stroke-width="1.2" stroke-linecap="round" />
+          <path d="M140.118 76.589L153.247 72.213M135.741 83.154L148.871 78.777M249.53 113.789L262.659 109.413M245.153 120.354L258.282 115.977M468.353 164.118L481.482 159.742M463.977 170.683L477.106 166.307M304.235 317.295L317.365 312.918M299.859 323.86L312.988 319.483M490.235 273.53L503.365 269.154M485.859 280.095L498.988 275.718" fill="none" stroke="#BCD3E859" stroke-linecap="round" />
+          <text x="2.259" y="37.201" font-size="12" letter-spacing="1.751" fill="#BCD3E8">BORACAY / ARRIVAL ROUTE</text>
+          <text x="481.482" y="30.636" font-size="12" fill="#F5EFE3">N</text>
+          <text x="32.894" y="168.495" font-size="13" letter-spacing="1.751" fill="#F5EFE3">CATICLAN</text>
+          <text x="2.259" y="238.518" font-size="12" letter-spacing="1.751" fill="#BCD3E8">PANAY</text>
+          <text x="352.377" y="310.73" font-size="13" letter-spacing="1.751" fill="#F5EFE3">CAGBAN</text>
+          <text x="321.552" y="204" font-size="12" letter-spacing="1.751" transform="translate(144 536) rotate(-90)" fill="#F5EFE3">WHITE BEACH</text>
+        </svg>
+      </div>
+      <div class="stay_map stay_map-mobile" aria-hidden="true">
+        <svg width="510" height="340" viewBox="0 0 510 340" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
+          <path d="M0 236C38 226 78 224 100 229C116 233 129 225 141 216C153 207 166 209 177 218C189 227 201 225 214 220C234 214 251 226 266 258C253 285 232 303 212 310H0Z" fill="#2A3A6B" stroke="#BCD3E8" />
+          <path d="M14 258C50 250 90 250 120 256C150 262 180 254 210 246" fill="none" stroke="#BCD3E838" stroke-width="0.8" />
+          <path d="M10 280C48 272 92 274 126 280C160 286 196 278 232 268" fill="none" stroke="#BCD3E829" stroke-width="0.8" />
+          <path d="M383 34C405 34 415 51 414 70C413 90 415 110 419 130C423 150 419 166 413 181C409 197 413 212 415 227C417 247 401 260 383 260C364 260 352 247 352 229C352 210 351 190 350 170C349 150 352 130 352 110C352 90 348 76 350 63C353 46 364 34 383 34Z" fill="#2A3A6B" stroke="#BCD3E8" />
+          <path d="M383 48C398 48 404 60 403 74C402 94 405 116 408 134C410 150 406 166 401 182C398 198 402 214 403 228C404 240 395 248 383 248" fill="none" stroke="#BCD3E838" stroke-width="0.8" stroke-dasharray="2 3" />
+          <path d="M82 124C150 122 222 148 296 206C326 230 348 246 366 259" fill="none" stroke="#E3B5AC" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="6 5" />
+          <path d="M366 257C366 222 368 172 373 140" fill="none" stroke="#E3B5AC" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="0.1 5" />
+          <path d="M64 116L84 124L64 132L69 124Z" fill="#E3B5AC" />
+          <path d="M373 137C373 137 362 130 362 122C362 117.6 365.4 115 368.6 115C370.8 115 372.3 116.3 373 117.8C373.7 116.3 375.2 115 377.4 115C380.6 115 384 117.6 384 122C384 130 373 137 373 137Z" fill="#E3B5AC" />
+          <circle cx="366" cy="259" r="3" fill="#1F2F5C" stroke="#E3B5AC" stroke-width="1.4" />
+          <circle cx="466" cy="52" r="14" fill="none" stroke="#F5EFE3" stroke-width="1.2" />
+          <path d="M466 40V64M459 52H473M466 40L462 46M466 40L470 46" fill="none" stroke="#F5EFE3" stroke-width="1.2" stroke-linecap="round" />
+          <path d="M150 70L162 66M146 76L158 72M250 104L262 100M246 110L258 106M450 150L462 146M446 156L458 152M300 290L312 286M296 296L308 292M470 250L482 246M466 256L478 252" fill="none" stroke="#BCD3E859" stroke-linecap="round" />
+          <text x="24" y="34" font-size="11" letter-spacing="1.6" fill="#BCD3E8">BORACAY / ARRIVAL ROUTE</text>
+          <text x="462" y="28" font-size="11" fill="#F5EFE3">N</text>
+          <text x="52" y="154" font-size="12" letter-spacing="1.6" fill="#F5EFE3">CATICLAN</text>
+          <text x="24" y="218" font-size="11" letter-spacing="1.6" fill="#BCD3E8">PANAY</text>
+          <text x="344" y="284" font-size="12" letter-spacing="1.6" fill="#F5EFE3">CAGBAN</text>
+          <text x="340" y="196" font-size="11" letter-spacing="1.6" transform="rotate(-90 340 196)" fill="#F5EFE3">WHITE BEACH</text>
+        </svg>
+      </div>
+    </header>
+
+    <div class="stay_directions" data-fade-in>
+      <h2 class="stay_directions-title" data-fade-in-item>Getting there</h2>
+      <ol class="stay_steps">
+        {steps.map((step) => (
+          <li class="stay_step" data-fade-in-item>
+            <span class="stay_step-number" aria-hidden="true">{step.number}</span>
+            <div class="stay_step-content">
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+              <span class="stay_step-detail">{step.detail}</span>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+  <div class="stay_scallop" aria-hidden="true"></div>
+</section>
+
+<style>
+  @layer components {
+    .stay_wrap { position: relative; overflow: clip; padding: var(--section-space-medium) var(--site-margin); background: var(--dark-900) var(--background-texture) center / 32rem repeat; color: var(--light-100); }
+    .stay_layout { width: 100%; max-width: var(--max-width-main); margin-inline: auto; }
+    .stay_header { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); min-height: 23.25rem; }
+    .stay_intro { display: flex; max-width: 34.375rem; flex-direction: column; gap: var(--space-4); }
+    .stay_title { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--light-100); font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
+    .stay_description { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; max-width: 27.5rem; margin: 0; color: var(--brand-500); font: var(--primary-regular) 1.25rem / 1.6 var(--primary-family); }
+    .stay_map { flex: 0 1 37.875rem; width: min(37.875rem, 50%); }
+    .stay_map svg { display: block; width: 100%; max-width: 34.875rem; height: auto; font-family: var(--mono-family); }
+    .stay_map-mobile { display: none; }
+    .stay_directions { display: flex; flex-direction: column; gap: var(--space-5); padding-top: 3.5rem; }
+    .stay_directions-title { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--light-100); font: var(--secondary-regular) var(--h5) / 1.1 var(--secondary-family); }
+    .stay_steps { position: relative; display: flex; margin: 0; padding: 0; gap: var(--space-6); list-style: none; }
+    .stay_steps::before { position: absolute; top: 1.125rem; right: 2.25rem; left: 2.25rem; border-top: 0.09375rem dashed var(--brand-500); content: ""; }
+    .stay_step { position: relative; display: flex; min-width: 0; flex: 1 1 0; flex-direction: column; gap: var(--space-3); }
+    .stay_step-number { z-index: 1; display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; place-items: center; border: 0.09375rem solid var(--light-100); border-radius: 50%; background: var(--dark-900); color: var(--light-100); font: var(--primary-regular) 1rem / 1.25 var(--mono-family); }
+    .stay_step-content { display: flex; flex-direction: column; gap: var(--space-3); }
+    .stay_step h3 { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--light-100); font: var(--secondary-regular) 1.5rem / 1.75rem var(--secondary-family); }
+    .stay_step p { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--brand-500); font: var(--primary-regular) var(--text-main) / 1.5 var(--primary-family); }
+    .stay_step-detail { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; padding-top: var(--space-2); border-top: 0.0625rem solid color-mix(in srgb, var(--brand-500) 20%, var(--dark-900)); color: var(--light-100); font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
+    .stay_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--light-100) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--light-100) 0.6875rem, transparent calc(0.6875rem + 0.03125rem)) 0 0 / 2.25rem 0.6875rem repeat-x; }
+  }
+
+  @media (max-width: 61.999rem) {
+    .stay_wrap { padding-top: var(--section-space-small); padding-bottom: var(--section-space-medium); }
+    .stay_header { display: flex; min-height: 0; flex-direction: column; align-items: start; gap: var(--space-7); }
+    .stay_intro { max-width: none; gap: var(--space-5); }
+    .stay_title { font-size: min(var(--h1), calc((100vw - 2 * var(--site-margin)) / 5.6)); line-height: 0.94; letter-spacing: var(--letter-spacing-tighter); }
+    .stay_description { max-width: none; font-size: var(--text-main); line-height: var(--line-height-huge); }
+    .stay_map-desktop { display: none; }
+    .stay_map-mobile { display: block; width: 21.875rem; max-width: 100%; flex: none; }
+    .stay_directions { gap: var(--space-6); padding-top: var(--space-7); }
+    .stay_steps { flex-direction: column; gap: var(--space-6); }
+    .stay_steps::before { display: none; }
+    .stay_step { flex: none; flex-direction: row; gap: var(--space-4); }
+    .stay_step:not(:last-child)::after { position: absolute; top: 2.25rem; bottom: calc(var(--space-6) * -1); left: 1.125rem; border-left: 0.09375rem dashed var(--brand-500); content: ""; }
+    .stay_step-content { min-width: 0; padding-top: var(--space-1); }
+    .stay_step-detail { padding-top: var(--space-3); }
+  }
+</style>
