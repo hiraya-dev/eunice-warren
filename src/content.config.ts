@@ -25,4 +25,20 @@ const entourage = defineCollection({
   }),
 });
 
-export const collections = { entourage };
+const explore = defineCollection({
+  loader: glob({ pattern: "**/*.json", base: "./src/content/explore" }),
+  schema: ({ image }) =>
+    z.object({
+      order: z.number(),
+      title: z.string(),
+      tag: z.string(),
+      body: z.string(),
+      image: image(),
+      alt: z.string(),
+      sticker: z.enum(["sun", "shell", "fish", "boat"]),
+      tilt: z.number(),
+      offset: z.enum(["none", "space-5", "space-6"]),
+    }),
+});
+
+export const collections = { entourage, explore };

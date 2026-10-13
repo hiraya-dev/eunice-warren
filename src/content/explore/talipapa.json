@@ -1,0 +1,11 @@
+{
+  "order": 3,
+  "title": "D’Talipapa market",
+  "tag": "EAT",
+  "body": "Pick your catch, have it cooked next door.",
+  "image": "../../assets/images/explore/talipapa.jpg",
+  "alt": "Fresh fish piled beside a market scale at D’Talipapa",
+  "sticker": "fish",
+  "tilt": -1.5,
+  "offset": "none"
+}

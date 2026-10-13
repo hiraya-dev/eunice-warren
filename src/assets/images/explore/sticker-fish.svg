@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <path d="m62.43 40.65c2.41-3.06 3.67-6.94 3.67-11.06 0-1.43-0.14-2.85-0.43-4.05-0.66-2.72-3.99-3.47-5.9-1.46-2.47 2.62-5.16 4.95-8.68 4.95-1.51 0-3.02-0.42-4.49-0.86-3.48-1.1-7.06-1.94-10.98-1.94-10.3 0-19.43 5.84-23.04 13.38-0.43 0.9-0.37 1.95 0.13 2.82 4.49 8.05 13.39 12.99 22.5 12.99 3.66 0 7.11-0.78 10.16-1.67 1.43-0.42 2.94-0.74 4.37-0.74 4.15 0 7.71 2.59 10.17 5.42 0.83 0.94 1.92 1.41 2.81 1.41 1.86 0 3.5-1.53 3.79-3.68 0.15-1.14 0.26-2.3 0.26-3.31 0-4.97-1.64-9.37-4.34-12.2z" fill="#F5EFE3" />
+  <path d="m57.74 40.77c3.18-2.68 4.94-6.59 4.94-11.04 0-1.27-0.13-2.53-0.38-3.49-0.03-0.11-0.15-0.14-0.23-0.07-3.25 3.13-6.4 5.94-10.99 5.94-1.54 0-2.99-0.28-4.39-0.69-3.46-1.12-7.08-1.95-11.09-1.95-9.12 0-16.82 4.97-20.04 11.12-0.05 0.09-0.05 0.18 0 0.27 3.81 7.05 11.41 11.32 19.67 11.32 3.42 0 6.58-0.71 9.38-1.56 1.71-0.52 3.58-0.93 5.27-0.93 5.37 0 9.8 3.22 12.64 6.66 0.17 0.2 0.43 0.12 0.5-0.14 0.23-1.07 0.3-2.27 0.3-3.37 0-5.23-2.15-9.31-5.58-12.07z" fill="#BCD3E8" stroke="#1F2F5C" stroke-width="1.01" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="m47.25 31.61c-0.74 6.09-0.43 13.04 0.56 18.15" fill="none" stroke="#1F2F5C" stroke-width="1.431" />
+  <circle cx="29.8" cy="37.15" r="1.443" fill="#1F2F5C" />
+  <path d="m30.72 37.73c2.42 1.3 5.38 2.35 7.75 2.85" fill="none" stroke="#1F2F5C" stroke-width="0.9543" stroke-linecap="round" />
+  <path d="m29.13 44.6c3.14-2.11 6.71-3.63 9.59-4.01h1.9" fill="none" stroke="#1F2F5C" stroke-width="0.9543" stroke-linecap="round" />
+  <path d="m20.87 40.57h0.96" fill="none" stroke="#1F2F5C" stroke-width="0.9272" stroke-linecap="round" />
+  <path d="m57.73 46.12 1.96 2.02" fill="none" stroke="#C23B2E" stroke-width="0.8806" stroke-linecap="round" />
+  <path d="m31.02 50.56 2.21-1.59" fill="none" stroke="#1F2F5C" stroke-width="0.4127" stroke-linecap="round" />
+  <path d="m32.93 50.98 2.25-1.57" fill="none" stroke="#1F2F5C" stroke-width="0.4127" stroke-linecap="round" />
+  <path d="m35.29 51.19 2.02-1.43" fill="none" stroke="#1F2F5C" stroke-width="0.4264" stroke-linecap="round" />
+  <path d="m38.33 33.38 2.46-1.78" fill="none" stroke="#1F2F5C" stroke-width="0.4264" stroke-linecap="round" />
+  <path d="m39.91 34.17 2.6-1.84" fill="none" stroke="#1F2F5C" stroke-width="0.4264" stroke-linecap="round" />
+  <path d="m41.59 34.87 2.54-1.87" fill="none" stroke="#1F2F5C" stroke-width="0.4264" stroke-linecap="round" />
+</svg>
