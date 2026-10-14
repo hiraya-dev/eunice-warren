@@ -156,6 +156,10 @@ const stickers = {
     .explore_wrap {
       position: relative;
       overflow: clip;
+      --explore-inset: max(
+        0px,
+        calc((100% - var(--site-margin) - var(--max-width-main)) / 2)
+      );
       padding: var(--section-space-medium) 0 var(--section-space-medium)
         var(--site-margin);
       background: var(--light-100) var(--background-texture) center / 32rem
@@ -163,7 +167,8 @@ const stickers = {
       color: var(--dark-900);
     }
     .explore_layout {
-      width: 100%;
+      width: min(var(--max-width-main), 100%);
+      margin-left: var(--explore-inset);
     }
     .explore_slider {
       --slider-status: on;
@@ -187,7 +192,13 @@ const stickers = {
     .explore_stamp {
       position: absolute;
       top: 6rem;
-      left: calc(var(--site-margin) + 33.5rem);
+      left: calc(
+        var(--site-margin) +
+          max(
+            0px,
+            calc((100% - 2 * var(--site-margin) - var(--max-width-main)) / 2)
+          ) + 33.5rem
+      );
       width: 7rem;
       height: 8.75rem;
       rotate: -8deg;
@@ -241,7 +252,13 @@ const stickers = {
       pointer-events: none;
     }
     .explore_collection {
-      width: calc(100vw - var(--site-margin));
+      width: calc(
+        100vw - var(--site-margin) -
+          max(
+            0px,
+            calc((100vw - 2 * var(--site-margin) - var(--max-width-main)) / 2)
+          )
+      );
       margin-top: var(--space-6);
     }
     .explore_list {
@@ -365,6 +382,12 @@ const stickers = {
     }
     [data-gsap-slider-status="not-active"] [data-gsap-slider-controls] {
       display: none;
+    }
+  }
+
+  @media (min-width: 90.001rem) {
+    .explore_header {
+      padding-right: 0;
     }
   }
 
