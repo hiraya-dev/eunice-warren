@@ -1,0 +1,863 @@
+---
+import { Image } from "astro:assets";
+import Form from "@/components/form/Form.astro";
+import Input from "@/components/form/Input.astro";
+import Textarea from "@/components/form/Textarea.astro";
+import stamp from "@/assets/images/playlist/stamp-pilipinas.png";
+import postcardPaper from "@/assets/textures/postcard-paper.jpg";
+import { PLAYLIST_URI } from "@/settings/playlist.ts";
+---
+
+<section
+  id="playlist"
+  class="playlist_wrap theme-light"
+  style="scroll-margin-top: var(--nav-height)"
+>
+  <div class="playlist_layout">
+    <div class="playlist_left">
+      <header class="playlist_header">
+        <h2 class="playlist_title">What gets<br />you dancing?</h2>
+        <p class="playlist_intro">
+          Send a song to the DJ. We'll play as many as we can.
+        </p>
+      </header>
+      <div class="playlist_player">
+        <div class="playlist_player-row">
+          <div
+            class="playlist_cassette"
+            data-playlist-cassette
+            role="group"
+            aria-label="Cassette player"
+          >
+            <div class="playlist_cassette-rim" aria-hidden="true"></div>
+            <span
+              class="playlist_screw playlist_screw-top-left"
+              aria-hidden="true"></span><span
+              class="playlist_screw playlist_screw-top-right"
+              aria-hidden="true"></span><span
+              class="playlist_screw playlist_screw-bottom-left"
+              aria-hidden="true"></span><span
+              class="playlist_screw playlist_screw-bottom-right"
+              aria-hidden="true"></span>
+            <div class="playlist_label">
+              <div class="playlist_label-head">
+                <div>
+                  <span class="playlist_label-kicker">E &amp; W · MIXTAPE</span
+                  ><strong>Boracay ’27</strong>
+                </div><div class="playlist_label-meta">
+                  <span>SIDE A</span><small>01·14·27</small>
+                </div>
+              </div>
+              <div class="playlist_window" aria-hidden="true">
+                <div class="playlist_stripes"><i></i><i></i><i></i></div><div
+                  class="playlist_tape-window"
+                >
+                  <div class="playlist_tape-pack"></div>
+                </div><div class="playlist_reel playlist_reel-left">
+                  <div class="playlist_reel-inner">
+                    <svg viewBox="0 0 100 100"
+                      ><circle r="48" cx="50" cy="50" fill="#F5EFE3"></circle><g
+                        fill="#1F2F5C"
+                        ><path d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                        ></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(60 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(120 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(180 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(240 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(300 50 50)"></path></g
+                      ><circle r="18" cx="50" cy="50" fill="#1F2F5C"
+                      ></circle><circle
+                        r="48"
+                        cx="50"
+                        cy="50"
+                        fill="none"
+                        stroke="#1B1A18"
+                        stroke-width="3"></circle></svg
+                    >
+                  </div>
+                </div><div class="playlist_reel playlist_reel-right">
+                  <div class="playlist_reel-inner">
+                    <svg viewBox="0 0 100 100"
+                      ><circle r="48" cx="50" cy="50" fill="#F5EFE3"></circle><g
+                        fill="#1F2F5C"
+                        transform="rotate(30 50 50)"
+                        ><path d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                        ></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(60 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(120 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(180 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(240 50 50)"></path><path
+                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
+                          transform="rotate(300 50 50)"></path></g
+                      ><circle r="18" cx="50" cy="50" fill="#1F2F5C"
+                      ></circle><circle
+                        r="48"
+                        cx="50"
+                        cy="50"
+                        fill="none"
+                        stroke="#1B1A18"
+                        stroke-width="3"></circle></svg
+                    >
+                  </div>
+                </div>
+              </div>
+              <div class="playlist_progress">
+                <span data-playlist-elapsed>0:00</span><input
+                  data-playlist-seek
+                  aria-label="Seek"
+                  type="range"
+                  min="0"
+                  max="0"
+                  step="1"
+                  value="0"
+                  disabled
+                /><span data-playlist-total>0:00</span>
+              </div>
+            </div>
+            <div class="playlist_transport">
+              <button
+                type="button"
+                data-playlist-restart
+                aria-label="Restart"
+                disabled
+                ><svg viewBox="0 0 24 24" aria-hidden="true"
+                  ><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"></path></svg
+                ></button
+              ><button
+                type="button"
+                data-playlist-toggle
+                aria-label="Play"
+                disabled
+                ><svg
+                  class="playlist_play-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"><path d="M7 4.5v15l13-7.5z"></path></svg
+                ><svg
+                  class="playlist_pause-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  ><path d="M6 4h4v16H6zM14 4h4v16h-4z"></path></svg
+                ></button
+              >
+            </div>
+          </div>
+          <div class="playlist_listen-copy">
+            <div class="playlist_eyebrow">
+              <span aria-hidden="true"></span>SIDE A · LISTEN ALONG
+            </div><h3>Side A — Boracay ’27</h3><p>
+              Press play on the tape — the reels follow the playlist below.
+              Every song you send lands on it.
+            </p>
+          </div>
+        </div>
+        <div
+          class="playlist_embed"
+          data-playlist-embed
+          data-uri={PLAYLIST_URI}
+          aria-label="Spotify playlist"
+        >
+          <span>Playlist unavailable right now.</span>
+        </div>
+      </div>
+    </div>
+    <Form
+      name="song-request"
+      successMessage="Song requests open soon — hold that thought."
+      class="playlist_form-wrap"
+    >
+      <div
+        class="playlist_postcard"
+        style={`--postcard-texture: url("${postcardPaper.src}")`}
+      >
+        <Image
+          src={stamp}
+          alt=""
+          class="playlist_stamp"
+          width={912}
+          height={1152}
+          aria-hidden="true"
+        /><Input
+          appearance="postcard"
+          label="Your name"
+          name="name"
+          placeholder=""
+          required
+        /><Input
+          appearance="postcard-search"
+          label="Find a song"
+          name="song"
+          required
+          placeholder="Song title and artist"
+        /><Textarea
+          appearance="postcard"
+          label="Dedication (optional)"
+          name="dedication"
+          minLines={2}
+          maxLines={2}
+        /><button class="playlist_submit" type="submit">Add it to Side A</button
+        >
+      </div>
+    </Form>
+  </div>
+  <div class="playlist_scallop" aria-hidden="true"></div>
+</section>
+
+<script>
+  const initPlaylist = () => {
+    const section = document.querySelector<HTMLElement>("#playlist");
+    if (!section || section.dataset.playlistInitialized === "true") return;
+    section.dataset.playlistInitialized = "true";
+    const embed = section.querySelector<HTMLElement>("[data-playlist-embed]");
+    const seek = section.querySelector<HTMLInputElement>(
+      "[data-playlist-seek]",
+    );
+    const toggle = section.querySelector<HTMLButtonElement>(
+      "[data-playlist-toggle]",
+    );
+    const restart = section.querySelector<HTMLButtonElement>(
+      "[data-playlist-restart]",
+    );
+    const elapsed = section.querySelector<HTMLElement>(
+      "[data-playlist-elapsed]",
+    );
+    const total = section.querySelector<HTMLElement>("[data-playlist-total]");
+    const reels = Array.from(
+      section.querySelectorAll<HTMLElement>(".playlist_reel-inner"),
+    );
+    if (!embed || !seek || !toggle || !restart || !elapsed || !total) return;
+    interface SpotifyPlaybackEvent {
+      data: { isPaused: boolean; position: number; duration: number };
+    }
+    interface SpotifyController {
+      togglePlay: () => void;
+      seek: (seconds: number) => void;
+      addListener: (
+        event: string,
+        callback: (event: SpotifyPlaybackEvent) => void,
+      ) => void;
+    }
+    interface SpotifyAPI {
+      createController: (
+        element: HTMLElement,
+        options: { uri: string; width: string; height: number },
+        callback: (controller: SpotifyController) => void,
+      ) => void;
+    }
+    let controller: SpotifyController | undefined;
+    let playing = false;
+    let position = 0;
+    let duration = 0;
+    let updatedAt = performance.now();
+    let frame = 0;
+    let timeout: number | undefined;
+    let observer: IntersectionObserver | undefined;
+    let script: HTMLScriptElement | undefined;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const playlistUri = embed.dataset.uri;
+    const format = (ms: number) =>
+      `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
+    const render = () => {
+      const current = playing
+        ? Math.min(
+            duration || position,
+            position + performance.now() - updatedAt,
+          )
+        : position;
+      elapsed.textContent = format(current);
+      if (duration) seek.value = String(current);
+      seek.style.setProperty(
+        "--_progress",
+        String(duration ? current / duration : 0),
+      );
+      if (!reducedMotion.matches)
+        reels.forEach((reel) => {
+          reel.style.transform = `rotate(${(current / 1000) * 180}deg)`;
+        });
+      if (playing) frame = requestAnimationFrame(render);
+    };
+    const fail = () => {
+      if (timeout) window.clearTimeout(timeout);
+      toggle.disabled = true;
+      restart.disabled = true;
+      seek.disabled = true;
+    };
+    const ready = (api: SpotifyAPI) => {
+      if (controller || !playlistUri) return;
+      api.createController(
+        embed,
+        { uri: playlistUri, width: "100%", height: 80 },
+        (created) => {
+          controller = created;
+          if (timeout) window.clearTimeout(timeout);
+          toggle.disabled = false;
+          restart.disabled = false;
+          seek.disabled = false;
+          controller.addListener("playback_update", (event) => {
+            playing = !event.data.isPaused;
+            position = event.data.position || 0;
+            duration = event.data.duration || 0;
+            updatedAt = performance.now();
+            seek.max = String(duration);
+            total.textContent = format(duration);
+            toggle.setAttribute("aria-label", playing ? "Pause" : "Play");
+            toggle.setAttribute("aria-pressed", String(playing));
+            cancelAnimationFrame(frame);
+            render();
+          });
+        },
+      );
+    };
+    const load = () => {
+      const spotify = (window as Window & { IFrameAPI?: SpotifyAPI }).IFrameAPI;
+      if (spotify) return ready(spotify);
+      (
+        window as Window & {
+          onSpotifyIframeApiReady?: (api: SpotifyAPI) => void;
+        }
+      ).onSpotifyIframeApiReady = ready;
+      script = document.createElement("script");
+      script.src = "https://open.spotify.com/embed/iframe-api/v1";
+      script.async = true;
+      script.addEventListener("error", fail, { once: true });
+      document.head.appendChild(script);
+      timeout = window.setTimeout(() => {
+        if (!controller) fail();
+      }, 10000);
+    };
+    const onToggle = () => controller?.togglePlay();
+    const onRestart = () => controller?.seek(0);
+    const onSeek = () => controller?.seek(Number(seek.value) / 1000);
+    toggle.addEventListener("click", onToggle);
+    restart.addEventListener("click", onRestart);
+    seek.addEventListener("input", onSeek);
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          load();
+          observer?.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(section);
+    document.addEventListener(
+      "astro:before-swap",
+      () => {
+        cancelAnimationFrame(frame);
+        observer?.disconnect();
+        if (timeout) window.clearTimeout(timeout);
+        toggle.removeEventListener("click", onToggle);
+        restart.removeEventListener("click", onRestart);
+        seek.removeEventListener("input", onSeek);
+      },
+      { once: true },
+    );
+  };
+  initPlaylist();
+  document.addEventListener("astro:page-load", initPlaylist);
+</script>
+
+<style is:global>
+  @layer components {
+    .playlist_wrap {
+      position: relative;
+      overflow: clip;
+      padding: var(--section-space-medium) var(--site-margin)
+        calc(var(--section-space-medium) + 1rem);
+      background-color: var(--light-100);
+      background-image: var(--background-texture);
+      color: var(--dark-900);
+    }
+    .playlist_layout {
+      display: grid;
+      gap: var(--space-7);
+      max-width: var(--max-width-main);
+      margin-inline: auto;
+    }
+    .playlist_left {
+      display: grid;
+      gap: var(--space-7);
+      min-width: 0;
+    }
+    .playlist_header {
+      display: grid;
+      gap: var(--space-4);
+    }
+    .playlist_title {
+      margin: 0;
+      font-family: var(--secondary-family);
+      font-size: var(--h1);
+      font-weight: var(--secondary-regular);
+      line-height: 1.1;
+      padding-bottom: var(--secondary-trim-bottom);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+    .playlist_intro {
+      max-width: 32ch;
+      margin: 0;
+      font-size: var(--text-main);
+      line-height: 1.5;
+    }
+    .playlist_player {
+      display: grid;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+    .playlist_player-row {
+      display: grid;
+      grid-template-areas: "copy" "cassette";
+      gap: var(--space-4);
+    }
+    .playlist_eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--accent-500);
+      font-family: var(--mono-family);
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      line-height: 1;
+    }
+    .playlist_eyebrow span {
+      width: 0.375rem;
+      height: 0.375rem;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .playlist_listen-copy {
+      display: grid;
+      grid-area: copy;
+      gap: var(--space-4);
+    }
+    .playlist_listen-copy h3,
+    .playlist_listen-copy p {
+      display: none;
+    }
+    .playlist_cassette {
+      grid-area: cassette;
+    }
+    .playlist_cassette {
+      container-type: inline-size;
+      position: relative;
+      width: 100%;
+      aspect-ratio: 380 / 240;
+      transform: rotate(-2deg);
+    }
+    .playlist_cassette::before {
+      position: absolute;
+      inset: 0;
+      content: "";
+      border: 0.1cqw solid #121b3a;
+      border-radius: 4.2cqw;
+      background: linear-gradient(
+        165deg,
+        #2b3b6b 0%,
+        var(--dark-900) 55%,
+        #16224a 100%
+      );
+      box-shadow:
+        inset 0 0.53cqw 0.26cqw rgb(255 255 255 / 0.18),
+        inset 0 -0.79cqw 0.79cqw rgb(0 0 0 / 0.4),
+        0 6.32cqw 10.53cqw rgb(31 47 92 / 0.22),
+        0 1.58cqw 3.16cqw rgb(31 47 92 / 0.16);
+    }
+    .playlist_cassette-rim,
+    .playlist_label,
+    .playlist_screw,
+    .playlist_transport {
+      position: absolute;
+    }
+    .playlist_cassette-rim {
+      inset: 1.58cqw;
+      border: 0.1cqw solid rgb(255 255 255 / 0.12);
+      border-radius: 2.9cqw;
+    }
+    .playlist_screw {
+      width: 3.16cqw;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at 36% 30%,
+        #8a93ae,
+        #4a5578 50%,
+        #232e52 80%
+      );
+    }
+    .playlist_screw-top-left {
+      top: 2.63cqw;
+      left: 2.63cqw;
+    }
+    .playlist_screw-top-right {
+      top: 2.63cqw;
+      right: 2.63cqw;
+    }
+    .playlist_screw-bottom-left {
+      bottom: 2.63cqw;
+      left: 2.63cqw;
+    }
+    .playlist_screw-bottom-right {
+      right: 2.63cqw;
+      bottom: 2.63cqw;
+    }
+    .playlist_label {
+      inset: 5.79cqw 7.89cqw auto;
+      height: 41.05cqw;
+      padding: 3.16cqw 3.68cqw;
+      border: 0.79cqw solid #e9dfcb;
+      border-radius: 2.1cqw;
+      background: var(--light-100);
+    }
+    .playlist_label-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1.58cqw;
+    }
+    .playlist_label-head > div:first-child {
+      display: grid;
+      gap: 1.58cqw;
+    }
+    .playlist_label-kicker,
+    .playlist_label-meta,
+    .playlist_progress {
+      font-family: var(--mono-family);
+    }
+    .playlist_label-kicker {
+      color: var(--accent-500);
+      font-size: 2.37cqw;
+      letter-spacing: 0.14em;
+      line-height: 1;
+    }
+    .playlist_label strong {
+      font: italic var(--secondary-regular) 5.79cqw/1 var(--secondary-family);
+      letter-spacing: -0.02em;
+    }
+    .playlist_label-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: end;
+      gap: 1.58cqw;
+      font-size: 2.37cqw;
+      line-height: 1;
+    }
+    .playlist_label-meta span {
+      padding: 0.79cqw 1.84cqw;
+      border-radius: 100vw;
+      background: var(--dark-900);
+      color: var(--light-100);
+    }
+    .playlist_label-meta small {
+      color: var(--dark-700);
+      font-size: 2.1cqw;
+    }
+    .playlist_window {
+      position: relative;
+      height: 15.26cqw;
+      margin-top: 2.63cqw;
+    }
+    .playlist_stripes {
+      position: absolute;
+      inset: 3.68cqw -3.68cqw auto;
+      display: grid;
+      gap: 0.79cqw;
+    }
+    .playlist_stripes i {
+      height: 2.1cqw;
+    }
+    .playlist_stripes i:nth-child(1) {
+      background: var(--accent-500);
+    }
+    .playlist_stripes i:nth-child(2) {
+      background: var(--brand-500);
+    }
+    .playlist_stripes i:nth-child(3) {
+      background: var(--light-300);
+    }
+    .playlist_tape-window {
+      position: absolute;
+      inset: 0 12.11cqw;
+      border-radius: 100vw;
+      background: linear-gradient(180deg, #2a2722, #1b1a18 50%);
+      box-shadow:
+        0 0 0 1.05cqw #e9dfcb,
+        inset 0 0.79cqw 2.1cqw rgb(0 0 0 / 0.6);
+    }
+    .playlist_tape-pack {
+      position: absolute;
+      inset: 2.37cqw auto auto 16.32cqw;
+      width: 18.42cqw;
+      height: 10.53cqw;
+      border: 0.53cqw solid #11100f;
+      border-radius: 0.79cqw;
+      background: #393631;
+      box-shadow: inset 0 0.79cqw 1.58cqw rgb(0 0 0 / 0.7);
+    }
+    .playlist_reel {
+      position: absolute;
+      top: 1.84cqw;
+      width: 11.58cqw;
+    }
+    .playlist_reel-left {
+      left: 14.21cqw;
+    }
+    .playlist_reel-right {
+      right: 14.21cqw;
+    }
+    .playlist_reel-inner {
+      transform-origin: center;
+    }
+    .playlist_reel svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .playlist_progress {
+      display: flex;
+      align-items: center;
+      gap: 2.1cqw;
+      margin-top: 2.1cqw;
+      color: var(--dark-700);
+      font-size: 2.1cqw;
+      line-height: 1;
+    }
+    .playlist_progress input {
+      --_progress: 0;
+      appearance: none;
+      flex: 1;
+      height: 2.1cqw;
+      margin: 0;
+      background: linear-gradient(
+        to right,
+        var(--dark-900) calc(var(--_progress) * 100%),
+        color-mix(in srgb, var(--dark-900) 22%, transparent)
+          calc(var(--_progress) * 100%)
+      );
+      border-radius: 100vw;
+      cursor: pointer;
+    }
+    .playlist_progress input::-webkit-slider-thumb {
+      appearance: none;
+      width: 2.89cqw;
+      height: 2.89cqw;
+      border: 0.53cqw solid var(--dark-900);
+      border-radius: 50%;
+      background: white;
+    }
+    .playlist_progress input::-moz-range-thumb {
+      width: 1.84cqw;
+      height: 1.84cqw;
+      border: 0.53cqw solid var(--dark-900);
+      border-radius: 50%;
+      background: white;
+    }
+    .playlist_transport {
+      right: 26.32cqw;
+      bottom: 3.16cqw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3.16cqw;
+      width: 47.37cqw;
+      height: 11.58cqw;
+      clip-path: polygon(13% 0, 87% 0, 100% 100%, 0 100%);
+      background: rgb(0 0 0 / 0.18);
+    }
+    .playlist_transport button {
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0.1cqw solid rgb(245 239 227 / 0.35);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--light-100);
+      cursor: pointer;
+    }
+    .playlist_transport button:first-child {
+      width: 7.37cqw;
+      height: 7.37cqw;
+    }
+    .playlist_transport button:last-child {
+      width: 8.95cqw;
+      height: 8.95cqw;
+      border: 0;
+      background: var(--accent-500);
+    }
+    .playlist_transport svg {
+      width: 4.2cqw;
+      height: 4.2cqw;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .playlist_transport button:last-child svg {
+      width: 3.68cqw;
+      height: 3.68cqw;
+      fill: var(--light-100);
+      stroke: none;
+    }
+    .playlist_pause-icon {
+      display: none;
+    }
+    .playlist_transport button[aria-pressed="true"] .playlist_play-icon {
+      display: none;
+    }
+    .playlist_transport button[aria-pressed="true"] .playlist_pause-icon {
+      display: block;
+    }
+    .playlist_embed {
+      position: relative;
+      width: 100%;
+      height: 5rem;
+      overflow: hidden;
+      border-radius: 0.75rem;
+      background: #2e3d66;
+      color: var(--light-100);
+    }
+    .playlist_embed span {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 0.875rem;
+    }
+    .playlist_embed.is-ready span {
+      display: none;
+    }
+    .playlist_embed iframe {
+      position: relative;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      height: 5rem;
+      border: 0;
+    }
+    .playlist_form-wrap {
+      min-width: 0;
+    }
+    .playlist_postcard {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: 1.5rem;
+      border: 0.09375rem solid var(--dark-900);
+      background: var(--light-200) var(--postcard-texture) repeat;
+      box-shadow:
+        0 0.0625rem 0.0625rem rgb(31 47 92 / 0.1),
+        0 0.375rem 0.875rem rgb(31 47 92 / 0.1),
+        0 1.375rem 2.5rem rgb(31 47 92 / 0.08);
+      transform: rotate(1.5deg);
+    }
+    .playlist_stamp {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 3.75rem;
+      height: 4.6875rem;
+      object-fit: cover;
+      transform: rotate(4deg);
+      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 0.18))
+        drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 0.14));
+    }
+    .playlist_submit {
+      width: 100%;
+      text-align: center;
+      padding: 1rem;
+      border: 0;
+      background: var(--accent-500);
+      color: var(--light-100);
+      font: 500 1rem/1.25 var(--primary-family);
+      cursor: pointer;
+    }
+    .playlist_submit:focus-visible,
+    .playlist_transport button:focus-visible,
+    .playlist_progress input:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+    .playlist_scallop {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 0.8125rem;
+      background:
+        linear-gradient(var(--brand-500) 0 0) bottom / 100% 0.125rem no-repeat,
+        radial-gradient(
+            circle at 1.125rem 0.6875rem,
+            var(--brand-500) 0.6875rem,
+            transparent calc(0.6875rem + 0.03125rem)
+          )
+          0 0 / 2.25rem 0.6875rem repeat-x;
+    }
+    @media (width >= 64rem) {
+      .playlist_wrap {
+        padding-block: var(--section-space-large);
+      }
+      .playlist_left {
+        gap: 1.75rem;
+      }
+      .playlist_header {
+        gap: 1.75rem;
+      }
+      .playlist_layout {
+        grid-template-columns: minmax(0, 1fr) 32.5rem;
+        gap: 6rem;
+        align-items: start;
+      }
+      .playlist_player-row {
+        grid-template-areas: "cassette copy";
+        grid-template-columns: 23.75rem minmax(0, 17.5rem);
+        gap: 2.25rem;
+        align-items: center;
+        padding-top: 0.75rem;
+      }
+      .playlist_listen-copy {
+        gap: 0.875rem;
+      }
+      .playlist_listen-copy h3,
+      .playlist_listen-copy p {
+        display: block;
+        margin: 0;
+      }
+      .playlist_listen-copy h3 {
+        font: 1.875rem/1 var(--secondary-family);
+        letter-spacing: -0.02em;
+      }
+      .playlist_listen-copy p {
+        color: var(--dark-700);
+        font-size: 0.875rem;
+        line-height: 1.43;
+      }
+      .playlist_cassette {
+        width: 23.75rem;
+        transform: rotate(-3deg);
+      }
+      .playlist_postcard {
+        padding: 2.25rem;
+        transform: rotate(2.5deg);
+      }
+      .playlist_stamp {
+        top: 1.25rem;
+        right: 1.125rem;
+        width: 5rem;
+        height: 6.25rem;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .playlist_reel-inner {
+        transform: none !important;
+      }
+    }
+  }
+</style>
