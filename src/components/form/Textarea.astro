@@ -25,6 +25,8 @@ interface Props extends Omit<HTMLAttributes<"textarea">, "rows"> {
   maxLines?: number;
   /** Require the field and mark its label. */
   required?: boolean;
+  /** Visual treatment for the field. */
+  appearance?: "default" | "postcard";
 }
 
 const {
@@ -36,6 +38,7 @@ const {
   minLines = 3,
   maxLines = 12,
   required = false,
+  appearance = "default",
   class: className,
   ...rest
 } = Astro.props;
@@ -44,7 +47,12 @@ const {
 {
   render && label && (
     <label
-      class:list={["field", "form-textarea", className]}
+      class:list={[
+        "field",
+        "form-textarea",
+        appearance !== "default" && appearance,
+        className,
+      ]}
       style={`--_min-lines: ${minLines}; --_max-lines: ${maxLines};`}
     >
       <span class="field-label text-style-main">
@@ -82,6 +90,29 @@ const {
           var(--border-width) * 2
       );
       resize: vertical;
+    }
+    .form-textarea.postcard .field-label {
+      display: inline-flex;
+      align-self: flex-start;
+      padding: 0.25rem 0.5rem;
+      background: var(--brand-500);
+      color: var(--dark-900);
+      font-family: var(--mono-family);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .form-textarea.postcard .field-star {
+      display: none;
+    }
+    .form-textarea.postcard .field-control {
+      min-height: 4rem;
+      padding: 0.5rem;
+      border: 0.0625rem solid var(--light-300);
+      border-radius: 0;
+      background: transparent;
+      color: var(--dark-900);
     }
   }
 </style>
