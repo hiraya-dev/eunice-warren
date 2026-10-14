@@ -178,7 +178,12 @@ test.describe("Playlist section", () => {
     await page.locator(".playlist_submit").click();
     await expect(page.locator('input[name="name"]')).toBeFocused();
     await page.locator('input[name="name"]').fill("Eunice");
-    await page.locator('input[name="song"]').fill("Dancing Queen — ABBA");
+    await expect(page.locator(".field-search-icon")).toHaveCount(0);
+    await expect(page.locator('input[name="artist"]')).not.toHaveAttribute(
+      "required",
+    );
+    await page.locator('input[name="song"]').fill("Dancing Queen");
+    await page.locator('input[name="artist"]').fill("ABBA");
     await page.locator(".playlist_submit").click();
     await expect(
       page.locator('.playlist_form-wrap .form_note-sent[role="status"]'),
