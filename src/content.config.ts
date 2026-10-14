@@ -41,4 +41,13 @@ const explore = defineCollection({
     }),
 });
 
-export const collections = { entourage, explore };
+const faq = defineCollection({
+  loader: glob({ pattern: "**/*.json", base: "./src/content/faq" }),
+  schema: z.object({
+    order: z.number(),
+    question: z.string(),
+    answer: z.string(),
+  }),
+});
+
+export const collections = { entourage, explore, faq };
