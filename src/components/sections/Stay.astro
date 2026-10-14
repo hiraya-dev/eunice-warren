@@ -82,22 +82,12 @@ const steps = [
       </div>
     </header>
 
-    <div
-      class="stay_directions"
-      data-fade-in
-      data-step-timeline-init
-      data-step-timeline-activation="0.5"
-    >
+    <div class="stay_directions" data-fade-in>
       <h2 class="stay_directions-title" data-fade-in-item>Getting there</h2>
-      <ol class="stay_steps" data-step-timeline-list>
-        <li class="stay_steps-line" data-step-timeline-line role="presentation" aria-hidden="true">
-          <span class="stay_steps-fill" data-step-timeline-fill>
-            <span class="stay_steps-fill-track" data-step-timeline-fill-track></span>
-          </span>
-        </li>
+      <ol class="stay_steps">
         {steps.map((step) => (
-          <li class="stay_step" data-step-timeline-item data-status="inactive">
-            <span class="stay_step-number" data-step-timeline-marker aria-hidden="true">{step.number}</span>
+          <li class="stay_step" data-fade-in-item>
+            <span class="stay_step-number" aria-hidden="true">{step.number}</span>
             <div class="stay_step-content">
               <h3>{step.title}</h3>
               <p>{step.body}</p>
@@ -110,167 +100,6 @@ const steps = [
   </div>
   <div class="stay_scallop" aria-hidden="true"></div>
 </section>
-
-<script>
-  import { gsap, ScrollTrigger } from "@/scripts/scroll.ts";
-
-  const initStayTimeline = () => {
-    const roots = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-step-timeline-init]"),
-    ).filter((root) => root.dataset.stepTimelineInitialized !== "true");
-
-    roots.forEach((root) => {
-      const list = root.querySelector<HTMLElement>("[data-step-timeline-list]");
-      const line = root.querySelector<HTMLElement>("[data-step-timeline-line]");
-      const fill = root.querySelector<HTMLElement>("[data-step-timeline-fill]");
-      const fillTrack = root.querySelector<HTMLElement>("[data-step-timeline-fill-track]");
-      const items = Array.from(
-        root.querySelectorAll<HTMLElement>("[data-step-timeline-item]"),
-      );
-      const markers = items.map((item) =>
-        item.querySelector<HTMLElement>("[data-step-timeline-marker]"),
-      );
-
-      if (!list || !line || !fill || !fillTrack || !items.length || markers.some((marker) => !marker)) return;
-
-      root.dataset.stepTimelineInitialized = "true";
-      root.dataset.stepTimelineReady = "true";
-
-      const activationInput = Number.parseFloat(root.dataset.stepTimelineActivation || "0.5");
-      const activation = Number.isFinite(activationInput)
-        ? Math.min(Math.max(activationInput, 0), 1)
-        : 0.5;
-      const mm = gsap.matchMedia();
-
-      const setStatus = (index: number) => {
-        items.forEach((item, itemIndex) => {
-          item.dataset.status = index >= 0 && itemIndex <= index ? "active" : "inactive";
-          if (itemIndex === index) item.dataset.current = "true";
-          else delete item.dataset.current;
-        });
-      };
-
-      const measureLine = () => {
-        const listBox = list.getBoundingClientRect();
-        const centers = markers.map((marker) => {
-          const box = marker!.getBoundingClientRect();
-          return {
-            x: box.left + box.width / 2 - listBox.left,
-            y: box.top + box.height / 2 - listBox.top,
-          };
-        });
-        const first = centers[0];
-        const last = centers[centers.length - 1];
-        const isDesktop = window.matchMedia("(min-width: 62rem)").matches;
-        const span = isDesktop ? Math.max(last.x - first.x, 0) : Math.max(last.y - first.y, 0);
-
-        if (isDesktop) {
-          line.style.left = `${first.x}px`;
-          line.style.top = `${first.y}px`;
-          line.style.width = `${span}px`;
-          line.style.height = "0px";
-          fillTrack.style.width = `${span}px`;
-          fillTrack.style.height = "0.09375rem";
-        } else {
-          line.style.left = `${first.x}px`;
-          line.style.top = `${first.y}px`;
-          line.style.width = "0px";
-          line.style.height = `${span}px`;
-          fillTrack.style.width = "0.09375rem";
-          fillTrack.style.height = `${span}px`;
-        }
-
-        return centers;
-      };
-
-      mm.add(
-        {
-          desktop: "(min-width: 62rem)",
-          mobile: "(max-width: 61.999rem)",
-          reduceMotion: "(prefers-reduced-motion: reduce)",
-        },
-        (context) => {
-          const conditions = (context.conditions || {}) as Record<string, boolean>;
-          const { desktop, mobile, reduceMotion } = conditions;
-          if (!desktop && !mobile) return;
-
-          const isDesktop = Boolean(desktop);
-          const centers = measureLine();
-          const fractions = centers.map((center) => {
-            const first = centers[0];
-            const last = centers[centers.length - 1];
-            const span = isDesktop ? last.x - first.x : last.y - first.y;
-            const offset = isDesktop ? center.x - first.x : center.y - first.y;
-            return span > 0 ? offset / span : 0;
-          });
-          const finalIndex = items.length - 1;
-
-          if (reduceMotion) {
-            gsap.set(fill, isDesktop ? { width: "100%" } : { height: "100%" });
-            setStatus(finalIndex);
-            return;
-          }
-
-          const contextScope = gsap.context(() => {
-            const setProgress = (progress: number, isActive: boolean) => {
-              const reached = isActive || progress >= 1;
-              const drawProgress = isDesktop ? Math.min(progress / 0.8, 1) : progress;
-              let index = -1;
-              if (reached) {
-                fractions.forEach((fraction, itemIndex) => {
-                  if (drawProgress + 0.0001 >= fraction) index = itemIndex;
-                });
-              }
-              setStatus(index);
-            };
-
-            gsap.set(fill, isDesktop ? { width: 0 } : { height: 0 });
-
-            const timeline = gsap.timeline({
-              scrollTrigger: {
-                trigger: isDesktop ? root : line,
-                start: isDesktop ? "center center" : `top ${activation * 100}%`,
-                end: isDesktop ? "+=150%" : `bottom ${activation * 100}%`,
-                pin: isDesktop ? root : false,
-                pinSpacing: isDesktop,
-                scrub: true,
-                invalidateOnRefresh: true,
-                onUpdate: (self: { progress: number; isActive: boolean }) => setProgress(self.progress, self.isActive),
-                onToggle: (self: { progress: number; isActive: boolean }) => setProgress(self.progress, self.isActive),
-                onRefresh: (self: { progress: number; isActive: boolean }) => setProgress(self.progress, self.isActive),
-              },
-            });
-            timeline.to(fill, {
-              ...(isDesktop ? { width: "100%" } : { height: "100%" }),
-              duration: isDesktop ? 0.8 : 1,
-              ease: "none",
-            });
-            if (isDesktop) timeline.to({}, { duration: 0.2 });
-          }, root);
-
-          const refresh = () => ScrollTrigger.refresh();
-          const onResize = () => refresh();
-          window.addEventListener("resize", onResize);
-          window.addEventListener("load", refresh, { once: true });
-          document.fonts?.ready.then(refresh);
-          ScrollTrigger.addEventListener("refreshInit", measureLine);
-          ScrollTrigger.refresh();
-
-          return () => {
-            contextScope.revert();
-            window.removeEventListener("resize", onResize);
-            ScrollTrigger.removeEventListener("refreshInit", measureLine);
-          };
-        },
-      );
-
-      document.addEventListener("astro:before-swap", () => mm.revert(), { once: true });
-    });
-  };
-
-  initStayTimeline();
-  document.addEventListener("astro:page-load", initStayTimeline);
-</script>
 
 <style>
   @layer components {
@@ -286,18 +115,10 @@ const steps = [
     .stay_directions { display: flex; flex-direction: column; gap: var(--space-5); padding-top: 3.5rem; }
     .stay_directions-title { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--light-100); font: var(--secondary-regular) var(--h5) / 1.1 var(--secondary-family); }
     .stay_steps { position: relative; display: flex; margin: 0; padding: 0; gap: var(--space-6); list-style: none; }
-    .stay_steps-line { position: absolute; top: 1.125rem; right: 2.25rem; left: 2.25rem; z-index: 0; border-top: 0.09375rem dashed color-mix(in srgb, var(--brand-500) 35%, transparent); pointer-events: none; }
-    .stay_steps-fill { position: absolute; top: -0.09375rem; left: 0; display: block; width: 0; height: 0.1875rem; overflow: hidden; }
-    .stay_steps-fill-track { display: block; width: 100%; height: 0.09375rem; border-top: 0.09375rem dashed var(--light-100); }
+    .stay_steps::before { position: absolute; top: 1.125rem; right: 2.25rem; left: 2.25rem; border-top: 0.09375rem dashed var(--brand-500); content: ""; }
     .stay_step { position: relative; display: flex; min-width: 0; flex: 1 1 0; flex-direction: column; gap: var(--space-3); }
-    .stay_step-number { z-index: 1; display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; place-items: center; border: 0.09375rem solid var(--light-100); border-radius: 50%; background: var(--dark-900); color: var(--light-100); font: var(--primary-regular) 1rem / 1.25 var(--mono-family); transition: background-color 0.4s, color 0.4s, box-shadow 0.4s; }
+    .stay_step-number { z-index: 1; display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; place-items: center; border: 0.09375rem solid var(--light-100); border-radius: 50%; background: var(--dark-900); color: var(--light-100); font: var(--primary-regular) 1rem / 1.25 var(--mono-family); }
     .stay_step-content { display: flex; flex-direction: column; gap: var(--space-3); }
-    [data-step-timeline-ready] .stay_step-content { opacity: 0.25; }
-    [data-step-timeline-ready] .stay_step[data-status="active"] .stay_step-content { opacity: 1; transform: translateY(0); }
-    [data-step-timeline-ready] .stay_step[data-status="inactive"] .stay_step-content { opacity: 0; transform: translateY(0.75rem); }
-    [data-step-timeline-ready] .stay_step-content { transition: opacity 0.4s, transform 0.4s; }
-    [data-step-timeline-ready] .stay_step[data-status="active"] .stay_step-number { background: var(--light-100); color: var(--dark-900); }
-    [data-step-timeline-ready] .stay_step[data-current="true"] .stay_step-number { box-shadow: 0 0 0 0.375rem color-mix(in srgb, var(--light-100) 14%, transparent); }
     .stay_step h3 { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--light-100); font: var(--secondary-regular) 1.5rem / 1.75rem var(--secondary-family); }
     .stay_step p { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--brand-500); font: var(--primary-regular) var(--text-main) / 1.5 var(--primary-family); }
     .stay_step-detail { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; padding-top: var(--space-2); border-top: 0.0625rem solid color-mix(in srgb, var(--brand-500) 20%, var(--dark-900)); color: var(--light-100); font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -314,12 +135,10 @@ const steps = [
     .stay_map-mobile { display: block; width: 21.875rem; max-width: 100%; flex: none; }
     .stay_directions { gap: var(--space-6); padding-top: var(--space-7); }
     .stay_steps { flex-direction: column; gap: var(--space-6); }
-    .stay_steps-line { top: 0; left: 1.125rem; width: 0; height: 100%; border-top: 0; border-left: 0.09375rem dashed color-mix(in srgb, var(--brand-500) 35%, transparent); }
-    .stay_steps-fill { top: 0; left: -0.09375rem; width: 0.1875rem; height: 0; }
-    .stay_steps-fill-track { width: 0.09375rem; height: 100%; border-top: 0; border-left: 0.09375rem dashed var(--light-100); }
+    .stay_steps::before { display: none; }
     .stay_step { flex: none; flex-direction: row; gap: var(--space-4); }
+    .stay_step:not(:last-child)::after { position: absolute; top: 2.25rem; bottom: calc(var(--space-6) * -1); left: 1.125rem; border-left: 0.09375rem dashed var(--brand-500); content: ""; }
     .stay_step-content { min-width: 0; padding-top: var(--space-1); }
     .stay_step-detail { padding-top: var(--space-3); }
-    [data-step-timeline-ready] .stay_step[data-status="inactive"] .stay_step-content { opacity: 0.25; transform: none; }
   }
 </style>
