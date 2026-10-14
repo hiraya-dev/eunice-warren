@@ -111,61 +111,34 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
                 </div>
               </div>
               <div class="playlist_progress">
-                <span data-playlist-elapsed>0:00</span><input
-                  data-playlist-seek
-                  aria-label="Seek"
-                  type="range"
-                  min="0"
-                  max="0"
-                  step="1"
-                  value="0"
-                  disabled
-                /><span data-playlist-total>0:00</span>
+                <span data-playlist-elapsed>0:00</span><span
+                  class="playlist_progress-track"
+                  data-playlist-progress
+                  aria-hidden="true"
+                ></span><span data-playlist-total>0:00</span>
               </div>
             </div>
-            <div class="playlist_transport">
-              <button
-                type="button"
-                data-playlist-restart
-                aria-label="Restart"
-                disabled
-                ><svg viewBox="0 0 24 24" aria-hidden="true"
-                  ><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"></path></svg
-                ></button
-              ><button
-                type="button"
-                data-playlist-toggle
-                aria-label="Play"
-                disabled
-                ><svg
-                  class="playlist_play-icon"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"><path d="M7 4.5v15l13-7.5z"></path></svg
-                ><svg
-                  class="playlist_pause-icon"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  ><path d="M6 4h4v16H6zM14 4h4v16h-4z"></path></svg
-                ></button
-              >
+            <div class="playlist_transport" aria-hidden="true">
+              <span></span><span></span><span></span>
             </div>
           </div>
           <div class="playlist_listen-copy">
             <div class="playlist_eyebrow">
               <span aria-hidden="true"></span>SIDE A · LISTEN ALONG
             </div><h3>Side A — Boracay ’27</h3><p>
-              Press play on the tape — the reels follow the playlist below.
-              Every song you send lands on it.
+              Press play below — the reels spin along. Every song you send lands
+              on it.
             </p>
           </div>
-        </div>
-        <div
-          class="playlist_embed"
-          data-playlist-embed
-          data-uri={PLAYLIST_URI}
-          aria-label="Spotify playlist"
-        >
-          <span>Playlist unavailable right now.</span>
+          <div
+            class="playlist_embed"
+            data-playlist-embed
+            data-uri={PLAYLIST_URI}
+            aria-label="Spotify playlist"
+          >
+            <span>Playlist unavailable right now.</span>
+            <div data-playlist-embed-target></div>
+          </div>
         </div>
       </div>
     </div>
@@ -217,29 +190,24 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     if (!section || section.dataset.playlistInitialized === "true") return;
     section.dataset.playlistInitialized = "true";
     const embed = section.querySelector<HTMLElement>("[data-playlist-embed]");
-    const seek = section.querySelector<HTMLInputElement>(
-      "[data-playlist-seek]",
-    );
-    const toggle = section.querySelector<HTMLButtonElement>(
-      "[data-playlist-toggle]",
-    );
-    const restart = section.querySelector<HTMLButtonElement>(
-      "[data-playlist-restart]",
+    const embedTarget = section.querySelector<HTMLElement>(
+      "[data-playlist-embed-target]",
     );
     const elapsed = section.querySelector<HTMLElement>(
       "[data-playlist-elapsed]",
     );
     const total = section.querySelector<HTMLElement>("[data-playlist-total]");
+    const progress = section.querySelector<HTMLElement>(
+      "[data-playlist-progress]",
+    );
     const reels = Array.from(
       section.querySelectorAll<HTMLElement>(".playlist_reel-inner"),
     );
-    if (!embed || !seek || !toggle || !restart || !elapsed || !total) return;
+    if (!embed || !embedTarget || !elapsed || !total || !progress) return;
     interface SpotifyPlaybackEvent {
       data: { isPaused: boolean; position: number; duration: number };
     }
     interface SpotifyController {
-      togglePlay: () => void;
-      seek: (seconds: number) => void;
       addListener: (
         event: string,
         callback: (event: SpotifyPlaybackEvent) => void,
@@ -248,7 +216,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     interface SpotifyAPI {
       createController: (
         element: HTMLElement,
-        options: { uri: string; width: string; height: number },
+        options: { uri: string; width: string; height: number; theme: "dark" },
         callback: (controller: SpotifyController) => void,
       ) => void;
     }
@@ -273,8 +241,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
           )
         : position;
       elapsed.textContent = format(current);
-      if (duration) seek.value = String(current);
-      seek.style.setProperty(
+      progress.style.setProperty(
         "--_progress",
         String(duration ? current / duration : 0),
       );
@@ -286,30 +253,22 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     };
     const fail = () => {
       if (timeout) window.clearTimeout(timeout);
-      toggle.disabled = true;
-      restart.disabled = true;
-      seek.disabled = true;
     };
     const ready = (api: SpotifyAPI) => {
       if (controller || !playlistUri) return;
       api.createController(
-        embed,
-        { uri: playlistUri, width: "100%", height: 80 },
+        embedTarget,
+        { uri: playlistUri, width: "100%", height: 80, theme: "dark" },
         (created) => {
           controller = created;
+          embed.classList.add("is-ready");
           if (timeout) window.clearTimeout(timeout);
-          toggle.disabled = false;
-          restart.disabled = false;
-          seek.disabled = false;
           controller.addListener("playback_update", (event) => {
             playing = !event.data.isPaused;
             position = event.data.position || 0;
             duration = event.data.duration || 0;
             updatedAt = performance.now();
-            seek.max = String(duration);
             total.textContent = format(duration);
-            toggle.setAttribute("aria-label", playing ? "Pause" : "Play");
-            toggle.setAttribute("aria-pressed", String(playing));
             cancelAnimationFrame(frame);
             render();
           });
@@ -333,12 +292,6 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         if (!controller) fail();
       }, 10000);
     };
-    const onToggle = () => controller?.togglePlay();
-    const onRestart = () => controller?.seek(0);
-    const onSeek = () => controller?.seek(Number(seek.value) / 1000);
-    toggle.addEventListener("click", onToggle);
-    restart.addEventListener("click", onRestart);
-    seek.addEventListener("input", onSeek);
     observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -355,9 +308,6 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         cancelAnimationFrame(frame);
         observer?.disconnect();
         if (timeout) window.clearTimeout(timeout);
-        toggle.removeEventListener("click", onToggle);
-        restart.removeEventListener("click", onRestart);
-        seek.removeEventListener("input", onSeek);
       },
       { once: true },
     );
@@ -414,7 +364,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     .playlist_player-row {
       display: grid;
-      grid-template-areas: "copy" "cassette";
+      grid-template-areas: "copy" "cassette" "embed";
       gap: var(--space-4);
     }
     .playlist_eyebrow {
@@ -445,6 +395,9 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     .playlist_cassette {
       grid-area: cassette;
+    }
+    .playlist_embed {
+      grid-area: embed;
     }
     .playlist_cassette {
       container-type: inline-size;
@@ -629,35 +582,22 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       font-size: 2.1cqw;
       line-height: 1;
     }
-    .playlist_progress input {
+    .playlist_progress-track {
       --_progress: 0;
-      appearance: none;
+      position: relative;
       flex: 1;
-      height: 2.1cqw;
+      height: 0.79cqw;
       margin: 0;
-      background: linear-gradient(
-        to right,
-        var(--dark-900) calc(var(--_progress) * 100%),
-        color-mix(in srgb, var(--dark-900) 22%, transparent)
-          calc(var(--_progress) * 100%)
-      );
+      overflow: hidden;
       border-radius: 100vw;
-      cursor: pointer;
+      background: color-mix(in srgb, var(--dark-900) 22%, transparent);
     }
-    .playlist_progress input::-webkit-slider-thumb {
-      appearance: none;
-      width: 2.89cqw;
-      height: 2.89cqw;
-      border: 0.53cqw solid var(--dark-900);
-      border-radius: 50%;
-      background: white;
-    }
-    .playlist_progress input::-moz-range-thumb {
-      width: 1.84cqw;
-      height: 1.84cqw;
-      border: 0.53cqw solid var(--dark-900);
-      border-radius: 50%;
-      background: white;
+    .playlist_progress-track::before {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: calc(var(--_progress) * 100%);
+      content: "";
+      background: var(--dark-900);
     }
     .playlist_transport {
       right: 26.32cqw;
@@ -665,62 +605,35 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 3.16cqw;
+      gap: 8.95cqw;
       width: 47.37cqw;
       height: 11.58cqw;
       clip-path: polygon(13% 0, 87% 0, 100% 100%, 0 100%);
       background: rgb(0 0 0 / 0.18);
     }
-    .playlist_transport button {
-      display: grid;
-      place-items: center;
-      padding: 0;
-      border: 0.1cqw solid rgb(245 239 227 / 0.35);
-      border-radius: 50%;
-      background: transparent;
-      color: var(--light-100);
-      cursor: pointer;
-    }
-    .playlist_transport button:first-child {
-      width: 7.37cqw;
-      height: 7.37cqw;
-    }
-    .playlist_transport button:last-child {
-      width: 8.95cqw;
-      height: 8.95cqw;
-      border: 0;
-      background: var(--accent-500);
-    }
-    .playlist_transport svg {
-      width: 4.2cqw;
-      height: 4.2cqw;
-      fill: none;
-      stroke: currentColor;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-    .playlist_transport button:last-child svg {
-      width: 3.68cqw;
-      height: 3.68cqw;
-      fill: var(--light-100);
-      stroke: none;
-    }
-    .playlist_pause-icon {
-      display: none;
-    }
-    .playlist_transport button[aria-pressed="true"] .playlist_play-icon {
-      display: none;
-    }
-    .playlist_transport button[aria-pressed="true"] .playlist_pause-icon {
+    .playlist_transport span {
       display: block;
+      width: 2.37cqw;
+      height: 2.37cqw;
+      border-radius: 50%;
+      background: #0f1730;
+      box-shadow:
+        inset 0 0.26cqw 0.53cqw rgb(0 0 0 / 0.67),
+        0 0.26cqw 0 rgb(255 255 255 / 0.12);
+    }
+    .playlist_transport span:nth-child(2) {
+      width: 7.89cqw;
+      height: 3.16cqw;
+      border-radius: 0.53cqw;
     }
     .playlist_embed {
       position: relative;
-      width: 100%;
+      width: max(100%, 18.75rem);
+      justify-self: center;
       height: 5rem;
       overflow: hidden;
       border-radius: 0.75rem;
-      background: #2e3d66;
+      background: #1f1f1f;
       color: var(--light-100);
     }
     .playlist_embed span {
@@ -779,9 +692,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       font: 500 1rem/1.25 var(--primary-family);
       cursor: pointer;
     }
-    .playlist_submit:focus-visible,
-    .playlist_transport button:focus-visible,
-    .playlist_progress input:focus-visible {
+    .playlist_submit:focus-visible {
       outline: var(--focus-width) solid var(--dark-900);
       outline-offset: var(--focus-offset);
     }
@@ -816,9 +727,10 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         align-items: start;
       }
       .playlist_player-row {
-        grid-template-areas: "cassette copy";
+        grid-template-areas: "cassette copy" "embed .";
         grid-template-columns: 23.75rem minmax(0, 17.5rem);
-        gap: 2.25rem;
+        column-gap: 2.25rem;
+        row-gap: 1.75rem;
         align-items: center;
         padding-top: 0.75rem;
       }
@@ -842,6 +754,9 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       .playlist_cassette {
         width: 23.75rem;
         transform: rotate(-3deg);
+      }
+      .playlist_embed {
+        width: 23.75rem;
       }
       .playlist_postcard {
         padding: 2.25rem;
