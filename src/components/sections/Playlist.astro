@@ -452,6 +452,11 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       width: 100%;
       aspect-ratio: 380 / 240;
       transform: rotate(-2deg);
+    }
+    .playlist_cassette::before {
+      position: absolute;
+      inset: 0;
+      content: "";
       border: 0.1cqw solid #121b3a;
       border-radius: 4.2cqw;
       background: linear-gradient(
@@ -579,7 +584,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     .playlist_tape-window {
       position: absolute;
-      inset: 0 14.47cqw;
+      inset: 0 12.11cqw;
       border-radius: 100vw;
       background: linear-gradient(180deg, #2a2722, #1b1a18 50%);
       box-shadow:
@@ -588,7 +593,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     .playlist_tape-pack {
       position: absolute;
-      inset: 2.37cqw auto auto 19.47cqw;
+      inset: 2.37cqw auto auto 16.32cqw;
       width: 18.42cqw;
       height: 10.53cqw;
       border: 0.53cqw solid #11100f;
@@ -602,10 +607,10 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       width: 11.58cqw;
     }
     .playlist_reel-left {
-      left: 2.1cqw;
+      left: 14.21cqw;
     }
     .playlist_reel-right {
-      right: 2.1cqw;
+      right: 14.21cqw;
     }
     .playlist_reel-inner {
       transform-origin: center;
