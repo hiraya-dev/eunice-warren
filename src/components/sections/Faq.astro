@@ -1,0 +1,392 @@
+---
+import { getCollection } from "astro:content";
+import { Image } from "astro:assets";
+import stamp from "@/assets/images/faq/stamp-plane.png";
+
+const questions = (await getCollection("faq")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+---
+
+<section
+  id="faq"
+  class="faq_wrap theme-light"
+  style="scroll-margin-top: var(--nav-height)"
+>
+  <div class="faq_layout">
+    <header class="faq_header">
+      <h2 class="faq_title"><span class="faq_title-desktop">Good<br />to know</span><span class="faq_title-mobile">Good to<br />know</span></h2>
+      <p class="faq_intro">
+        The questions we get asked most. Tap one to open it.
+      </p>
+      <Image
+        class="faq_stamp"
+        src={stamp}
+        alt=""
+        aria-hidden="true"
+        width={320}
+        height={310}
+      />
+    </header>
+
+    <div
+      class="faq_list"
+      data-accordion-css-init
+      data-accordion-close-siblings="true"
+    >
+      <ul>
+        {questions.map((item, index) => {
+          const panelId = `faq-panel-${item.id}`;
+          const buttonId = `faq-toggle-${item.id}`;
+          const active = index === 0;
+          return (
+            <li
+              class="faq_item"
+              data-accordion-status={active ? "active" : "not-active"}
+            >
+              <h3>
+                <button
+                  class="faq_toggle"
+                  type="button"
+                  data-accordion-toggle
+                  aria-expanded={active ? "true" : "false"}
+                  aria-controls={panelId}
+                  id={buttonId}
+                >
+                  <span class="faq_question">{item.data.question}</span>
+                  <span class="faq_icon" aria-hidden="true">
+                    <span class="faq_icon-bar faq_icon-bar-horizontal"></span>
+                    <span class="faq_icon-bar faq_icon-bar-vertical"></span>
+                  </span>
+                </button>
+              </h3>
+              <div
+                class="faq_panel"
+                id={panelId}
+                role="region"
+                aria-labelledby={buttonId}
+                {...(!active ? { inert: true } : {})}
+              >
+                <div class="faq_panel-wrap">
+                  <p class="faq_answer">{item.data.answer}</p>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div class="faq_contact">
+        <span class="faq_avatar" aria-hidden="true"></span>
+        <div class="faq_contact-copy">
+          <p>Still unsure? Ask <span>[Contact name]</span></p>
+          <a href="#">[email / Viber] <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="faq_scallop" aria-hidden="true"></div>
+</section>
+
+<script>
+  const initFaqAccordions = () => {
+    document.querySelectorAll<HTMLElement>("[data-accordion-css-init]").forEach((accordion) => {
+      if (accordion.dataset.accordionReady === "true") return;
+      accordion.dataset.accordionReady = "true";
+
+      accordion.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const toggle = target.closest<HTMLButtonElement>("[data-accordion-toggle]");
+        if (!toggle || !accordion.contains(toggle)) return;
+
+        const item = toggle.closest<HTMLElement>("[data-accordion-status]");
+        if (!item) return;
+        const opening = item.dataset.accordionStatus !== "active";
+        const closeSiblings = accordion.dataset.accordionCloseSiblings === "true";
+        const items = Array.from(
+          accordion.querySelectorAll<HTMLElement>("[data-accordion-status]"),
+        );
+
+        items.forEach((candidate) => {
+          const active = candidate === item ? opening : closeSiblings ? false : candidate.dataset.accordionStatus === "active";
+          candidate.dataset.accordionStatus = active ? "active" : "not-active";
+          const candidateToggle = candidate.querySelector<HTMLButtonElement>("[data-accordion-toggle]");
+          const panel = candidate.querySelector<HTMLElement>(".faq_panel");
+          if (candidateToggle) candidateToggle.setAttribute("aria-expanded", String(active));
+          if (panel) panel.toggleAttribute("inert", !active);
+        });
+      });
+    });
+  };
+
+  initFaqAccordions();
+</script>
+
+<style is:global>
+  @layer components {
+    .faq_wrap {
+      --_border: #94adcb;
+      position: relative;
+      overflow: clip;
+      padding: 5rem var(--site-margin) var(--section-space-medium);
+      background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat;
+      color: var(--dark-900);
+    }
+
+    .faq_wrap :is(h2, h3, p) {
+      display: block;
+      &::before,
+      &::after {
+        content: none;
+      }
+    }
+
+    .faq_layout {
+      display: flex;
+      width: 100%;
+      max-width: var(--max-width-main);
+      margin-inline: auto;
+      flex-direction: column;
+      gap: var(--space-7);
+    }
+
+    .faq_header {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .faq_title {
+      margin: 0;
+      font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+
+    .faq_title-mobile {
+      display: inline;
+    }
+
+    .faq_title-desktop {
+      display: none;
+    }
+
+    .faq_intro {
+      max-width: 31.25rem;
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--text-main) / var(--line-height-huge) var(--primary-family);
+    }
+
+    .faq_stamp {
+      position: absolute;
+      top: 1rem;
+      right: 0;
+      width: 6.875rem;
+      height: 6.5625rem;
+      object-fit: contain;
+      rotate: -14deg;
+      transform-origin: 0 0;
+      mix-blend-mode: multiply;
+      opacity: 0.7;
+    }
+
+    .faq_list > ul {
+      margin: 0;
+      padding: 0;
+      border-top: 0.09375rem solid var(--dark-900);
+      list-style: none;
+    }
+
+    .faq_item {
+      border-bottom: var(--border-width) solid var(--_border);
+    }
+
+    .faq_item h3 {
+      margin: 0;
+    }
+
+    .faq_toggle {
+      display: flex;
+      width: 100%;
+      align-items: start;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding-block: 1rem;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: var(--secondary-regular) 1.3125rem / 1.625rem var(--secondary-family);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .faq_toggle:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+
+    .faq_question {
+      flex: 1;
+    }
+
+    .faq_icon {
+      position: relative;
+      display: flex;
+      width: 1.5rem;
+      height: 1.75rem;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .faq_icon-bar {
+      position: absolute;
+      display: block;
+      background: currentColor;
+      transition: transform 0.6s cubic-bezier(0.625, 0.05, 0, 1);
+    }
+
+    .faq_icon-bar-horizontal {
+      width: 0.75em;
+      height: 0.09em;
+    }
+
+    .faq_icon-bar-vertical {
+      width: 0.09em;
+      height: 0.75em;
+    }
+
+    .faq_item[data-accordion-status="active"] .faq_icon-bar-vertical {
+      transform: rotate(90deg);
+    }
+
+    .faq_panel {
+      display: grid;
+      grid-template-rows: 0fr;
+      overflow: hidden;
+      transition: grid-template-rows 0.6s cubic-bezier(0.625, 0.05, 0, 1);
+    }
+
+    .faq_item[data-accordion-status="active"] .faq_panel {
+      grid-template-rows: 1fr;
+    }
+
+    .faq_panel-wrap {
+      display: flex;
+      height: 100000%;
+      flex-flow: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .faq_answer {
+      margin: 0;
+      padding: 0.625rem 1.5rem 1.125rem 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) 1rem / 1.5rem var(--primary-family);
+    }
+
+    .faq_contact {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-5);
+    }
+
+    .faq_avatar {
+      width: 2.25rem;
+      height: 2.25rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #8fa9c8;
+    }
+
+    .faq_contact-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .faq_contact-copy p,
+    .faq_contact-copy a {
+      margin: 0;
+    }
+
+    .faq_contact-copy p {
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--primary-family);
+    }
+
+    .faq_contact-copy a {
+      color: var(--dark-900);
+      font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--mono-family);
+      text-decoration: none;
+    }
+
+    .faq_scallop {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 0.8125rem;
+      background: linear-gradient(var(--dark-900) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--dark-900) 0.6875rem, transparent calc(0.6875rem + 0.03125rem)) 0 0 / 2.25rem 0.6875rem repeat-x;
+    }
+
+    @media (hover: hover) {
+      .faq_toggle:hover .faq_question {
+        text-decoration: underline;
+        text-decoration-thickness: 0.0625rem;
+        text-underline-offset: 0.15em;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .faq_panel,
+      .faq_icon-bar {
+        transition: none;
+      }
+    }
+
+    @media (width >= 64rem) {
+      .faq_wrap {
+        padding-block: var(--section-space-medium);
+      }
+
+      .faq_layout {
+        display: grid;
+        grid-template-columns: 27.5rem minmax(0, 1fr);
+        align-items: start;
+        gap: 6rem;
+      }
+
+      .faq_stamp {
+        top: 22.5rem;
+        right: auto;
+        left: 14.75rem;
+        width: 10rem;
+        height: 9.5625rem;
+      }
+
+      .faq_toggle {
+        align-items: center;
+        padding-block: 1.125rem;
+      }
+
+      .faq_title-desktop {
+        display: inline;
+      }
+
+      .faq_title-mobile {
+        display: none;
+      }
+
+      .faq_answer {
+        padding-right: 2.5rem;
+        font-size: 0.9375rem;
+        line-height: 1.4375rem;
+      }
+    }
+  }
+</style>
