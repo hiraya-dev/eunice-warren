@@ -163,7 +163,7 @@ const text = label ?? kind.label;
       min-height: 2rem;
       padding: 0.25rem 0;
       border: 0;
-      border-bottom: 0.09375rem solid var(--dark-900);
+      box-shadow: inset 0 -0.09375rem 0 var(--dark-900);
       border-radius: 0;
       background: transparent;
       color: var(--dark-900);
@@ -178,6 +178,13 @@ const text = label ?? kind.label;
       min-height: 2.5rem;
       padding-left: 1.75rem;
       font-size: 1rem;
+    }
+    .form-input.postcard .field-control:focus,
+    .form-input.postcard .field-control:focus-visible,
+    .form-input.postcard-search .field-control:focus,
+    .form-input.postcard-search .field-control:focus-visible {
+      outline: none;
+      box-shadow: inset 0 -0.1875rem 0 var(--dark-900);
     }
     .field-search-icon {
       position: absolute;

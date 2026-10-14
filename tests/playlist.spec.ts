@@ -189,4 +189,81 @@ test.describe("Playlist section", () => {
       page.locator('.playlist_form-wrap .form_note-sent[role="status"]'),
     ).toHaveText("Song requests open soon — hold that thought.");
   });
+
+  test("keeps postcard fields empty, lined, and stable on focus", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const dedication = page.locator('textarea[name="dedication"]');
+
+    await expect(dedication).toHaveValue("");
+    await dedication.click({ position: { x: 80, y: 24 } });
+    expect(
+      await dedication.evaluate(
+        (element) => (element as HTMLTextAreaElement).selectionStart,
+      ),
+    ).toBe(0);
+
+    const sizing = await dedication.evaluate((element) => {
+      const control = element as HTMLTextAreaElement;
+      const styles = getComputedStyle(control);
+      return {
+        height: control.offsetHeight,
+        lineHeight: parseFloat(styles.lineHeight),
+        maxHeight: Math.round(parseFloat(styles.maxHeight)),
+        resize: styles.resize,
+        borderTop: styles.borderTopStyle,
+        borderLeft: styles.borderLeftStyle,
+        borderRight: styles.borderRightStyle,
+      };
+    });
+    expect(sizing.height).toBeGreaterThanOrEqual(sizing.lineHeight * 4);
+    expect(sizing.height).toBeLessThanOrEqual(sizing.maxHeight);
+    expect(sizing.resize).toBe("none");
+    expect(sizing.borderTop).toBe("none");
+    expect(sizing.borderLeft).toBe("none");
+    expect(sizing.borderRight).toBe("none");
+
+    await dedication.fill("line\n".repeat(7) + "line");
+    const expandedHeight = await dedication.evaluate(
+      (element) => (element as HTMLElement).offsetHeight,
+    );
+    expect(expandedHeight).toBeGreaterThan(sizing.height);
+    expect(expandedHeight).toBe(sizing.maxHeight);
+
+    for (const field of await page
+      .locator(".playlist_postcard .field-control")
+      .all()) {
+      const blurred = await field.evaluate((element) => ({
+        height: (element as HTMLElement).offsetHeight,
+        boxShadow: getComputedStyle(element).boxShadow,
+      }));
+      await field.focus();
+      const focused = await field.evaluate((element) => {
+        const control = element as HTMLInputElement | HTMLTextAreaElement;
+        const styles = getComputedStyle(control);
+        return {
+          height: control.offsetHeight,
+          outlineStyle: styles.outlineStyle,
+          outlineWidth: styles.outlineWidth,
+          borderTop: styles.borderTopStyle,
+          borderLeft: styles.borderLeftStyle,
+          borderRight: styles.borderRightStyle,
+          borderBottom: styles.borderBottomStyle,
+          boxShadow: styles.boxShadow,
+        };
+      });
+      expect(focused.height).toBe(blurred.height);
+      expect(
+        focused.outlineStyle === "none" || focused.outlineWidth === "0px",
+      ).toBe(true);
+      expect(focused.borderTop).toBe("none");
+      expect(focused.borderLeft).toBe("none");
+      expect(focused.borderRight).toBe("none");
+      expect(focused.borderBottom).toBe("none");
+      // The line is an inset shadow so thickening it never shifts layout.
+      expect(blurred.boxShadow).toMatch(/0px -1\.5px 0px 0px inset/);
+      expect(focused.boxShadow).toMatch(/0px -3px 0px 0px inset/);
+    }
+  });
 });
