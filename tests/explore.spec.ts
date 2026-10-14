@@ -81,6 +81,62 @@ test.describe("explore section", () => {
       .toBeLessThan(initialX);
   });
 
+  test("aligns the layout with stay without document overflow", async ({
+    page,
+  }) => {
+    let stampOffsetAt1440: { x: number; y: number } | undefined;
+    for (const width of [1440, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      const measurements = await page.evaluate(() => {
+        const title = document.querySelector("#explore .explore_title")!;
+        const stamp = document.querySelector("#explore .explore_stamp")!;
+        const stay = document.querySelector("#stay .stay_layout")!;
+        const controls = document.querySelector(
+          "#explore .explore_controls-header",
+        );
+        const titleRect = title.getBoundingClientRect();
+        const stampRect = stamp.getBoundingClientRect();
+        const stayRect = stay.getBoundingClientRect();
+        const controlsRect = controls?.getBoundingClientRect();
+        return {
+          titleLeft: titleRect.left,
+          stayLeft: stayRect.left,
+          stampOffsetX: stampRect.left - titleRect.left,
+          stampOffsetY: stampRect.top - titleRect.top,
+          stayRight: stayRect.right,
+          controlsRight: controlsRect?.right,
+          controlsVisible: controlsRect
+            ? controlsRect.width > 0 && controlsRect.height > 0
+            : false,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      expect(measurements.titleLeft).toBeCloseTo(measurements.stayLeft, 0);
+      if (width === 1440) {
+        stampOffsetAt1440 = {
+          x: measurements.stampOffsetX,
+          y: measurements.stampOffsetY,
+        };
+      } else {
+        expect(
+          Math.abs(measurements.stampOffsetX - stampOffsetAt1440!.x),
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(measurements.stampOffsetY - stampOffsetAt1440!.y),
+        ).toBeLessThanOrEqual(1);
+      }
+      if (measurements.controlsVisible) {
+        expect(measurements.controlsRight).toBeCloseTo(
+          measurements.stayRight,
+          0,
+        );
+      }
+      expect(measurements.scrollWidth).toBeLessThanOrEqual(width);
+    }
+  });
+
   test("shows the mobile counter and reaches the final note", async ({
     page,
   }) => {
