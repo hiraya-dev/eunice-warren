@@ -14,3 +14,5 @@ export const SITE_INDEXABLE = false;
 export const SITE_LOCALE = "en-US";
 /** Routes excluded from search and the sitemap. Surrounding slashes are ignored. */
 export const NOINDEX_ROUTES: string[] = ["/404", "/style-guide"];
+/** RSVP deadline shown in the invitation and confirmation flow. */
+export const RSVP_DEADLINE_LABEL = "[deadline]";

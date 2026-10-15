@@ -1,0 +1,1068 @@
+---
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import stamp from "@/assets/images/rsvp/stamp-received.png";
+import postcardPaper from "@/assets/textures/postcard-paper.jpg";
+import { RSVP_DEADLINE_LABEL } from "@/consts";
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Message destination for guests who cannot find an invite. */
+  messageHref?: string;
+  /** Calendar event destination. */
+  calendarHref?: string;
+  /** Map destination. */
+  mapsHref?: string;
+}
+
+const {
+  messageHref = "#",
+  calendarHref = "#",
+  mapsHref = "#",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section
+  id="rsvp"
+  class:list={["rsvp_wrap", "theme-dark", className]}
+  style="scroll-margin-top: var(--nav-height)"
+  {...rest}
+>
+  <div
+    class="rsvp_layout"
+    data-rsvp-init
+    data-rsvp-deadline={RSVP_DEADLINE_LABEL}
+  >
+    <div class="rsvp_left">
+      <header class="rsvp_header" data-rsvp-header>
+        <h2 class="rsvp_title">Will you<br />be there?</h2>
+        <p class="rsvp_intro" data-rsvp-intro>
+          Please reply by {RSVP_DEADLINE_LABEL}. Three quick steps, and you can
+          change your answer until then.
+        </p>
+      </header>
+      <div class="rsvp_invitation" data-rsvp-invitation hidden>
+        <div class="rsvp_invitation-top">
+          <div>
+            <span class="rsvp_eyebrow">Your invitation</span><strong
+              data-rsvp-household></strong>
+          </div><div class="rsvp_admits">
+            <span class="rsvp_eyebrow">Admits</span><strong data-rsvp-seats
+            ></strong>
+          </div>
+        </div>
+        <div class="rsvp_invitation-bottom">
+          <ul>
+            <li>Thu, Jan 14, 2027 · 3:00 PM</li><li>
+              [Venue], White Beach, Boracay
+            </li><li>Island formal</li>
+          </ul><div class="rsvp_invitation-links">
+            <a href={calendarHref}>Add to calendar ↗</a><a href={mapsHref}
+              >Open in maps ↗</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rsvp_right">
+      <ol class="rsvp_steps" aria-label="RSVP progress" data-rsvp-steps>
+        <li data-step="1" aria-current="step">
+          <span></span><b
+            >1 · <span class="rsvp_step-full">Find invite</span><span
+              class="rsvp_step-short">Find</span
+            ></b
+          >
+        </li>
+        <li data-step="2"><span></span><b>2 · Attending</b></li>
+        <li data-step="3"><span></span><b>3 · Details</b></li>
+      </ol>
+      <div class="rsvp_sent-steps" data-rsvp-sent-steps hidden>
+        <span>✓ RSVP received</span><span>3 of 3 · Done</span>
+      </div>
+
+      <div class="rsvp_card-wrap">
+        <div
+          class="rsvp_card"
+          style={`--rsvp-paper: url("${postcardPaper.src}")`}
+        >
+          <div class="rsvp_stub" aria-hidden="true">RSVP · Nº 011427</div>
+          <div class="rsvp_content">
+            <div class="rsvp_panel" data-rsvp-panel="1">
+              <form data-rsvp-find novalidate>
+                <h3 tabindex="-1" data-rsvp-heading>
+                  First, let's find your invitation.
+                </h3>
+                <div class="rsvp_field">
+                  <label for="rsvp-name">Full name on your invite</label><input
+                    id="rsvp-name"
+                    name="name"
+                    autocomplete="name"
+                    required
+                    data-rsvp-name
+                  /><p class="rsvp_help">
+                    Just one name from your household is enough. We'll find the
+                    rest.
+                  </p><p
+                    class="rsvp_error"
+                    id="rsvp-name-error"
+                    data-rsvp-name-error
+                    role="alert"
+                    hidden
+                  >
+                  </p>
+                </div>
+                <div class="rsvp_actions">
+                  <a class="rsvp_text-link" href={messageHref}
+                    >Can't find it? Message us</a
+                  ><button class="rsvp_primary" type="submit"
+                    >Find my invite <span aria-hidden="true">→</span></button
+                  >
+                </div>
+              </form>
+            </div>
+
+            <div class="rsvp_panel" data-rsvp-panel="2" hidden>
+              <form data-rsvp-attending>
+                <h3 tabindex="-1" data-rsvp-heading>
+                  Hi <span data-rsvp-first-name></span> — can you make it?
+                </h3>
+                <fieldset class="rsvp_options">
+                  <legend>Will you be attending?</legend><label
+                    class="rsvp_option"
+                    ><input
+                      type="radio"
+                      name="attending"
+                      value="yes"
+                      checked
+                    /><span>Joyfully accepts</span></label
+                  ><label class="rsvp_option"
+                    ><input type="radio" name="attending" value="no" /><span
+                      >Regretfully declines</span
+                    ></label
+                  >
+                </fieldset>
+                <div class="rsvp_guests" data-rsvp-guests>
+                  <span>Guests (incl. you)</span><div>
+                    <button
+                      type="button"
+                      data-rsvp-fewer
+                      aria-label="Fewer guests">−</button
+                    ><output data-rsvp-count aria-live="polite"></output><button
+                      type="button"
+                      data-rsvp-more
+                      aria-label="More guests">+</button
+                    >
+                  </div>
+                </div>
+                <div class="rsvp_actions">
+                  <button class="rsvp_back" type="button" data-rsvp-back
+                    >← Back</button
+                  ><button class="rsvp_primary" type="submit"
+                    >Continue <span aria-hidden="true">→</span></button
+                  >
+                </div>
+              </form>
+            </div>
+
+            <div class="rsvp_panel" data-rsvp-panel="3" hidden>
+              <form data-rsvp-details novalidate>
+                <h3 tabindex="-1" data-rsvp-heading>
+                  Last bit — a few details.
+                </h3>
+                <div class="rsvp_field">
+                  <label for="rsvp-email">Email for updates</label><input
+                    id="rsvp-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                  /><p
+                    class="rsvp_error"
+                    id="rsvp-email-error"
+                    data-rsvp-email-error
+                    role="alert"
+                    hidden
+                  >
+                    Please enter a valid email address.
+                  </p>
+                </div>
+                <div class="rsvp_field" data-rsvp-companion-field hidden>
+                  <label for="rsvp-companion"
+                    >Your guest's name (optional)</label
+                  ><input id="rsvp-companion" name="companion" />
+                </div>
+                <div class="rsvp_field">
+                  <label for="rsvp-note"
+                    >A note for Eunice &amp; Warren (optional)</label
+                  ><textarea
+                    id="rsvp-note"
+                    name="note"
+                    placeholder="Can't wait to see you two in Boracay…"
+                  ></textarea>
+                </div>
+                <div class="rsvp_actions">
+                  <button class="rsvp_back" type="button" data-rsvp-details-back
+                    >← Back</button
+                  ><button class="rsvp_primary" type="submit" data-rsvp-submit
+                    >Send RSVP <span aria-hidden="true">→</span></button
+                  >
+                </div>
+              </form>
+            </div>
+
+            <div class="rsvp_panel rsvp_sent" data-rsvp-panel="sent" hidden>
+              <Image
+                class="rsvp_stamp"
+                src={stamp}
+                alt=""
+                aria-hidden="true"
+                width={180}
+                height={73}
+              />
+              <h3 tabindex="-1" data-rsvp-heading></h3>
+              <dl class="rsvp_summary">
+                <div>
+                  <dt>Attending</dt><dd data-rsvp-attending-summary></dd>
+                </div><div data-rsvp-guests-summary>
+                  <dt>Guests</dt><dd data-rsvp-guests-summary-value></dd>
+                </div><div>
+                  <dt>Updates to</dt><dd data-rsvp-email-summary></dd>
+                </div>
+              </dl>
+              <button
+                class="rsvp_text-link rsvp_edit"
+                type="button"
+                data-rsvp-edit>Edit my RSVP</button
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="rsvp_scallop" aria-hidden="true"></div>
+</section>
+
+<script>
+  import { createFakeRsvpStore, type Invite } from "@/lib/rsvp/store";
+
+  const initRsvp = () => {
+    document
+      .querySelectorAll<HTMLElement>("[data-rsvp-init]")
+      .forEach((root) => {
+        if (root.dataset.rsvpReady) return;
+        root.dataset.rsvpReady = "true";
+        const store = createFakeRsvpStore();
+        let invite: Invite | null = null;
+        let matchedName = "";
+        let attending = true;
+        let guests = 1;
+        let step: "1" | "2" | "3" | "sent" = "1";
+        const heading = () =>
+          root.querySelector<HTMLElement>(
+            `[data-rsvp-panel="${step}"] [data-rsvp-heading]`,
+          );
+        const nameInput =
+          root.querySelector<HTMLInputElement>("[data-rsvp-name]")!;
+        const title = root.querySelector<HTMLElement>(".rsvp_title")!;
+        const intro = root.querySelector<HTMLElement>("[data-rsvp-intro]")!;
+        const deadline = root.dataset.rsvpDeadline ?? "[deadline]";
+        const setConfirmationCopy = (isAttending: boolean, email: string) => {
+          title.textContent = isAttending
+            ? "See you in Boracay."
+            : "We'll miss you.";
+          intro.textContent = `We've sent a copy to ${email}. Plans change? You can edit your RSVP any time before ${deadline}.`;
+        };
+        const restoreIntro = () => {
+          title.replaceChildren(
+            document.createTextNode("Will you"),
+            document.createElement("br"),
+            document.createTextNode("be there?"),
+          );
+          intro.textContent = `Please reply by ${deadline}. Three quick steps, and you can change your answer until then.`;
+        };
+        const setStep = (next: typeof step) => {
+          step = next;
+          updateInvitation();
+          root
+            .querySelectorAll<HTMLElement>("[data-rsvp-panel]")
+            .forEach((item) => {
+              item.hidden = item.dataset.rsvpPanel !== next;
+            });
+          root.querySelectorAll<HTMLElement>("[data-step]").forEach((item) => {
+            const current = item.dataset.step === next;
+            if (current) {
+              item.setAttribute("aria-current", "step");
+            } else {
+              item.removeAttribute("aria-current");
+            }
+            item.classList.toggle(
+              "is-complete",
+              Number(item.dataset.step) < Number(next),
+            );
+          });
+          root.querySelector<HTMLElement>("[data-rsvp-steps]")!.hidden =
+            next === "sent";
+          root.querySelector<HTMLElement>("[data-rsvp-sent-steps]")!.hidden =
+            next !== "sent";
+          root.querySelector<HTMLElement>(".rsvp_card")!.dataset.sent = String(
+            next === "sent",
+          );
+          requestAnimationFrame(() => heading()?.focus());
+        };
+        const updateGuestControls = () => {
+          const count =
+            root.querySelector<HTMLOutputElement>("[data-rsvp-count]")!;
+          count.value = String(guests);
+          count.textContent = String(guests);
+          root.querySelector<HTMLButtonElement>("[data-rsvp-fewer]")!.disabled =
+            guests <= 1;
+          root.querySelector<HTMLButtonElement>("[data-rsvp-more]")!.disabled =
+            !invite || guests >= invite.seats;
+        };
+        const updateInvitation = () => {
+          root.querySelector<HTMLElement>("[data-rsvp-invitation]")!.hidden =
+            !invite || step === "1";
+          if (invite) {
+            root.querySelector("[data-rsvp-household]")!.textContent =
+              invite.householdName;
+            root.querySelector("[data-rsvp-seats]")!.textContent = String(
+              invite.seats,
+            );
+          }
+        };
+        root
+          .querySelector<HTMLFormElement>("[data-rsvp-find]")!
+          .addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const error = root.querySelector<HTMLElement>(
+              "[data-rsvp-name-error]",
+            )!;
+            const value = nameInput.value;
+            if (!value.trim()) {
+              error.textContent = "Please enter the name on your invitation.";
+              error.hidden = false;
+              nameInput.setAttribute("aria-invalid", "true");
+              nameInput.setAttribute("aria-describedby", "rsvp-name-error");
+              return;
+            }
+            const result = await store.findInvite(value);
+            if (!result) {
+              error.textContent =
+                "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
+              error.hidden = false;
+              nameInput.setAttribute("aria-invalid", "true");
+              nameInput.setAttribute("aria-describedby", "rsvp-name-error");
+              return;
+            }
+            error.hidden = true;
+            nameInput.removeAttribute("aria-invalid");
+            invite = result.invite;
+            matchedName = result.matchedName;
+            guests = invite.seats;
+            root.querySelector("[data-rsvp-first-name]")!.textContent =
+              matchedName.split(" ")[0];
+            updateGuestControls();
+            setStep("2");
+          });
+        root
+          .querySelector<HTMLFormElement>("[data-rsvp-attending]")!
+          .addEventListener("change", (event) => {
+            if ((event.target as HTMLInputElement).name === "attending") {
+              attending = (event.target as HTMLInputElement).value === "yes";
+              root.querySelector<HTMLElement>("[data-rsvp-guests]")!.hidden =
+                !attending;
+            }
+          });
+        root
+          .querySelector<HTMLFormElement>("[data-rsvp-attending]")!
+          .addEventListener("submit", (event) => {
+            event.preventDefault();
+            root.querySelector<HTMLElement>(
+              "[data-rsvp-companion-field]",
+            )!.hidden = !attending || guests < 2;
+            setStep("3");
+          });
+        root
+          .querySelector<HTMLButtonElement>("[data-rsvp-fewer]")!
+          .addEventListener("click", () => {
+            guests = Math.max(1, guests - 1);
+            updateGuestControls();
+          });
+        root
+          .querySelector<HTMLButtonElement>("[data-rsvp-more]")!
+          .addEventListener("click", () => {
+            guests = Math.min(invite?.seats ?? guests, guests + 1);
+            updateGuestControls();
+          });
+        root
+          .querySelector<HTMLButtonElement>("[data-rsvp-back]")!
+          .addEventListener("click", () => {
+            setStep("1");
+          });
+        root
+          .querySelector<HTMLButtonElement>("[data-rsvp-details-back]")!
+          .addEventListener("click", () => {
+            setStep("2");
+          });
+        root
+          .querySelector<HTMLFormElement>("[data-rsvp-details]")!
+          .addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget as HTMLFormElement;
+            const email = form.elements.namedItem("email") as HTMLInputElement;
+            const error = root.querySelector<HTMLElement>(
+              "[data-rsvp-email-error]",
+            )!;
+            if (!email.checkValidity()) {
+              email.setAttribute("aria-invalid", "true");
+              email.setAttribute("aria-describedby", "rsvp-email-error");
+              error.hidden = false;
+              email.focus();
+              return;
+            }
+            email.removeAttribute("aria-invalid");
+            email.removeAttribute("aria-describedby");
+            error.hidden = true;
+            const submit =
+              root.querySelector<HTMLButtonElement>("[data-rsvp-submit]")!;
+            submit.disabled = true;
+            submit.setAttribute("aria-busy", "true");
+            await store.submit({
+              inviteId: invite!.id,
+              name: matchedName,
+              attending,
+              guests,
+              email: email.value,
+              companionName:
+                (form.elements.namedItem("companion") as HTMLInputElement)
+                  .value || undefined,
+              note:
+                (form.elements.namedItem("note") as HTMLTextAreaElement)
+                  .value || undefined,
+            });
+            root.querySelector<HTMLElement>(
+              "[data-rsvp-email-summary]",
+            )!.textContent = email.value;
+            root.querySelector<HTMLElement>(
+              "[data-rsvp-attending-summary]",
+            )!.textContent = attending
+              ? "Joyfully accepts"
+              : "Regretfully declines";
+            root.querySelector<HTMLElement>(
+              "[data-rsvp-guests-summary-value]",
+            )!.textContent = `${guests} ${guests === 1 ? "guest" : "guests"}`;
+            root.querySelector<HTMLElement>(
+              "[data-rsvp-guests-summary]",
+            )!.hidden = !attending;
+            root.querySelector<HTMLElement>(
+              "[data-rsvp-panel=sent] h3",
+            )!.textContent = attending
+              ? `You're on the list, ${matchedName.split(" ")[0]}.`
+              : `Thanks for letting us know, ${matchedName.split(" ")[0]}.`;
+            setConfirmationCopy(attending, email.value);
+            submit.disabled = false;
+            submit.removeAttribute("aria-busy");
+            setStep("sent");
+          });
+        root
+          .querySelector<HTMLButtonElement>("[data-rsvp-edit]")!
+          .addEventListener("click", () => {
+            restoreIntro();
+            setStep("2");
+          });
+        updateGuestControls();
+      });
+  };
+  initRsvp();
+  document.addEventListener("astro:page-load", initRsvp);
+</script>
+
+<style is:global>
+  @layer components {
+    .rsvp_wrap [hidden] {
+      display: none !important;
+    }
+    .rsvp_wrap {
+      --_line: #b9b2a3;
+      --_placeholder: #8a8577;
+      position: relative;
+      overflow: clip;
+      padding: var(--section-space-small) var(--site-margin)
+        var(--section-space-medium);
+      background: var(--dark-900) url("../../assets/textures/grain-dark.jpg")
+        center / 32rem repeat;
+      color: var(--dark-900);
+    }
+    .rsvp_layout {
+      display: grid;
+      gap: var(--space-7);
+      max-width: var(--max-width-main);
+      margin-inline: auto;
+      min-width: 0;
+    }
+    .rsvp_left,
+    .rsvp_right {
+      min-width: 0;
+    }
+    .rsvp_layout > * {
+      min-width: 0;
+    }
+    .rsvp_left {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .rsvp_header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .rsvp_title {
+      margin: 0;
+      padding-bottom: var(--space-2);
+      color: var(--light-100);
+      font: var(--secondary-regular) var(--h1) / var(--line-height-medium)
+        var(--secondary-family);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+    .rsvp_intro {
+      max-width: 26.25rem;
+      margin: 0;
+      color: var(--brand-500);
+      font: var(--primary-regular) var(--text-large) / 1.6 var(--primary-family);
+    }
+    .rsvp_steps {
+      display: flex;
+      gap: var(--space-1);
+      margin: 0 0 var(--space-5);
+      padding: 0;
+      color: var(--brand-500);
+      list-style: none;
+    }
+    .rsvp_steps li {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-1);
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      text-transform: uppercase;
+    }
+    .rsvp_steps li > span {
+      height: 0.1875rem;
+      background: var(--dark-700);
+    }
+    .rsvp_steps li[aria-current="step"] > span,
+    .rsvp_steps li.is-complete > span {
+      background: var(--light-100);
+    }
+    .rsvp_steps li[aria-current="step"] b,
+    .rsvp_steps li.is-complete b {
+      color: var(--light-100);
+      font-weight: inherit;
+    }
+    .rsvp_sent-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: var(--space-5);
+      padding-bottom: var(--space-1);
+      border-bottom: 0.1875rem solid var(--light-100);
+      color: var(--light-100);
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      text-transform: uppercase;
+    }
+    .rsvp_sent-steps span:last-child {
+      color: var(--brand-500);
+    }
+    .rsvp_step-short {
+      display: none;
+    }
+    .rsvp_card-wrap {
+      width: 100%;
+      min-width: 0;
+      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(0 0 0 / 25%))
+        drop-shadow(0 0.625rem 1.5rem rgb(0 0 0 / 22%))
+        drop-shadow(0 1.875rem 3.75rem rgb(0 0 0 / 18%));
+    }
+    .rsvp_card {
+      position: relative;
+      min-width: 0;
+      background: var(--light-100) var(--rsvp-paper) center / 32rem repeat;
+      -webkit-mask-image:
+        radial-gradient(
+          circle at 0 12.1875rem,
+          transparent 0.9375rem,
+          #000 calc(0.9375rem + 0.03125rem)
+        ),
+        radial-gradient(
+          circle at 100% 12.1875rem,
+          transparent 0.9375rem,
+          #000 calc(0.9375rem + 0.03125rem)
+        );
+      -webkit-mask-size: 50% 100%;
+      -webkit-mask-position:
+        0 0,
+        100% 0;
+      -webkit-mask-repeat: no-repeat;
+      mask-image:
+        radial-gradient(
+          circle at 0 12.1875rem,
+          transparent 0.9375rem,
+          #000 calc(0.9375rem + 0.03125rem)
+        ),
+        radial-gradient(
+          circle at 100% 12.1875rem,
+          transparent 0.9375rem,
+          #000 calc(0.9375rem + 0.03125rem)
+        );
+      mask-size: 50% 100%;
+      mask-position:
+        0 0,
+        100% 0;
+      mask-repeat: no-repeat;
+    }
+    .rsvp_content {
+      padding: 2.5rem 6rem 2.5rem 2.5rem;
+    }
+    .rsvp_stub {
+      position: absolute;
+      inset: 0 0 0 auto;
+      display: grid;
+      width: 3.75rem;
+      place-items: center;
+      border-left: 0.125rem dashed var(--light-100);
+      background: var(--accent-500);
+      color: var(--light-100);
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      letter-spacing: 0.22em;
+      text-align: center;
+      writing-mode: vertical-rl;
+    }
+    .rsvp_panel form,
+    .rsvp_sent {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      animation: rsvp-step-in var(--open-duration) var(--open-ease) both;
+    }
+    @keyframes rsvp-step-in {
+      from {
+        opacity: 0;
+        transform: translateY(0.375rem);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .rsvp_panel h3 {
+      margin: 0;
+      scroll-margin-top: calc(
+        var(--nav-height) + var(--space-7) + var(--space-5)
+      );
+      font: var(--secondary-regular) 1.5rem / 1.167 var(--secondary-family);
+    }
+    .rsvp_field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .rsvp_field label,
+    .rsvp_options legend,
+    .rsvp_eyebrow,
+    .rsvp_summary dt {
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .rsvp_field input,
+    .rsvp_field textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: var(--space-3);
+      border: 0.0625rem solid var(--_line);
+      border-radius: 0;
+      background: transparent;
+      color: var(--dark-900);
+      font: var(--primary-regular) var(--text-main) / var(--line-height-huge)
+        var(--primary-family);
+    }
+    .rsvp_field textarea {
+      min-height: 5.25rem;
+      resize: vertical;
+    }
+    .rsvp_field input::placeholder,
+    .rsvp_field textarea::placeholder {
+      color: var(--_placeholder);
+    }
+    .rsvp_field input:focus,
+    .rsvp_field textarea:focus {
+      border-width: 0.125rem;
+      outline: none;
+    }
+    .rsvp_help {
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--text-small) / var(--line-height-huge)
+        var(--primary-family);
+    }
+    .rsvp_error {
+      margin: 0;
+      color: var(--accent-500);
+      font: var(--primary-regular) var(--text-small) / var(--line-height-huge)
+        var(--primary-family);
+    }
+    .rsvp_text-link,
+    .rsvp_back {
+      width: fit-content;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--dark-900);
+      font: var(--primary-medium) var(--text-main) / var(--line-height-huge)
+        var(--primary-family);
+      cursor: pointer;
+    }
+    .rsvp_text-link {
+      text-decoration: underline;
+      text-underline-offset: 0.25rem;
+    }
+    .rsvp_primary {
+      align-self: end;
+      padding: var(--space-3) var(--space-4);
+      border: 0;
+      border-radius: 0;
+      background: var(--accent-500);
+      color: var(--light-100);
+      font: var(--primary-medium) var(--text-main) / var(--line-height-huge)
+        var(--primary-family);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .rsvp_primary:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+    .rsvp_options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    .rsvp_options legend {
+      margin-bottom: var(--space-1);
+    }
+    .rsvp_option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      border: 0.0625rem solid var(--_line);
+      cursor: pointer;
+    }
+    .rsvp_option:has(input:checked) {
+      border-width: 0.125rem;
+      border-color: var(--dark-900);
+    }
+    .rsvp_option input {
+      width: 1.25rem;
+      height: 1.25rem;
+      margin: 0;
+      box-sizing: border-box;
+      appearance: none;
+      border: 0.09375rem solid var(--_line);
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+    }
+    .rsvp_option input:checked {
+      border: 0.375rem solid var(--dark-900);
+    }
+    .rsvp_option input:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+    .rsvp_guests {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-block: var(--space-3);
+      border-block: 0.0625rem solid var(--light-300);
+      font: var(--primary-regular) var(--text-main) / var(--line-height-huge)
+        var(--primary-family);
+    }
+    .rsvp_guests > div {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .rsvp_guests button {
+      display: grid;
+      width: 2.25rem;
+      height: 2.25rem;
+      place-items: center;
+      border: 0.0625rem solid var(--dark-900);
+      background: transparent;
+      color: var(--dark-900);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .rsvp_guests button:disabled {
+      cursor: not-allowed;
+      opacity: 0.35;
+    }
+    .rsvp_guests output {
+      min-width: 1.25rem;
+      font: var(--secondary-regular) 1.5rem / 1 var(--secondary-family);
+      text-align: center;
+    }
+    .rsvp_actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+    .rsvp_invitation {
+      width: 26.25rem;
+      max-width: 100%;
+      box-sizing: border-box;
+      border: 0.09375rem solid var(--light-100);
+      color: var(--light-100);
+    }
+    .rsvp_invitation .rsvp_eyebrow {
+      color: var(--light-100);
+    }
+    .rsvp_invitation-top {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      padding: var(--space-4);
+    }
+    .rsvp_invitation-top > div {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .rsvp_invitation-top strong {
+      font: var(--secondary-regular) var(--h6) / 1.125 var(--secondary-family);
+    }
+    .rsvp_admits {
+      align-items: end;
+    }
+    .rsvp_invitation-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-4);
+      border-top: 0.09375rem dashed var(--light-100);
+    }
+    .rsvp_invitation-bottom ul {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font: var(--primary-regular) var(--text-main) / var(--line-height-huge)
+        var(--primary-family);
+    }
+    .rsvp_invitation-bottom li::before {
+      content: "✓";
+      display: inline-block;
+      width: 0.875rem;
+    }
+    .rsvp_invitation-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      padding-top: var(--space-1);
+    }
+    .rsvp_invitation-links a {
+      color: inherit;
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      text-transform: uppercase;
+      border-bottom: 0.0625rem solid currentColor;
+      padding-bottom: 0.25rem;
+    }
+    .rsvp_sent {
+      position: relative;
+    }
+    .rsvp_stamp {
+      position: absolute;
+      top: -0.875rem;
+      left: 16.25rem;
+      width: 11.25rem;
+      height: 4.5625rem;
+      object-fit: contain;
+      rotate: -8deg;
+      transform-origin: top left;
+      mix-blend-mode: multiply;
+      opacity: 0.95;
+    }
+    .rsvp_summary {
+      margin: 0;
+      border-top: 0.0625rem solid var(--light-300);
+    }
+    .rsvp_summary > div {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding-block: 0.875rem;
+      border-bottom: 0.0625rem solid var(--light-300);
+    }
+    .rsvp_summary dd {
+      margin: 0;
+      color: var(--dark-900);
+      font: var(--primary-regular) var(--text-main) / var(--line-height-huge)
+        var(--primary-family);
+      text-align: right;
+    }
+    .rsvp_scallop {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 0.8125rem;
+      background:
+        linear-gradient(var(--light-100) 0 0) bottom / 100% 0.125rem no-repeat,
+        radial-gradient(
+            circle at 1.125rem 0.6875rem,
+            var(--light-100) 0.6875rem,
+            transparent calc(0.6875rem + 0.03125rem)
+          )
+          0 0 / 2.25rem 0.6875rem repeat-x;
+    }
+    .rsvp_wrap :is(button, input, textarea, a):focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+  }
+  @media (min-width: 64rem) {
+    .rsvp_layout {
+      grid-template-columns: minmax(0, 1fr) 35rem;
+      align-items: start;
+      gap: var(--space-8);
+    }
+    .rsvp_right {
+      display: flex;
+      flex-direction: column;
+    }
+    .rsvp_invitation {
+      margin-top: var(--space-3);
+    }
+  }
+  @media (max-width: 63.999rem) {
+    .rsvp_layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+    }
+    .rsvp_left,
+    .rsvp_right {
+      display: contents;
+    }
+    .rsvp_header {
+      order: 1;
+      margin-bottom: var(--space-7);
+    }
+    .rsvp_steps,
+    .rsvp_sent-steps,
+    .rsvp_card-wrap {
+      order: 2;
+    }
+    .rsvp_invitation {
+      order: 3;
+      margin-top: var(--space-7);
+    }
+    .rsvp_steps {
+      gap: var(--space-2);
+    }
+    .rsvp_step-full {
+      display: none;
+    }
+    .rsvp_step-short {
+      display: inline;
+    }
+    .rsvp_card {
+      min-height: 0;
+      -webkit-mask-image:
+        radial-gradient(
+          circle at 0 2.75rem,
+          transparent 0.75rem,
+          #000 calc(0.75rem + 0.03125rem)
+        ),
+        radial-gradient(
+          circle at 100% 2.75rem,
+          transparent 0.75rem,
+          #000 calc(0.75rem + 0.03125rem)
+        );
+      -webkit-mask-size: 50% 100%;
+      -webkit-mask-position:
+        0 0,
+        100% 0;
+      -webkit-mask-repeat: no-repeat;
+      mask-image:
+        radial-gradient(
+          circle at 0 2.75rem,
+          transparent 0.75rem,
+          #000 calc(0.75rem + 0.03125rem)
+        ),
+        radial-gradient(
+          circle at 100% 2.75rem,
+          transparent 0.75rem,
+          #000 calc(0.75rem + 0.03125rem)
+        );
+      mask-size: 50% 100%;
+      mask-position:
+        0 0,
+        100% 0;
+      mask-repeat: no-repeat;
+    }
+    .rsvp_stub {
+      position: relative;
+      inset: auto;
+      display: grid;
+      width: auto;
+      height: 2.75rem;
+      border: 0;
+      border-bottom: 0.125rem dashed var(--light-100);
+      writing-mode: horizontal-tb;
+    }
+    .rsvp_content {
+      padding: var(--space-5) var(--site-margin);
+    }
+    .rsvp_panel h3 {
+      font-size: var(--h6);
+    }
+    .rsvp_stamp {
+      top: var(--space-4);
+      right: var(--space-4);
+      left: auto;
+      width: 6.5rem;
+      height: auto;
+    }
+    .rsvp_sent h3 {
+      padding-right: 7rem;
+    }
+    .rsvp_guests button {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+    .rsvp_sent {
+      gap: var(--space-5);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rsvp_panel form,
+    .rsvp_sent {
+      animation: none;
+    }
+  }
+</style>
