@@ -39,6 +39,17 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
   });
 
+  test("recovers from a fictional store rejection", async ({ page }) => {
+    const button = rsvp(page).getByRole("button", { name: /Find my invite/ });
+    await rsvp(page).locator("[data-rsvp-name]").fill("Error Test");
+    await button.click();
+    await expect(rsvp(page).locator("[data-rsvp-name-error]")).toHaveText(
+      "Something went wrong — please try again.",
+    );
+    await expect(button).toBeEnabled();
+    await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
+  });
+
   test("bounds the guest count by the invitation seats", async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Liza Santos");
     await rsvp(page)
@@ -206,9 +217,8 @@ test.describe("RSVP section", () => {
         .evaluate((element) => {
           const rect = element.getBoundingClientRect();
           const margin = parseFloat(
-            getComputedStyle(
-              document.querySelector(".rsvp_wrap")!,
-            ).paddingRight,
+            getComputedStyle(document.querySelector(".rsvp_wrap")!)
+              .paddingRight,
           );
           return { right: rect.right, limit: innerWidth - margin };
         });

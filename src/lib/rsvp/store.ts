@@ -16,7 +16,9 @@ export interface RsvpSubmission {
 }
 
 export interface RsvpStore {
-  findInvite(name: string): Promise<{ invite: Invite; matchedName: string } | null>;
+  findInvite(
+    name: string,
+  ): Promise<{ invite: Invite; matchedName: string } | null>;
   submit(submission: RsvpSubmission): Promise<void>;
 }
 
@@ -29,19 +31,36 @@ export const normalizeGuestName = (value: string) =>
     .toLocaleLowerCase();
 
 const fixtures: Invite[] = [
-  { id: "santos", householdName: "The Santos Family", members: ["Liza Santos"], seats: 2 },
+  {
+    id: "santos",
+    householdName: "The Santos Family",
+    members: ["Liza Santos"],
+    seats: 2,
+  },
   { id: "reyes", householdName: "Ana Reyes", members: ["Ana Reyes"], seats: 1 },
-  { id: "cruz", householdName: "The Cruz Family", members: ["Mateo Cruz", "Sofía Cruz"], seats: 4 },
+  {
+    id: "cruz",
+    householdName: "The Cruz Family",
+    members: ["Mateo Cruz", "Sofía Cruz"],
+    seats: 4,
+  },
 ];
 
-const pause = (duration = 180) => new Promise<void>((resolve) => window.setTimeout(resolve, duration));
+const pause = (duration = 180) =>
+  new Promise<void>((resolve) => window.setTimeout(resolve, duration));
+const failureFixtureName = "Error Test";
 
 export const createFakeRsvpStore = (): RsvpStore => ({
   async findInvite(name) {
     await pause();
+    if (normalizeGuestName(name) === normalizeGuestName(failureFixtureName)) {
+      throw new Error("fictional RSVP lookup failure");
+    }
     const wanted = normalizeGuestName(name);
     for (const invite of fixtures) {
-      const matchedName = invite.members.find((member) => normalizeGuestName(member) === wanted);
+      const matchedName = invite.members.find(
+        (member) => normalizeGuestName(member) === wanted,
+      );
       if (matchedName) return { invite, matchedName };
     }
     return null;

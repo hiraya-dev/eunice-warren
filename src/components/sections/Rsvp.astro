@@ -209,6 +209,14 @@ const {
                     >Send RSVP <span aria-hidden="true">→</span></button
                   >
                 </div>
+                <p
+                  class="rsvp_error"
+                  data-rsvp-submit-error
+                  role="alert"
+                  hidden
+                >
+                  Something went wrong — please try again.
+                </p>
               </form>
             </div>
 
@@ -269,6 +277,9 @@ const {
         const title = root.querySelector<HTMLElement>(".rsvp_title")!;
         const intro = root.querySelector<HTMLElement>("[data-rsvp-intro]")!;
         const deadline = root.dataset.rsvpDeadline ?? "[deadline]";
+        const findButton = root.querySelector<HTMLButtonElement>(
+          "[data-rsvp-find] button[type='submit']",
+        )!;
         const setConfirmationCopy = (isAttending: boolean, email: string) => {
           title.textContent = isAttending
             ? "See you in Boracay."
@@ -348,24 +359,37 @@ const {
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
               return;
             }
-            const result = await store.findInvite(value);
-            if (!result) {
-              error.textContent =
-                "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
+            findButton.disabled = true;
+            findButton.setAttribute("aria-busy", "true");
+            try {
+              const result = await store.findInvite(value);
+              if (!result) {
+                error.textContent =
+                  "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
+                error.hidden = false;
+                nameInput.setAttribute("aria-invalid", "true");
+                nameInput.setAttribute("aria-describedby", "rsvp-name-error");
+                return;
+              }
+              error.hidden = true;
+              nameInput.removeAttribute("aria-invalid");
+              nameInput.removeAttribute("aria-describedby");
+              invite = result.invite;
+              matchedName = result.matchedName;
+              guests = invite.seats;
+              root.querySelector("[data-rsvp-first-name]")!.textContent =
+                matchedName.split(" ")[0];
+              updateGuestControls();
+              setStep("2");
+            } catch {
+              error.textContent = "Something went wrong — please try again.";
               error.hidden = false;
               nameInput.setAttribute("aria-invalid", "true");
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
-              return;
+            } finally {
+              findButton.disabled = false;
+              findButton.removeAttribute("aria-busy");
             }
-            error.hidden = true;
-            nameInput.removeAttribute("aria-invalid");
-            invite = result.invite;
-            matchedName = result.matchedName;
-            guests = invite.seats;
-            root.querySelector("[data-rsvp-first-name]")!.textContent =
-              matchedName.split(" ")[0];
-            updateGuestControls();
-            setStep("2");
           });
         root
           .querySelector<HTMLFormElement>("[data-rsvp-attending]")!
@@ -428,21 +452,35 @@ const {
             error.hidden = true;
             const submit =
               root.querySelector<HTMLButtonElement>("[data-rsvp-submit]")!;
+            const submitError = root.querySelector<HTMLElement>(
+              "[data-rsvp-submit-error]",
+            )!;
             submit.disabled = true;
             submit.setAttribute("aria-busy", "true");
-            await store.submit({
-              inviteId: invite!.id,
-              name: matchedName,
-              attending,
-              guests,
-              email: email.value,
-              companionName:
-                (form.elements.namedItem("companion") as HTMLInputElement)
-                  .value || undefined,
-              note:
-                (form.elements.namedItem("note") as HTMLTextAreaElement)
-                  .value || undefined,
-            });
+            submitError.hidden = true;
+            try {
+              await store.submit({
+                inviteId: invite!.id,
+                name: matchedName,
+                attending,
+                guests,
+                email: email.value,
+                companionName:
+                  (form.elements.namedItem("companion") as HTMLInputElement)
+                    .value || undefined,
+                note:
+                  (form.elements.namedItem("note") as HTMLTextAreaElement)
+                    .value || undefined,
+              });
+            } catch {
+              submitError.textContent =
+                "Something went wrong — please try again.";
+              submitError.hidden = false;
+              return;
+            } finally {
+              submit.disabled = false;
+              submit.removeAttribute("aria-busy");
+            }
             root.querySelector<HTMLElement>(
               "[data-rsvp-email-summary]",
             )!.textContent = email.value;
@@ -944,125 +982,125 @@ const {
       outline: var(--focus-width) solid var(--dark-900);
       outline-offset: var(--focus-offset);
     }
-  }
-  @media (min-width: 64rem) {
-    .rsvp_layout {
-      grid-template-columns: minmax(0, 1fr) 35rem;
-      align-items: start;
-      gap: var(--space-8);
+    @media (min-width: 64rem) {
+      .rsvp_layout {
+        grid-template-columns: minmax(0, 1fr) 35rem;
+        align-items: start;
+        gap: var(--space-8);
+      }
+      .rsvp_right {
+        display: flex;
+        flex-direction: column;
+      }
+      .rsvp_invitation {
+        margin-top: var(--space-3);
+      }
     }
-    .rsvp_right {
-      display: flex;
-      flex-direction: column;
+    @media (max-width: 63.999rem) {
+      .rsvp_layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+      }
+      .rsvp_left,
+      .rsvp_right {
+        display: contents;
+      }
+      .rsvp_header {
+        order: 1;
+        margin-bottom: var(--space-7);
+      }
+      .rsvp_steps,
+      .rsvp_sent-steps,
+      .rsvp_card-wrap {
+        order: 2;
+      }
+      .rsvp_invitation {
+        order: 3;
+        margin-top: var(--space-7);
+      }
+      .rsvp_steps {
+        gap: var(--space-2);
+      }
+      .rsvp_step-full {
+        display: none;
+      }
+      .rsvp_step-short {
+        display: inline;
+      }
+      .rsvp_card {
+        min-height: 0;
+        -webkit-mask-image:
+          radial-gradient(
+            circle at 0 2.75rem,
+            transparent 0.75rem,
+            #000 calc(0.75rem + 0.03125rem)
+          ),
+          radial-gradient(
+            circle at 100% 2.75rem,
+            transparent 0.75rem,
+            #000 calc(0.75rem + 0.03125rem)
+          );
+        -webkit-mask-size: 50% 100%;
+        -webkit-mask-position:
+          0 0,
+          100% 0;
+        -webkit-mask-repeat: no-repeat;
+        mask-image:
+          radial-gradient(
+            circle at 0 2.75rem,
+            transparent 0.75rem,
+            #000 calc(0.75rem + 0.03125rem)
+          ),
+          radial-gradient(
+            circle at 100% 2.75rem,
+            transparent 0.75rem,
+            #000 calc(0.75rem + 0.03125rem)
+          );
+        mask-size: 50% 100%;
+        mask-position:
+          0 0,
+          100% 0;
+        mask-repeat: no-repeat;
+      }
+      .rsvp_stub {
+        position: relative;
+        inset: auto;
+        display: grid;
+        width: auto;
+        height: 2.75rem;
+        border: 0;
+        border-bottom: 0.125rem dashed var(--light-100);
+        writing-mode: horizontal-tb;
+      }
+      .rsvp_content {
+        padding: var(--space-5) var(--site-margin);
+      }
+      .rsvp_panel h3 {
+        font-size: var(--h6);
+      }
+      .rsvp_stamp {
+        top: var(--space-4);
+        right: var(--space-4);
+        left: auto;
+        width: 6.5rem;
+        height: auto;
+      }
+      .rsvp_sent h3 {
+        padding-right: 7rem;
+      }
+      .rsvp_guests button {
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+      .rsvp_sent {
+        gap: var(--space-5);
+      }
     }
-    .rsvp_invitation {
-      margin-top: var(--space-3);
-    }
-  }
-  @media (max-width: 63.999rem) {
-    .rsvp_layout {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 0;
-    }
-    .rsvp_left,
-    .rsvp_right {
-      display: contents;
-    }
-    .rsvp_header {
-      order: 1;
-      margin-bottom: var(--space-7);
-    }
-    .rsvp_steps,
-    .rsvp_sent-steps,
-    .rsvp_card-wrap {
-      order: 2;
-    }
-    .rsvp_invitation {
-      order: 3;
-      margin-top: var(--space-7);
-    }
-    .rsvp_steps {
-      gap: var(--space-2);
-    }
-    .rsvp_step-full {
-      display: none;
-    }
-    .rsvp_step-short {
-      display: inline;
-    }
-    .rsvp_card {
-      min-height: 0;
-      -webkit-mask-image:
-        radial-gradient(
-          circle at 0 2.75rem,
-          transparent 0.75rem,
-          #000 calc(0.75rem + 0.03125rem)
-        ),
-        radial-gradient(
-          circle at 100% 2.75rem,
-          transparent 0.75rem,
-          #000 calc(0.75rem + 0.03125rem)
-        );
-      -webkit-mask-size: 50% 100%;
-      -webkit-mask-position:
-        0 0,
-        100% 0;
-      -webkit-mask-repeat: no-repeat;
-      mask-image:
-        radial-gradient(
-          circle at 0 2.75rem,
-          transparent 0.75rem,
-          #000 calc(0.75rem + 0.03125rem)
-        ),
-        radial-gradient(
-          circle at 100% 2.75rem,
-          transparent 0.75rem,
-          #000 calc(0.75rem + 0.03125rem)
-        );
-      mask-size: 50% 100%;
-      mask-position:
-        0 0,
-        100% 0;
-      mask-repeat: no-repeat;
-    }
-    .rsvp_stub {
-      position: relative;
-      inset: auto;
-      display: grid;
-      width: auto;
-      height: 2.75rem;
-      border: 0;
-      border-bottom: 0.125rem dashed var(--light-100);
-      writing-mode: horizontal-tb;
-    }
-    .rsvp_content {
-      padding: var(--space-5) var(--site-margin);
-    }
-    .rsvp_panel h3 {
-      font-size: var(--h6);
-    }
-    .rsvp_stamp {
-      top: var(--space-4);
-      right: var(--space-4);
-      left: auto;
-      width: 6.5rem;
-      height: auto;
-    }
-    .rsvp_sent h3 {
-      padding-right: 7rem;
-    }
-    .rsvp_guests button {
-      width: 2.5rem;
-      height: 2.5rem;
-    }
-    .rsvp_sent {
-      gap: var(--space-5);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .rsvp_panel form,
-    .rsvp_sent {
-      animation: none;
+    @media (prefers-reduced-motion: reduce) {
+      .rsvp_panel form,
+      .rsvp_sent {
+        animation: none;
+      }
     }
   }
 </style>
