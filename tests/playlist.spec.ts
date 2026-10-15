@@ -176,8 +176,8 @@ test.describe("Playlist section", () => {
   }) => {
     await page.goto("/");
     await page.locator(".playlist_submit").click();
-    await expect(page.locator('input[name="name"]')).toBeFocused();
-    await page.locator('input[name="name"]').fill("Eunice");
+    await expect(page.locator('.playlist_form-wrap input[name="name"]')).toBeFocused();
+    await page.locator('.playlist_form-wrap input[name="name"]').fill("Eunice");
     await expect(page.locator(".field-search-icon")).toHaveCount(0);
     await expect(page.locator('input[name="artist"]')).not.toHaveAttribute(
       "required",
