@@ -7,7 +7,15 @@ test.describe("With love stack", () => {
   test("renders notes and cycles the top card with Shuffle", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#with-love")).toBeVisible();
-    await expect(order(page)).toHaveCount(6);
+    await page.locator("#with-love").scrollIntoViewIfNeeded();
+    await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");
+    // Upload specs share the fake store, so real notes may already replace the samples.
+    await expect.poll(() => order(page).count()).toBeGreaterThanOrEqual(3);
+    const attributionBox = await page.locator("#with-love .is--active .with-love_attribution").boundingBox();
+    const shuffleBox = await page.locator("#with-love .shuffle-btn").boundingBox();
+    expect(attributionBox).not.toBeNull();
+    expect(shuffleBox).not.toBeNull();
+    expect(attributionBox!.y + attributionBox!.height).toBeLessThanOrEqual(shuffleBox!.y - 8);
     const first = await order(page).first().getAttribute("data-note-id");
     await page.locator('[data-stacked-cards-control="next"]').click();
     await expect.poll(() => order(page).first().getAttribute("data-note-id")).not.toBe(first);
@@ -16,6 +24,8 @@ test.describe("With love stack", () => {
 
   test("moves the top card after a large drag and ignores a small drag", async ({ page }) => {
     await page.goto("/");
+    await page.locator("#with-love").scrollIntoViewIfNeeded();
+    await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");
     const top = order(page).first();
     const first = await top.getAttribute("data-note-id");
     await top.scrollIntoViewIfNeeded();
@@ -39,6 +49,8 @@ test.describe("With love stack", () => {
 
   test("uses the designed lettering colour and cycles with reduced motion", async ({ page }) => {
     await page.goto("/");
+    await page.locator("#with-love").scrollIntoViewIfNeeded();
+    await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");
     const alpha = await page.locator(".with-love_word-with").evaluate((element) => {
       const color = getComputedStyle(element).color;
       return color.match(/\/\s*([\d.]+)\)?$/)?.[1] ?? color.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/)?.[1];
@@ -50,6 +62,8 @@ test.describe("With love stack", () => {
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const page = await context.newPage();
     await page.goto("/");
+    await page.locator("#with-love").scrollIntoViewIfNeeded();
+    await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");
     const first = await order(page).first().getAttribute("data-note-id");
     await page.locator('[data-stacked-cards-control="next"]').click();
     await expect.poll(() => order(page).first().getAttribute("data-note-id")).not.toBe(first);
