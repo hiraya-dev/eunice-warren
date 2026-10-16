@@ -12,6 +12,8 @@ import type { RateLimiter } from "@/lib/rsvp/logic";
 import type { RsvpStore } from "@/lib/rsvp/store";
 import { createFakeRsvpStore } from "@/lib/rsvp/store";
 import { createSheetsRsvpStore } from "@/lib/rsvp/sheets";
+import { getLoveStore } from "@/lib/with-love/store";
+import { isJpeg, isTodayInManila, isWithinLength, stripControls } from "@/lib/with-love/validation";
 
 const TEST_SECRET = "local-rsvp-token-secret";
 const envRecord = env as unknown as Record<string, unknown>;
@@ -107,6 +109,17 @@ const submitInput = z.object({
   note: z.string().max(1000).optional(),
   turnstileToken: z.string().max(4096),
 });
+const loveSubmitInput = z.object({
+  photo: z.custom<File>((value) => typeof File !== "undefined" && value instanceof File),
+  message: z.string(),
+  name: z.string(),
+  city: z.string().optional(),
+  turnstileToken: z.string().max(4096),
+});
+
+const loveFail = (message = "Something went wrong — please try again.") => {
+  throw new ActionError({ code: "INTERNAL_SERVER_ERROR", message });
+};
 
 export const server = {
   rsvp: {
@@ -179,4 +192,61 @@ export const server = {
       },
     }),
   },
+  withLove: {
+      submit: defineAction({
+        accept: "form",
+        input: loveSubmitInput,
+        handler: async (input, context) => {
+          const store = getLoveStore(envRecord);
+          try {
+            await guardLove(input.turnstileToken, context);
+            const name = stripControls(input.name);
+            const message = stripControls(input.message);
+            const city = stripControls(input.city ?? "");
+            if (!isWithinLength(message, 140)) loveFail("Please write a note (up to 140 characters).");
+            if (!isWithinLength(name, 60)) loveFail("Please add your name.");
+            if (city.length > 60) loveFail("Please shorten the city name.");
+            if (input.photo.size > 2 * 1024 * 1024) loveFail("That photo is too large — try another one.");
+            const bytes = new Uint8Array(await input.photo.arrayBuffer());
+            if (!isJpeg(bytes)) loveFail("That file doesn't look like a photo — try another one.");
+            if (storeName === "fake" && name.toLocaleLowerCase() === "error test") throw new Error("fictional upload failure");
+            const notes = await store.listNotes();
+            if (notes.length >= 2000)
+              throw new ActionError({ code: "CONFLICT", message: "The stack is full. Thank you for all the love!" });
+            if (notes.filter((note) => isTodayInManila(note.submittedAt)).length >= 300)
+              throw new ActionError({ code: "CONFLICT", message: "The stack is full for today. Come back tomorrow!" });
+            const id = crypto.randomUUID();
+            await store.addNote({
+              id,
+              submittedAt: new Date().toISOString(),
+              name,
+              city,
+              message,
+              photoKey: `notes/${id}.jpg`,
+            }, bytes);
+            return { note: { id, name, city, message, photoUrl: `/api/with-love/photo/${id}` } };
+          } catch (error) {
+            if (error instanceof ActionError) throw error;
+            loveFail();
+          }
+        },
+      }),
+    },
 };
+
+async function guardLove(inputToken: string, context: { request: Request }) {
+  let verified = false;
+  try {
+    verified = await verifyTurnstile(inputToken);
+    if (verified && !(await isWithinRateLimit(
+      envRecord.WITH_LOVE_LIMITER as RateLimiter | undefined,
+      context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+    ))) {
+      throw new ActionError({ code: "TOO_MANY_REQUESTS", message: "You've pinned a lot! Take a breather and try again in a minute." });
+    }
+  } catch (error) {
+    if (error instanceof ActionError) throw error;
+    loveFail();
+  }
+  if (!verified) throw new ActionError({ code: "FORBIDDEN", message: "Please try again." });
+}

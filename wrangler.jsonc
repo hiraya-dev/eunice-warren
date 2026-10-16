@@ -15,11 +15,20 @@
     "not_found_handling": "404-page",
   },
 
+  "kv_namespaces": [
+    { "binding": "WITH_LOVE_PHOTOS", "id": "c00b4621542449ddb7828b30e08a38f9" },
+  ],
+
   "ratelimits": [
     {
       "name": "RSVP_LOOKUP_LIMITER",
       "namespace_id": "1001",
       "simple": { "limit": 10, "period": 60 },
+    },
+    {
+      "name": "WITH_LOVE_LIMITER",
+      "namespace_id": "1002",
+      "simple": { "limit": 5, "period": 60 },
     },
   ],
 

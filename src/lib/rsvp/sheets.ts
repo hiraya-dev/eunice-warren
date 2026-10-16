@@ -3,7 +3,7 @@ import { normalizeGuestName } from "./store.ts";
 import { parseGuestRows } from "./logic.ts";
 
 type ServiceAccount = { client_email?: string; private_key?: string };
-type SheetsConfig = { keyJson: string; sheetId: string };
+export type SheetsConfig = { keyJson: string; sheetId: string };
 let cachedGuests:
   { expiresAt: number; parsed: ReturnType<typeof parseGuestRows> } | undefined;
 let cachedAccessToken: { value: string; expiresAt: number } | undefined;
@@ -73,7 +73,7 @@ async function accessToken(config: SheetsConfig) {
   return data.access_token;
 }
 
-async function sheetsFetch(
+export async function sheetsFetch(
   config: SheetsConfig,
   path: string,
   init?: RequestInit,
@@ -96,7 +96,7 @@ async function sheetsFetch(
   return response;
 }
 
-const configFromEnv = (env: Record<string, unknown>): SheetsConfig => {
+export const configFromEnv = (env: Record<string, unknown>): SheetsConfig => {
   const keyJson =
     typeof env.GOOGLE_SERVICE_ACCOUNT_JSON === "string"
       ? env.GOOGLE_SERVICE_ACCOUNT_JSON
