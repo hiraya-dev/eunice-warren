@@ -1,8 +1,9 @@
 ---
 import { Image } from "astro:assets";
+import Stamp from "@/components/media/Stamp.astro";
 import stampIsland from "@/assets/images/footer/stamp-island.jpg";
 import stampSunset from "@/assets/images/footer/stamp-sunset.jpg";
-import stampEw from "@/assets/images/footer/stamp-ew.png";
+import stampEw from "@/assets/images/stamps/ew.jpg";
 import postmark from "@/assets/images/footer/postmark.png";
 
 interface Props {
@@ -12,8 +13,6 @@ interface Props {
 
 const { render = true } = Astro.props;
 
-const stampPath =
-  "M0 0L3 0A3.5 3.5 0 0 0 10 0L14 0A3.5 3.5 0 0 0 21 0L25 0A3.5 3.5 0 0 0 32 0L36 0A3.5 3.5 0 0 0 43 0L47 0A3.5 3.5 0 0 0 54 0L58 0A3.5 3.5 0 0 0 65 0L68 0L68 5.5A3.5 3.5 0 0 0 68 12.5L68 16.5A3.5 3.5 0 0 0 68 23.5L68 27.5A3.5 3.5 0 0 0 68 34.5L68 38.5A3.5 3.5 0 0 0 68 45.5L68 49.5A3.5 3.5 0 0 0 68 56.5L68 60.5A3.5 3.5 0 0 0 68 67.5L68 71.5A3.5 3.5 0 0 0 68 78.5L68 84L65 84A3.5 3.5 0 0 0 58 84L54 84A3.5 3.5 0 0 0 47 84L43 84A3.5 3.5 0 0 0 36 84L32 84A3.5 3.5 0 0 0 25 84L21 84A3.5 3.5 0 0 0 14 84L10 84A3.5 3.5 0 0 0 3 84L0 84L0 78.5A3.5 3.5 0 0 0 0 71.5L0 67.5A3.5 3.5 0 0 0 0 60.5L0 56.5A3.5 3.5 0 0 0 0 49.5L0 45.5A3.5 3.5 0 0 0 0 38.5L0 34.5A3.5 3.5 0 0 0 0 27.5L0 23.5A3.5 3.5 0 0 0 0 16.5L0 12.5A3.5 3.5 0 0 0 0 5.5Z";
 ---
 
 {
@@ -23,18 +22,12 @@ const stampPath =
         <p class="footer_signoff">
           <span>From</span>
           <span class="footer_stamp footer_stamp-island">
-            <svg viewBox="0 0 68 84" preserveAspectRatio="none" aria-hidden="true">
-              <path d={stampPath} fill="var(--light-200)" stroke="var(--light-300)" />
-            </svg>
-            <Image src={stampIsland} alt="" width={400} height={300} />
+            <Stamp paper="light-200"><Image src={stampIsland} alt="" width={56} height={72} densities={[1, 2]} /></Stamp>
           </span>
           <span class="footer_highlight footer_highlight-brand">island hopping</span>
           <span>to</span>
           <span class="footer_stamp footer_stamp-sunset">
-            <svg viewBox="0 0 68 84" preserveAspectRatio="none" aria-hidden="true">
-              <path d={stampPath} fill="var(--light-200)" stroke="var(--light-300)" />
-            </svg>
-            <Image src={stampSunset} alt="" width={333} height={520} />
+            <Stamp paper="light-200"><Image src={stampSunset} alt="" width={56} height={72} densities={[1, 2]} /></Stamp>
           </span>
           <span class="footer_highlight footer_highlight-accent">sunset vows,</span>
           <span>see you in Boracay ↘</span>
@@ -43,7 +36,7 @@ const stampPath =
         <p class="footer_date">01.14.27</p>
 
         <div class="footer_cluster" aria-hidden="true">
-          <Image class="footer_cluster-stamp" src={stampEw} alt="" width={506} height={640} />
+          <div class="footer_cluster-stamp"><Stamp><Image src={stampEw} alt="" width={170} height={219} densities={[1, 2]} /></Stamp></div>
           <Image class="footer_cluster-postmark" src={postmark} alt="" width={640} height={491} />
         </div>
 
@@ -161,24 +154,7 @@ const stampPath =
       display: inline-block;
       flex: 0 0 auto;
       width: 3.75rem;
-      height: 4.625rem;
-      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 0.18)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 0.14));
-    }
-
-    .footer_stamp svg,
-    .footer_stamp img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    .footer_stamp img {
-      inset: 0.375rem;
-      width: calc(100% - 0.75rem);
-      height: calc(100% - 0.75rem);
-      object-fit: cover;
-      clip-path: inset(0 round 0.0625rem);
+      height: 4.6875rem;
     }
 
     .footer_stamp-island { rotate: -5deg; }
@@ -206,7 +182,6 @@ const stampPath =
     .footer_cluster-stamp,
     .footer_cluster-postmark {
       position: absolute;
-      object-fit: contain;
     }
 
     .footer_cluster-stamp {
@@ -216,7 +191,6 @@ const stampPath =
       height: 15rem;
       transform: rotate(5deg);
       transform-origin: top left;
-      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 0.18)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 0.14));
     }
 
     .footer_cluster-postmark {
@@ -297,13 +271,7 @@ const stampPath =
 
       .footer_stamp {
         width: 2.5rem;
-        height: 3.0625rem;
-      }
-
-      .footer_stamp img {
-        inset: 0.25rem;
-        width: calc(100% - 0.5rem);
-        height: calc(100% - 0.5rem);
+        height: 3.125rem;
       }
 
       .footer_date {

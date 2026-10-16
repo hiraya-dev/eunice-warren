@@ -1,9 +1,10 @@
 ---
 import { Image } from "astro:assets";
+import Stamp from "@/components/media/Stamp.astro";
 import Form from "@/components/form/Form.astro";
 import Input from "@/components/form/Input.astro";
 import Textarea from "@/components/form/Textarea.astro";
-import stamp from "@/assets/images/playlist/stamp-pilipinas.png";
+import stamp from "@/assets/images/stamps/paraw.jpg";
 import postcardPaper from "@/assets/textures/postcard-paper.jpg";
 import { PLAYLIST_URI } from "@/settings/playlist.ts";
 ---
@@ -151,14 +152,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         class="playlist_postcard"
         style={`--postcard-texture: url("${postcardPaper.src}")`}
       >
-        <Image
-          src={stamp}
-          alt=""
-          class="playlist_stamp"
-          width={912}
-          height={1152}
-          aria-hidden="true"
-        /><Input
+        <div class="playlist_stamp"><Stamp><Image src={stamp} alt="" width={72} height={93} densities={[1, 2]} aria-hidden="true" /></Stamp></div><Input
           appearance="postcard"
           label="Your name"
           name="name"
@@ -682,10 +676,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       right: 1rem;
       width: 3.75rem;
       height: 4.6875rem;
-      object-fit: cover;
       transform: rotate(4deg);
-      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 0.18))
-        drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 0.14));
     }
     .playlist_submit {
       width: 100%;

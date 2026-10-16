@@ -1,11 +1,12 @@
 ---
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
+import Stamp from "@/components/media/Stamp.astro";
 import couple from "@/assets/images/hero/polaroid-couple.jpg";
 import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
 import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
-import paraw from "@/assets/images/hero/stamp-paraw.png";
-import palm from "@/assets/images/hero/stamp-palm.png";
+import paraw from "@/assets/images/stamps/paraw.jpg";
+import palm from "@/assets/images/stamps/palm.jpg";
 import postmark from "@/assets/images/hero/postmark-received.png";
 import note from "@/assets/images/hero/note-thats-us.png";
 import Button from "@/components/Button.astro";
@@ -33,8 +34,8 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     <div class="hero_keepsake hero_sunset" data-hero-keepsake>
       <div class="hero_polaroid"><Image src={sunsetSail} alt="" width={176} height={200} widths={[176, 352]} sizes="(min-width: 48rem) 12.22vw, 176px" loading="eager" fetchpriority="low" /></div>
     </div>
-    <Image class="hero_keepsake hero_paraw" data-hero-keepsake src={paraw} alt="" width={120} height={150} widths={[120, 240]} sizes="(min-width: 48rem) 8.33vw, 72px" loading="eager" fetchpriority="low" />
-    <Image class="hero_keepsake hero_palm" data-hero-keepsake src={palm} alt="" width={96} height={120} widths={[96, 192]} sizes="(min-width: 48rem) 6.67vw, 96px" loading="eager" fetchpriority="low" />
+    <div class="hero_keepsake hero_paraw" data-hero-keepsake><Stamp><Image src={paraw} alt="" width={860} height={1110} widths={[120, 240]} sizes="(min-width: 48rem) 8.33vw, 72px" loading="eager" fetchpriority="low" /></Stamp></div>
+    <div class="hero_keepsake hero_palm" data-hero-keepsake><Stamp><Image src={palm} alt="" width={860} height={1110} widths={[96, 192]} sizes="(min-width: 48rem) 6.67vw, 96px" loading="eager" fetchpriority="low" /></Stamp></div>
     <Image class="hero_keepsake hero_postmark" data-hero-keepsake src={postmark} alt="" width={195} height={120} widths={[195, 390]} sizes="(min-width: 48rem) 13.54vw, 130px" loading="eager" fetchpriority="low" />
     <Image class="hero_keepsake hero_note" data-hero-keepsake src={note} alt="" width={190} height={114} widths={[190, 380]} sizes="(min-width: 48rem) 13.19vw, 120px" loading="eager" fetchpriority="low" />
   </div>
@@ -117,8 +118,8 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     .hero_white-beach .hero_polaroid { width: 14.583cqw; padding: 0.833cqw 0.833cqw 2.778cqw; }
     .hero_sunset { top: 36.111cqw; left: 77.778cqw; transform: rotate(-4deg); }
     .hero_sunset .hero_polaroid { width: 13.889cqw; padding: 0.833cqw 0.833cqw 2.222cqw; }
-    .hero_paraw { top: 36.111cqw; left: 10.417cqw; width: 8.333cqw; height: 10.417cqw; object-fit: contain; transform: rotate(8deg); }
-    .hero_palm { top: 20.833cqw; left: 90cqw; width: 6.667cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-9deg); }
+    .hero_paraw { top: 36.111cqw; left: 10.417cqw; width: 8.333cqw; height: 10.417cqw; transform: rotate(8deg); }
+    .hero_palm { top: 20.833cqw; left: 90cqw; width: 6.667cqw; height: 8.333cqw; transform: rotate(-9deg); }
     .hero_postmark { top: 44.444cqw; left: 17.361cqw; width: 13.542cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-10deg); opacity: 0.9; }
     .hero_note { top: 4.722cqw; left: 21.597cqw; width: 13.194cqw; height: 7.917cqw; object-fit: fill; transform: rotate(-8deg); }
     .hero_content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); text-align: center; }

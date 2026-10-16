@@ -2,8 +2,9 @@
 import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
+import Stamp from "@/components/media/Stamp.astro";
 import Arrow from "@/assets/icons/arrow-full.svg";
-import stamp from "@/assets/images/explore/stamp-shell.png";
+import stamp from "@/assets/images/stamps/shell.jpg";
 import boatSticker from "@/assets/images/explore/sticker-boat.svg?raw";
 import fishSticker from "@/assets/images/explore/sticker-fish.svg?raw";
 import shellSticker from "@/assets/images/explore/sticker-shell.svg?raw";
@@ -40,15 +41,7 @@ const stickers = {
         <h2 class="explore_title" data-fade-in-item>
           Field notes<br />on Boracay
         </h2>
-        <Image
-          class="explore_stamp"
-          src={stamp}
-          alt=""
-          aria-hidden="true"
-          width={112}
-          height={140}
-          loading="lazy"
-        />
+        <div class="explore_stamp"><Stamp><Image src={stamp} alt="" aria-hidden="true" width={100} height={129} densities={[1, 2]} loading="lazy" /></Stamp></div>
         <div
           class="explore_controls explore_controls-header"
           data-gsap-slider-controls
@@ -203,8 +196,6 @@ const stickers = {
       height: 8.75rem;
       rotate: -8deg;
       transform-origin: 0 0;
-      filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 18%))
-        drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 14%));
     }
     .explore_controls {
       display: flex;

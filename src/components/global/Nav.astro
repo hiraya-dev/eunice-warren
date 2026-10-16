@@ -1,8 +1,9 @@
 ---
 import { Image } from "astro:assets";
 import Button from "@/components/Button.astro";
+import Stamp from "@/components/media/Stamp.astro";
 import disc from "@/assets/images/now-playing-disc.png";
-import palm from "@/assets/images/hero/stamp-palm.png";
+import palm from "@/assets/images/stamps/palm.jpg";
 import { SITE_NAME } from "@/consts.ts";
 
 interface Props {
@@ -68,7 +69,7 @@ const links = [
           </div>
           <Button class="navigation_rsvp" element="link" href="/#rsvp" shape="pill">RSVP by December</Button>
           <div class="navigation_meta"><span>01 · 14 · 2027</span><span class="navigation_location">BORACAY, <span class="navigation_location-full">PHILIPPINES</span><span class="navigation_location-short">PH</span></span></div>
-          <Image class="navigation_palm" src={palm} alt="" width={240} height={300} aria-hidden="true" />
+          <div class="navigation_palm"><Stamp><Image src={palm} alt="" width={90} height={116} densities={[1, 2]} aria-hidden="true" /></Stamp></div>
         </div>
       </div>
     </nav>
@@ -246,7 +247,7 @@ const links = [
     .button_wrap.pill.navigation_rsvp .button-016__inner { width: 100%; box-sizing: border-box; padding: 1.0625rem; }
     .navigation_meta { display: flex; justify-content: space-between; padding-top: var(--space-2); color: var(--brand-500); font-family: var(--mono-family); font-size: var(--eyebrow); letter-spacing: var(--letter-spacing-wider); line-height: var(--line-height-medium); text-transform: uppercase; }
     .navigation_location-short { display: none; }
-    .navigation_palm { position: absolute; right: 1.75rem; top: -7.5rem; width: 4.5rem; height: 5.625rem; object-fit: contain; transform: rotate(8deg); transform-origin: 0 0; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(0 0 0 / 18%)) drop-shadow(0 0.5rem 0.875rem rgb(0 0 0 / 20%)); opacity: 0; transition: opacity 0.75s cubic-bezier(.7, 0, .3, 1) 0.5s; }
+    .navigation_palm { position: absolute; right: 1.75rem; top: -7.5rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); transform-origin: 0 0; opacity: 0; transition: opacity 0.75s cubic-bezier(.7, 0, .3, 1) 0.5s; }
     .navigation[data-navigation-status="active"] .navigation_palm { opacity: 1; }
     @media (width < 62rem) {
       .nav_actions { gap: var(--space-3); }
