@@ -223,7 +223,7 @@ const stickers = {
       background: transparent;
       color: var(--dark-900);
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s ease, scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
     }
     .explore_control-next {
       border-color: var(--dark-900);
@@ -247,6 +247,7 @@ const stickers = {
       outline: var(--focus-width) solid var(--dark-900);
       outline-offset: var(--focus-offset);
     }
+    .explore_control:active:not(:disabled):not([data-gsap-slider-control-status="not-active"]) { scale: 0.97; }
     [data-gsap-slider-control-status="not-active"] {
       opacity: 0.4;
       pointer-events: none;

@@ -22,6 +22,12 @@ test.describe("FAQ section", () => {
     }
   });
 
+  test("marks the FAQ heading copy for the shared fade-in", async ({ page }) => {
+    const header = page.locator(".faq_header");
+    await expect(header).toHaveAttribute("data-fade-in", "");
+    await expect(header.locator("[data-fade-in-item]")).toHaveCount(2);
+  });
+
   test("opens one item and closes siblings, and can close an open item", async ({ page }) => {
     await page.locator(".faq_toggle").nth(2).click();
     await expect(page.locator(".faq_toggle").nth(2)).toHaveAttribute("aria-expanded", "true");

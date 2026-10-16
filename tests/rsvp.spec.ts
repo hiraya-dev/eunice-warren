@@ -16,6 +16,46 @@ test.describe("RSVP section", () => {
     );
   });
 
+  test("shows a stable busy spinner without changing the button name", async ({ page }) => {
+    const button = rsvp(page).getByRole("button", { name: "Find my invite" });
+    await button.evaluate((element) => {
+      element.setAttribute("aria-busy", "true");
+      (element as HTMLButtonElement).disabled = true;
+    });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute("aria-busy", "true");
+    await expect(button.locator(".rsvp_primary-spinner")).toBeVisible();
+    await expect(button.locator(".rsvp_primary-arrow")).toBeHidden();
+    await expect(button.locator(".rsvp_primary-label-busy")).toBeHidden();
+    await expect(button).toHaveAccessibleName("Find my invite");
+  });
+
+  test("uses a visible busy label when reduced motion is requested", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.reload();
+    const button = rsvp(page).getByRole("button", { name: "Find my invite" });
+    await button.evaluate((element) => element.setAttribute("aria-busy", "true"));
+    await expect(button.locator(".rsvp_primary-label-busy")).toBeVisible();
+    await expect(button.locator(".rsvp_primary-spinner")).toBeHidden();
+    await expect(button).toHaveAccessibleName("Find my invite");
+  });
+
+  test("fills current and complete steps with a transformed pseudo-element", async ({ page }) => {
+    const transforms = await rsvp(page).locator(".rsvp_steps li > span").evaluateAll((elements) =>
+      elements.map((element) => getComputedStyle(element, "::after").transform),
+    );
+    expect(transforms[0]).toContain("matrix(1");
+    expect(transforms[1]).toContain("matrix(0");
+    await rsvp(page).locator("[data-step='2']").evaluate((element) => element.classList.add("is-complete"));
+    await expect.poll(() => rsvp(page).locator("[data-step='2'] > span").evaluate((element) => getComputedStyle(element, "::after").transform)).toContain("matrix(1");
+  });
+
+  test("reveals the RSVP header through the shared fade-in attributes", async ({ page }) => {
+    const header = rsvp(page).locator(".rsvp_header");
+    await expect(header).toHaveAttribute("data-fade-in", "");
+    await expect(header.locator("[data-fade-in-item]")).toHaveCount(2);
+  });
+
   test("keeps RSVP field layout stable when focused", async ({ page }) => {
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
