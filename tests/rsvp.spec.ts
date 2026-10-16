@@ -10,6 +10,12 @@ test.describe("RSVP section", () => {
     await rsvp(page).scrollIntoViewIfNeeded();
   });
 
+  test("shows the RSVP deadline label", async ({ page }) => {
+    await expect(rsvp(page).locator("[data-rsvp-intro]")).toContainText(
+      "December 31",
+    );
+  });
+
   test("finds invites case-insensitively and ignores accents and spacing", async ({
     page,
   }) => {

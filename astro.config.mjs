@@ -1,7 +1,8 @@
 // @ts-check
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { defineConfig, fontProviders } from "astro/config";
 import sitemap from "@astrojs/sitemap";
+import cloudflare from "@astrojs/cloudflare";
 import { SITE_INDEXABLE, SITE_URL } from "./src/consts.ts";
 import { isNoindexRoute } from "./src/utils/seo.ts";
 
@@ -10,8 +11,28 @@ const cloudflareHeaders = {
   name: "cloudflare-headers",
   hooks: {
     "astro:build:done": async ({ dir }) => {
-      const headers = SITE_INDEXABLE ? "" : "/*\n  X-Robots-Tag: noindex, nofollow\n";
-      await writeFile(new URL("_headers", dir), headers);
+      const target = new URL("./dist/client/_headers", import.meta.url);
+      let current = "";
+      for (const candidate of [target, new URL("_headers", dir)]) {
+        try {
+          current = await readFile(candidate, "utf8");
+          break;
+        } catch {
+          // The adapter and this integration can run in either order.
+        }
+      }
+      if (!SITE_INDEXABLE && !current.includes("X-Robots-Tag:")) {
+        const suffix = current && !current.endsWith("\n") ? "\n" : "";
+        await writeFile(
+          target,
+          current + suffix + "/*\n  X-Robots-Tag: noindex, nofollow\n",
+        );
+      } else if (
+        current &&
+        target.toString() !== new URL("_headers", dir).toString()
+      ) {
+        await writeFile(target, current);
+      }
     },
   },
 };
@@ -20,10 +41,14 @@ export default defineConfig({
   site: SITE_URL,
   integrations: [
     sitemap({
-      filter: (page) => SITE_INDEXABLE && !isNoindexRoute(new URL(page).pathname),
+      filter: (page) =>
+        SITE_INDEXABLE && !isNoindexRoute(new URL(page).pathname),
     }),
     cloudflareHeaders,
   ],
+  adapter: cloudflare({ imageService: "compile" }),
+  output: "static",
+  session: false,
   fonts: [
     {
       name: "PP Neue Montreal",

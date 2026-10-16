@@ -30,7 +30,7 @@ export const normalizeGuestName = (value: string) =>
     .replace(/\s+/g, " ")
     .toLocaleLowerCase();
 
-const fixtures: Invite[] = [
+export const fakeFixtures: Invite[] = [
   {
     id: "santos",
     householdName: "The Santos Family",
@@ -46,18 +46,16 @@ const fixtures: Invite[] = [
   },
 ];
 
-const pause = (duration = 180) =>
-  new Promise<void>((resolve) => window.setTimeout(resolve, duration));
-const failureFixtureName = "Error Test";
+const pause = (duration = 20) =>
+  new Promise<void>((resolve) => setTimeout(resolve, duration));
 
 export const createFakeRsvpStore = (): RsvpStore => ({
   async findInvite(name) {
     await pause();
-    if (normalizeGuestName(name) === normalizeGuestName(failureFixtureName)) {
+    if (normalizeGuestName(name) === "error test")
       throw new Error("fictional RSVP lookup failure");
-    }
     const wanted = normalizeGuestName(name);
-    for (const invite of fixtures) {
+    for (const invite of fakeFixtures) {
       const matchedName = invite.members.find(
         (member) => normalizeGuestName(member) === wanted,
       );
