@@ -28,10 +28,11 @@ Keep these header rows on the existing tabs:
 4. Add the secrets with Wrangler: wrangler secret put
    GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_SHEET_ID, RSVP_TOKEN_SECRET, and
    TURNSTILE_SECRET_KEY.
-5. In the Workers Builds production environment, set RSVP_STORE=sheets and
-   PUBLIC_RSVP_STORE=sheets. Set PUBLIC_TURNSTILE_SITE_KEY to the widget's public
-   key before the build. The committed Wrangler config has the safe
-   RSVP_STORE=sheets default; preview/local runs override it with fake.
+5. No Workers Builds variables are needed. The committed Wrangler config
+   defaults to RSVP_STORE=sheets, and the production Turnstile site key
+   (0x4AAAAAAFYIhA_8zh_lLnm8, public) is the fallback in Rsvp.astro. Set
+   PUBLIC_TURNSTILE_SITE_KEY at build time only to use a different widget.
+   Preview/local runs override the store with fake.
 6. Build and deploy with npm run build followed by npx wrangler deploy. With the
    adapter, this command still works unchanged: Wrangler uses
    @astrojs/cloudflare/entrypoints/server from main and the adapter's generated
