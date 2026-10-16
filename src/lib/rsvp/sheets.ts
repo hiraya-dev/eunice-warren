@@ -160,7 +160,7 @@ export const createSheetsRsvpStore = (
       ];
       await sheetsFetch(
         config,
-        "values/Responses!A:H:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "values/Responses!A:H:append?valueInputOption=RAW&insertDataOption=OVERWRITE",
         { method: "POST", body: JSON.stringify({ values }) },
       );
     },
