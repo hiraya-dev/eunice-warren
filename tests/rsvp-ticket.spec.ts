@@ -61,6 +61,28 @@ test.describe("RSVP ticket popup", () => {
     expect([...pngBytes.subarray(0, 8)]).toEqual([
       137, 80, 78, 71, 13, 10, 26, 10,
     ]);
+    const notchAlpha = await page.evaluate(async (base64) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${base64}`;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(image, 0, 0);
+      const tearY = Math.round((24.75 / 32.5) * canvas.height);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const alphaAt = (x: number, y: number) =>
+        pixels[(y * canvas.width + x) * 4 + 3];
+      return {
+        left: alphaAt(1, tearY),
+        right: alphaAt(canvas.width - 2, tearY),
+        center: alphaAt(Math.floor(canvas.width / 2), tearY),
+      };
+    }, pngBytes.toString("base64"));
+    expect(notchAlpha.left).toBe(0);
+    expect(notchAlpha.right).toBe(0);
+    expect(notchAlpha.center).toBe(255);
     const ics = page.waitForEvent("download");
     await dialog.locator("[data-ticket-calendar]").click();
     const calendar = await ics;
@@ -77,6 +99,50 @@ test.describe("RSVP ticket popup", () => {
     const dialog = await accept(page);
     await expect(dialog.locator("[data-ticket]")).toHaveClass(/is-printed/);
     await expect(dialog.locator("[data-ticket-confetti]")).toBeEmpty();
+  });
+
+  test("uses cut-out perforations and a full-screen confetti layer", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    const dialog = await accept(page, false);
+    await expect(dialog.locator("[data-ticket-popup]")).toHaveAttribute(
+      "data-stage",
+      "released",
+    );
+    await expect(
+      dialog.locator("[data-ticket-confetti] .ticket-popup_confetti-piece"),
+    ).not.toHaveCount(0);
+
+    const ticket = dialog.locator("[data-ticket]");
+    const details = await dialog.evaluate((element) => {
+      const ticket = element.querySelector<HTMLElement>("[data-ticket]")!;
+      const ticketBox = ticket.getBoundingClientRect();
+      const pieceBoxes = [
+        ...element.querySelectorAll<HTMLElement>(
+          ".ticket-popup_confetti-piece",
+        ),
+      ].map((piece) => piece.getBoundingClientRect());
+      const style = getComputedStyle(ticket);
+      return {
+        hasNotches: Boolean(element.querySelector(".ticket-popup_notch")),
+        maskImage: style.maskImage,
+        pointerEvents: getComputedStyle(
+          element.querySelector<HTMLElement>("[data-ticket-confetti]")!,
+        ).pointerEvents,
+        // The burst spans the viewport, not just the ticket.
+        spansViewport:
+          Math.max(...pieceBoxes.map((piece) => piece.right)) -
+            Math.min(...pieceBoxes.map((piece) => piece.left)) >
+          Math.max(window.innerWidth * 0.8, ticketBox.width + 40),
+      };
+    });
+    expect(details.hasNotches).toBe(false);
+    expect(details.maskImage).not.toBe("none");
+    expect(details.pointerEvents).toBe("none");
+    expect(details.spansViewport).toBe(true);
+    await expect(ticket).toBeVisible();
   });
 
   test("fits the viewport at every target size", async ({ page }) => {
