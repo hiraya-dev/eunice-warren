@@ -113,21 +113,18 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
                   <span>ADMIT</span><strong data-ticket-admit></strong>
                 </div><div>
                   <span>REFERENCE</span><strong data-ticket-reference></strong>
-                </div><div class="ticket-popup_barcode"></div><i
-                  class="ticket-popup_notch ticket-popup_notch-left"></i><i
-                  class="ticket-popup_notch ticket-popup_notch-right"></i>
+                </div><div class="ticket-popup_barcode"></div>
               </div>
             </div>
-          </div>
-          <div
-            class="ticket-popup_confetti"
-            data-ticket-confetti
-            aria-hidden="true"
-          >
           </div>
         </div>
       </div>
     </div>
+    <div
+      class="ticket-popup_confetti"
+      data-ticket-confetti
+      aria-hidden="true"
+    ></div>
   </div>
 </Modal>
 
@@ -243,13 +240,28 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       icon.classList.toggle("is-spinner", name !== "printed");
     };
     const burst = () => {
-      for (let i = 0; i < 12; i++) {
+      const pieceCount = 96;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const layer = modal.querySelector<HTMLElement>("[data-ticket-confetti]")!;
+      for (let i = 0; i < pieceCount; i++) {
         const node = document.createElement("i");
         node.className = "ticket-popup_confetti-piece";
-        node.style.setProperty("--x", `${(Math.random() - 0.5) * 220}px`);
-        node.style.setProperty("--y", `${80 + Math.random() * 130}px`);
+        const startX =
+          (i / (pieceCount - 1)) * viewportWidth +
+          (Math.random() - 0.5) * 48;
+        node.style.setProperty("--start-x", `${startX}px`);
+        node.style.setProperty("--start-y", `${-20 - Math.random() * 80}px`);
+        node.style.setProperty(
+          "--drift-x",
+          `${(Math.random() - 0.5) * 280}px`,
+        );
+        node.style.setProperty(
+          "--end-y",
+          `${viewportHeight + 80 + Math.random() * 180}px`,
+        );
         node.style.setProperty("--r", `${Math.random() * 240 - 120}deg`);
-        node.style.setProperty("--d", `${Math.random() * 0.45}s`);
+        node.style.setProperty("--d", `${Math.random() * 0.35}s`);
         node.addEventListener(
           "animationend",
           () => {
@@ -259,7 +271,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
           { once: true },
         );
         confetti.push(node);
-        modal.querySelector("[data-ticket-confetti]")!.append(node);
+        layer.append(node);
       }
     };
     const release = () => {
@@ -364,8 +376,8 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
         error.hidden = true;
         ticket.classList.add("is-capture");
         try {
-          const { domToPng } = await import("modern-screenshot");
-          const dataUrl = await domToPng(ticket, {
+          const { domToCanvas } = await import("modern-screenshot");
+          const canvas = await domToCanvas(ticket, {
             scale: 2,
             style: { transform: "none", rotate: "0deg", boxShadow: "none" },
             filter: (element) =>
@@ -374,6 +386,34 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
                 element.classList.contains("ticket-popup_shadow")
               ),
           });
+          const ticketStyle = getComputedStyle(ticket);
+          const rem = parseFloat(
+            getComputedStyle(document.documentElement).fontSize,
+          );
+          const tearLine =
+            (parseFloat(
+              ticketStyle.getPropertyValue("--ticket-tear-line"),
+            ) *
+              rem /
+              ticket.offsetHeight) *
+            canvas.height;
+          const notchRadius =
+            (parseFloat(
+              ticketStyle.getPropertyValue("--ticket-notch-radius"),
+            ) *
+              rem /
+              ticket.offsetWidth) *
+            canvas.width;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Canvas unavailable");
+          context.globalCompositeOperation = "destination-out";
+          context.beginPath();
+          context.arc(0, tearLine, notchRadius, 0, Math.PI * 2);
+          context.moveTo(canvas.width + notchRadius, tearLine);
+          context.arc(canvas.width, tearLine, notchRadius, 0, Math.PI * 2);
+          context.fill();
+          context.globalCompositeOperation = "source-over";
+          const dataUrl = canvas.toDataURL("image/png");
           const link = document.createElement("a");
           link.href = dataUrl;
           link.download = ticketFilename(detail.inviteId);
@@ -697,11 +737,16 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       width: 16.25rem;
       height: 33rem;
       clip-path: inset(0 -3rem -4rem -3rem);
+      filter:
+        drop-shadow(0 1px 1px #0f0f0f2e)
+        drop-shadow(0 1.125rem 1.625rem #0f0f0f47);
     }
     .ticket-popup-output.is-released {
       clip-path: none;
     }
     .ticket-popup_ticket {
+      --ticket-tear-line: 24.75rem;
+      --ticket-notch-radius: 0.8125rem;
       position: absolute;
       top: 0;
       left: 0;
@@ -711,9 +756,32 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       flex-direction: column;
       background: var(--accent-500);
       background-image: linear-gradient(145deg, #fff1, transparent 42%);
-      box-shadow:
-        0 1px 1px #0f0f0f2e,
-        0 1.125rem 1.625rem #0f0f0f47;
+      mask-image:
+        radial-gradient(
+          circle var(--ticket-notch-radius) at 0 var(--ticket-tear-line),
+          transparent 0 100%,
+          #000 100%
+        ),
+        radial-gradient(
+          circle var(--ticket-notch-radius) at 100% var(--ticket-tear-line),
+          transparent 0 100%,
+          #000 100%
+        );
+      mask-composite: intersect;
+      mask-repeat: no-repeat;
+      -webkit-mask-image:
+        radial-gradient(
+          circle var(--ticket-notch-radius) at 0 var(--ticket-tear-line),
+          transparent 0 100%,
+          #000 100%
+        ),
+        radial-gradient(
+          circle var(--ticket-notch-radius) at 100% var(--ticket-tear-line),
+          transparent 0 100%,
+          #000 100%
+        );
+      -webkit-mask-composite: source-in;
+      -webkit-mask-repeat: no-repeat;
       transform: translateY(-100%) perspective(1100px)
         rotate(1.5deg)
         rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
@@ -879,20 +947,6 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     .ticket-popup_stub > div:nth-child(2) strong {
       font: 700 0.625rem/.75rem var(--mono-family);
     }
-    .ticket-popup_notch {
-      position: absolute;
-      top: -0.8125rem;
-      width: 1.625rem;
-      height: 1.625rem;
-      border-radius: 50%;
-      background: #1a274c;
-    }
-    .ticket-popup_notch-left {
-      left: -0.8125rem;
-    }
-    .ticket-popup_notch-right {
-      right: -0.8125rem;
-    }
     .ticket-popup_barcode {
       grid-column: 1/-1;
       height: 1.5rem;
@@ -909,13 +963,13 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     .ticket-popup_confetti-piece {
       position: absolute;
       z-index: 3;
-      top: 9rem;
-      left: 11.875rem;
+      top: 0;
+      left: 0;
       width: 0.5rem;
       height: 0.875rem;
       background: var(--light-100);
       border-radius: 1px;
-      animation: ticket-confetti 1.4s var(--d) ease-out forwards;
+      animation: ticket-confetti 2.5s var(--d) ease-in both;
     }
     .ticket-popup_confetti-piece:nth-child(3n) {
       background: var(--brand-500);
@@ -925,6 +979,13 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     }
     .ticket-popup_confetti-piece:nth-child(3n + 1) {
       background: var(--accent-500);
+    }
+    .ticket-popup_confetti {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
+      overflow: visible;
+      pointer-events: none;
     }
     @keyframes ticket-feed {
       0%,
@@ -985,11 +1046,15 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     }
     @keyframes ticket-confetti {
       from {
-        transform: translate(0, 0) rotate(0);
+        transform: translate(var(--start-x), var(--start-y)) rotate(0);
         opacity: 1;
       }
       to {
-        transform: translate(var(--x), var(--y)) rotate(var(--r));
+        transform: translate(
+            calc(var(--start-x) + var(--drift-x)),
+            var(--end-y)
+          )
+          rotate(var(--r));
         opacity: 0;
       }
     }
