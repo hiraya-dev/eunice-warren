@@ -164,7 +164,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     const reduced = () =>
       matchMedia("(prefers-reduced-motion: reduce)").matches;
     let detail: TicketDetail | null = null;
-    let timer = 0;
+    let timers: number[] = [];
     let confetti: HTMLElement[] = [];
     let resizeObserver: ResizeObserver | null = null;
     let resizeHandler: (() => void) | null = null;
@@ -189,10 +189,36 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
         "--ticket-scale",
         String(Math.max(0.55, scale)),
       );
+      const sceneScale = Math.max(0.55, scale);
+      const releaseScale = Math.min(
+        1.1,
+        (availableWidth - 32) / (240 * sceneScale),
+        Math.max(1, availableHeight - 16) / (520 * sceneScale),
+      );
+      const standaloneScale = Math.max(0.55, releaseScale);
+      const compact = matchMedia("(max-height: 41.6875rem)").matches;
+      const graphicHeight = compact ? 616 : 700;
+      const outputTop = compact ? 86 : 194;
+      graphicWrap.style.setProperty(
+        "--ticket-release-scale",
+        String(standaloneScale),
+      );
+      graphicWrap.style.setProperty(
+        "--ticket-release-x",
+        // The ticket scales from its top centre, so centring it needs no scale term.
+        `${(380 - 240) / 2 - 60}px`,
+      );
+      graphicWrap.style.setProperty(
+        "--ticket-release-y",
+        `${(graphicHeight - 520 * standaloneScale) / 2 - outputTop}px`,
+      );
     };
     const clear = () => {
-      window.clearTimeout(timer);
+      timers.forEach((id) => window.clearTimeout(id));
+      timers = [];
       ticket.classList.remove("is-printing", "is-printed", "is-capture");
+      ticket.classList.remove("is-releasing", "is-released");
+      ticket.parentElement!.classList.remove("is-released");
       confetti.forEach((node) => node.remove());
       confetti = [];
     };
@@ -236,24 +262,41 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
         modal.querySelector("[data-ticket-confetti]")!.append(node);
       }
     };
+    const release = () => {
+      ticket.parentElement!.classList.add("is-released");
+      popup.dataset.stage = "released";
+      ticket.classList.remove("is-printing");
+      if (reduced()) {
+        ticket.classList.add("is-released");
+        return;
+      }
+      ticket.classList.add("is-releasing");
+      timers.push(
+        window.setTimeout(() => {
+          ticket.classList.remove("is-releasing");
+          ticket.classList.add("is-released");
+          burst();
+        }, 650),
+      );
+    };
     const print = () => {
       clear();
       if (reduced()) {
         stage("printed");
         ticket.classList.add("is-printed");
+        release();
         return;
       }
       stage("processing");
-      timer = window.setTimeout(() => {
+      timers.push(window.setTimeout(() => {
         stage("printing");
         ticket.classList.add("is-printing");
-        timer = window.setTimeout(() => {
+        timers.push(window.setTimeout(() => {
           stage("printed");
-          ticket.classList.remove("is-printing");
           ticket.classList.add("is-printed");
-          burst();
-        }, 1800);
-      }, 400);
+          timers.push(window.setTimeout(release, 100));
+        }, 1800));
+      }, 400));
     };
     const open = (event: Event) => {
       detail = (event as CustomEvent<TicketDetail>).detail;
@@ -358,6 +401,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       ticket.style.removeProperty("--tilt-scale");
     };
     const enableTilt = () => {
+      disableTilt();
       if (
         matchMedia(
           "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
@@ -654,6 +698,9 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       height: 33rem;
       clip-path: inset(0 -3rem -4rem -3rem);
     }
+    .ticket-popup-output.is-released {
+      clip-path: none;
+    }
     .ticket-popup_ticket {
       position: absolute;
       top: 0;
@@ -667,24 +714,71 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       box-shadow:
         0 1px 1px #0f0f0f2e,
         0 1.125rem 1.625rem #0f0f0f47;
-      rotate: 1.5deg;
       transform: translateY(-100%) perspective(1100px)
+        rotate(1.5deg)
         rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
         scale(var(--tilt-scale, 1));
       transform-origin: center top;
       transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
     }
     .ticket-popup_ticket.is-printing {
-      animation: ticket-feed 1.8s linear forwards;
+      animation: ticket-feed 1.8s ease-in-out forwards;
     }
     .ticket-popup_ticket.is-printed {
-      transform: translateY(0) perspective(1100px) rotateX(var(--tilt-x, 0deg))
+      transform: translateY(0) perspective(1100px) rotate(1.5deg)
+        rotateX(var(--tilt-x, 0deg))
         rotateY(var(--tilt-y, 0deg)) scale(var(--tilt-scale, 1));
+    }
+    .ticket-popup_ticket.is-releasing {
+      animation: ticket-release 650ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    }
+    .ticket-popup_ticket.is-released {
+      transform: translate(
+          var(--ticket-release-x),
+          var(--ticket-release-y)
+        ) perspective(1100px) rotateX(var(--tilt-x, 0deg))
+        rotateY(var(--tilt-y, 0deg))
+        scale(calc(var(--ticket-release-scale) * var(--tilt-scale, 1)));
     }
     .ticket-popup_ticket.is-capture {
       transform: none !important;
       rotate: 0deg !important;
       box-shadow: none !important;
+    }
+    .ticket-popup_graphic::before {
+      position: absolute;
+      z-index: 0;
+      inset: 8rem 3rem;
+      border-radius: 50%;
+      background: radial-gradient(
+        ellipse,
+        color-mix(in srgb, var(--accent-500) 30%, transparent),
+        transparent 68%
+      );
+      content: "";
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 650ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .ticket-popup_graphic:has(
+      .ticket-popup_ticket.is-releasing,
+      .ticket-popup_ticket.is-released
+    )::before {
+      opacity: 1;
+    }
+    .ticket-popup_machine {
+      transition:
+        opacity 400ms cubic-bezier(0.23, 1, 0.32, 1),
+        transform 400ms cubic-bezier(0.23, 1, 0.32, 1),
+        visibility 0s linear 400ms;
+      transform-origin: center top;
+    }
+    .ticket-popup_graphic:has(.ticket-popup_ticket.is-releasing, .ticket-popup_ticket.is-released)
+      .ticket-popup_machine {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(3rem) scale(0.96);
+      visibility: hidden;
     }
     .ticket-popup_shadow {
       position: absolute;
@@ -694,6 +788,10 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       left: 0;
       height: 1rem;
       background: linear-gradient(#1f2f5c73, transparent);
+    }
+    .ticket-popup_ticket:is(.is-releasing, .is-released) .ticket-popup_shadow {
+      opacity: 0;
+      transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
     }
     .ticket-popup_ticket-body {
       display: flex;
@@ -753,6 +851,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       opacity: 1;
     }
     .ticket-popup_stub {
+      position: relative;
       display: grid;
       height: 7.75rem;
       grid-template-columns: 1fr 1fr;
@@ -830,35 +929,58 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     @keyframes ticket-feed {
       0%,
       8% {
-        transform: translateY(-100%);
+        transform: translateY(-100%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       14%,
       20% {
-        transform: translateY(-85%);
+        transform: translateY(-85%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       26%,
       32% {
-        transform: translateY(-68%);
+        transform: translateY(-68%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       38%,
       44% {
-        transform: translateY(-52%);
+        transform: translateY(-52%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       50%,
       56% {
-        transform: translateY(-36%);
+        transform: translateY(-36%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       62%,
       68% {
-        transform: translateY(-21%);
+        transform: translateY(-21%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       74%,
       80% {
-        transform: translateY(-8%);
+        transform: translateY(-8%) rotate(1.5deg);
+        animation-timing-function: ease-in-out;
       }
       86%,
       100% {
-        transform: translateY(0);
+        transform: translateY(0) rotate(1.5deg);
+        animation-timing-function: ease-out;
+      }
+    }
+    @keyframes ticket-release {
+      from {
+        transform: translateY(0) perspective(1100px) rotate(1.5deg)
+          rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
+          scale(var(--tilt-scale, 1));
+      }
+      to {
+        transform: translate(
+            var(--ticket-release-x),
+            var(--ticket-release-y)
+          ) perspective(1100px) rotateX(var(--tilt-x, 0deg))
+          rotateY(var(--tilt-y, 0deg))
+          scale(calc(var(--ticket-release-scale) * var(--tilt-scale, 1)));
       }
     }
     @keyframes ticket-confetti {
@@ -960,8 +1082,23 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
         transition: none !important;
       }
       .ticket-popup_ticket.is-printed {
-        transform: none;
-        rotate: 0deg;
+        transform: translate(
+            var(--ticket-release-x),
+            var(--ticket-release-y)
+          ) perspective(1100px) rotateX(var(--tilt-x, 0deg))
+          rotateY(var(--tilt-y, 0deg))
+          scale(var(--ticket-release-scale));
+      }
+      .ticket-popup_graphic::before {
+        transition: none;
+      }
+      .ticket-popup_graphic:has(.ticket-popup_ticket.is-printed)
+        .ticket-popup_machine {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(3rem) scale(0.96);
+        visibility: hidden;
+        transition: none;
       }
     }
   }

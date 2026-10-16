@@ -93,6 +93,11 @@ test.describe("RSVP ticket popup", () => {
       await page.goto("/");
       const dialog = await accept(page, false);
       // Measure once the dialog has opened and its entrance transition settled.
+      await expect(dialog.locator("[data-ticket-popup]")).toHaveAttribute(
+        "data-stage",
+        "released",
+        { timeout: 15_000 },
+      );
       await page.waitForFunction(() => {
         const modal =
           document.querySelector<HTMLDialogElement>("#rsvp-ticket-modal");
@@ -172,7 +177,11 @@ test.describe("RSVP ticket popup", () => {
               ticket.getBoundingClientRect().top -
                 machine.getBoundingClientRect().bottom,
             ]);
-            if (now < 2600) requestAnimationFrame(sample);
+            // Stop at the release, when the printer itself starts to move.
+            const released =
+              ticket.closest<HTMLElement>("[data-ticket-popup]")!.dataset
+                .stage === "released";
+            if (now < 2600 && !released) requestAnimationFrame(sample);
             else resolve(values);
           };
           requestAnimationFrame(sample);
@@ -201,5 +210,77 @@ test.describe("RSVP ticket popup", () => {
       runStart = index;
     }
     expect(plateaus).toBeGreaterThanOrEqual(3);
+  });
+
+  test("releases the ticket smoothly into the centred standalone state", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const dialog = await accept(page, false);
+    await expect(dialog).toBeVisible();
+    const samples = await dialog.locator("[data-ticket]").evaluate(
+      (ticket) =>
+        new Promise<{
+          samples: Array<{ time: number; top: number; left: number }>;
+          final: { ticket: DOMRect; wrap: DOMRect; machineOpacity: string };
+        }>((resolve) => {
+          const wrap = ticket.closest<HTMLElement>(
+            ".ticket-popup_graphic-wrap",
+          )!;
+          const machine = ticket
+            .closest("[data-ticket-graphic]")!
+            .querySelector<HTMLElement>(".ticket-popup_machine")!;
+          const values: Array<{ time: number; top: number; left: number }> = [];
+          const started = performance.now();
+          const sample = () => {
+            const now = performance.now() - started;
+            const rect = ticket.getBoundingClientRect();
+            if (rect.width > 0)
+              values.push({ time: now, top: rect.top, left: rect.left });
+            if (now < 3600) {
+              requestAnimationFrame(sample);
+              return;
+            }
+            resolve({
+              samples: values,
+              final: {
+                ticket: rect,
+                wrap: wrap.getBoundingClientRect(),
+                machineOpacity: getComputedStyle(machine).opacity,
+              },
+            });
+          };
+          requestAnimationFrame(sample);
+        }),
+    );
+    const last = samples.final;
+    expect(
+      Math.abs(
+        last.ticket.left +
+          last.ticket.width / 2 -
+          (last.wrap.left + last.wrap.width / 2),
+      ),
+    ).toBeLessThan(4);
+    expect(
+      Math.abs(
+        last.ticket.top +
+          last.ticket.height / 2 -
+          (last.wrap.top + last.wrap.height / 2),
+      ),
+    ).toBeLessThan(4);
+    expect(Number(last.machineOpacity)).toBe(0);
+
+    let maxVelocity = 0;
+    for (let index = 1; index < samples.samples.length; index += 1) {
+      const previous = samples.samples[index - 1];
+      const current = samples.samples[index];
+      const elapsed = Math.max(1, current.time - previous.time);
+      const distance = Math.hypot(
+        current.left - previous.left,
+        current.top - previous.top,
+      );
+      maxVelocity = Math.max(maxVelocity, distance / elapsed);
+    }
+    expect(maxVelocity).toBeLessThan(4.5);
   });
 });
