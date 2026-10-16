@@ -113,6 +113,7 @@ const {
                   >
                   </p>
                 </div>
+                <div class="rsvp_turnstile" data-rsvp-turnstile></div>
                 <div class="rsvp_actions">
                   <a class="rsvp_text-link" href={messageHref}
                     >Can't find it? Message us</a
@@ -202,6 +203,7 @@ const {
                     placeholder="Can't wait to see you two in Boracay…"
                   ></textarea>
                 </div>
+                <div class="rsvp_turnstile" data-rsvp-turnstile></div>
                 <div class="rsvp_actions">
                   <button class="rsvp_back" type="button" data-rsvp-details-back
                     >← Back</button
@@ -254,7 +256,21 @@ const {
 </section>
 
 <script>
-  import { createFakeRsvpStore, type Invite } from "@/lib/rsvp/store";
+  import { actions } from "astro:actions";
+  import type { Invite } from "@/lib/rsvp/store";
+  declare global {
+    interface Window {
+      turnstile?: {
+        render: (
+          container: HTMLElement,
+          options: Record<string, unknown>,
+        ) => string | number;
+        execute: (widget: string | number | undefined) => void;
+        reset: (widget: string | number | undefined) => void;
+        remove: (widget: string | number | undefined) => void;
+      };
+    }
+  }
 
   const initRsvp = () => {
     document
@@ -262,7 +278,46 @@ const {
       .forEach((root) => {
         if (root.dataset.rsvpReady) return;
         root.dataset.rsvpReady = "true";
-        const store = createFakeRsvpStore();
+        const fakeMode =
+          import.meta.env.PUBLIC_RSVP_STORE === "fake" ||
+          (import.meta.env.DEV && !import.meta.env.PUBLIC_RSVP_STORE);
+        let turnstileWidget: string | number | undefined;
+        const getTurnstileToken = async (container: HTMLElement) => {
+          if (fakeMode) return "local-test-token";
+          const load = () =>
+            new Promise<void>((resolve, reject) => {
+              if (window.turnstile) return resolve();
+              const script = document.createElement("script");
+              script.src =
+                "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+              script.async = true;
+              script.defer = true;
+              script.onload = () => resolve();
+              script.onerror = () => reject(new Error("Turnstile unavailable"));
+              document.head.append(script);
+            });
+          await load();
+          if (turnstileWidget !== undefined) {
+            window.turnstile!.remove(turnstileWidget);
+          }
+          container.replaceChildren();
+          return new Promise<string>((resolve, reject) => {
+            turnstileWidget = window.turnstile!.render(container, {
+              // The production widget's site key is public; tests run in
+              // fake mode and never render Turnstile.
+              sitekey:
+                import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ||
+                "0x4AAAAAAFYIhA_8zh_lLnm8",
+              appearance: "interaction-only",
+              execution: "execute",
+              callback: (token: string) => {
+                resolve(token);
+              },
+              "error-callback": () => reject(new Error("Turnstile rejected")),
+            });
+            window.turnstile!.execute(turnstileWidget);
+          });
+        };
         let invite: Invite | null = null;
         let matchedName = "";
         let attending = true;
@@ -362,8 +417,24 @@ const {
             findButton.disabled = true;
             findButton.setAttribute("aria-busy", "true");
             try {
-              const result = await store.findInvite(value);
-              if (!result) {
+              const result = await actions.rsvp.find({
+                name: value,
+                turnstileToken: await getTurnstileToken(
+                  root.querySelectorAll<HTMLElement>(
+                    "[data-rsvp-turnstile]",
+                  )[0],
+                ),
+              });
+              if (result.error || !result.data) {
+                error.textContent =
+                  result.error?.message ||
+                  "Something went wrong — please try again.";
+                error.hidden = false;
+                nameInput.setAttribute("aria-invalid", "true");
+                nameInput.setAttribute("aria-describedby", "rsvp-name-error");
+                return;
+              }
+              if (!result.data.invite) {
                 error.textContent =
                   "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
                 error.hidden = false;
@@ -374,12 +445,14 @@ const {
               error.hidden = true;
               nameInput.removeAttribute("aria-invalid");
               nameInput.removeAttribute("aria-describedby");
-              invite = result.invite;
-              matchedName = result.matchedName;
+              invite = result.data.invite;
+              matchedName = result.data.matchedName;
+              const token = result.data.token;
               guests = invite.seats;
               root.querySelector("[data-rsvp-first-name]")!.textContent =
                 matchedName.split(" ")[0];
               updateGuestControls();
+              root.dataset.rsvpToken = token;
               setStep("2");
             } catch {
               error.textContent = "Something went wrong — please try again.";
@@ -387,6 +460,7 @@ const {
               nameInput.setAttribute("aria-invalid", "true");
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
             } finally {
+              if (!fakeMode) window.turnstile?.reset(turnstileWidget);
               findButton.disabled = false;
               findButton.removeAttribute("aria-busy");
             }
@@ -459,25 +533,38 @@ const {
             submit.setAttribute("aria-busy", "true");
             submitError.hidden = true;
             try {
-              await store.submit({
-                inviteId: invite!.id,
+              const result = await actions.rsvp.submit({
+                token: root.dataset.rsvpToken ?? "",
                 name: matchedName,
                 attending,
-                guests,
+                guests: attending ? guests : 0,
                 email: email.value,
                 companionName:
-                  (form.elements.namedItem("companion") as HTMLInputElement)
-                    .value || undefined,
+                  attending && guests >= 2
+                    ? (form.elements.namedItem("companion") as HTMLInputElement)
+                        .value || undefined
+                    : undefined,
                 note:
                   (form.elements.namedItem("note") as HTMLTextAreaElement)
                     .value || undefined,
+                turnstileToken: await getTurnstileToken(
+                  root.querySelectorAll<HTMLElement>(
+                    "[data-rsvp-turnstile]",
+                  )[1],
+                ),
               });
+              if (result.error) {
+                submitError.textContent = result.error.message;
+                submitError.hidden = false;
+                return;
+              }
             } catch {
               submitError.textContent =
                 "Something went wrong — please try again.";
               submitError.hidden = false;
               return;
             } finally {
+              if (!fakeMode) window.turnstile?.reset(turnstileWidget);
               submit.disabled = false;
               submit.removeAttribute("aria-busy");
             }
@@ -752,6 +839,12 @@ const {
       color: var(--accent-500);
       font: var(--primary-regular) var(--text-small) / var(--line-height-huge)
         var(--primary-family);
+    }
+    .rsvp_turnstile {
+      min-height: 0;
+    }
+    .rsvp_turnstile:has(iframe) {
+      min-height: 4.0625rem;
     }
     .rsvp_text-link,
     .rsvp_back {

@@ -2,12 +2,35 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "eunice-warren",
   "compatibility_date": "2026-08-13",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "RSVP_STORE": "sheets",
+  },
 
-  // The built site. There is no `main`, so this deploys as an assets-only
-  // Worker: Cloudflare serves the files and no script runs per request.
+  // The adapter entrypoint serves static assets and runs Astro actions on demand.
+  // Production uses Sheets; the test environment selects fake fixtures.
   "assets": {
-    "directory": "./dist",
+    "directory": "./dist/client",
     "not_found_handling": "404-page",
+  },
+
+  "ratelimits": [
+    {
+      "name": "RSVP_LOOKUP_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 },
+    },
+  ],
+
+  "env": {
+    "test": {
+      "vars": {
+        "RSVP_STORE": "fake",
+        "PUBLIC_RSVP_STORE": "fake",
+        "PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+      },
+    },
   },
 
   // Required by `npx wrangler preview`, the deploy command Workers Builds runs
