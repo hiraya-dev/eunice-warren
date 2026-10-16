@@ -18,6 +18,12 @@ test.describe("wedding schedule tabs", () => {
     await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').getAttribute("id"), { timeout: 7000 }).toBe("wedding-tab-2");
   });
 
+  test("marks the wedding heading for the shared fade-in", async ({ page }) => {
+    const header = page.locator(".wedding_header");
+    await expect(header).toHaveAttribute("data-fade-in", "");
+    await expect(header.locator("[data-fade-in-item]")).toHaveCount(1);
+  });
+
   test("supports click and roving keyboard navigation", async ({ page }) => {
     await page.locator("#wedding").scrollIntoViewIfNeeded();
     await page.locator("#wedding-tab-3").click();

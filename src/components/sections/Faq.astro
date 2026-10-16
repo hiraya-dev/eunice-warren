@@ -14,9 +14,9 @@ const questions = (await getCollection("faq")).sort(
   style="scroll-margin-top: var(--nav-height)"
 >
   <div class="faq_layout">
-    <header class="faq_header">
-      <h2 class="faq_title"><span class="faq_title-desktop">Good<br />to know</span><span class="faq_title-mobile">Good to<br />know</span></h2>
-      <p class="faq_intro">
+    <header class="faq_header" data-fade-in>
+      <h2 class="faq_title" data-fade-in-item><span class="faq_title-desktop">Good<br />to know</span><span class="faq_title-mobile">Good to<br />know</span></h2>
+      <p class="faq_intro" data-fade-in-item>
         The questions we get asked most. Tap one to open it.
       </p>
       <Image

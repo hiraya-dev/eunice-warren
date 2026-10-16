@@ -36,9 +36,9 @@ const {
     data-rsvp-deadline={RSVP_DEADLINE_LABEL}
   >
     <div class="rsvp_left">
-      <header class="rsvp_header" data-rsvp-header>
-        <h2 class="rsvp_title">Will you<br />be there?</h2>
-        <p class="rsvp_intro" data-rsvp-intro>
+      <header class="rsvp_header" data-rsvp-header data-fade-in>
+        <h2 class="rsvp_title" data-fade-in-item>Will you<br />be there?</h2>
+        <p class="rsvp_intro" data-rsvp-intro data-fade-in-item>
           Please reply by {RSVP_DEADLINE_LABEL}. Three quick steps, and you can
           change your answer until then.
         </p>
@@ -118,8 +118,8 @@ const {
                 <div class="rsvp_actions">
                   <a class="rsvp_text-link" href={messageHref}
                     >Can't find it? Message us</a
-                  ><button class="rsvp_primary" type="submit"
-                    >Find my invite <span aria-hidden="true">→</span></button
+                  ><button class="rsvp_primary" type="submit" aria-label="Find my invite"
+                    ><span class="rsvp_primary-label"><span>Find my invite</span><span class="rsvp_primary-label-busy" aria-hidden="true">Finding…</span></span> <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
                   >
                 </div>
               </form>
@@ -162,7 +162,7 @@ const {
                   <button class="rsvp_back" type="button" data-rsvp-back
                     >← Back</button
                   ><button class="rsvp_primary" type="submit"
-                    >Continue <span aria-hidden="true">→</span></button
+                    >Continue <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
                   >
                 </div>
               </form>
@@ -208,8 +208,8 @@ const {
                 <div class="rsvp_actions">
                   <button class="rsvp_back" type="button" data-rsvp-details-back
                     >← Back</button
-                  ><button class="rsvp_primary" type="submit" data-rsvp-submit
-                    >Send RSVP <span aria-hidden="true">→</span></button
+                  ><button class="rsvp_primary" type="submit" data-rsvp-submit aria-label="Send RSVP"
+                    ><span class="rsvp_primary-label"><span>Send RSVP</span><span class="rsvp_primary-label-busy" aria-hidden="true">Sending…</span></span> <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
                   >
                 </div>
                 <p
@@ -702,12 +702,22 @@ const {
       text-transform: uppercase;
     }
     .rsvp_steps li > span {
+      position: relative;
       height: 0.1875rem;
       background: var(--dark-700);
     }
-    .rsvp_steps li[aria-current="step"] > span,
-    .rsvp_steps li.is-complete > span {
+    .rsvp_steps li > span::after {
+      position: absolute;
+      inset: 0;
+      content: "";
       background: var(--light-100);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 400ms cubic-bezier(0.625, 0.05, 0, 1);
+    }
+    .rsvp_steps li[aria-current="step"] > span::after,
+    .rsvp_steps li.is-complete > span::after {
+      transform: scaleX(1);
     }
     .rsvp_steps li[aria-current="step"] b,
     .rsvp_steps li.is-complete b {
@@ -898,11 +908,31 @@ const {
         var(--primary-family);
       white-space: nowrap;
       cursor: pointer;
+      transition: scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
     }
+    .rsvp_primary:active:not(:disabled) { scale: 0.97; }
     .rsvp_primary:disabled {
       cursor: wait;
       opacity: 0.6;
     }
+    .rsvp_primary[aria-busy="true"] { opacity: 1; }
+    .rsvp_primary-label,
+    .rsvp_primary-mark { display: inline-grid; align-items: center; }
+    .rsvp_primary-label > *,
+    .rsvp_primary-mark > * { grid-area: 1 / 1; }
+    .rsvp_primary-label-busy,
+    .rsvp_primary-spinner { visibility: hidden; }
+    .rsvp_primary[aria-busy="true"] .rsvp_primary-arrow { visibility: hidden; }
+    .rsvp_primary[aria-busy="true"] .rsvp_primary-spinner { visibility: visible; }
+    .rsvp_primary-spinner {
+      width: 0.875em;
+      height: 0.875em;
+      border: 0.125em solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: rsvp-spinner 0.6s linear infinite;
+    }
+    @keyframes rsvp-spinner { to { rotate: 360deg; } }
     .rsvp_options {
       display: flex;
       flex-direction: column;
@@ -1216,6 +1246,11 @@ const {
       }
     }
     @media (prefers-reduced-motion: reduce) {
+      .rsvp_steps li > span::after,
+      .rsvp_primary { transition: none; }
+      .rsvp_primary-spinner { display: none; animation: none; }
+      .rsvp_primary[aria-busy="true"] .rsvp_primary-label > span:first-child { visibility: hidden; }
+      .rsvp_primary[aria-busy="true"] .rsvp_primary-label-busy { visibility: visible; }
       .rsvp_panel form,
       .rsvp_sent {
         animation: none;

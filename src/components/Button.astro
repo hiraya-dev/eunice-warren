@@ -306,8 +306,9 @@ const named = {
       color: var(--button-016-color);
       background: transparent;
       line-height: 1;
-      transition: color 0.325s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+      transition: color 0.325s cubic-bezier(0.785, 0.135, 0.15, 0.86), scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
     }
+    [data-button-016]:active:not(:disabled) { scale: 0.97; }
     [data-button-016]::after {
       position: absolute;
       inset: -0.125em;
@@ -326,6 +327,9 @@ const named = {
       [data-button-016]:is(:hover, :focus-visible) { color: var(--button-016-hover-color); }
       [data-button-016]:is(:hover, :focus-visible) .button-016__text { translate: 0 calc(var(--button-016-text-duplicate-distance) * -1) 0; }
       [data-button-016]:is(:hover, :focus-visible) .button-016__bg { background-color: var(--button-016-hover-color-background); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-button-016] { transition: none; }
     }
   }
 </style>

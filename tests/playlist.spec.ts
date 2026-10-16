@@ -62,6 +62,7 @@ test.describe("Playlist section", () => {
     await expect(embed).toHaveCSS("width", "380px");
     const iframe = embed.locator("iframe");
     await expect(iframe).toHaveCount(1);
+    await expect(iframe).toHaveCSS("opacity", "1");
     await expect(iframe).toHaveAttribute("src", /theme=0/);
     const layout = await cassette.evaluate((node) => {
       const element = node as HTMLElement;
@@ -87,6 +88,13 @@ test.describe("Playlist section", () => {
         ),
       )
       .toContain('"theme":"dark"');
+  });
+
+  test("marks the heading copy for the shared fade-in", async ({ page }) => {
+    await page.goto("/");
+    const header = page.locator(".playlist_header");
+    await expect(header).toHaveAttribute("data-fade-in", "");
+    await expect(header.locator("[data-fade-in-item]")).toHaveCount(2);
   });
 
   test("continuously rotates reels while Spotify is playing", async ({
