@@ -1,9 +1,10 @@
 ---
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
+import Stamp from "@/components/media/Stamp.astro";
 import inkArrived from "@/assets/images/invitation/ink-arrived.png";
 import postmark from "@/assets/images/invitation/postmark-ticket.png";
-import palm from "@/assets/images/hero/stamp-palm.png";
+import palm from "@/assets/images/stamps/palm.jpg";
 
 interface Props extends HTMLAttributes<"section"> {
   /** Venue shown in the invitation facts. */
@@ -107,7 +108,7 @@ const welcomeParagraphs = [
               <span>Nº 011427</span>
             </div>
           </div>
-          <Image class="invitation_palm" src={palm} alt="" width={96} height={120} widths={[96, 192]} sizes="(min-width: 62rem) 96px, 60px" />
+          <div class="invitation_palm"><Stamp><Image src={palm} alt="" width={860} height={1110} widths={[96, 192]} sizes="(min-width: 62rem) 96px, 60px" /></Stamp></div>
         </div>
       </div>
 
@@ -174,7 +175,7 @@ const welcomeParagraphs = [
     .invitation_ticket-stub { display: flex; width: 7.5rem; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); margin: var(--space-2) var(--space-2) var(--space-2) 0; color: var(--dark-900); letter-spacing: 0.14em; text-align: center; }
     .invitation_ticket-stub img { width: 6.25rem; height: 4.375rem; object-fit: contain; mix-blend-mode: multiply; transform: rotate(-10deg); }
     .invitation_ticket-stub span:last-child { letter-spacing: var(--letter-spacing-wide); }
-    .invitation_palm { position: absolute; z-index: 1; top: -2.625rem; right: -1.25rem; width: 6rem; height: 7.5rem; object-fit: contain; transform: rotate(7deg); transform-origin: 0 0; filter: drop-shadow(0 0.0625rem 0.0625rem rgb(31 47 92 / 18%)) drop-shadow(0 0.5rem 0.875rem rgb(31 47 92 / 14%)); }
+    .invitation_palm { position: absolute; z-index: 1; top: -2.625rem; right: -1.25rem; width: 6rem; height: 7.5rem; transform: rotate(7deg); transform-origin: 0 0; }
     .invitation_ink-wrap { position: absolute; top: calc(100% + 1.875rem); right: 4.75rem; width: 10.625rem; height: 5.8125rem; transform: rotate(7deg); transform-origin: 0 0; pointer-events: none; mix-blend-mode: multiply; opacity: 0.75; }
     .invitation_ink { width: 100%; height: 100%; object-fit: fill; }
     .invitation_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--brand-500) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--brand-500) 0.6875rem, transparent calc(0.6875rem + 0.5px)) 0 0 / 2.25rem 0.6875rem repeat-x; }
