@@ -16,6 +16,57 @@ test.describe("RSVP section", () => {
     );
   });
 
+  test("keeps RSVP field layout stable when focused", async ({ page }) => {
+    for (const width of [375, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const nameInput = rsvp(page).locator("[data-rsvp-name]");
+      const nextBlock = nameInput.locator("xpath=following-sibling::*[1]");
+      await nameInput.evaluate((input) => input.blur());
+      await nameInput.scrollIntoViewIfNeeded();
+
+      const before = await page.evaluate(() => {
+        const input = document.querySelector<HTMLInputElement>(
+          "[data-rsvp-name]",
+        )!;
+        const nextBlock = input.nextElementSibling!;
+        const inputRect = input.getBoundingClientRect();
+        return {
+          input: {
+            height: inputRect.height,
+            width: inputRect.width,
+          },
+          nextTop: nextBlock.getBoundingClientRect().top,
+        };
+      });
+
+      await nameInput.focus();
+
+      const after = await page.evaluate(() => {
+        const input = document.querySelector<HTMLInputElement>(
+          "[data-rsvp-name]",
+        )!;
+        const nextBlock = input.nextElementSibling!;
+        const inputRect = input.getBoundingClientRect();
+        const styles = getComputedStyle(input);
+        return {
+          input: {
+            height: inputRect.height,
+            width: inputRect.width,
+          },
+          nextTop: nextBlock.getBoundingClientRect().top,
+          borderTopWidth: styles.borderTopWidth,
+          boxShadow: styles.boxShadow,
+        };
+      });
+
+      expect(after.input).toEqual(before.input);
+      expect(after.nextTop).toBe(before.nextTop);
+      expect(after.borderTopWidth).toBe("1px");
+      expect(after.boxShadow).not.toBe("none");
+      await expect(nextBlock).toBeVisible();
+    }
+  });
+
   test("finds invites case-insensitively and ignores accents and spacing", async ({
     page,
   }) => {
