@@ -1,27 +1,87 @@
 import { expect, test } from "@playwright/test";
 
-const sampleWhile = async (page: import("@playwright/test").Page, delta: number) => {
-  const values: { navy: number; blue: number }[] = [];
-  for (let index = 0; index < 20; index += 1) {
-    await page.mouse.wheel(0, delta);
-    values.push(
-      await page.evaluate(() => {
-        const readX = (selector: string) => {
-          const element = document.querySelector<HTMLElement>(selector)!;
-          return new DOMMatrix(getComputedStyle(element).transform).e;
-        };
-        return {
-          navy: readX(".ribbons_ribbon-navy [data-marquee-collection-target]"),
-          blue: readX(".ribbons_ribbon-blue [data-marquee-collection-target]"),
-        };
-      }),
-    );
-    await page.waitForTimeout(30);
-  }
-  return values;
+type MotionSample = {
+  navy: { x: number; width: number };
+  blue: { x: number; width: number };
 };
 
-const movement = (values: number[]) => Math.sign(values.at(-1)! - values[0]);
+const waitForStatusWhileWheeling = async (
+  page: import("@playwright/test").Page,
+  delta: number,
+  expected: "normal" | "inverted",
+) => {
+  const deadline = Date.now() + 3000;
+  let statuses: (string | null)[] = [];
+
+  while (Date.now() < deadline) {
+    await page.mouse.wheel(0, delta);
+    statuses = await page.locator("#ribbons .ribbons_ribbon").evaluateAll((ribbons) =>
+      ribbons.map((ribbon) => ribbon.getAttribute("data-marquee-status")),
+    );
+    if (statuses.every((status) => status === expected)) return;
+    await page.waitForTimeout(40);
+  }
+
+  expect(statuses, `ribbon status did not become ${expected} while wheeling`).toEqual([
+    expected,
+    expected,
+  ]);
+};
+
+const sampleWhileWheeling = async (
+  page: import("@playwright/test").Page,
+  delta: number,
+) => {
+  const sampling = page.evaluate(() =>
+    new Promise<MotionSample[]>((resolve) => {
+      const samples: MotionSample[] = [];
+      const started = performance.now();
+      const read = (selector: string) => {
+        const element = document.querySelector<HTMLElement>(selector)!;
+        return {
+          x: new DOMMatrix(getComputedStyle(element).transform).e,
+          width: element.offsetWidth,
+        };
+      };
+      const sample = () => {
+        samples.push({
+          navy: read(".ribbons_ribbon-navy [data-marquee-collection-target]"),
+          blue: read(".ribbons_ribbon-blue [data-marquee-collection-target]"),
+        });
+        if (performance.now() - started >= 650) resolve(samples);
+        else requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    }),
+  );
+
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    await page.mouse.wheel(0, delta);
+    if (await Promise.race([sampling.then(() => true), page.waitForTimeout(40).then(() => false)])) break;
+  }
+  return sampling;
+};
+
+const assertDirection = (
+  samples: MotionSample[],
+  ribbon: keyof MotionSample,
+  expectedSign: -1 | 1,
+) => {
+  const deltas = samples.slice(1).flatMap((sample, index) => {
+    const previous = samples[index][ribbon];
+    const current = sample[ribbon];
+    const delta = current.x - previous.x;
+    return delta !== 0 && Math.abs(delta) <= current.width / 4 ? [delta] : [];
+  });
+  expect(deltas.length, `${ribbon} had too few valid motion samples`).toBeGreaterThanOrEqual(10);
+
+  const matching = deltas.filter((delta) => Math.sign(delta) === expectedSign).length;
+  expect(
+    matching / deltas.length,
+    `${ribbon} moved in the wrong direction for too many samples`,
+  ).toBeGreaterThanOrEqual(0.8);
+};
 
 const localCoverage = (element: Element) => {
   const ribbon = element as HTMLElement;
@@ -66,6 +126,8 @@ test.describe("ribbon marquee", () => {
   });
 
   test("moves in each base direction and reverses while scrolling up", async ({ page }) => {
+    // Many wheel/sample round trips; under parallel load each one can take hundreds of ms.
+    test.slow();
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page.evaluate(() => {
@@ -74,17 +136,19 @@ test.describe("ribbon marquee", () => {
     });
     await page.waitForTimeout(100);
 
-    const down = await sampleWhile(page, 40);
-    expect(movement(down.map((value) => value.navy))).toBe(-1);
-    expect(movement(down.map((value) => value.blue))).toBe(1);
+    await waitForStatusWhileWheeling(page, 40, "normal");
     await expect(page.locator(".ribbons_ribbon-navy")).toHaveAttribute("data-marquee-status", "normal");
     await expect(page.locator(".ribbons_ribbon-blue")).toHaveAttribute("data-marquee-status", "normal");
+    const downSamples = await sampleWhileWheeling(page, 40);
+    assertDirection(downSamples, "navy", -1);
+    assertDirection(downSamples, "blue", 1);
 
-    const up = await sampleWhile(page, -40);
-    expect(movement(up.map((value) => value.navy))).toBe(1);
-    expect(movement(up.map((value) => value.blue))).toBe(-1);
+    await waitForStatusWhileWheeling(page, -40, "inverted");
     await expect(page.locator(".ribbons_ribbon-navy")).toHaveAttribute("data-marquee-status", "inverted");
     await expect(page.locator(".ribbons_ribbon-blue")).toHaveAttribute("data-marquee-status", "inverted");
+    const upSamples = await sampleWhileWheeling(page, -40);
+    assertDirection(upSamples, "navy", 1);
+    assertDirection(upSamples, "blue", -1);
   });
 
   test("stays static, has no JS clones, and remains filled with reduced motion", async ({ page }) => {
