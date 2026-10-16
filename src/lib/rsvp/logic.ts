@@ -21,6 +21,19 @@ const fromBase64Url = (value: string) => {
 
 export const isRsvpClosed = (now = Date.now()) => now > RSVP_DEADLINE_TIME;
 
+/** Cloudflare's Workers rate-limit binding takes an options object, not a bare key. */
+export type RateLimiter = {
+  limit: (options: { key: string }) => Promise<{ success: boolean }>;
+};
+
+export async function isWithinRateLimit(
+  limiter: RateLimiter | undefined,
+  key: string,
+) {
+  if (!limiter?.limit) return true;
+  return (await limiter.limit({ key })).success;
+}
+
 export async function signRsvpToken(
   inviteId: string,
   expiresAt: number,
