@@ -219,9 +219,6 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       ticket.classList.remove("is-printing", "is-printed", "is-capture");
       ticket.classList.remove("is-releasing", "is-released");
       ticket.parentElement!.classList.remove("is-released");
-      ["--ticket-release-scale", "--ticket-release-x", "--ticket-release-y"].forEach(
-        (property) => graphicWrap.style.removeProperty(property),
-      );
       confetti.forEach((node) => node.remove());
       confetti = [];
     };
