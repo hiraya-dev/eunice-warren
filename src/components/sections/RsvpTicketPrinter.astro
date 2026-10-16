@@ -1,0 +1,968 @@
+---
+import Modal from "@/components/interactive/Modal.astro";
+import postcardPaper from "@/assets/textures/postcard-paper.jpg";
+import { RSVP_EVENT } from "@/lib/rsvp/event";
+---
+
+<Modal
+  id="rsvp-ticket-modal"
+  label="Your Boracay admission ticket"
+  variant="full-screen"
+>
+  <div
+    class="ticket-popup_wrap"
+    data-ticket-popup
+    style={`--ticket-paper: url("${postcardPaper.src}")`}
+  >
+    <div class="ticket-popup_bar">
+      <span
+        >✓ RSVP RECEIVED <span class="ticket-popup_number">· Nº 011427</span
+        ></span
+      >
+      <button
+        class="ticket-popup_close"
+        type="button"
+        data-modal-close
+        aria-label="Close ticket"
+        ><span aria-hidden="true">CLOSE</span><i aria-hidden="true">×</i
+        ></button
+      >
+    </div>
+    <div class="ticket-popup_layout">
+      <div class="ticket-popup_message">
+        <h2 data-ticket-heading></h2>
+        <p data-ticket-body>
+          Your ticket is fresh off the press. Save it for the big day, and
+          change your answer any time before December 31.
+        </p>
+        <div class="ticket-popup_actions">
+          <button type="button" class="ticket-popup_save" data-ticket-save
+            >Save my ticket ↓</button
+          >
+          <button type="button" data-ticket-calendar>ADD TO CALENDAR ↗</button>
+          <button type="button" data-ticket-edit>EDIT MY RSVP</button>
+        </div>
+        <p class="ticket-popup_error" data-ticket-error hidden></p>
+      </div>
+      <div class="ticket-popup_graphic-wrap">
+        <div class="ticket-popup_graphic" data-ticket-graphic>
+          <div class="ticket-popup_machine">
+            <div class="ticket-popup_machine-head">
+              <div class="ticket-popup_machine-brand">
+                <div class="ticket-popup_postmark">E&amp;W</div><div>
+                  <b>BORACAY TICKET OFFICE</b><span>EST. 14 · 01 · 2027</span>
+                </div>
+              </div><div class="ticket-popup_on">ON <i></i></div>
+            </div>
+            <div class="ticket-popup_screen">
+              <div class="ticket-popup_guest">
+                <div>
+                  <strong data-ticket-names></strong><span
+                    >JOYFULLY ACCEPTS</span>
+                </div><strong class="ticket-popup_count" data-ticket-count
+                ></strong>
+              </div><div
+                class="ticket-popup_status"
+                role="status"
+                aria-live="polite"
+              >
+                <span data-ticket-status-icon></span><span data-ticket-status
+                ></span>
+              </div>
+            </div>
+            <div class="ticket-popup_slot"></div>
+          </div>
+          <div class="ticket-popup-output">
+            <div class="ticket-popup_ticket" data-ticket>
+              <div class="ticket-popup_shadow"></div><div
+                class="ticket-popup_ticket-body"
+              >
+                <div class="ticket-popup_ticket-top">
+                  <span>RSVP Nº 011427</span><span>BORACAY · PH</span>
+                </div><svg viewBox="0 0 196 150" aria-hidden="true"
+                  ><g
+                    fill="none"
+                    stroke="var(--light-100)"
+                    stroke-width="1.4"
+                    opacity=".85"
+                    ><path
+                      d="M0 14 C16 4 33 4 49 14 S82 24 98 14 S131 4 147 14 S180 24 196 14M0 32 C16 22 33 22 49 32 S82 42 98 32 S131 22 147 32 S180 78 196 32M0 50 C16 40 33 40 49 50 S82 60 98 50 S131 40 147 50 S180 60 196 50M0 68 C16 58 33 58 49 68 S82 78 98 68 S131 58 147 68 S180 78 196 68M0 86 C16 76 33 76 49 86 S82 96 98 86 S131 76 147 86 S180 96 196 86M0 104 C16 94 33 94 49 104 S82 114 98 104 S131 94 147 104 S180 114 196 104M0 122 C16 112 33 112 49 122 S82 132 98 122 S131 112 147 122 S180 132 196 122M0 140 C16 130 33 130 49 140 S82 150 98 140 S131 130 147 140 S180 150 196 140"
+                    ></path></g
+                  ><circle
+                    cx="148"
+                    cy="46"
+                    r="22"
+                    fill="var(--accent-500)"
+                    stroke="var(--light-100)"
+                    stroke-width="1.4"></circle><circle
+                    cx="148"
+                    cy="46"
+                    r="13"
+                    fill="var(--light-100)"></circle></svg
+                ><div class="ticket-popup_ticket-names">
+                  <strong>Eunice<br />&amp; Warren</strong><span
+                    data-ticket-names-line></span>
+                </div><div class="ticket-popup_ticket-meta">
+                  <span><small>DATE</small><b>{RSVP_EVENT.dateLabel}</b></span
+                  ><span><small>VOWS</small><b>{RSVP_EVENT.vowsLabel}</b></span
+                  ><span
+                    ><small>DRESS</small><b>{RSVP_EVENT.dressLabel}</b></span>
+                </div>
+              </div><div class="ticket-popup_stub">
+                <div>
+                  <span>ADMIT</span><strong data-ticket-admit></strong>
+                </div><div>
+                  <span>REFERENCE</span><strong data-ticket-reference></strong>
+                </div><div class="ticket-popup_barcode"></div><i
+                  class="ticket-popup_notch ticket-popup_notch-left"></i><i
+                  class="ticket-popup_notch ticket-popup_notch-right"></i>
+              </div>
+            </div>
+          </div>
+          <div
+            class="ticket-popup_confetti"
+            data-ticket-confetti
+            aria-hidden="true"
+          >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Modal>
+
+<script>
+  import {
+    calendarIcs,
+    seatWord,
+    ticketFilename,
+    ticketNames,
+    ticketReference,
+  } from "@/lib/rsvp/event";
+  type TicketDetail = {
+    inviteId: string;
+    matchedName: string;
+    companionName?: string;
+    guests: number;
+    deadline: string;
+  };
+  const initTicket = () => {
+    const modal =
+      document.querySelector<HTMLDialogElement>("#rsvp-ticket-modal");
+    if (!modal || modal.dataset.ticketReady) return;
+    modal.dataset.ticketReady = "true";
+    const popup = modal.querySelector<HTMLElement>("[data-ticket-popup]")!;
+    const ticket = modal.querySelector<HTMLElement>("[data-ticket]")!;
+    const graphicWrap = modal.querySelector<HTMLElement>(
+      "[data-ticket-graphic]",
+    )!.parentElement!;
+    const layout = modal.querySelector<HTMLElement>(".ticket-popup_layout")!;
+    const heading = modal.querySelector<HTMLElement>("[data-ticket-heading]")!;
+    const actions = modal.querySelector<HTMLElement>(".ticket-popup_actions")!;
+    const status = modal.querySelector<HTMLElement>("[data-ticket-status]")!;
+    const icon = modal.querySelector<HTMLElement>("[data-ticket-status-icon]")!;
+    const reduced = () =>
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let detail: TicketDetail | null = null;
+    let timer = 0;
+    let confetti: HTMLElement[] = [];
+    let resizeObserver: ResizeObserver | null = null;
+    let resizeHandler: (() => void) | null = null;
+    const setScale = () => {
+      const mobile = matchMedia("(max-width: 62rem)").matches;
+      const availableWidth = mobile
+        ? layout.clientWidth - 48
+        : layout.clientWidth;
+      const availableHeight = mobile
+        ? layout.clientHeight -
+          heading.getBoundingClientRect().height -
+          actions.getBoundingClientRect().height -
+          32
+        : layout.clientHeight - 72;
+      const naturalHeight = 700;
+      const scale = Math.min(
+        1,
+        availableWidth / 380,
+        availableHeight / naturalHeight,
+      );
+      graphicWrap.style.setProperty(
+        "--ticket-scale",
+        String(Math.max(0.55, scale)),
+      );
+    };
+    const clear = () => {
+      window.clearTimeout(timer);
+      ticket.classList.remove("is-printing", "is-printed", "is-capture");
+      confetti.forEach((node) => node.remove());
+      confetti = [];
+    };
+    const stopFitting = () => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      if (resizeHandler) window.removeEventListener("resize", resizeHandler);
+      resizeHandler = null;
+    };
+    const stage = (name: "processing" | "printing" | "printed") => {
+      popup.dataset.stage = name;
+      status.textContent =
+        name === "processing"
+          ? "SAVING TO THE GUEST LIST"
+          : name === "printing"
+            ? "PRINTING YOUR TICKET"
+            : "TICKET PRINTED · SEE YOU THERE";
+      icon.innerHTML =
+        name === "printed"
+          ? '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m4 7.2 2.2 2L10 5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          : '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1a6 6 0 1 0 6 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+      icon.classList.toggle("is-spinner", name !== "printed");
+    };
+    const burst = () => {
+      for (let i = 0; i < 12; i++) {
+        const node = document.createElement("i");
+        node.className = "ticket-popup_confetti-piece";
+        node.style.setProperty("--x", `${(Math.random() - 0.5) * 220}px`);
+        node.style.setProperty("--y", `${80 + Math.random() * 130}px`);
+        node.style.setProperty("--r", `${Math.random() * 240 - 120}deg`);
+        node.style.setProperty("--d", `${Math.random() * 0.45}s`);
+        node.addEventListener(
+          "animationend",
+          () => {
+            node.remove();
+            confetti = confetti.filter((item) => item !== node);
+          },
+          { once: true },
+        );
+        confetti.push(node);
+        modal.querySelector("[data-ticket-confetti]")!.append(node);
+      }
+    };
+    const print = () => {
+      clear();
+      if (reduced()) {
+        stage("printed");
+        ticket.classList.add("is-printed");
+        return;
+      }
+      stage("processing");
+      timer = window.setTimeout(() => {
+        stage("printing");
+        ticket.classList.add("is-printing");
+        timer = window.setTimeout(() => {
+          stage("printed");
+          ticket.classList.remove("is-printing");
+          ticket.classList.add("is-printed");
+          burst();
+        }, 1800);
+      }, 400);
+    };
+    const open = (event: Event) => {
+      detail = (event as CustomEvent<TicketDetail>).detail;
+      if (!detail) return;
+      const names = ticketNames(detail.matchedName, detail.companionName);
+      modal.querySelector("[data-ticket-heading]")!.textContent =
+        `See you in Boracay, ${detail.matchedName.split(" ")[0]}.`;
+      modal.querySelector("[data-ticket-body]")!.textContent =
+        `Your ticket is fresh off the press. Save it for the big day, and change your answer any time before ${detail.deadline}.`;
+      modal.querySelector("[data-ticket-names]")!.textContent = names;
+      modal.querySelector("[data-ticket-names-line]")!.textContent =
+        `${names} · Joyfully accepts`;
+      modal.querySelector("[data-ticket-count]")!.textContent =
+        `×${detail.guests}`;
+      modal.querySelector("[data-ticket-admit]")!.textContent = seatWord(
+        detail.guests,
+      );
+      modal.querySelector("[data-ticket-reference]")!.textContent =
+        ticketReference(detail.inviteId);
+      setScale();
+      stopFitting();
+      resizeHandler = setScale;
+      window.addEventListener("resize", resizeHandler);
+      resizeObserver = new ResizeObserver(setScale);
+      resizeObserver.observe(popup);
+      modal.showModal();
+      setScale();
+      print();
+    };
+    document.addEventListener("rsvp-ticket-open", open);
+    modal.addEventListener("close", () => {
+      clear();
+      stopFitting();
+      popup.dataset.stage = "";
+      (
+        document.querySelector(
+          "[data-rsvp-panel=sent] h3",
+        ) as HTMLElement | null
+      )?.focus();
+    });
+    modal.querySelector("[data-ticket-edit]")!.addEventListener("click", () => {
+      modal.close();
+      document.dispatchEvent(new CustomEvent("rsvp-ticket-edit"));
+    });
+    modal
+      .querySelector("[data-ticket-calendar]")!
+      .addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(
+          new Blob([calendarIcs()], { type: "text/calendar;charset=utf-8" }),
+        );
+        link.download = "eunice-warren-wedding.ics";
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+    modal
+      .querySelector("[data-ticket-save]")!
+      .addEventListener("click", async () => {
+        if (!detail) return;
+        const button =
+          modal.querySelector<HTMLButtonElement>("[data-ticket-save]")!;
+        const error = modal.querySelector<HTMLElement>("[data-ticket-error]")!;
+        button.disabled = true;
+        button.textContent = "Saving…";
+        error.hidden = true;
+        ticket.classList.add("is-capture");
+        try {
+          const { domToPng } = await import("modern-screenshot");
+          const dataUrl = await domToPng(ticket, {
+            scale: 2,
+            style: { transform: "none", rotate: "0deg", boxShadow: "none" },
+            filter: (element) =>
+              !(
+                element instanceof HTMLElement &&
+                element.classList.contains("ticket-popup_shadow")
+              ),
+          });
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = ticketFilename(detail.inviteId);
+          link.click();
+        } catch {
+          error.textContent = "Couldn't save — try a screenshot instead.";
+          error.hidden = false;
+        } finally {
+          ticket.classList.remove("is-capture");
+          button.disabled = false;
+          button.textContent = "Save my ticket ↓";
+        }
+      });
+    const tiltMove = (event: PointerEvent) => {
+      const rect = ticket.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width - 0.5;
+      const y = (event.clientY - rect.top) / rect.height - 0.5;
+      ticket.style.setProperty("--tilt-x", `${y * -12}deg`);
+      ticket.style.setProperty("--tilt-y", `${x * 12}deg`);
+      ticket.style.setProperty("--tilt-scale", "1.018");
+    };
+    const tiltLeave = () => {
+      ticket.style.removeProperty("--tilt-x");
+      ticket.style.removeProperty("--tilt-y");
+      ticket.style.removeProperty("--tilt-scale");
+    };
+    const enableTilt = () => {
+      if (
+        matchMedia(
+          "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
+        ).matches
+      ) {
+        ticket.addEventListener("pointermove", tiltMove);
+        ticket.addEventListener("pointerleave", tiltLeave);
+      }
+    };
+    const disableTilt = () => {
+      ticket.removeEventListener("pointermove", tiltMove);
+      ticket.removeEventListener("pointerleave", tiltLeave);
+      tiltLeave();
+    };
+    modal.addEventListener("close", disableTilt);
+    document.addEventListener("rsvp-ticket-open", enableTilt);
+  };
+  initTicket();
+  document.addEventListener("astro:page-load", initTicket);
+</script>
+
+<style is:global>
+  @layer components {
+    #rsvp-ticket-modal::backdrop {
+      background: rgb(24 36 72 / 84%);
+      backdrop-filter: blur(14px);
+    }
+    #rsvp-ticket-modal .modal_content > .modal_close {
+      display: none;
+    }
+    #rsvp-ticket-modal .modal_content,
+    #rsvp-ticket-modal .modal_scroll,
+    #rsvp-ticket-modal .modal_body {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+    }
+    .ticket-popup_wrap {
+      --_scrim: rgb(24 36 72 / 84%);
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      box-sizing: border-box;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 2rem 4rem 2.5rem;
+      color: var(--light-100);
+      background: var(--_scrim);
+    }
+    .ticket-popup_bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--brand-500);
+      font: 0.75rem/1rem var(--mono-family);
+      letter-spacing: 0.04em;
+    }
+    .ticket-popup_close,
+    .ticket-popup_actions button {
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
+    }
+    .ticket-popup_close {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      color: var(--light-100);
+    }
+    .ticket-popup_close i {
+      display: grid;
+      width: 2.25rem;
+      height: 2.25rem;
+      place-items: center;
+      border: 1px solid rgb(245 239 227 / 40%);
+      border-radius: 50%;
+      font: 1.5rem/1 var(--primary-family);
+    }
+    .ticket-popup_layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      align-items: center;
+      justify-content: center;
+      gap: 7.5rem;
+    }
+    .ticket-popup_message {
+      display: flex;
+      width: 27.5rem;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+    .ticket-popup_message h2 {
+      margin: 0;
+      color: var(--light-100);
+      font: var(--secondary-regular) 5rem/0.95 var(--secondary-family);
+      letter-spacing: -0.03em;
+    }
+    .ticket-popup_message p {
+      max-width: 23.75rem;
+      margin: 0;
+      color: var(--brand-500);
+      font: 1.125rem/1.45 var(--primary-family);
+    }
+    .ticket-popup_actions {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      flex-wrap: wrap;
+    }
+    .ticket-popup_actions button {
+      text-decoration: underline;
+      text-underline-offset: 0.25rem;
+    }
+    .ticket-popup_actions .ticket-popup_save {
+      padding: 1rem 1.625rem;
+      color: var(--dark-900);
+      background: var(--light-100);
+      font: 500 0.9375rem/1.125rem var(--primary-family);
+      text-decoration: none;
+    }
+    .ticket-popup_actions button:not(.ticket-popup_save) {
+      font: 0.75rem/1rem var(--mono-family);
+      letter-spacing: 0.04em;
+    }
+    .ticket-popup_error {
+      color: var(--light-100) !important;
+      font-size: 0.875rem !important;
+    }
+    .ticket-popup_graphic-wrap {
+      width: calc(23.75rem * var(--ticket-scale, 1));
+      height: calc(43.75rem * var(--ticket-scale, 1));
+    }
+    .ticket-popup_graphic {
+      position: relative;
+      width: 23.75rem;
+      height: 43.75rem;
+      transform: scale(var(--ticket-scale, 1));
+      transform-origin: top left;
+    }
+    .ticket-popup_machine {
+      position: absolute;
+      z-index: 2;
+      top: 0;
+      left: 0;
+      display: flex;
+      width: 23.75rem;
+      height: 12.5rem;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.75rem 0.75rem 1.5rem;
+      background: #efe6d4 var(--ticket-paper) center/32rem repeat;
+      border: 1px solid var(--light-300);
+      border-radius: 1.5rem;
+      box-shadow:
+        inset 0 1px #fff,
+        0 -2px #5b678840,
+        0 1.375rem 2.5rem -1.125rem #0a10248c;
+    }
+    .ticket-popup_machine-head {
+      display: flex;
+      height: 2.5rem;
+      align-items: center;
+      justify-content: space-between;
+      padding-inline: 0.375rem;
+      color: var(--dark-900);
+      font: 0.5625rem/.5625rem var(--mono-family);
+      letter-spacing: 0.12em;
+    }
+    .ticket-popup_machine-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+    .ticket-popup_machine-brand > div:last-child {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1875rem;
+    }
+    .ticket-popup_machine-head span {
+      color: var(--dark-700);
+    }
+    .ticket-popup_postmark {
+      display: grid;
+      width: 2.125rem;
+      height: 2.125rem;
+      place-items: center;
+      border: 1.5px solid var(--accent-500);
+      border-radius: 50%;
+      color: var(--accent-500);
+      font: italic 0.75rem/.875rem var(--secondary-family);
+      rotate: -8deg;
+    }
+    .ticket-popup_on {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      color: var(--dark-700);
+    }
+    .ticket-popup_on i {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--accent-500);
+      box-shadow: 0 0 0.375rem var(--accent-500);
+    }
+    .ticket-popup_screen {
+      display: flex;
+      min-height: 5.5rem;
+      flex-direction: column;
+      gap: 0.875rem;
+      padding: 1rem 1.125rem;
+      background: var(--dark-900);
+      border: 1px solid #16224a;
+      border-radius: 0.75rem;
+      box-shadow: inset 0 0 1.5rem 0.25rem #080e20a6;
+    }
+    .ticket-popup_guest {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+    .ticket-popup_guest > div {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .ticket-popup_guest strong {
+      font: 500 0.875rem/1.125rem var(--primary-family);
+    }
+    .ticket-popup_guest span,
+    .ticket-popup_status,
+    .ticket-popup_count {
+      color: var(--brand-500);
+      font-family: var(--mono-family);
+      letter-spacing: 0.08em;
+    }
+    .ticket-popup_guest span {
+      font-size: 0.625rem;
+      line-height: 0.75rem;
+    }
+    .ticket-popup_count {
+      color: var(--light-100);
+      font: 1.375rem/1.375rem var(--secondary-family);
+    }
+    .ticket-popup_status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed #bcd3e840;
+      font-size: 0.625rem;
+    }
+    .ticket-popup_status > span:first-child {
+      display: grid;
+      width: 0.875rem;
+      height: 0.875rem;
+      place-items: center;
+      color: var(--brand-500);
+    }
+    .ticket-popup_status svg {
+      display: block;
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+    .ticket-popup_status .is-spinner {
+      animation: ticket-spin 0.8s linear infinite;
+    }
+    .ticket-popup_slot {
+      position: absolute;
+      right: 1.5rem;
+      bottom: 0.375rem;
+      left: 1.5rem;
+      height: 0.5rem;
+      background: #0e1733;
+      border-radius: 0.25rem;
+      box-shadow:
+        inset 0 2px 3px #000b,
+        0 1px #fff9;
+    }
+    .ticket-popup-output {
+      position: absolute;
+      top: 12.125rem;
+      left: 3.75rem;
+      width: 16.25rem;
+      height: 33rem;
+      clip-path: inset(0 -3rem -4rem -3rem);
+    }
+    .ticket-popup_ticket {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      width: 15rem;
+      height: 32.5rem;
+      flex-direction: column;
+      background: var(--accent-500);
+      background-image: linear-gradient(145deg, #fff1, transparent 42%);
+      box-shadow:
+        0 1px 1px #0f0f0f2e,
+        0 1.125rem 1.625rem #0f0f0f47;
+      rotate: 1.5deg;
+      transform: translateY(-100%) perspective(1100px)
+        rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
+        scale(var(--tilt-scale, 1));
+      transform-origin: center top;
+      transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .ticket-popup_ticket.is-printing {
+      animation: ticket-feed 1.8s linear forwards;
+    }
+    .ticket-popup_ticket.is-printed {
+      transform: translateY(0) perspective(1100px) rotateX(var(--tilt-x, 0deg))
+        rotateY(var(--tilt-y, 0deg)) scale(var(--tilt-scale, 1));
+    }
+    .ticket-popup_ticket.is-capture {
+      transform: none !important;
+      rotate: 0deg !important;
+      box-shadow: none !important;
+    }
+    .ticket-popup_shadow {
+      position: absolute;
+      z-index: 1;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 1rem;
+      background: linear-gradient(#1f2f5c73, transparent);
+    }
+    .ticket-popup_ticket-body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1.125rem;
+      padding: 1.5rem 1.375rem 1.625rem;
+    }
+    .ticket-popup_ticket-top {
+      display: flex;
+      justify-content: space-between;
+      color: var(--light-100);
+      font: 700 0.5625rem/.625rem var(--mono-family);
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+    }
+    .ticket-popup_ticket-body svg {
+      width: 100%;
+      height: 9.375rem;
+    }
+    .ticket-popup_ticket-names {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      color: var(--light-100);
+    }
+    .ticket-popup_ticket-names strong {
+      font: var(--secondary-regular) 2.5rem/0.9 var(--secondary-family);
+      letter-spacing: -0.03em;
+    }
+    .ticket-popup_ticket-names span {
+      white-space: nowrap;
+      font: 500 0.6875rem/ 0.9375rem var(--primary-family);
+    }
+    .ticket-popup_ticket-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      color: var(--light-100);
+    }
+    .ticket-popup_ticket-meta span {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font: 700 0.5rem/.5rem var(--mono-family);
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+    }
+    .ticket-popup_ticket-meta small {
+      font: inherit;
+    }
+    .ticket-popup_ticket-meta b {
+      font-size: 0.8125rem;
+      line-height: 0.8125rem;
+      white-space: nowrap;
+      opacity: 1;
+    }
+    .ticket-popup_stub {
+      display: grid;
+      height: 7.75rem;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      padding: 1.25rem 1.375rem 1.125rem;
+      border-top: 1.5px dashed #f5efe373;
+      color: var(--light-100);
+    }
+    .ticket-popup_stub > div:not(.ticket-popup_barcode) {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .ticket-popup_stub span {
+      font: 700 0.5rem/.625rem var(--mono-family);
+      opacity: 0.7;
+    }
+    .ticket-popup_stub strong {
+      font: 1.375rem/1 var(--secondary-family);
+    }
+    .ticket-popup_stub > div:nth-child(2) {
+      align-items: flex-end;
+      text-align: right;
+    }
+    .ticket-popup_stub > div:nth-child(2) strong {
+      font: 700 0.625rem/.75rem var(--mono-family);
+    }
+    .ticket-popup_notch {
+      position: absolute;
+      top: -0.8125rem;
+      width: 1.625rem;
+      height: 1.625rem;
+      border-radius: 50%;
+      background: #1a274c;
+    }
+    .ticket-popup_notch-left {
+      left: -0.8125rem;
+    }
+    .ticket-popup_notch-right {
+      right: -0.8125rem;
+    }
+    .ticket-popup_barcode {
+      grid-column: 1/-1;
+      height: 1.5rem;
+      background: repeating-linear-gradient(
+        90deg,
+        var(--light-100) 0 2px,
+        transparent 2px 4px,
+        var(--light-100) 4px 5px,
+        transparent 5px 8px,
+        var(--light-100) 8px 12px,
+        transparent 12px 14px
+      );
+    }
+    .ticket-popup_confetti-piece {
+      position: absolute;
+      z-index: 3;
+      top: 9rem;
+      left: 11.875rem;
+      width: 0.5rem;
+      height: 0.875rem;
+      background: var(--light-100);
+      border-radius: 1px;
+      animation: ticket-confetti 1.4s var(--d) ease-out forwards;
+    }
+    .ticket-popup_confetti-piece:nth-child(3n) {
+      background: var(--brand-500);
+      border-radius: 50%;
+      width: 0.75rem;
+      height: 0.75rem;
+    }
+    .ticket-popup_confetti-piece:nth-child(3n + 1) {
+      background: var(--accent-500);
+    }
+    @keyframes ticket-feed {
+      0%,
+      8% {
+        transform: translateY(-100%);
+      }
+      14%,
+      20% {
+        transform: translateY(-85%);
+      }
+      26%,
+      32% {
+        transform: translateY(-68%);
+      }
+      38%,
+      44% {
+        transform: translateY(-52%);
+      }
+      50%,
+      56% {
+        transform: translateY(-36%);
+      }
+      62%,
+      68% {
+        transform: translateY(-21%);
+      }
+      74%,
+      80% {
+        transform: translateY(-8%);
+      }
+      86%,
+      100% {
+        transform: translateY(0);
+      }
+    }
+    @keyframes ticket-confetti {
+      from {
+        transform: translate(0, 0) rotate(0);
+        opacity: 1;
+      }
+      to {
+        transform: translate(var(--x), var(--y)) rotate(var(--r));
+        opacity: 0;
+      }
+    }
+    @keyframes ticket-spin {
+      to {
+        rotate: 360deg;
+      }
+    }
+    @media (max-width: 80rem) {
+      .ticket-popup_layout {
+        gap: 4.5rem;
+      }
+      .ticket-popup_message {
+        width: 29.375rem;
+      }
+      .ticket-popup_message h2 {
+        font-size: 4rem;
+      }
+    }
+    @media (max-width: 62rem) {
+      .ticket-popup_wrap {
+        padding: 1.25rem;
+      }
+      .ticket-popup_number,
+      .ticket-popup_close span {
+        display: none;
+      }
+      .ticket-popup_layout {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .ticket-popup_message {
+        display: contents;
+      }
+      .ticket-popup_message h2 {
+        order: 0;
+        width: 100%;
+        max-width: 22rem;
+        font-size: 2rem;
+        line-height: 1;
+      }
+      .ticket-popup_message p {
+        display: none;
+      }
+      .ticket-popup_graphic-wrap {
+        order: 1;
+      }
+      .ticket-popup_actions {
+        order: 2;
+        display: flex;
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem 1.5rem;
+      }
+      .ticket-popup_actions .ticket-popup_save {
+        width: 100%;
+      }
+      .ticket-popup_actions button:not(.ticket-popup_save) {
+        font: 0.6875rem/.875rem var(--mono-family);
+        letter-spacing: 0.04em;
+      }
+    }
+    @media (max-width: 23.4375rem) {
+      .ticket-popup_message h2 {
+        font-size: 1.625rem;
+      }
+    }
+    @media (max-height: 41.6875rem) {
+      .ticket-popup_screen {
+        display: none;
+      }
+      .ticket-popup_machine {
+        height: 5.75rem;
+      }
+      .ticket-popup-output {
+        top: 5.375rem;
+      }
+      .ticket-popup_graphic-wrap {
+        height: calc(38.5rem * var(--ticket-scale, 1));
+      }
+      .ticket-popup_graphic {
+        height: 38.5rem;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ticket-popup_ticket,
+      .ticket-popup_status .is-spinner {
+        animation: none !important;
+        transition: none !important;
+      }
+      .ticket-popup_ticket.is-printed {
+        transform: none;
+        rotate: 0deg;
+      }
+    }
+  }
+</style>
