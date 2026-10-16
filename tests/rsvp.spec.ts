@@ -110,6 +110,8 @@ test.describe("RSVP section", () => {
     await rsvp(page)
       .getByRole("button", { name: /Send RSVP/ })
       .click();
+    await expect(page.locator("#rsvp-ticket-modal")).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(rsvp(page).locator("[data-rsvp-panel='sent']")).toBeVisible();
     await expect(visiblePanels(page)).toHaveCount(1);
     await expect(rsvp(page).locator("[data-rsvp-invitation]")).toBeVisible();

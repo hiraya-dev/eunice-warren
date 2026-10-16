@@ -4,6 +4,7 @@ import type { HTMLAttributes } from "astro/types";
 import stamp from "@/assets/images/rsvp/stamp-received.png";
 import postcardPaper from "@/assets/textures/postcard-paper.jpg";
 import { RSVP_DEADLINE_LABEL } from "@/consts";
+import RsvpTicketPrinter from "@/components/sections/RsvpTicketPrinter.astro";
 
 interface Props extends HTMLAttributes<"section"> {
   /** Message destination for guests who cannot find an invite. */
@@ -254,6 +255,7 @@ const {
   </div>
   <div class="rsvp_scallop" aria-hidden="true"></div>
 </section>
+<RsvpTicketPrinter />
 
 <script>
   import { actions } from "astro:actions";
@@ -335,11 +337,13 @@ const {
         const findButton = root.querySelector<HTMLButtonElement>(
           "[data-rsvp-find] button[type='submit']",
         )!;
-        const setConfirmationCopy = (isAttending: boolean, email: string) => {
+        const setConfirmationCopy = (isAttending: boolean) => {
           title.textContent = isAttending
             ? "See you in Boracay."
             : "We'll miss you.";
-          intro.textContent = `We've sent a copy to ${email}. Plans change? You can edit your RSVP any time before ${deadline}.`;
+          intro.textContent = isAttending
+            ? `Your ticket is fresh off the press. Save it for the big day, and change your answer any time before ${deadline}.`
+            : `Plans change? You can update your RSVP any time before ${deadline}.`;
         };
         const restoreIntro = () => {
           title.replaceChildren(
@@ -587,10 +591,28 @@ const {
             )!.textContent = attending
               ? `You're on the list, ${matchedName.split(" ")[0]}.`
               : `Thanks for letting us know, ${matchedName.split(" ")[0]}.`;
-            setConfirmationCopy(attending, email.value);
+            setConfirmationCopy(attending);
             submit.disabled = false;
             submit.removeAttribute("aria-busy");
             setStep("sent");
+            if (attending && invite) {
+              const companionName =
+                guests >= 2
+                  ? (form.elements.namedItem("companion") as HTMLInputElement)
+                      .value || undefined
+                  : undefined;
+              document.dispatchEvent(
+                new CustomEvent("rsvp-ticket-open", {
+                  detail: {
+                    inviteId: invite.id,
+                    matchedName,
+                    companionName,
+                    guests,
+                    deadline,
+                  },
+                }),
+              );
+            }
           });
         root
           .querySelector<HTMLButtonElement>("[data-rsvp-edit]")!
@@ -598,6 +620,10 @@ const {
             restoreIntro();
             setStep("2");
           });
+        document.addEventListener("rsvp-ticket-edit", () => {
+          restoreIntro();
+          setStep("2");
+        });
         updateGuestControls();
       });
   };

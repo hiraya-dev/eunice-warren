@@ -10,6 +10,27 @@ import {
 } from "../src/lib/rsvp/logic.ts";
 import { normalizeGuestName } from "../src/lib/rsvp/store.ts";
 import { createSheetsRsvpStore } from "../src/lib/rsvp/sheets.ts";
+import {
+  RSVP_EVENT,
+  calendarIcs,
+  seatWord,
+  ticketNames,
+  ticketReference,
+} from "../src/lib/rsvp/event.ts";
+
+test("builds ticket data and an RFC 5545 calendar event", () => {
+  assert.equal(seatWord(2), "Two");
+  assert.equal(seatWord(12), "Twelve");
+  assert.equal(
+    ticketNames("Liza Santos", "Marco Santos"),
+    "Liza & Marco Santos",
+  );
+  assert.equal(ticketReference("santos"), "SANTOS");
+  const ics = calendarIcs();
+  assert.match(ics, /BEGIN:VCALENDAR\r\n/);
+  assert.match(ics, /DTSTART:20270114T070000Z\r\n/);
+  assert.match(ics, new RegExp(`LOCATION:${RSVP_EVENT.location}`));
+});
 
 test("normalizes accents, case, and spacing", () => {
   assert.equal(normalizeGuestName("  Sofía   CRUZ "), "sofia cruz");
