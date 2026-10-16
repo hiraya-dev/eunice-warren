@@ -4,6 +4,7 @@ import { isJpeg, isTodayInManila, stripControls } from "../src/lib/with-love/val
 import { createSheetsLoveStore, parseNoteRows, sortVisibleNotes } from "../src/lib/with-love/store.ts";
 import { sampleFillCount } from "../src/lib/with-love/logic.ts";
 import { isFakeTurnstileMode } from "../src/scripts/turnstile.ts";
+import { clampPan, clampZoom, coverScale, pinchZoom, sourceRect } from "../src/scripts/with-love/crop.ts";
 
 const serviceAccount = async () => {
   const pair = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
@@ -42,6 +43,32 @@ test("fills the stack to six only when fewer than three real notes exist", () =>
 test("uses the real Turnstile path outside fake mode", () => {
   assert.equal(isFakeTurnstileMode(undefined, false), false);
   assert.equal(isFakeTurnstileMode("fake", false), true);
+});
+
+test("calculates cover scales for landscape, portrait, and square images", () => {
+  assert.equal(coverScale({ width: 1600, height: 900 }, { width: 800, height: 700 }), 700 / 900);
+  assert.equal(coverScale({ width: 900, height: 1600 }, { width: 800, height: 700 }), 800 / 900);
+  assert.equal(coverScale({ width: 1000, height: 1000 }, { width: 800, height: 700 }), 0.8);
+});
+
+test("clamps zoom and pan to the image edges", () => {
+  assert.equal(clampZoom(9), 4);
+  assert.equal(clampZoom(0), 1);
+  assert.deepEqual(
+    clampPan({ zoom: 2, panX: 9999, panY: -9999 }, { width: 1000, height: 875 }, { width: 800, height: 700 }),
+    { zoom: 2, panX: 400, panY: -350 },
+  );
+  assert.equal(pinchZoom(1, 100, 250), 2.5);
+});
+
+test("returns an 8:7 source crop without upscaling", () => {
+  const rect = sourceRect({ zoom: 1, panX: 0, panY: 0 }, { width: 2400, height: 1600 }, { width: 800, height: 700 });
+  const outputWidth = Math.min(1600, Math.floor(rect.width));
+  assert.equal(Math.round(outputWidth * 7 / 8), Math.round(outputWidth * rect.height / rect.width));
+  assert.equal(outputWidth <= 1600, true);
+  const edge = sourceRect({ zoom: 4, panX: 9999, panY: -9999 }, { width: 2400, height: 1600 }, { width: 800, height: 700 });
+  assert.equal(edge.x + edge.width <= 2400, true);
+  assert.equal(edge.y >= 0, true);
 });
 
 test("caches Notes reads and invalidates after a successful append", async () => {

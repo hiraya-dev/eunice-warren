@@ -186,7 +186,7 @@ const { class: className, ...rest } = Astro.props;
       transform: translateX(-50%);
     }
     .stacked-cards__stack { z-index: 0; position: relative; width: 100%; }
-    .stack-cards__before { padding-top: 117.5%; }
+    .stack-cards__before { padding-top: var(--with-love-stack-height); }
     .stacked-cards__collection,
     .stack-cards__list { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     .stack-cards__item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
@@ -210,7 +210,7 @@ const { class: className, ...rest } = Astro.props;
       cursor: grab;
     }
     .stack-cards__card.is--dragging { cursor: grabbing; }
-    .with-love_photo { display: block; width: 100%; height: var(--with-love-photo-height); flex: none; object-fit: cover; pointer-events: none; user-select: none; }
+    .with-love_photo { display: block; width: 100%; height: auto; aspect-ratio: 8 / 7; flex: 0 0 auto; object-fit: cover; pointer-events: none; user-select: none; }
     .with-love_message { margin: 0; color: var(--dark-900); font: italic var(--secondary-ultralight) var(--with-love-message-size) / var(--with-love-message-line) var(--secondary-family); }
     .with-love_attribution { margin: 0; color: var(--dark-700); font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
     .stacked-cards__controls { z-index: 1; position: relative; display: flex; align-items: center; justify-content: center; margin-top: -1.375rem; }
@@ -235,9 +235,8 @@ const { class: className, ...rest } = Astro.props;
       --with-love-stack-offset-min: 48;
       --with-love-stack-offset-max: 100;
       --with-love-stack-offset: clamp(var(--with-love-stack-offset-min) / 16 * 1rem, ((var(--with-love-stack-offset-min) - ((var(--with-love-stack-offset-max) - var(--with-love-stack-offset-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--with-love-stack-offset-max) - var(--with-love-stack-offset-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--with-love-stack-offset-max) / 16 * 1rem);
-      --with-love-photo-height-min: 168;
-      --with-love-photo-height-max: 300;
-      --with-love-photo-height: clamp(var(--with-love-photo-height-min) / 16 * 1rem, ((var(--with-love-photo-height-min) - ((var(--with-love-photo-height-max) - var(--with-love-photo-height-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--with-love-photo-height-max) - var(--with-love-photo-height-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--with-love-photo-height-max) / 16 * 1rem);
+      /* Osmo's 117.5% card ratio, plus room for the caption on narrow cards: +3.5rem at 320px, none at 1440px. */
+      --with-love-stack-height: calc(117.5% + clamp(0rem, 4.5rem - 5vw, 3.5rem));
       --with-love-message-size-min: 16;
       --with-love-message-size-max: 24;
       --with-love-message-size: clamp(var(--with-love-message-size-min) / 16 * 1rem, ((var(--with-love-message-size-min) - ((var(--with-love-message-size-max) - var(--with-love-message-size-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--with-love-message-size-max) - var(--with-love-message-size-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--with-love-message-size-max) / 16 * 1rem);

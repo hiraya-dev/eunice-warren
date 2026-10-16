@@ -179,8 +179,6 @@ function initWithLoveStackCore() {
     image.className = "with-love_photo";
     image.src = note.photoUrl;
     image.alt = `Photo shared by ${note.name}`;
-    image.width = 1600;
-    image.height = 1200;
     image.loading = "lazy";
     const message = document.createElement("p");
     message.className = "with-love_message";

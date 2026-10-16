@@ -11,6 +11,11 @@ test.describe("With love stack", () => {
     await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");
     // Upload specs share the fake store, so real notes may already replace the samples.
     await expect.poll(() => order(page).count()).toBeGreaterThanOrEqual(3);
+    const attributionBox = await page.locator("#with-love .is--active .with-love_attribution").boundingBox();
+    const shuffleBox = await page.locator("#with-love .shuffle-btn").boundingBox();
+    expect(attributionBox).not.toBeNull();
+    expect(shuffleBox).not.toBeNull();
+    expect(attributionBox!.y + attributionBox!.height).toBeLessThanOrEqual(shuffleBox!.y - 8);
     const first = await order(page).first().getAttribute("data-note-id");
     await page.locator('[data-stacked-cards-control="next"]').click();
     await expect.poll(() => order(page).first().getAttribute("data-note-id")).not.toBe(first);
