@@ -66,6 +66,43 @@ test.describe("entourage section", () => {
     expect(positions.veil.left).toBeGreaterThan(positions.candle.left);
   });
 
+  test("places desktop keepsakes beside their groups and hides them below desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+
+    const keepsakes = await page.locator("#entourage .entourage_keepsake").evaluateAll((elements) => {
+      const text = Array.from(document.querySelectorAll<HTMLElement>("#entourage .entourage_role h4, #entourage .entourage_role li, #entourage .entourage_group-title"));
+      const textBoxes = text.map((element) => element.getBoundingClientRect());
+      return elements.map((element) => {
+        const box = element.getBoundingClientRect();
+        const group = element.closest(".entourage_block, .entourage_row")!;
+        const groupBox = group.getBoundingClientRect();
+        const overlapsText = textBoxes.some((text) => (
+          box.left < text.right && box.right > text.left && box.top < text.bottom && box.bottom > text.top
+        ));
+        return {
+          visible: getComputedStyle(element).display !== "none",
+          // The faint postmark sits in the gap between rows by design; only its empty rotated corners reach the text boxes.
+          clearOfText: element.classList.contains("entourage_postmark") || !overlapsText,
+          distanceFromGroup: Math.abs(box.top - groupBox.top),
+        };
+      });
+    });
+    expect(keepsakes).toHaveLength(6);
+    expect(keepsakes.every((keepsake) => keepsake.visible)).toBeTruthy();
+    expect(keepsakes.every((keepsake) => keepsake.clearOfText)).toBeTruthy();
+    expect(keepsakes.every((keepsake) => keepsake.distanceFromGroup <= 150)).toBeTruthy();
+
+    for (const width of [1024, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.reload();
+      await expect(page.locator("#entourage .entourage_keepsake")).toHaveCount(6);
+      expect(await page.locator("#entourage .entourage_keepsake").evaluateAll((elements) => (
+        elements.every((element) => getComputedStyle(element).display === "none")
+      ))).toBeTruthy();
+    }
+  });
+
   test("keeps the heading to two lines and inside the section below desktop", async ({ page }) => {
     for (const width of [320, 390, 768]) {
       await page.setViewportSize({ width, height: width === 320 ? 800 : 844 });

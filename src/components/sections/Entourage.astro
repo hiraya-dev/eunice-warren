@@ -3,6 +3,11 @@ import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import stamp from "@/assets/images/hero/stamp-paraw.png";
+import familyPolaroid from "@/assets/images/entourage/polaroid-family.jpg";
+import sampaguita from "@/assets/images/entourage/keepsake-sampaguita.jpg";
+import barkadaPolaroid from "@/assets/images/entourage/polaroid-barkada.jpg";
+import willysRock from "@/assets/images/entourage/stamp-willys-rock.png";
+import pawikan from "@/assets/images/entourage/stamp-pawikan.png";
 
 interface Props extends HTMLAttributes<"section"> {}
 
@@ -26,6 +31,31 @@ const [{ data }] = await getCollection("entourage");
               <span>{group.title}</span>{group.italic && <em>{group.italic}</em>}
             </h3>
           )}
+          {group.id === "parents" && (
+            <div class="entourage_keepsake entourage_family-polaroid" aria-hidden="true">
+              <Image src={familyPolaroid} alt="" width={138} height={138} densities={[1, 2]} loading="lazy" />
+            </div>
+          )}
+          {group.id === "principal-sponsors" && (
+            <>
+              <svg class="entourage_keepsake entourage_postmark" viewBox="0 0 260 96" width="260" height="96" fill="none" aria-hidden="true">
+                <circle cx="48" cy="48" r="44" stroke-width="2.5" />
+                <circle cx="48" cy="48" r="34" stroke-width="1.5" />
+                <text x="48" y="44" text-anchor="middle" font-size="10" letter-spacing="1">BORACAY</text>
+                <text x="48" y="58" text-anchor="middle" font-size="10" letter-spacing="1">01.14.27</text>
+                <path d="M100 30 C120 22 140 38 160 30 S200 22 220 30 S250 38 258 32" stroke-width="2.5" />
+                <path d="M100 48 C120 40 140 56 160 48 S200 40 220 48 S250 56 258 50" stroke-width="2.5" />
+                <path d="M100 66 C120 58 140 74 160 66 S200 58 220 66 S250 74 258 68" stroke-width="2.5" />
+              </svg>
+              <Image class="entourage_keepsake entourage_willys-rock" src={willysRock} alt="" width={116} height={145} densities={[1, 2]} loading="lazy" aria-hidden="true" />
+            </>
+          )}
+          {group.id === "secondary-sponsors" && (
+            <Image class="entourage_keepsake entourage_sampaguita" src={sampaguita} alt="" width={92} height={130} densities={[1, 2]} loading="lazy" aria-hidden="true" />
+          )}
+          {group.id === "bridal-party" && (
+            <Image class="entourage_keepsake entourage_barkada-polaroid" src={barkadaPolaroid} alt="" width={138} height={138} densities={[1, 2]} loading="lazy" aria-hidden="true" />
+          )}
           <div class="entourage_rows">
             {group.rows.map((row, rowIndex) => (
               <div class="entourage_row" data-fade-in-item>
@@ -40,6 +70,9 @@ const [{ data }] = await getCollection("entourage");
                     </div>
                   );
                 })}
+                {group.id === "bridal-party" && rowIndex === group.rows.length - 1 && (
+                  <Image class="entourage_keepsake entourage_pawikan" src={pawikan} alt="" width={96} height={120} densities={[1, 2]} loading="lazy" aria-hidden="true" />
+                )}
               </div>
             ))}
           </div>
@@ -58,7 +91,7 @@ const [{ data }] = await getCollection("entourage");
     .entourage_title { margin: 0; font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); font-size: min(var(--h1), calc((100vw - 2 * var(--site-margin)) / 5.6)); letter-spacing: var(--letter-spacing-tight); }
     .entourage_intro { max-width: 31.25rem; margin: 0; font: var(--primary-regular) var(--text-main) / var(--line-height-huge) var(--primary-family); }
     .entourage_programme { display: flex; width: 100%; max-width: 60rem; flex-direction: column; gap: 4.5rem; text-align: center; }
-    .entourage_block { display: flex; flex-direction: column; align-items: center; gap: var(--space-7); }
+    .entourage_block { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-7); }
     .entourage_officiant, .entourage_parents { gap: 0; }
     .entourage_principal-sponsors, .entourage_secondary-sponsors { gap: 2.5rem; }
     .entourage_bridal-party { gap: 3.5rem; }
@@ -70,10 +103,20 @@ const [{ data }] = await getCollection("entourage");
     .entourage_bridal-party .entourage_row:first-child { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .entourage_bridal-party .entourage_rows { gap: 3.5rem; }
     .entourage_secondary-sponsors .entourage_row, .entourage_bridal-party .entourage_row:last-child { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .entourage_bridal-party .entourage_row:last-child { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .entourage_bridal-party .entourage_row:last-child { position: relative; grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .entourage_role { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: var(--space-1); }
     .entourage_role h4 { margin: 0; color: var(--dark-700); font: italic 400 1.25rem / 1.4 var(--secondary-family); }
     .entourage_role ul { display: flex; margin: 0; padding: 0; flex-direction: column; list-style: none; color: var(--dark-900); font: var(--secondary-regular) var(--text-large) / 1.5 var(--secondary-family); }
+    .entourage_keepsake { position: absolute; z-index: 1; pointer-events: none; transform-origin: 0 0; }
+    .entourage_family-polaroid, .entourage_barkada-polaroid { --_paper: #fbf8f1; width: 9.75rem; padding: 0.5625rem 0.5625rem 2.125rem; background: var(--_paper); box-shadow: 0 0.0625rem 0.0625rem color-mix(in srgb, var(--dark-900) 16%, transparent), 0 0.625rem 1.375rem color-mix(in srgb, var(--dark-900) 12%, transparent); }
+    .entourage_family-polaroid { top: -4.375rem; left: calc(50% - 39.25rem); rotate: -5deg; }
+    .entourage_barkada-polaroid { top: 0; left: calc(50% + 29.75rem); rotate: 5deg; }
+    .entourage_family-polaroid img, .entourage_barkada-polaroid img { display: block; width: 8.625rem; height: 8.625rem; object-fit: cover; }
+    .entourage_postmark { top: -4.375rem; left: calc(50% + 10.625rem); width: 16.25rem; height: 6rem; overflow: visible; rotate: -8deg; opacity: 0.16; stroke: var(--dark-900); fill: none; }
+    .entourage_postmark text { fill: var(--dark-900); font-family: var(--mono-family); }
+    .entourage_willys-rock { top: -0.5rem; left: calc(50% + 30.875rem); width: 7.25rem; height: 9.0625rem; object-fit: contain; rotate: -4deg; }
+    .entourage_sampaguita { top: -0.75rem; left: calc(50% - 38rem); width: 5.75rem; height: 8.125rem; object-fit: cover; rotate: 4deg; box-shadow: 0 0.0625rem 0.0625rem color-mix(in srgb, var(--dark-900) 14%, transparent), 0 0.5rem 1.125rem color-mix(in srgb, var(--dark-900) 10%, transparent); }
+    .entourage_pawikan { top: -2rem; left: calc(50% - 37.25rem); width: 6rem; height: 7.5rem; object-fit: contain; rotate: -6deg; }
     .entourage_stamp { position: absolute; top: 9.375rem; left: calc(50% + 21.25rem); width: 6.5rem; height: 8.125rem; object-fit: contain; transform: rotate(6deg); transform-origin: top left; }
     .entourage_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--dark-900) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--dark-900) 0.6875rem, transparent calc(0.6875rem + 0.5px)) 0 0 / 2.25rem 0.6875rem repeat-x; }
   }
@@ -99,5 +142,9 @@ const [{ data }] = await getCollection("entourage");
     .entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
     .entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(3) { grid-column: 2; grid-row: 1; }
     .entourage_bridal-party .entourage_row:last-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 79.999rem) {
+    .entourage_keepsake { display: none; }
   }
 </style>
