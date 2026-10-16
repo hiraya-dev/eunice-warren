@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  isWithinRateLimit,
   parseGuestRows,
   RSVP_DEADLINE_TIME,
   signRsvpToken,
@@ -141,4 +142,23 @@ test("appends response rows as RAW values", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("calls the rate limiter with an options object, as Cloudflare requires", async () => {
+  const calls: unknown[] = [];
+  // Mirrors the Workers binding, which throws when given a bare string.
+  const limiter = {
+    async limit(options: { key: string }) {
+      if (typeof options !== "object" || typeof options?.key !== "string")
+        throw new TypeError(
+          "Failed to execute 'limit' on 'Ratelimit': parameter 1 is not of type 'RatelimitOptions'.",
+        );
+      calls.push(options);
+      return { success: calls.length <= 1 };
+    },
+  };
+  assert.equal(await isWithinRateLimit(limiter, "203.0.113.7"), true);
+  assert.equal(await isWithinRateLimit(limiter, "203.0.113.7"), false);
+  assert.deepEqual(calls[0], { key: "203.0.113.7" });
+  assert.equal(await isWithinRateLimit(undefined, "203.0.113.7"), true);
 });

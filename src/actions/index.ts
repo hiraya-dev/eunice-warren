@@ -3,10 +3,12 @@ import { z } from "astro/zod";
 import { env } from "cloudflare:workers";
 import {
   isRsvpClosed,
+  isWithinRateLimit,
   signRsvpToken,
   validateSubmission,
   verifyRsvpToken,
 } from "@/lib/rsvp/logic";
+import type { RateLimiter } from "@/lib/rsvp/logic";
 import type { RsvpStore } from "@/lib/rsvp/store";
 import { createFakeRsvpStore } from "@/lib/rsvp/store";
 import { createSheetsRsvpStore } from "@/lib/rsvp/sheets";
@@ -69,22 +71,26 @@ async function guard(
   context: { request: Request },
   applyRateLimit = false,
 ) {
-  if (!(await verifyTurnstile(inputToken)))
-    throw new ActionError({ code: "FORBIDDEN", message: "Please try again." });
-  if (applyRateLimit) {
-    const limiter = envRecord.RSVP_LOOKUP_LIMITER as
-      { limit?: (key: string) => Promise<{ success: boolean }> } | undefined;
-    if (limiter?.limit) {
-      const result = await limiter.limit(
+  let verified = false;
+  let withinLimit = true;
+  try {
+    verified = await verifyTurnstile(inputToken);
+    if (verified && applyRateLimit)
+      withinLimit = await isWithinRateLimit(
+        envRecord.RSVP_LOOKUP_LIMITER as RateLimiter | undefined,
         context.request.headers.get("CF-Connecting-IP") ?? "unknown",
       );
-      if (!result.success)
-        throw new ActionError({
-          code: "TOO_MANY_REQUESTS",
-          message: "Too many tries — wait a minute and try again.",
-        });
-    }
+  } catch {
+    // Never surface a platform error message to guests.
+    fail();
   }
+  if (!verified)
+    throw new ActionError({ code: "FORBIDDEN", message: "Please try again." });
+  if (!withinLimit)
+    throw new ActionError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Too many tries — wait a minute and try again.",
+    });
 }
 
 const findInput = z.object({
