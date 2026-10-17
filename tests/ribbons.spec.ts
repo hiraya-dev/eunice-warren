@@ -151,6 +151,26 @@ test.describe("ribbon marquee", () => {
     assertDirection(upSamples, "blue", -1);
   });
 
+  test("pauses the marquee outside the viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await page.evaluate(() => {
+      const ribbon = document.querySelector<HTMLElement>("#ribbons")!;
+      window.scrollTo(0, Math.max(0, ribbon.offsetTop - innerHeight - ribbon.offsetHeight - 20));
+    });
+    await page.waitForTimeout(100);
+    const collection = page.locator(".ribbons_ribbon-navy [data-marquee-collection-target]").first();
+    const offscreen = await collection.evaluate((element) => getComputedStyle(element).transform);
+    await page.waitForTimeout(500);
+    await expect(collection).toHaveCSS("transform", offscreen);
+
+    await page.locator("#ribbons").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(100);
+    const onscreen = await collection.evaluate((element) => getComputedStyle(element).transform);
+    await page.waitForTimeout(500);
+    expect(await collection.evaluate((element) => getComputedStyle(element).transform)).not.toBe(onscreen);
+  });
+
   test("stays static, has no JS clones, and remains filled with reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");

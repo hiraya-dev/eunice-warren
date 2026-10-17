@@ -138,6 +138,27 @@ test.describe("Playlist section", () => {
     );
   });
 
+  test("draws progress with a compositor transform", async ({ page }) => {
+    await installSpotify(page);
+    await page.goto("/");
+    await loadSpotify(page);
+    await page.evaluate(() =>
+      (window as any).__playlistController.listeners[0][1]({
+        data: { isPaused: true, position: 115500, duration: 231000 },
+      }),
+    );
+    const fill = await page.locator("[data-playlist-progress]").evaluate((track) => {
+      const style = getComputedStyle(track, "::before");
+      return {
+        transform: style.transform,
+        width: parseFloat(style.width),
+        trackWidth: (track as HTMLElement).getBoundingClientRect().width,
+      };
+    });
+    expect(fill.transform).toMatch(/^matrix\(0\.5(?:,|\s)/);
+    expect(fill.width).toBeCloseTo(fill.trackWidth, 0);
+  });
+
   test("keeps the embed at least 300px wide without document overflow on mobile", async ({
     page,
   }) => {
