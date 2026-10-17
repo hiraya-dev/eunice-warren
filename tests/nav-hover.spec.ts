@@ -5,18 +5,18 @@ test.describe("full-screen menu hover", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page.locator('[data-navigation-toggle="toggle"]').click();
-    const stay = page.locator(".navigation_link", { hasText: "Stay" });
+    const explore = page.locator(".navigation_link", { hasText: "Explore" });
     const supportsHover = await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
     await page.mouse.move(0, 0);
-    await stay.hover();
+    await explore.hover();
 
     if (supportsHover) {
-      await expect.poll(() => page.locator(".navigation_item").evaluateAll((items) => items.filter((_item, index) => index !== 1).every((item) => getComputedStyle(item).opacity === "0.15"))).toBe(true);
-      await expect.poll(() => stay.locator(".navigation_label-text").evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
+      await expect.poll(() => page.locator(".navigation_item").evaluateAll((items) => items.filter((_item, index) => index !== 3).every((item) => getComputedStyle(item).opacity === "0.15"))).toBe(true);
+      await expect.poll(() => explore.locator(".navigation_label-text").evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
     } else {
-      await expect(page.locator(".navigation_item")).toHaveCount(5);
+      await expect(page.locator(".navigation_item")).toHaveCount(7);
       await expect.poll(() => page.locator(".navigation_item").evaluateAll((items) => items.every((item) => getComputedStyle(item).opacity === "1"))).toBe(true);
-      await expect.poll(() => stay.locator(".navigation_label-text").evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+      await expect.poll(() => explore.locator(".navigation_label-text").evaluate((element) => getComputedStyle(element).transform)).toBe("none");
     }
   });
 
@@ -32,9 +32,9 @@ test.describe("full-screen menu hover", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await page.locator('[data-navigation-toggle="toggle"]').click();
-    const stay = page.locator(".navigation_link", { hasText: "Stay" });
-    await stay.hover();
+    const explore = page.locator(".navigation_link", { hasText: "Explore" });
+    await explore.hover();
     await expect(page.locator(".navigation_item").first()).toHaveCSS("opacity", "1");
-    await expect.poll(() => stay.locator(".navigation_label-text").evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+    await expect.poll(() => explore.locator(".navigation_label-text").evaluate((element) => getComputedStyle(element).transform)).toBe("none");
   });
 });

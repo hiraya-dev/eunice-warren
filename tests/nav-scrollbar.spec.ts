@@ -1,13 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const links = [
-  ["The wedding", "/#the-wedding"],
-  ["Stay", "/#stay"],
-  ["Explore", "/#explore"],
-  ["Playlist", "/#playlist"],
-  ["FAQ", "/#faq"],
-] as const;
-
 const waitForPanelTransition = async (page: import("@playwright/test").Page, open: boolean) => {
   const panel = page.locator("#site-navigation-panel");
   const clipPath = open

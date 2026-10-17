@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 const links = [
-  ["The wedding", "/#the-wedding"],
-  ["Stay", "/#stay"],
+  ["Invitation", "/#invitation"],
+  ["The wedding", "/#wedding"],
+  ["Entourage", "/#entourage"],
   ["Explore", "/#explore"],
+  ["With love", "/#with-love"],
   ["Playlist", "/#playlist"],
   ["FAQ", "/#faq"],
 ] as const;
@@ -126,4 +128,115 @@ test.describe("Eunice & Warren navigation", () => {
       await expect(page.locator(".navigation_link", { hasText: name })).toHaveAttribute("href", href);
     }
   });
+
+  test("keeps the toggle light through close and keeps navigation geometry stable", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+
+    const samples = await page.evaluate(() => new Promise<Array<{
+      elapsed: number;
+      color: string;
+      toggleLeft: number;
+      rsvpLeft: number;
+      nowPlayingLeft: number;
+      panelBottom: number;
+      closeElapsed: number;
+    }>>((resolve) => {
+      const panel = document.querySelector<HTMLElement>("#site-navigation-panel")!;
+      const started = performance.now();
+      let closeStarted = 0;
+      const getSample = () => {
+        const panelPath = getComputedStyle(panel).clipPath.match(/100% ([\d.]+)%/);
+        const rect = (selector: string) => document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
+        return {
+          elapsed: performance.now() - started,
+          color: getComputedStyle(document.querySelector<HTMLElement>(".nav_toggle-button")!).color,
+          toggleLeft: rect(".nav_toggle-button").left,
+          rsvpLeft: rect(".nav_rsvp").left,
+          nowPlayingLeft: rect(".nav_now-playing").left,
+          panelBottom: panelPath ? Number(panelPath[1]) : 0,
+          closeElapsed: closeStarted ? performance.now() - closeStarted : -1,
+        };
+      };
+      document.querySelector<HTMLButtonElement>('[data-navigation-toggle="toggle"]')!.click();
+      const frames: Array<ReturnType<typeof getSample>> = [];
+      const tick = () => {
+        frames.push(getSample());
+        if (!closeStarted && performance.now() - started >= 1200) {
+          closeStarted = performance.now();
+          document.querySelector<HTMLButtonElement>('[data-navigation-toggle="toggle"]')!.click();
+        }
+        if (!closeStarted || performance.now() - closeStarted < 1200) requestAnimationFrame(tick);
+        else resolve(frames);
+      };
+      requestAnimationFrame(tick);
+    }));
+
+    const closingSamples = samples.filter((sample) => sample.closeElapsed >= 0);
+    expect(closingSamples.filter((sample) => sample.closeElapsed < 550).length).toBeGreaterThan(5);
+    expect(closingSamples.filter((sample) => sample.closeElapsed < 550).every((sample) => sample.color === "rgb(245, 239, 227)")).toBe(true);
+    expect(closingSamples.some((sample) => sample.closeElapsed > 750 && sample.color === "rgb(31, 47, 92)")).toBe(true);
+    const initial = samples[0];
+    for (const sample of samples) {
+      expect(Math.abs(sample.toggleLeft - initial.toggleLeft)).toBeLessThan(0.5);
+      expect(Math.abs(sample.rsvpLeft - initial.rsvpLeft)).toBeLessThan(0.5);
+      expect(Math.abs(sample.nowPlayingLeft - initial.nowPlayingLeft)).toBeLessThan(0.5);
+    }
+    expect(samples.some((sample) => sample.panelBottom > 5 && sample.panelBottom < 95)).toBe(true);
+  });
+
+  test("keeps the mobile toggle fixed and the fading actions in place", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    const toggle = page.locator('[data-navigation-toggle="toggle"]');
+    const samples = await page.evaluate(() => new Promise<Array<{ toggleLeft: number; rsvpLeft: number; nowPlayingLeft: number; rsvpOpacity: string; nowPlayingOpacity: string }>>((resolve) => {
+      const toggle = document.querySelector<HTMLButtonElement>('[data-navigation-toggle="toggle"]')!;
+      const read = () => {
+        const rect = (selector: string) => document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
+        return {
+          toggleLeft: rect(".nav_toggle-button").left,
+          rsvpLeft: rect(".nav_rsvp").left,
+          nowPlayingLeft: rect(".nav_now-playing").left,
+          rsvpOpacity: getComputedStyle(document.querySelector<HTMLElement>(".nav_rsvp")!).opacity,
+          nowPlayingOpacity: getComputedStyle(document.querySelector<HTMLElement>(".nav_now-playing")!).opacity,
+        };
+      };
+      const frames: Array<ReturnType<typeof read>> = [];
+      const started = performance.now();
+      toggle.click();
+      const tick = () => {
+        frames.push(read());
+        if (performance.now() - started < 1200) requestAnimationFrame(tick);
+        else resolve(frames);
+      };
+      requestAnimationFrame(tick);
+    }));
+    const initial = samples[0];
+    for (const sample of samples) {
+      expect(Math.abs(sample.toggleLeft - initial.toggleLeft)).toBeLessThan(0.5);
+      if (Number(sample.rsvpOpacity) > 0) expect(Math.abs(sample.rsvpLeft - initial.rsvpLeft)).toBeLessThan(0.5);
+      if (Number(sample.nowPlayingOpacity) > 0) expect(Math.abs(sample.nowPlayingLeft - initial.nowPlayingLeft)).toBeLessThan(0.5);
+    }
+
+    await expect(page.locator(".nav_toggle-close")).toBeVisible();
+    await expect(page.locator(".nav_toggle-menu")).toBeHidden();
+    await toggle.click();
+    await expect(page.locator(".nav_toggle-label")).toBeHidden();
+  });
+
+  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+    test(`keeps the palm clear of every link label at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      await page.locator('[data-navigation-toggle="toggle"]').click();
+      await waitForPanelTransition(page, true);
+      expect(await page.evaluate(() => {
+        const stamp = document.querySelector<HTMLElement>(".navigation_palm")!.getBoundingClientRect();
+        return Array.from(document.querySelectorAll<HTMLElement>(".navigation_label-text")).every((link) => {
+          const rect = link.getBoundingClientRect();
+          return rect.right <= stamp.left || rect.left >= stamp.right || rect.bottom <= stamp.top || rect.top >= stamp.bottom;
+        });
+      })).toBe(true);
+    });
+  }
 });
