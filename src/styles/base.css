@@ -16,6 +16,7 @@
   --primary-family: var(--font-neue-montreal, system-ui, sans-serif);
   --secondary-family: var(--font-editorial-new, Georgia, serif);
   --mono-family: var(--font-fraktion-mono, ui-monospace, monospace);
+  --hand-family: var(--font-delicious-handrawn, cursive);
   --primary-regular: 400;
   --primary-medium: 500;
   --primary-bold: 700;
