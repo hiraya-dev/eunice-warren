@@ -15,9 +15,11 @@ interface Props {
 
 const { render = true, overlap = false } = Astro.props;
 const links = [
-  ["The wedding", "/#the-wedding"],
-  ["Stay", "/#stay"],
+  ["Invitation", "/#invitation"],
+  ["The wedding", "/#wedding"],
+  ["Entourage", "/#entourage"],
   ["Explore", "/#explore"],
+  ["With love", "/#with-love"],
   ["Playlist", "/#playlist"],
   ["FAQ", "/#faq"],
 ] as const;
@@ -53,7 +55,7 @@ const links = [
       <div class="navigation_inner">
         <ul class="navigation_links">
           {links.map(([label, href], index) => (
-            <li class="navigation_item">
+            <li class="navigation_item" style={`--i: ${index};`}>
               <a href={href} class="navigation_link">
                 <span class="navigation_number">{String(index + 1).padStart(2, "0")}</span>
                 <span class="navigation_label"><span class="navigation_label-text">{label}</span></span>
@@ -198,10 +200,11 @@ const links = [
     .nav_now-playing_title { color: var(--text); font-family: var(--primary-family); font-size: 0.75rem; font-weight: var(--primary-medium); line-height: 1; }
     .nav_now-playing_pause { flex: 0 0 auto; width: 0.625rem; height: 0.75rem; margin-left: 0.25rem; }
     .nav_rsvp { transition: opacity var(--open-duration) var(--open-ease) 0.6s, visibility 0s linear 0.6s; }
-    .nav_toggle { display: inline-flex; align-items: center; gap: var(--space-3); padding: 0; color: var(--text); cursor: pointer; background: none; border: 0; transition: color 0.1s var(--open-ease) 0.6s; }
-    .nav_toggle-label { color: currentColor; font-family: var(--mono-family); font-size: var(--eyebrow); letter-spacing: var(--letter-spacing-wider); line-height: 1; transition: color 0.1s var(--open-ease) 0.6s; }
-    .nav_toggle-close { display: none; }
-    .nav_toggle-button { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: var(--border-width) solid currentColor; border-radius: 50%; }
+    .nav_toggle { position: relative; display: inline-flex; align-items: center; gap: var(--space-3); padding: 0; color: var(--text); cursor: pointer; background: none; border: 0; transition: color 0.1s var(--open-ease) 0.6s; }
+    .nav_toggle-label { display: grid; justify-items: end; color: currentColor; font-family: var(--mono-family); font-size: var(--eyebrow); letter-spacing: var(--letter-spacing-wider); line-height: 1; transition: color 0.1s var(--open-ease) 0.6s; }
+    .nav_toggle-menu, .nav_toggle-close { grid-area: 1 / 1; }
+    .nav_toggle-close { visibility: hidden; }
+    .nav_toggle-button { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; color: var(--text); border: var(--border-width) solid currentColor; border-radius: 50%; transition: color 0.1s var(--open-ease) 0.6s; }
     .nav_toggle-bar { position: absolute; width: 0.875rem; height: 0.09375rem; background: currentColor; border-radius: var(--radius-round); transition: transform 0.5s cubic-bezier(.7, 0, .3, 1); }
     .nav_toggle-bar:first-child { transform: rotate(0.001deg) translateY(-0.1875rem); }
     .nav_toggle-bar:last-child { transform: rotate(0.001deg) translateY(0.1875rem); }
@@ -209,8 +212,8 @@ const links = [
     .nav_wrap[data-navigation-status="active"]::after { opacity: 1; transition-delay: 0.3s; }
     .nav_wrap[data-navigation-status="active"] .nav_logo { color: var(--light-100); transition-delay: 0.3s; }
     .nav_wrap[data-navigation-status="active"] .nav_toggle-label { color: var(--brand-500); transition-delay: 0.3s; }
-    .nav_wrap[data-navigation-status="active"] .nav_toggle-menu { display: none; }
-    .nav_wrap[data-navigation-status="active"] .nav_toggle-close { display: inline; }
+    .nav_wrap[data-navigation-status="active"] .nav_toggle-menu { visibility: hidden; }
+    .nav_wrap[data-navigation-status="active"] .nav_toggle-close { visibility: visible; }
     .nav_wrap[data-navigation-status="active"] .nav_toggle-button { color: var(--light-100); transition-delay: 0.3s; }
     .nav_wrap[data-navigation-status="active"] .nav_now-playing { opacity: 0; visibility: hidden; transition-delay: 0.3s; }
     [data-navigation-status="active"] .nav_toggle-bar:first-child { transform: rotate(45deg); }
@@ -222,16 +225,8 @@ const links = [
     .navigation_item { overflow: clip; border-bottom: var(--border-width) solid var(--dark-800); }
     .navigation_link { display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-3) 0; color: var(--light-100); transform: translateY(100%) rotate(5deg); transition: transform 0.75s cubic-bezier(.7, 0, .3, 1); }
     .navigation[data-navigation-status="active"] .navigation_link { transform: translateY(0) rotate(.001deg); }
-    .navigation_item:nth-child(1) .navigation_link { transition-delay: 0.5s; }
-    .navigation_item:nth-child(2) .navigation_link { transition-delay: 0.45s; }
-    .navigation_item:nth-child(3) .navigation_link { transition-delay: 0.4s; }
-    .navigation_item:nth-child(4) .navigation_link { transition-delay: 0.35s; }
-    .navigation_item:nth-child(5) .navigation_link { transition-delay: 0.3s; }
-    .navigation[data-navigation-status="active"] .navigation_item:nth-child(1) .navigation_link { transition-delay: 0.3s; }
-    .navigation[data-navigation-status="active"] .navigation_item:nth-child(2) .navigation_link { transition-delay: 0.35s; }
-    .navigation[data-navigation-status="active"] .navigation_item:nth-child(3) .navigation_link { transition-delay: 0.4s; }
-    .navigation[data-navigation-status="active"] .navigation_item:nth-child(4) .navigation_link { transition-delay: 0.45s; }
-    .navigation[data-navigation-status="active"] .navigation_item:nth-child(5) .navigation_link { transition-delay: 0.5s; }
+    .navigation_item .navigation_link { transition-delay: calc(0.6s - (var(--i) * 0.05s)); }
+    .navigation[data-navigation-status="active"] .navigation_item .navigation_link { transition-delay: calc(0.3s + (var(--i) * 0.05s)); }
     .navigation_number { flex: 0 0 1.75rem; color: var(--brand-500); font-family: var(--mono-family); font-size: 0.6875rem; line-height: 1.1; }
     .navigation_label { display: block; overflow: clip; font-family: var(--secondary-family); font-size: var(--h3); font-weight: var(--secondary-regular); line-height: var(--line-height-medium); letter-spacing: var(--letter-spacing-snug); }
     .navigation_label-text { display: block; text-shadow: 0 1.1em 0 currentColor; transform: none; transition: transform 0.5s cubic-bezier(.7, 0, .3, 1); }
@@ -253,7 +248,8 @@ const links = [
       .nav_actions { gap: var(--space-3); }
       .nav_now-playing { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; }
       .nav_now-playing > img { width: 1.75rem; height: 1.75rem; }
-      .nav_now-playing_text, .nav_now-playing_pause, .nav_toggle-label { display: none; }
+      .nav_now-playing_text, .nav_now-playing_pause { display: none; }
+      .nav_toggle-label { position: absolute; right: calc(100% + var(--space-3)); display: none; }
       /* Paper's mobile bar shows only the button when closed, and "CLOSE" beside it when open. */
       .nav_wrap[data-navigation-status="active"] .nav_toggle-label { display: inline; }
       .nav_wrap[data-navigation-status="active"] .nav_rsvp { opacity: 0; visibility: hidden; transition-delay: 0.3s; }
