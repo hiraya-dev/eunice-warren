@@ -115,6 +115,21 @@ export default defineConfig({
         ],
       },
     },
+    {
+      name: "Delicious Handrawn",
+      cssVariable: "--font-delicious-handrawn",
+      provider: fontProviders.local(),
+      fallbacks: ["cursive"],
+      options: {
+        variants: [
+          {
+            weight: 400,
+            style: "normal",
+            src: ["./src/assets/fonts/DeliciousHandrawn-Regular.woff2"],
+          },
+        ],
+      },
+    },
   ],
   vite: { build: { cssTarget: "safari15.4" } },
 });

@@ -1,0 +1,168 @@
+---
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import Button from "@/components/Button.astro";
+import Stamp from "@/components/media/Stamp.astro";
+import palm from "@/assets/images/stamps/palm.jpg";
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Directions destination. */
+  directionsHref?: string;
+  /** Calendar event destination. */
+  calendarHref?: string;
+}
+
+const {
+  directionsHref = "#",
+  calendarHref = "#",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section id="pre-wedding" class:list={["prewedding_wrap", className]} {...rest}>
+  <div class="prewedding_layout">
+    <header class="prewedding_header" data-fade-in>
+      <div class="prewedding_title-group">
+        <p class="prewedding_eyebrow" data-fade-in-item>Pre-wedding · Lipa City · Before the island</p>
+        <h2 class="prewedding_title" data-fade-in-item>Before <br />we <em>fly</em></h2>
+      </div>
+      <div class="prewedding_intro" data-fade-in-item>
+        <p>Not everyone can make the trip to Boracay, and that's okay. So we're starting the celebration early, over a long lunch in Lipa.</p>
+        <p>Same couple, same playlist, no boat required.</p>
+      </div>
+    </header>
+
+    <div class="prewedding_body">
+      <div class="prewedding_postcard-column" data-fade-in>
+        <div class="prewedding_postcard" data-fade-in-item>
+          <div class="prewedding_message">
+            <p class="prewedding_note">Can't make it to the island? We'll bring a little of it to you. Come eat, toast and dance with us before we fly.<br />Love, E &amp; W</p>
+            <p class="prewedding_footer"><span>Wish you were there<span class="prewedding_footer-long"> · see you here</span></span></p>
+          </div>
+          <div class="prewedding_address">
+            <div class="prewedding_stamp"><Stamp><Image src={palm} alt="" width={860} height={1110} widths={[124, 248]} sizes="(min-width: 62rem) 77px, 62px" aria-hidden="true" /></Stamp></div>
+            <address>
+              <span>To: everyone we love</span>
+              <span>who can't make Boracay</span>
+              <span>Lipa City, Batangas</span>
+            </address>
+          </div>
+          <div class="prewedding_postmark" aria-hidden="true">
+            <div class="prewedding_postmark-circle">
+              <div class="prewedding_postmark-ring">
+                <span>LIPA CITY</span>
+                <span>01 09 27</span>
+                <span>LAYOVER</span>
+              </div>
+            </div>
+            <svg viewBox="0 0 70 40" width="70" height="40" fill="none" focusable="false">
+              <path d="M0 6 Q9 1 17.5 6 T35 6 T52.5 6 T70 6 M0 16 Q9 11 17.5 16 T35 16 T52.5 16 T70 16 M0 26 Q9 21 17.5 26 T35 26 T52.5 26 T70 26 M0 36 Q9 31 17.5 36 T35 36 T52.5 36 T70 36" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="prewedding_details" data-fade-in>
+        <dl class="prewedding_list" data-fade-in-item>
+          <div class="prewedding_row">
+            <dt class="prewedding_number">(01)</dt>
+            <dd class="prewedding_row-title">Sat, Jan 9, 2027</dd>
+            <dd class="prewedding_meta"><span>Lunch</span><span>Till late</span></dd>
+          </div>
+          <div class="prewedding_row">
+            <dt class="prewedding_number">(02)</dt>
+            <dd class="prewedding_row-title">Malihan <em>Residence</em></dd>
+            <dd class="prewedding_meta"><span>San Celestino</span><span>Lipa City, Batangas</span></dd>
+          </div>
+          <div class="prewedding_row">
+            <dt class="prewedding_number">(03)</dt>
+            <dd class="prewedding_row-title">Good food &amp; <em>dancing</em></dd>
+          </div>
+        </dl>
+
+        <div class="prewedding_cta" data-fade-in-item>
+          <div class="prewedding_actions">
+            <Button class="prewedding_directions" element="link" href={directionsHref} shape="pill">Get directions <span aria-hidden="true">↗</span></Button>
+            <a class="prewedding_calendar" href={calendarHref}>Add Jan 9 to your calendar <span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="prewedding_cta-note">No RSVP needed, just come hungry. Heading to Boracay too? You're welcome at both.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .prewedding_wrap { --_muted: color-mix(in srgb, var(--dark-900) 50%, transparent); position: relative; overflow: clip; padding: var(--section-space-medium) var(--site-margin); background: var(--light-100) var(--background-texture) center / 32rem repeat; color: var(--dark-900); }
+    .prewedding_layout { width: 100%; max-width: var(--max-width-main); margin-inline: auto; }
+    .prewedding_header { display: flex; flex-direction: column; gap: var(--space-5); }
+    .prewedding_title-group, .prewedding_intro { display: flex; flex-direction: column; }
+    .prewedding_title-group { gap: var(--space-5); }
+    .prewedding_eyebrow { margin: 0; color: var(--accent-500); font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
+    .prewedding_title { margin: 0; font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
+    .prewedding_title em, .prewedding_row-title em { font-weight: var(--secondary-ultralight); }
+    .prewedding_intro { gap: var(--space-3); }
+    .prewedding_intro p { margin: 0; font: var(--primary-regular) var(--text-large) / var(--line-height-large) var(--primary-family); --_trim-top: 0; --_trim-bottom: 0; }
+    .prewedding_intro p:last-child { color: var(--_muted); }
+    .prewedding_body { display: flex; flex-direction: column; gap: var(--space-8); margin-top: 3rem; }
+    .prewedding_postcard-column { display: flex; justify-content: flex-start; }
+    .prewedding_postcard { position: relative; display: flex; width: 35rem; max-width: 100%; min-height: 22.5rem; padding: var(--space-4); gap: var(--space-4); background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 0.0625rem 0.0625rem rgb(31 47 92 / 10%), 0 0.375rem 0.875rem rgb(31 47 92 / 10%), 0 1.375rem 2.5rem rgb(31 47 92 / 8%); rotate: -2.5deg; }
+    .prewedding_message { display: flex; min-width: 0; flex: 1 1 0; flex-direction: column; justify-content: space-between; gap: var(--space-5); padding-right: var(--space-4); border-right: var(--border-width) solid var(--light-300); }
+    .prewedding_note { margin: 0; font: 400 1.625rem / 1.23 var(--hand-family); }
+    .prewedding_footer { margin: 0; color: var(--_muted); font: var(--primary-regular) 0.75rem / 1.333 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
+    .prewedding_address { display: flex; width: 12.5rem; flex: 0 0 12.5rem; flex-direction: column; gap: 1.75rem; }
+    .prewedding_stamp { align-self: flex-end; width: 4.8125rem; rotate: 4deg; }
+    .prewedding_address address { display: flex; flex-direction: column; gap: var(--space-3); font: 400 1.375rem / 1.09 var(--hand-family); font-style: normal; }
+    .prewedding_address address span { padding-bottom: var(--space-1); border-bottom: var(--border-width) solid var(--light-300); }
+    .prewedding_postmark { position: absolute; top: 1.375rem; left: 19.875rem; display: flex; align-items: center; gap: var(--space-1); rotate: -10deg; opacity: 0.85; mix-blend-mode: multiply; color: var(--accent-500); }
+    .prewedding_postmark-circle { width: 5.75rem; height: 5.75rem; padding: 0.3125rem; border: 0.125rem solid currentColor; border-radius: 50%; }
+    .prewedding_postmark-ring { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; flex-direction: column; gap: 0.1875rem; border: var(--border-width) solid currentColor; border-radius: 50%; font: var(--primary-regular) 0.6875rem / 1 var(--mono-family); letter-spacing: 0.08em; text-align: center; }
+    .prewedding_postmark-ring span:nth-child(2) { font-size: 0.625rem; letter-spacing: 0.04em; }
+    .prewedding_postmark-ring span:nth-child(3) { font-size: 0.5625rem; }
+    .prewedding_postmark svg { width: 4.375rem; height: 2.5rem; stroke: currentColor; stroke-width: 0.1rem; }
+    .prewedding_details { display: flex; flex-direction: column; gap: var(--space-6); }
+    .prewedding_list { width: 100%; margin: 0; border-top: 0.09375rem solid var(--dark-900); }
+    .prewedding_row { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 10.625rem; align-items: center; gap: var(--space-4); margin: 0; padding-block: var(--space-4); border-bottom: var(--border-width) solid var(--light-300); }
+    .prewedding_number { margin: 0; font: var(--primary-regular) 1rem / 1.25 var(--mono-family); letter-spacing: 0.04em; }
+    .prewedding_row-title { min-width: 0; margin: 0; font: var(--secondary-regular) var(--h5) / 1.2 var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }
+    .prewedding_meta { display: flex; align-items: flex-end; flex-direction: column; gap: var(--space-1); margin: 0; font: var(--primary-regular) var(--text-small) / 1.25 var(--primary-family); text-align: right; }
+    .prewedding_meta span:first-child { font: var(--primary-regular) 1rem / 1.25 var(--mono-family); }
+    .prewedding_cta { display: flex; flex-direction: column; gap: var(--space-5); }
+    .prewedding_actions { display: flex; align-items: center; gap: var(--space-5); }
+    .prewedding_wrap .prewedding_directions { --button-016-color: var(--light-200); --button-016-color-background: var(--accent-500); --button-016-hover-color: var(--light-200); --button-016-hover-color-background: var(--dark-900); --button-016-color-focus: var(--dark-900); padding: 0; font-size: 1rem; }
+    .prewedding_directions :global(.button-016__inner) { padding: 1.125rem 2rem; line-height: 1.25; }
+    .prewedding_calendar { padding-bottom: var(--space-1); border-bottom: var(--border-width) solid var(--dark-900); color: var(--dark-900); font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
+    .prewedding_cta-note { margin: 0; color: var(--dark-700); font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--primary-family); }
+  }
+
+  @media (min-width: 62rem) {
+    .prewedding_header { align-items: flex-end; flex-direction: row; justify-content: space-between; gap: var(--space-7); }
+    .prewedding_intro { width: min(32.5rem, 45%); gap: var(--space-3); padding-bottom: var(--space-3); }
+    .prewedding_body { flex-direction: row; align-items: start; gap: var(--space-8); margin-top: 4.5rem; }
+    .prewedding_postcard-column { flex: 1 1 0; justify-content: center; padding-top: var(--space-4); }
+    .prewedding_details { flex: 1.2 1 0; min-width: 0; }
+  }
+
+  @media (max-width: 61.999rem) {
+    .prewedding_postcard { width: 21rem; min-height: 0; padding: var(--space-3); gap: var(--space-2); rotate: -2deg; }
+    .prewedding_message { gap: var(--space-5); padding-right: var(--space-2); }
+    .prewedding_note { font-size: 1.25rem; line-height: 1.25; }
+    .prewedding_footer { font-size: 0.625rem; line-height: 1.4; }
+    .prewedding_footer-long { display: none; }
+    .prewedding_address { width: 4.5rem; flex-basis: 4.5rem; gap: 0; }
+    .prewedding_stamp { width: 4rem; }
+    .prewedding_address address { display: none; }
+    .prewedding_postmark { top: 5.625rem; left: calc(100% - 8.375rem); scale: 0.8; transform-origin: left top; }
+    .prewedding_postmark svg { display: none; }
+    .prewedding_row { grid-template-columns: 2rem minmax(0, 1fr); align-items: start; gap: var(--space-3); row-gap: var(--space-1); padding-block: var(--space-4); }
+    .prewedding_number { font-size: 0.75rem; line-height: 3rem; }
+    .prewedding_row-title { line-height: 1.286; }
+    .prewedding_meta { grid-column: 2; align-items: baseline; flex-direction: row; gap: var(--space-3); text-align: left; }
+    .prewedding_meta span:first-child { font-size: 0.875rem; }
+    .prewedding_actions { align-items: flex-start; flex-direction: column; gap: var(--space-5); }
+    .prewedding_directions { width: 100%; grid-template-columns: 100%; }
+  }
+
+</style>
