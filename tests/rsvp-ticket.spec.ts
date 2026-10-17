@@ -101,6 +101,41 @@ test.describe("RSVP ticket popup", () => {
     await expect(dialog.locator("[data-ticket-confetti]")).toBeEmpty();
   });
 
+  test("keeps tilt properties local to the ticket", async ({ page }) => {
+    await page.goto("/");
+    test.skip(
+      !(await page.evaluate(() =>
+        matchMedia(
+          "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
+        ).matches,
+      )),
+      "tilt is disabled for touch or reduced-motion projects",
+    );
+    const dialog = await accept(page, false);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("[data-ticket-popup]")).toHaveAttribute(
+      "data-stage",
+      "released",
+      { timeout: 15_000 },
+    );
+    const ticket = dialog.locator("[data-ticket]");
+    await expect(ticket).toHaveClass(/is-released/, { timeout: 15_000 });
+    const box = await ticket.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(
+      box!.x + box!.width * 0.2,
+      box!.y + box!.height * 0.2,
+      { steps: 5 },
+    );
+    await page.waitForTimeout(50);
+    const values = await ticket.evaluate((element) => ({
+      ticket: getComputedStyle(element).getPropertyValue("--tilt-x"),
+      descendant: getComputedStyle(element.querySelector("strong")!).getPropertyValue("--tilt-x"),
+    }));
+    expect(values.ticket).not.toBe("0deg");
+    expect(values.descendant).toBe("0deg");
+  });
+
   test("uses cut-out perforations and a full-screen confetti layer", async ({
     page,
   }) => {

@@ -228,6 +228,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     let timeout: number | undefined;
     let observer: IntersectionObserver | undefined;
     let script: HTMLScriptElement | undefined;
+    let renderedElapsed = "";
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const playlistUri = embed.dataset.uri;
     const format = (ms: number) =>
@@ -239,7 +240,11 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
             position + performance.now() - updatedAt,
           )
         : position;
-      elapsed.textContent = format(current);
+      const formatted = format(current);
+      if (formatted !== renderedElapsed) {
+        elapsed.textContent = formatted;
+        renderedElapsed = formatted;
+      }
       progress.style.setProperty(
         "--_progress",
         String(duration ? current / duration : 0),
@@ -594,10 +599,11 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     .playlist_progress-track::before {
       position: absolute;
-      inset: 0 auto 0 0;
-      width: calc(var(--_progress) * 100%);
+      inset: 0;
       content: "";
       background: var(--dark-900);
+      transform: scaleX(var(--_progress));
+      transform-origin: left;
     }
     .playlist_transport {
       right: 26.32cqw;

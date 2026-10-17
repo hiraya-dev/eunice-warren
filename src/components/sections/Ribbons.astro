@@ -136,22 +136,28 @@ const ribbons = [
               repeat: -1,
               duration: marqueeSpeed,
               ease: "linear",
+              paused: true,
             })
             .totalProgress(0.5);
           gsap.set(collections, { xPercent: marqueeDirectionAttr === 1 ? 100 : -100 });
           animation.timeScale(marqueeDirectionAttr);
-          animation.play();
+          animation.render(animation.time(), true, true);
 
-          ScrollTrigger.create({
+          const visibility = ScrollTrigger.create({
             trigger: ribbon,
             start: "top bottom",
             end: "bottom top",
+            onToggle: (self) => {
+              if (self.isActive) animation.play();
+              else animation.pause();
+            },
             onUpdate: (self) => {
               const isInverted = self.direction === 1;
               animation.timeScale(isInverted ? -marqueeDirectionAttr : marqueeDirectionAttr);
               ribbon.dataset.marqueeStatus = isInverted ? "normal" : "inverted";
             },
           });
+          if (visibility.isActive) animation.play();
 
           const push = gsap.timeline({
             scrollTrigger: {

@@ -427,7 +427,12 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
           button.textContent = "Save my ticket ↓";
         }
       });
-    const tiltMove = (event: PointerEvent) => {
+    let tiltEvent: PointerEvent | null = null;
+    let tiltFrame = 0;
+    const tiltApply = () => {
+      tiltFrame = 0;
+      if (!tiltEvent) return;
+      const event = tiltEvent;
       const rect = ticket.getBoundingClientRect();
       const x = (event.clientX - rect.left) / rect.width - 0.5;
       const y = (event.clientY - rect.top) / rect.height - 0.5;
@@ -435,7 +440,14 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       ticket.style.setProperty("--tilt-y", `${x * 12}deg`);
       ticket.style.setProperty("--tilt-scale", "1.018");
     };
+    const tiltMove = (event: PointerEvent) => {
+      tiltEvent = event;
+      if (!tiltFrame) tiltFrame = requestAnimationFrame(tiltApply);
+    };
     const tiltLeave = () => {
+      if (tiltFrame) cancelAnimationFrame(tiltFrame);
+      tiltFrame = 0;
+      tiltEvent = null;
       ticket.style.removeProperty("--tilt-x");
       ticket.style.removeProperty("--tilt-y");
       ticket.style.removeProperty("--tilt-scale");
@@ -464,6 +476,22 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
 </script>
 
 <style is:global>
+  @property --tilt-x {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+  }
+  @property --tilt-y {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+  }
+  @property --tilt-scale {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 1;
+  }
+
   @layer components {
     #rsvp-ticket-modal::backdrop {
       background: rgb(24 36 72 / 84%);
