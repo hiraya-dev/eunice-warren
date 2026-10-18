@@ -103,9 +103,12 @@ const submitInput = z.object({
   token: z.string().min(1),
   name: z.string().trim().min(1).max(120),
   attending: z.boolean(),
-  guests: z.number().int(),
+  seats: z.array(z.object({
+    original: z.string().nullable(),
+    name: z.string().max(120),
+    attending: z.boolean(),
+  })),
   email: z.string().email().max(254),
-  companionName: z.string().max(120).optional(),
   note: z.string().max(1000).optional(),
   turnstileToken: z.string().max(4096),
 });
@@ -145,6 +148,7 @@ export const server = {
               seats: result.invite.seats,
             },
             matchedName: result.matchedName,
+            previous: result.previous,
             token,
           };
         } catch (error) {
@@ -169,7 +173,11 @@ export const server = {
           if (
             !result ||
             result.invite.id !== tokenData.inviteId ||
-            !validateSubmission({ ...input, seats: result.invite.seats })
+            !validateSubmission({
+              attending: input.attending,
+              seats: input.seats,
+              invite: result.invite,
+            })
           )
             throw new ActionError({
               code: "BAD_REQUEST",
@@ -179,9 +187,11 @@ export const server = {
             inviteId: result.invite.id,
             name: result.matchedName,
             attending: input.attending,
-            guests: input.attending ? input.guests : 0,
+            guests: input.attending
+              ? input.seats.filter((seat) => seat.attending).length
+              : 0,
+            seats: input.seats,
             email: input.email,
-            companionName: input.companionName,
             note: input.note,
           });
           return { ok: true };

@@ -10,15 +10,30 @@ export interface RsvpSubmission {
   name: string;
   attending: boolean;
   guests: number;
+  seats: RsvpSeat[];
   email: string;
-  companionName?: string;
   note?: string;
+}
+
+export interface RsvpSeat {
+  original: string | null;
+  name: string;
+  attending: boolean;
+}
+
+export interface PreviousRsvp {
+  attending: boolean;
+  seats: RsvpSeat[];
 }
 
 export interface RsvpStore {
   findInvite(
     name: string,
-  ): Promise<{ invite: Invite; matchedName: string } | null>;
+  ): Promise<{
+    invite: Invite;
+    matchedName: string;
+    previous: PreviousRsvp | null;
+  } | null>;
   submit(submission: RsvpSubmission): Promise<void>;
 }
 
@@ -41,15 +56,24 @@ export const fakeFixtures: Invite[] = [
   {
     id: "cruz",
     householdName: "The Cruz Family",
-    members: ["Mateo Cruz", "Sofía Cruz"],
+    members: ["Mateo Cruz", "Sofía Cruz", "Remedios Cruz"],
     seats: 4,
+  },
+  {
+    id: "garcia",
+    householdName: "The Garcia Family",
+    members: ["Paolo Garcia", "Bea Garcia"],
+    seats: 3,
   },
 ];
 
 const pause = (duration = 20) =>
   new Promise<void>((resolve) => setTimeout(resolve, duration));
 
-export const createFakeRsvpStore = (): RsvpStore => ({
+export const createFakeRsvpStore = (): RsvpStore => {
+  // Only the dedicated returning-guest fixture persists state, keeping parallel e2e fixtures isolated.
+  const previous = new Map<string, PreviousRsvp>();
+  return {
   async findInvite(name) {
     await pause();
     if (normalizeGuestName(name) === "error test")
@@ -59,11 +83,18 @@ export const createFakeRsvpStore = (): RsvpStore => ({
       const matchedName = invite.members.find(
         (member) => normalizeGuestName(member) === wanted,
       );
-      if (matchedName) return { invite, matchedName };
+      if (matchedName)
+        return { invite, matchedName, previous: previous.get(invite.id) ?? null };
     }
     return null;
   },
-  async submit() {
+  async submit(submission) {
     await pause();
+    if (submission.inviteId === "garcia")
+      previous.set(submission.inviteId, {
+        attending: submission.attending,
+        seats: submission.seats.map((seat) => ({ ...seat })),
+      });
   },
-});
+  };
+};

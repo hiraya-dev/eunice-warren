@@ -1,4 +1,4 @@
-import type { RsvpStore, RsvpSubmission } from "./store.ts";
+import type { Invite, PreviousRsvp, RsvpSeat, RsvpStore, RsvpSubmission } from "./store.ts";
 import { normalizeGuestName } from "./store.ts";
 import { parseGuestRows } from "./logic.ts";
 
@@ -7,6 +7,8 @@ export type SheetsConfig = { keyJson: string; sheetId: string };
 let cachedGuests:
   { expiresAt: number; parsed: ReturnType<typeof parseGuestRows> } | undefined;
 let cachedAccessToken: { value: string; expiresAt: number } | undefined;
+let cachedResponses:
+  { expiresAt: number; rows: unknown[][] } | undefined;
 
 const base64Url = (bytes: Uint8Array) => {
   let binary = "";
@@ -108,6 +110,89 @@ export const configFromEnv = (env: Record<string, unknown>): SheetsConfig => {
   return { keyJson, sheetId };
 };
 
+export const buildResponseRow = (submission: RsvpSubmission) => {
+  const attendingSeats = submission.attending
+    ? submission.seats.filter((seat) => seat.attending)
+    : [];
+  const leadIndex = submission.seats.findIndex(
+    (seat) => seat.original && normalizeGuestName(seat.original) === normalizeGuestName(submission.name),
+  );
+  const companions = attendingSeats
+    .filter((seat) => submission.seats.indexOf(seat) !== leadIndex)
+    .map((seat) => seat.name)
+    .join("; ");
+  const changes = submission.seats
+    .filter((seat) => {
+      if (seat.original === null && !seat.attending) return false;
+      const original = seat.original ?? "";
+      return normalizeGuestName(original) !== normalizeGuestName(seat.name);
+    })
+    .map((seat) => `${seat.original ?? "(plus-one)"} → ${seat.name}`)
+    .join("; ");
+  return [
+    new Date().toISOString(),
+    submission.inviteId,
+    submission.name,
+    submission.attending ? "yes" : "no",
+    submission.attending ? submission.guests : 0,
+    submission.email,
+    companions,
+    submission.note ?? "",
+    attendingSeats.map((seat) => seat.name).join("; "),
+    changes,
+  ];
+};
+
+export const parsePreviousResponseRow = (
+  row: unknown[],
+  invite: Invite,
+): { submittedAt: string; previous: PreviousRsvp } | null => {
+  if (!row[1] || String(row[1]) !== invite.id) return null;
+  const attending = String(row[3] ?? "").toLowerCase() === "yes";
+  const guests = Number.parseInt(String(row[4] ?? "0"), 10) || 0;
+  const attendees = String(row[8] ?? "")
+    .split(";")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  const seats: RsvpSeat[] = [
+    ...invite.members.map((original): RsvpSeat => ({ original, name: original, attending: false })),
+    ...Array.from({ length: Math.max(0, invite.seats - invite.members.length) }, (): RsvpSeat => ({ original: null, name: "", attending: false })),
+  ];
+  const changes = String(row[9] ?? "")
+    .split(";")
+    .map((change) => change.trim())
+    .filter(Boolean);
+  const openChanges: string[] = [];
+  for (const change of changes) {
+    const arrow = change.indexOf(" → ");
+    if (arrow < 0) continue;
+    const original = change.slice(0, arrow);
+    const name = change.slice(arrow + 3);
+    if (original === "(plus-one)") openChanges.push(name);
+    else {
+      const seat = seats.find((item) => item.original && normalizeGuestName(item.original) === normalizeGuestName(original));
+      if (seat) seat.name = name;
+    }
+  }
+  seats.filter((seat) => seat.original === null).forEach((seat, index) => { seat.name = openChanges[index] ?? ""; });
+  if (row.length >= 9) {
+    for (const name of attendees) {
+      const seat = seats.find((item) => item.original && normalizeGuestName(item.original) === normalizeGuestName(name));
+      if (seat) seat.name = name;
+    }
+    seats.forEach((seat) => { seat.attending = attending && attendees.some((name) => normalizeGuestName(name) === normalizeGuestName(seat.name)); });
+  } else {
+    seats.forEach((seat, index) => { seat.attending = attending && index < guests; });
+  }
+  return {
+    submittedAt: String(row[0] ?? ""),
+    previous: {
+      attending,
+      seats,
+    },
+  };
+};
+
 export const createSheetsRsvpStore = (
   env: Record<string, unknown>,
 ): RsvpStore => {
@@ -143,26 +228,26 @@ export const createSheetsRsvpStore = (
       const matchedName = matches[0].members.find(
         (member) => normalizeGuestName(member) === wanted,
       )!;
-      return { invite: matches[0], matchedName };
+      const invite = matches[0];
+      if (!cachedResponses || cachedResponses.expiresAt <= Date.now()) {
+        const response = await sheetsFetch(config, "values/Responses!A2:J");
+        const data = (await response.json()) as { values?: unknown[][] };
+        cachedResponses = { expiresAt: Date.now() + 60_000, rows: data.values ?? [] };
+      }
+      const previous = cachedResponses.rows
+        .map((row) => parsePreviousResponseRow(row, invite))
+        .filter((value): value is NonNullable<typeof value> => Boolean(value))
+        .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))[0]?.previous ?? null;
+      return { invite, matchedName, previous };
     },
     async submit(submission: RsvpSubmission) {
-      const values = [
-        [
-          new Date().toISOString(),
-          submission.inviteId,
-          submission.name,
-          submission.attending ? "yes" : "no",
-          submission.attending ? submission.guests : 0,
-          submission.email,
-          submission.companionName ?? "",
-          submission.note ?? "",
-        ],
-      ];
+      const values = [buildResponseRow(submission)];
       await sheetsFetch(
         config,
-        "values/Responses!A:H:append?valueInputOption=RAW&insertDataOption=OVERWRITE",
+        "values/Responses!A:J:append?valueInputOption=RAW&insertDataOption=OVERWRITE",
         { method: "POST", body: JSON.stringify({ values }) },
       );
+      cachedResponses = undefined;
     },
   };
 };

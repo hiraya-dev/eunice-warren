@@ -25,10 +25,15 @@ const SEAT_WORDS = [
 
 export const seatWord = (value: number) =>
   SEAT_WORDS[Math.max(0, Math.min(12, Math.round(value)))] ?? "Twelve";
-export const ticketNames = (matchedName: string, companionName?: string) =>
-  companionName?.trim()
-    ? `${matchedName.split(" ")[0]} & ${companionName.trim()}`
-    : matchedName;
+export const ticketNames = (names: string[] | string, legacyCompanion?: string) => {
+  const list = Array.isArray(names)
+    ? names.filter((name) => name.trim())
+    : [names, ...(legacyCompanion?.trim() ? [legacyCompanion.trim()] : [])];
+  if (list.length <= 1) return list[0] ?? "";
+  const firstNames = list.map((name) => name.trim().split(/\s+/)[0]);
+  if (firstNames.length === 2) return `${firstNames[0]} & ${firstNames[1]}`;
+  return `${firstNames.slice(0, -1).join(", ")} & ${firstNames.at(-1)}`;
+};
 export const ticketReference = (inviteId: string) => inviteId.toUpperCase();
 export const ticketFilename = (inviteId: string) =>
   `eunice-warren-ticket-${inviteId}.png`;
