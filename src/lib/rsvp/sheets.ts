@@ -247,6 +247,7 @@ export const createSheetsRsvpStore = (
         "values/Responses!A:J:append?valueInputOption=RAW&insertDataOption=OVERWRITE",
         { method: "POST", body: JSON.stringify({ values }) },
       );
+      cachedResponses = undefined;
     },
   };
 };
