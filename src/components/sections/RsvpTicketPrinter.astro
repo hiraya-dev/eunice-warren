@@ -139,7 +139,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
   type TicketDetail = {
     inviteId: string;
     matchedName: string;
-    companionName?: string;
+    names: string[];
     guests: number;
     deadline: string;
   };
@@ -313,7 +313,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     const open = (event: Event) => {
       detail = (event as CustomEvent<TicketDetail>).detail;
       if (!detail) return;
-      const names = ticketNames(detail.matchedName, detail.companionName);
+      const names = ticketNames(detail.names);
       modal.querySelector("[data-ticket-heading]")!.textContent =
         `See you in Boracay, ${detail.matchedName.split(" ")[0]}.`;
       modal.querySelector("[data-ticket-body]")!.textContent =
@@ -916,11 +916,12 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       color: var(--light-100);
     }
     .ticket-popup_ticket-names strong {
+      overflow-wrap: anywhere;
       font: var(--secondary-regular) 2.5rem/0.9 var(--secondary-family);
       letter-spacing: -0.03em;
     }
     .ticket-popup_ticket-names span {
-      white-space: nowrap;
+      overflow-wrap: anywhere;
       font: 500 0.6875rem/ 0.9375rem var(--primary-family);
     }
     .ticket-popup_ticket-meta {

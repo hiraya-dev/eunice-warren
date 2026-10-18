@@ -145,19 +145,12 @@ const {
                     ></label
                   >
                 </fieldset>
-                <div class="rsvp_guests" data-rsvp-guests>
-                  <span>Guests (incl. you)</span><div>
-                    <button
-                      type="button"
-                      data-rsvp-fewer
-                      aria-label="Fewer guests">−</button
-                    ><output data-rsvp-count aria-live="polite"></output><button
-                      type="button"
-                      data-rsvp-more
-                      aria-label="More guests">+</button
-                    >
-                  </div>
-                </div>
+                <fieldset class="rsvp_guest-list" data-rsvp-guests>
+                  <legend class="rsvp_guest-list-header"><span class="rsvp_guest-list-wide">Tick everyone who's coming</span><span class="rsvp_guest-list-narrow" aria-hidden="true">Who's coming</span><output data-rsvp-count aria-live="polite"></output></legend>
+                  <div data-rsvp-seat-list></div>
+                  <p class="rsvp_help rsvp_guest-help" data-rsvp-guest-help>Someone can't make it? Untick them, or tap Edit to give their seat to someone else. You can also fix a misspelled name.</p>
+                  <p class="rsvp_error rsvp_guest-error" data-rsvp-guest-error role="alert" hidden>Tick at least one guest. If no one can make it, choose “Regretfully declines” above.</p>
+                </fieldset>
                 <div class="rsvp_actions">
                   <button class="rsvp_back" type="button" data-rsvp-back
                     >← Back</button
@@ -189,11 +182,6 @@ const {
                   >
                     Please enter a valid email address.
                   </p>
-                </div>
-                <div class="rsvp_field" data-rsvp-companion-field hidden>
-                  <label for="rsvp-companion"
-                    >Your guest's name (optional)</label
-                  ><input id="rsvp-companion" name="companion" />
                 </div>
                 <div class="rsvp_field">
                   <label for="rsvp-note"
@@ -260,6 +248,7 @@ const {
 <script>
   import { actions } from "astro:actions";
   import type { Invite } from "@/lib/rsvp/store";
+  import { normalizeGuestName } from "@/lib/rsvp/store";
   declare global {
     interface Window {
       turnstile?: {
@@ -322,8 +311,10 @@ const {
         };
         let invite: Invite | null = null;
         let matchedName = "";
+        type Seat = { original: string | null; name: string; attending: boolean };
         let attending = true;
-        let guests = 1;
+        let seats: Seat[] = [];
+        let editingSeat = -1;
         let step: "1" | "2" | "3" | "sent" = "1";
         const heading = () =>
           root.querySelector<HTMLElement>(
@@ -383,14 +374,143 @@ const {
           requestAnimationFrame(() => heading()?.focus());
         };
         const updateGuestControls = () => {
-          const count =
-            root.querySelector<HTMLOutputElement>("[data-rsvp-count]")!;
-          count.value = String(guests);
-          count.textContent = String(guests);
-          root.querySelector<HTMLButtonElement>("[data-rsvp-fewer]")!.disabled =
-            guests <= 1;
-          root.querySelector<HTMLButtonElement>("[data-rsvp-more]")!.disabled =
-            !invite || guests >= invite.seats;
+          const count = root.querySelector<HTMLOutputElement>("[data-rsvp-count]")!;
+          const attendingCount = seats.filter((seat) => seat.attending).length;
+          count.value = `${attendingCount} of ${invite?.seats ?? 0} seats`;
+          count.textContent = `${attendingCount} of ${invite?.seats ?? 0} seats`;
+        };
+        const renderSeats = (focusIndex = -1, focusTarget: "checkbox" | "action" = "action") => {
+          const list = root.querySelector<HTMLElement>("[data-rsvp-seat-list]")!;
+          list.replaceChildren();
+          seats.forEach((seat, index) => {
+            const row = document.createElement("div");
+            row.className = "rsvp_seat-row";
+            row.dataset.seatIndex = String(index);
+            if (!seat.attending) row.classList.add("is-not-coming");
+            if (seat.original === null && !seat.name) row.classList.add("is-open");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = seat.attending;
+            checkbox.id = `rsvp-seat-${index}`;
+            checkbox.setAttribute("aria-label", `Seat ${index + 1}: ${seat.name || "Open seat"}`);
+            checkbox.dataset.rsvpSeatToggle = "true";
+            const label = document.createElement("label");
+            label.htmlFor = checkbox.id;
+            label.className = "rsvp_seat-label";
+            const name = document.createElement("span");
+            name.className = "rsvp_seat-name";
+            name.textContent = seat.name || "Open seat";
+            label.append(checkbox, name);
+            const meta = document.createElement("span");
+            meta.className = "rsvp_seat-meta";
+            if (index === invite?.members.indexOf(matchedName)) meta.textContent = "You";
+            if (!seat.attending && seat.name) {
+              const notComing = document.createElement("span");
+              notComing.textContent = "Not coming";
+              meta.append(notComing);
+            }
+            if (meta.textContent) label.append(meta);
+            row.append(label);
+            if (editingSeat === index) {
+              row.classList.add("is-editing");
+              const editWrap = document.createElement("div");
+              editWrap.className = "rsvp_seat-edit";
+              const input = document.createElement("input");
+              input.value = seat.name;
+              input.id = `rsvp-seat-name-${index}`;
+              input.setAttribute("aria-label", `Name for seat ${index + 1}`);
+              const done = document.createElement("button");
+              done.type = "button";
+              done.textContent = "Done";
+              done.setAttribute("aria-label", `Done editing ${seat.name || `seat ${index + 1}`}`);
+              const message = document.createElement("p");
+              message.className = "rsvp_error";
+              message.hidden = true;
+              message.textContent = "Please enter a name.";
+              const finish = () => {
+                const value = input.value.trim();
+                if (!value) { message.hidden = false; input.focus(); return; }
+                seat.name = value;
+                if (seat.original === null) seat.attending = true;
+                editingSeat = -1;
+                renderSeats(index, "action");
+              };
+              done.addEventListener("click", finish);
+              input.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") { event.preventDefault(); finish(); }
+                if (event.key === "Escape") { editingSeat = -1; renderSeats(index, "action"); }
+              });
+              editWrap.append(input, done, message);
+              if (seat.original && normalizeGuestName(seat.name) !== normalizeGuestName(seat.original)) {
+                const changed = document.createElement("span");
+                changed.className = "rsvp_seat-change";
+                changed.textContent = `Was ${seat.original}`;
+                const undo = document.createElement("button");
+                undo.type = "button";
+                undo.textContent = "Undo";
+                undo.setAttribute("aria-label", `Undo name change for ${seat.name}`);
+                undo.addEventListener("click", () => { seat.name = seat.original!; renderSeats(index, "action"); });
+                editWrap.append(changed, undo);
+              }
+              row.append(editWrap);
+              list.append(row);
+              requestAnimationFrame(() => input.focus());
+              return;
+            }
+            const action = document.createElement("button");
+            action.type = "button";
+            action.className = "rsvp_seat-action";
+            const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            icon.setAttribute("viewBox", "0 0 12 12");
+            icon.setAttribute("aria-hidden", "true");
+            icon.innerHTML = seat.name
+              ? '<path d="M8.2 1.3 10.7 3.8 4 10.5H1.5V8L8.2 1.3Z" />'
+              : '<path d="M6 1v10M1 6h10" />';
+            action.append(icon, document.createTextNode(seat.name ? "Edit" : "Add name"));
+            action.setAttribute("aria-label", seat.name ? `Edit ${seat.name}` : `Add name for seat ${index + 1}`);
+            action.dataset.rsvpSeatAction = "true";
+            action.addEventListener("click", () => { editingSeat = index; renderSeats(); });
+            row.append(action);
+            if (seat.original && normalizeGuestName(seat.name) !== normalizeGuestName(seat.original) && seat.name) {
+              const change = document.createElement("div");
+              change.className = "rsvp_seat-change-line";
+              change.textContent = `Was ${seat.original}`;
+              const undo = document.createElement("button");
+              undo.type = "button";
+              undo.textContent = "Undo";
+              undo.setAttribute("aria-label", `Undo name change for ${seat.name}`);
+              undo.addEventListener("click", () => { seat.name = seat.original!; renderSeats(index, "action"); });
+              change.append(" ", undo);
+              row.append(change);
+            } else if (seat.original === null && seat.name) {
+              const change = document.createElement("div");
+              change.className = "rsvp_seat-change-line";
+              change.textContent = "Plus-one";
+              const remove = document.createElement("button");
+              remove.type = "button";
+              remove.textContent = "Remove";
+              remove.setAttribute("aria-label", `Remove ${seat.name}`);
+              remove.addEventListener("click", () => { seat.name = ""; seat.attending = false; renderSeats(index, "action"); });
+              change.append(" ", remove);
+              row.append(change);
+            }
+            checkbox.addEventListener("change", () => {
+              seat.attending = checkbox.checked;
+              if (checkbox.checked) {
+                root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!.hidden = true;
+                root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.remove("has-error");
+              }
+              renderSeats(index, "checkbox");
+            });
+            list.append(row);
+          });
+          updateGuestControls();
+          if (focusIndex >= 0) {
+            const control = focusTarget === "checkbox"
+              ? root.querySelector<HTMLInputElement>(`#rsvp-seat-${focusIndex}`)
+              : root.querySelector<HTMLButtonElement>(`[data-seat-index="${focusIndex}"] [data-rsvp-seat-action]`);
+            control?.focus();
+          }
         };
         const updateInvitation = () => {
           root.querySelector<HTMLElement>("[data-rsvp-invitation]")!.hidden =
@@ -452,10 +572,19 @@ const {
               invite = result.data.invite;
               matchedName = result.data.matchedName;
               const token = result.data.token;
-              guests = invite.seats;
+              const previous = result.data.previous;
+              seats = previous?.seats?.length === invite.seats
+                ? previous.seats.map((seat, index) => ({ ...seat, attending: previous.attending ? seat.attending : index < invite!.members.length }))
+                : [
+                    ...invite.members.map((member): Seat => ({ original: member, name: member, attending: true })),
+                    ...Array.from({ length: Math.max(0, invite.seats - invite.members.length) }, (): Seat => ({ original: null, name: "", attending: false })),
+                  ];
+              attending = previous?.attending ?? true;
               root.querySelector("[data-rsvp-first-name]")!.textContent =
                 matchedName.split(" ")[0];
-              updateGuestControls();
+              root.querySelector<HTMLInputElement>(`input[name="attending"][value="${attending ? "yes" : "no"}"]`)!.checked = true;
+              root.querySelector<HTMLElement>("[data-rsvp-guests]")!.hidden = !attending;
+              renderSeats();
               root.dataset.rsvpToken = token;
               setStep("2");
             } catch {
@@ -476,28 +605,23 @@ const {
               attending = (event.target as HTMLInputElement).value === "yes";
               root.querySelector<HTMLElement>("[data-rsvp-guests]")!.hidden =
                 !attending;
+              root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!.hidden = true;
+              root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.remove("has-error");
+              if (attending) renderSeats();
             }
           });
         root
           .querySelector<HTMLFormElement>("[data-rsvp-attending]")!
           .addEventListener("submit", (event) => {
             event.preventDefault();
-            root.querySelector<HTMLElement>(
-              "[data-rsvp-companion-field]",
-            )!.hidden = !attending || guests < 2;
+            if (attending && !seats.some((seat) => seat.attending)) {
+              const error = root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!;
+              error.hidden = false;
+              root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.add("has-error");
+              root.querySelector<HTMLInputElement>("[data-rsvp-seat-toggle]")?.focus();
+              return;
+            }
             setStep("3");
-          });
-        root
-          .querySelector<HTMLButtonElement>("[data-rsvp-fewer]")!
-          .addEventListener("click", () => {
-            guests = Math.max(1, guests - 1);
-            updateGuestControls();
-          });
-        root
-          .querySelector<HTMLButtonElement>("[data-rsvp-more]")!
-          .addEventListener("click", () => {
-            guests = Math.min(invite?.seats ?? guests, guests + 1);
-            updateGuestControls();
           });
         root
           .querySelector<HTMLButtonElement>("[data-rsvp-back]")!
@@ -541,13 +665,8 @@ const {
                 token: root.dataset.rsvpToken ?? "",
                 name: matchedName,
                 attending,
-                guests: attending ? guests : 0,
+                seats: seats.map((seat) => ({ ...seat, attending: attending && seat.attending })),
                 email: email.value,
-                companionName:
-                  attending && guests >= 2
-                    ? (form.elements.namedItem("companion") as HTMLInputElement)
-                        .value || undefined
-                    : undefined,
                 note:
                   (form.elements.namedItem("note") as HTMLTextAreaElement)
                     .value || undefined,
@@ -580,9 +699,10 @@ const {
             )!.textContent = attending
               ? "Joyfully accepts"
               : "Regretfully declines";
-            root.querySelector<HTMLElement>(
-              "[data-rsvp-guests-summary-value]",
-            )!.textContent = `${guests} ${guests === 1 ? "guest" : "guests"}`;
+            const tickedNames = seats.filter((seat) => attending && seat.attending).map((seat) => seat.name);
+            root.querySelector<HTMLElement>("[data-rsvp-guests-summary-value]")!.textContent = attending
+              ? `${tickedNames.length} ${tickedNames.length === 1 ? "guest" : "guests"}: ${tickedNames.join(", ")}`
+              : "";
             root.querySelector<HTMLElement>(
               "[data-rsvp-guests-summary]",
             )!.hidden = !attending;
@@ -596,18 +716,13 @@ const {
             submit.removeAttribute("aria-busy");
             setStep("sent");
             if (attending && invite) {
-              const companionName =
-                guests >= 2
-                  ? (form.elements.namedItem("companion") as HTMLInputElement)
-                      .value || undefined
-                  : undefined;
               document.dispatchEvent(
                 new CustomEvent("rsvp-ticket-open", {
                   detail: {
                     inviteId: invite.id,
                     matchedName,
-                    companionName,
-                    guests,
+                    names: tickedNames,
+                    guests: tickedNames.length,
                     deadline,
                   },
                 }),
@@ -974,40 +1089,85 @@ const {
       outline: var(--focus-width) solid var(--dark-900);
       outline-offset: var(--focus-offset);
     }
-    .rsvp_guests {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-block: var(--space-3);
-      border-block: 0.0625rem solid var(--light-300);
-      font: var(--primary-regular) var(--text-main) / var(--line-height-huge)
-        var(--primary-family);
+    .rsvp_guest-list {
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
     }
-    .rsvp_guests > div {
+    .rsvp_guest-list-header {
       display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding-bottom: var(--space-2);
+      border-bottom: 0.0625rem solid var(--dark-900);
+      color: #4a5a85;
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .rsvp_guest-list-narrow { display: none; }
+    .rsvp_guest-list-header output { color: var(--dark-900); }
+    .rsvp_seat-row {
+      display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: var(--space-3);
+      row-gap: var(--space-1);
+      padding-block: var(--space-2);
+      border-bottom: 0.0625rem solid var(--light-300);
     }
-    .rsvp_guests button {
-      display: grid;
-      width: 2.25rem;
-      height: 2.25rem;
-      place-items: center;
-      border: 0.0625rem solid var(--dark-900);
-      background: transparent;
-      color: var(--dark-900);
-      font-size: 1.5rem;
+    .rsvp_seat-label {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      align-items: center;
+      gap: var(--space-3);
       cursor: pointer;
     }
-    .rsvp_guests button:disabled {
-      cursor: not-allowed;
-      opacity: 0.35;
+    .rsvp_seat-label input {
+      flex: 0 0 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin: 0;
+      appearance: none;
+      border: 0.09375rem solid var(--_line);
+      background: transparent;
+      cursor: pointer;
     }
-    .rsvp_guests output {
-      min-width: 1.25rem;
-      font: var(--secondary-regular) 1.5rem / 1 var(--secondary-family);
-      text-align: center;
+    .rsvp_seat-label input:checked {
+      border-color: var(--dark-900);
+      background-color: var(--dark-900);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M1 5.2 4.3 8.5 11 1.5' fill='none' stroke='%23F5EFE3' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
     }
+    .rsvp_seat-row.is-open .rsvp_seat-label input { border-style: dashed; }
+    .rsvp_seat-name { min-width: 0; color: var(--dark-900); font: var(--primary-regular) var(--text-main) / 1.25 var(--primary-family); }
+    .rsvp_seat-row.is-not-coming .rsvp_seat-name { color: #8a8577; }
+    .rsvp_seat-meta { display: flex; flex-wrap: wrap; gap: var(--space-2); color: #4a5a85; font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .rsvp_seat-row.is-not-coming .rsvp_seat-meta span { color: #8a8577; }
+    .rsvp_seat-action { display: inline-flex; flex: 0 0 4rem; min-height: 2.75rem; align-items: center; justify-content: flex-end; gap: 0.375rem; padding: 0; border: 0; background: transparent; color: var(--dark-900); font: var(--primary-medium) var(--text-small) / 1.25 var(--primary-family); text-align: right; text-decoration: underline; text-underline-offset: 0.25rem; cursor: pointer; }
+    .rsvp_seat-action svg { width: 0.75rem; height: 0.75rem; flex: 0 0 0.75rem; fill: none; stroke: var(--dark-900); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+    .rsvp_seat-row.is-open .rsvp_seat-action { flex-basis: 6rem; }
+    .rsvp_seat-change-line, .rsvp_seat-change { color: #4a5a85; font: var(--primary-regular) var(--text-small) / 1.25 var(--primary-family); }
+    .rsvp_seat-change-line { flex: 0 0 calc(100% - 2.75rem); box-sizing: border-box; margin-left: 2.75rem; padding-top: 0; font-size: 0.8125rem; line-height: 1rem; }
+    .rsvp_seat-change-line button, .rsvp_seat-change { border: 0; background: transparent; color: var(--dark-900); text-decoration: underline; cursor: pointer; }
+    .rsvp_seat-row.is-editing { align-items: flex-start; padding-block: 0.625rem; }
+    .rsvp_seat-row.is-editing .rsvp_seat-label { flex: 0 0 1.25rem; min-height: 2.625rem; align-items: flex-start; padding-top: 0.6875rem; }
+    .rsvp_seat-row.is-editing .rsvp_seat-label .rsvp_seat-name,
+    .rsvp_seat-row.is-editing .rsvp_seat-label .rsvp_seat-meta { display: none; }
+    .rsvp_seat-edit { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr) 4rem; column-gap: var(--space-2); row-gap: var(--space-1); align-items: start; }
+    .rsvp_seat-edit input { width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 0.125rem solid var(--dark-900); background: var(--light-200); color: var(--dark-900); font: var(--primary-regular) var(--text-main) / 1.25 var(--primary-family); }
+    .rsvp_seat-edit input:focus-visible { outline: var(--focus-width) solid var(--dark-900); outline-offset: 0.125rem; }
+    .rsvp_seat-edit > button { min-height: 2.75rem; border: 0; background: var(--dark-900); color: var(--light-100); cursor: pointer; }
+    .rsvp_seat-edit .rsvp_error { grid-column: 1 / -1; }
+    .rsvp_seat-edit .rsvp_seat-change { grid-column: 1 / -1; }
+    .rsvp_guest-help, .rsvp_guest-error { padding-top: 0.75rem; }
+    .rsvp_guest-list.has-error .rsvp_guest-help { display: none; }
+    .rsvp_guest-list.has-error .rsvp_guest-list-header { border-bottom-color: var(--accent-500); }
+    .rsvp_guest-list.has-error .rsvp_guest-list-header, .rsvp_guest-list.has-error .rsvp_guest-list-header output { color: var(--accent-500); }
+    .rsvp_guest-list.has-error .rsvp_seat-label input:not(:checked) { border-color: var(--accent-500); }
     .rsvp_actions {
       display: flex;
       align-items: center;
@@ -1237,13 +1397,15 @@ const {
       .rsvp_sent h3 {
         padding-right: 7rem;
       }
-      .rsvp_guests button {
-        width: 2.5rem;
-        height: 2.5rem;
-      }
       .rsvp_sent {
         gap: var(--space-5);
       }
+    }
+    @media (max-width: 29.9375rem) {
+      .rsvp_guest-list-wide { position: absolute; width: 0.0625rem; height: 0.0625rem; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+      .rsvp_guest-list-narrow { display: inline; }
+      .rsvp_seat-meta { gap: var(--space-1); }
+      .rsvp_seat-row { gap: var(--space-2); }
     }
     @media (prefers-reduced-motion: reduce) {
       .rsvp_steps li > span::after,

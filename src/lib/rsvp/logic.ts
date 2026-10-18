@@ -1,3 +1,6 @@
+import type { Invite, RsvpSeat } from "./store.ts";
+import { normalizeGuestName } from "./store.ts";
+
 export const RSVP_DEADLINE = "2026-12-31T23:59:59+08:00";
 export const RSVP_DEADLINE_TIME = new Date(RSVP_DEADLINE).getTime();
 
@@ -113,7 +116,7 @@ export function parseGuestRows(rows: unknown[][]): {
     if (ids.has(id)) duplicateIds.add(id);
     ids.add(id);
     for (const member of members) {
-      const normalized = normalize(member);
+      const normalized = normalizeGuestName(member);
       if (names.has(normalized)) duplicateNames.add(normalized);
       names.set(normalized, id);
     }
@@ -126,26 +129,25 @@ export function parseGuestRows(rows: unknown[][]): {
   };
 }
 
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase();
-
 export function validateSubmission(input: {
   attending: boolean;
-  guests: number;
-  seats: number;
-  companionName?: string;
+  seats: RsvpSeat[];
+  invite: Invite;
 }) {
-  if (
-    !Number.isInteger(input.guests) ||
-    (input.attending && (input.guests < 1 || input.guests > input.seats)) ||
-    (!input.attending && input.guests !== 0)
-  )
-    return false;
-  return !input.companionName || (input.attending && input.guests >= 2);
+  if (input.seats.length !== input.invite.seats) return false;
+  let attendingCount = 0;
+  for (let index = 0; index < input.seats.length; index += 1) {
+    const seat = input.seats[index];
+    const expectedOriginal = input.invite.members[index] ?? null;
+    if (seat.original !== expectedOriginal || seat.name !== seat.name.trim())
+      return false;
+    if (seat.name.length > 120) return false;
+    if (seat.attending) {
+      if (!input.attending || !seat.name) return false;
+      attendingCount += 1;
+    } else if (!seat.name && expectedOriginal !== null) {
+      return false;
+    }
+  }
+  return input.attending ? attendingCount > 0 : attendingCount === 0;
 }
-import type { Invite } from "./store.ts";

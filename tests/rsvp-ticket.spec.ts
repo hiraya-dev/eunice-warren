@@ -8,8 +8,12 @@ const accept = async (
   const rsvp = page.locator("#rsvp");
   await rsvp.locator("[data-rsvp-name]").fill("Liza Santos");
   await rsvp.getByRole("button", { name: /Find my invite/ }).click();
+  if (companion) {
+    await rsvp.getByRole("button", { name: "Add name for seat 2" }).click();
+    await rsvp.locator("[aria-label='Name for seat 2']").fill("Marco Santos");
+    await rsvp.getByRole("button", { name: /Done editing seat 2/ }).click();
+  }
   await rsvp.getByRole("button", { name: /Continue/ }).click();
-  if (companion) await rsvp.locator("#rsvp-companion").fill("Marco Santos");
   await rsvp.locator("#rsvp-email").fill("liza@example.com");
   await rsvp.getByRole("button", { name: /Send RSVP/ }).click();
   return page.locator("#rsvp-ticket-modal");
@@ -23,10 +27,10 @@ test.describe("RSVP ticket popup", () => {
     const dialog = await accept(page);
     await expect(dialog).toBeVisible();
     await expect(dialog.locator("[data-ticket-names]")).toHaveText(
-      "Liza & Marco Santos",
+      "Liza & Marco",
     );
     await expect(dialog.locator("[data-ticket-names-line]")).toHaveText(
-      "Liza & Marco Santos · Joyfully accepts",
+      "Liza & Marco · Joyfully accepts",
     );
     await expect(dialog.locator("[data-ticket-count]")).toHaveText("×2");
     await expect(dialog.locator("[data-ticket-admit]")).toHaveText("Two");

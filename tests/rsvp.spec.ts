@@ -147,19 +147,45 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
   });
 
-  test("bounds the guest count by the invitation seats", async ({ page }) => {
-    await rsvp(page).locator("[data-rsvp-name]").fill("Liza Santos");
+  test("renders one checklist row per seat", async ({ page }) => {
+    await rsvp(page).locator("[data-rsvp-name]").fill("Mateo Cruz");
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
       .click();
-    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("2");
-    await expect(rsvp(page).locator("[data-rsvp-more]")).toBeDisabled();
-    await rsvp(page).locator("[data-rsvp-fewer]").click();
-    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("1");
-    await expect(rsvp(page).locator("[data-rsvp-fewer]")).toBeDisabled();
+    await expect(rsvp(page).locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(4);
+    await expect(rsvp(page).locator("[data-rsvp-seat-list]")).toContainText("Remedios Cruz");
+    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("3 of 4 seats");
+    await expect(rsvp(page).getByRole("button", { name: "Add name for seat 4" })).toBeVisible();
+    const firstSeat = rsvp(page).locator("#rsvp-seat-0");
+    await firstSeat.focus();
+    await page.keyboard.press("Space");
+    await expect.poll(() => rsvp(page).locator("#rsvp-seat-0").evaluate((element) => document.activeElement === element)).toBe(true);
   });
 
-  test("requires a valid email and reveals companion details", async ({
+  test("restores a dedicated returning guest without exposing private details", async ({ page }, testInfo) => {
+    // The fake store remembers Garcia's answer for the whole server run, which
+    // both projects share, so only one project may submit it.
+    test.skip(testInfo.project.name !== "chromium", "shared fake-store state");
+    await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await rsvp(page).getByRole("button", { name: "Add name for seat 3" }).click();
+    await rsvp(page).locator("[aria-label='Name for seat 3']").fill("Nico Garcia");
+    await rsvp(page).getByRole("button", { name: /Done editing seat 3/ }).click();
+    await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+    await rsvp(page).locator("#rsvp-email").fill("paolo@example.com");
+    await rsvp(page).locator("#rsvp-note").fill("private note");
+    await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await expect(rsvp(page).locator("#rsvp-seat-2")).toBeChecked();
+    await expect(rsvp(page).locator("[data-rsvp-guests]")).toContainText("Nico Garcia");
+    await expect(rsvp(page).locator("#rsvp-email")).toHaveValue("");
+    await expect(rsvp(page).locator("#rsvp-note")).toHaveValue("");
+  });
+
+  test("requires a valid email and keeps the guest checklist", async ({
     page,
   }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Liza Santos");
@@ -175,9 +201,7 @@ test.describe("RSVP section", () => {
       "aria-current",
       "step",
     );
-    await expect(
-      rsvp(page).locator("[data-rsvp-companion-field]"),
-    ).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-companion-field]")).toHaveCount(0);
     await rsvp(page)
       .getByRole("button", { name: /Send RSVP/ })
       .click();
@@ -211,13 +235,13 @@ test.describe("RSVP section", () => {
     ).toHaveText("Joyfully accepts");
     await expect(
       rsvp(page).locator("[data-rsvp-guests-summary-value]"),
-    ).toHaveText("2 guests");
+    ).toHaveText("1 guest: Liza Santos");
     await expect(rsvp(page).locator("[data-rsvp-sent-steps]")).toContainText(
       "RSVP received",
     );
     await rsvp(page).getByRole("button", { name: "Edit my RSVP" }).click();
     await expect(rsvp(page).locator("[data-rsvp-panel='2']")).toBeVisible();
-    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("2");
+    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("1 of 2 seats");
     await expect(rsvp(page).locator(".rsvp_title")).toHaveText(
       "Will yoube there?",
     );
