@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("pre-wedding section", () => {
+// Skipped while the section is hidden from the home page (src/pages/index.astro); un-skip when it returns.
+test.describe.skip("pre-wedding section", () => {
   test("renders in the home page sequence with the event details", async ({ page }) => {
     await page.goto("/");
     const section = page.locator("#pre-wedding");
