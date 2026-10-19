@@ -25,109 +25,114 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       <div class="playlist_player">
         <div class="playlist_player-row">
           <div
-            class="playlist_cassette"
-            data-playlist-cassette
-            role="group"
-            aria-label="Cassette player"
+            class="playlist_turntable"
+            data-playlist-turntable
+            aria-hidden="true"
           >
-            <div class="playlist_cassette-rim" aria-hidden="true"></div>
-            <span
-              class="playlist_screw playlist_screw-top-left"
-              aria-hidden="true"></span><span
-              class="playlist_screw playlist_screw-top-right"
-              aria-hidden="true"></span><span
-              class="playlist_screw playlist_screw-bottom-left"
-              aria-hidden="true"></span><span
-              class="playlist_screw playlist_screw-bottom-right"
-              aria-hidden="true"></span>
-            <div class="playlist_label">
-              <div class="playlist_label-head">
-                <div>
-                  <span class="playlist_label-kicker">E &amp; W · MIXTAPE</span
-                  ><strong>Boracay ’27</strong>
-                </div><div class="playlist_label-meta">
-                  <span>SIDE A</span><small>01·14·27</small>
-                </div>
-              </div>
-              <div class="playlist_window" aria-hidden="true">
-                <div class="playlist_stripes"><i></i><i></i><i></i></div><div
-                  class="playlist_tape-window"
+            <div class="playlist_turntable-rim"></div>
+            <svg class="playlist_turntable-platter" viewBox="0 0 220 220">
+              <circle
+                cx="110"
+                cy="110"
+                r="109"
+                fill="#0E1630"
+                stroke="#FFFFFF24"></circle>
+              <g data-playlist-record>
+                <circle cx="110" cy="110" r="102" fill="#141414"></circle>
+                <g fill="none" stroke-width="1">
+                  <circle cx="110" cy="110" r="96" stroke="#FFFFFF14"
+                  ></circle><circle cx="110" cy="110" r="89" stroke="#FFFFFF10"
+                  ></circle><circle cx="110" cy="110" r="82" stroke="#FFFFFF14"
+                  ></circle><circle cx="110" cy="110" r="74" stroke="#FFFFFF0E"
+                  ></circle><circle cx="110" cy="110" r="67" stroke="#FFFFFF14"
+                  ></circle><circle cx="110" cy="110" r="60" stroke="#FFFFFF10"
+                  ></circle><circle cx="110" cy="110" r="52" stroke="#FFFFFF14"
+                  ></circle>
+                </g>
+                <circle cx="110" cy="110" r="38" fill="var(--accent-500)"
+                ></circle>
+                <circle
+                  cx="110"
+                  cy="110"
+                  r="33"
+                  fill="none"
+                  stroke="#F5EFE34D"
+                  stroke-width="0.75"></circle>
+                <text
+                  x="110"
+                  y="104"
+                  text-anchor="middle"
+                  class="playlist_record-name">E &amp; W</text
                 >
-                  <div class="playlist_tape-pack"></div>
-                </div><div class="playlist_reel playlist_reel-left">
-                  <div class="playlist_reel-inner">
-                    <svg viewBox="0 0 100 100"
-                      ><circle r="48" cx="50" cy="50" fill="#F5EFE3"></circle><g
-                        fill="#1F2F5C"
-                        ><path d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                        ></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(60 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(120 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(180 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(240 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(300 50 50)"></path></g
-                      ><circle r="18" cx="50" cy="50" fill="#1F2F5C"
-                      ></circle><circle
-                        r="48"
-                        cx="50"
-                        cy="50"
-                        fill="none"
-                        stroke="#1B1A18"
-                        stroke-width="3"></circle></svg
-                    >
-                  </div>
-                </div><div class="playlist_reel playlist_reel-right">
-                  <div class="playlist_reel-inner">
-                    <svg viewBox="0 0 100 100"
-                      ><circle r="48" cx="50" cy="50" fill="#F5EFE3"></circle><g
-                        fill="#1F2F5C"
-                        transform="rotate(30 50 50)"
-                        ><path d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                        ></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(60 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(120 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(180 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(240 50 50)"></path><path
-                          d="M46 3h8v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"
-                          transform="rotate(300 50 50)"></path></g
-                      ><circle r="18" cx="50" cy="50" fill="#1F2F5C"
-                      ></circle><circle
-                        r="48"
-                        cx="50"
-                        cy="50"
-                        fill="none"
-                        stroke="#1B1A18"
-                        stroke-width="3"></circle></svg
-                    >
-                  </div>
-                </div>
-              </div>
-              <div class="playlist_progress">
-                <span data-playlist-elapsed>0:00</span><span
-                  class="playlist_progress-track"
-                  data-playlist-progress
-                  aria-hidden="true"
-                ></span><span data-playlist-total>0:00</span>
-              </div>
-            </div>
-            <div class="playlist_transport" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
+                <text
+                  x="110"
+                  y="128"
+                  text-anchor="middle"
+                  class="playlist_record-date">01·14·27</text
+                >
+              </g>
+              <path
+                d="M38 62 A86 86 0 0 1 92 26"
+                fill="none"
+                stroke="#FFFFFF2E"
+                stroke-width="6"
+                stroke-linecap="round"></path>
+              <path
+                d="M182 158 A86 86 0 0 1 140 192"
+                fill="none"
+                stroke="#FFFFFF1A"
+                stroke-width="5"
+                stroke-linecap="round"></path>
+              <circle cx="110" cy="110" r="3.5" fill="#D6CDBB"></circle>
+            </svg>
+            <svg class="playlist_turntable-tonearm" viewBox="0 0 180 150">
+              <circle cx="140" cy="26" r="20" fill="#121B3A" stroke="#FFFFFF1F"
+              ></circle>
+              <g data-playlist-tonearm class="playlist_tonearm-moving">
+                <rect
+                  x="152"
+                  y="14"
+                  width="18"
+                  height="24"
+                  rx="4"
+                  fill="#D6CDBB"
+                  transform="rotate(28 140 26)"></rect>
+                <path
+                  d="M140 26 L132 70 L36 98"
+                  fill="none"
+                  stroke="#E9DFCB"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"></path>
+                <rect
+                  x="16"
+                  y="90"
+                  width="26"
+                  height="14"
+                  rx="2.5"
+                  fill="#F5EFE3"
+                  transform="rotate(-16 29 97)"></rect>
+                <rect
+                  x="20"
+                  y="100"
+                  width="6"
+                  height="5"
+                  rx="1"
+                  fill="#C23B2E"
+                  transform="rotate(-16 29 97)"></rect>
+              </g>
+              <circle cx="140" cy="26" r="9" fill="#D6CDBB"></circle><circle
+                cx="140"
+                cy="26"
+                r="3"
+                fill="#1F2F5C"></circle>
+            </svg>
           </div>
           <div class="playlist_listen-copy">
             <div class="playlist_eyebrow">
               <span aria-hidden="true"></span>SIDE A · LISTEN ALONG
             </div><h3>Side A — Boracay ’27</h3><p>
-              Press play below — the reels spin along. Every song you send lands
+              Press play below and the needle drops. Every song you send lands
               on it.
             </p>
           </div>
@@ -192,17 +197,11 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     const embedTarget = section.querySelector<HTMLElement>(
       "[data-playlist-embed-target]",
     );
-    const elapsed = section.querySelector<HTMLElement>(
-      "[data-playlist-elapsed]",
+    const record = section.querySelector<SVGElement>("[data-playlist-record]");
+    const tonearm = section.querySelector<SVGElement>(
+      "[data-playlist-tonearm]",
     );
-    const total = section.querySelector<HTMLElement>("[data-playlist-total]");
-    const progress = section.querySelector<HTMLElement>(
-      "[data-playlist-progress]",
-    );
-    const reels = Array.from(
-      section.querySelectorAll<HTMLElement>(".playlist_reel-inner"),
-    );
-    if (!embed || !embedTarget || !elapsed || !total || !progress) return;
+    if (!embed || !embedTarget || !record || !tonearm) return;
     interface SpotifyPlaybackEvent {
       data: { isPaused: boolean; position: number; duration: number };
     }
@@ -221,39 +220,115 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     let controller: SpotifyController | undefined;
     let playing = false;
-    let position = 0;
-    let duration = 0;
-    let updatedAt = performance.now();
     let frame = 0;
     let timeout: number | undefined;
+    let armStartTimeout: number | undefined;
+    let pauseTimeout: number | undefined;
     let observer: IntersectionObserver | undefined;
     let script: HTMLScriptElement | undefined;
-    let renderedElapsed = "";
+    let recordAngle = 0;
+    let lastFrameAt = 0;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const playlistUri = embed.dataset.uri;
-    const format = (ms: number) =>
-      `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
-    const render = () => {
-      const current = playing
-        ? Math.min(
-            duration || position,
-            position + performance.now() - updatedAt,
-          )
-        : position;
-      const formatted = format(current);
-      if (formatted !== renderedElapsed) {
-        elapsed.textContent = formatted;
-        renderedElapsed = formatted;
+    const spinDegreesPerMillisecond = 360 / 1800;
+    const decelerationDuration = 1000;
+    const setRecordAngle = (angle: number) => {
+      recordAngle = angle;
+      record.style.transform = `rotate(${angle}deg)`;
+    };
+    const stopFrame = () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      lastFrameAt = 0;
+    };
+    const spin = (now: number) => {
+      if (!playing || reducedMotion.matches) {
+        stopFrame();
+        return;
       }
-      progress.style.setProperty(
-        "--_progress",
-        String(duration ? current / duration : 0),
-      );
-      if (!reducedMotion.matches)
-        reels.forEach((reel) => {
-          reel.style.transform = `rotate(${(current / 1000) * 180}deg)`;
-        });
-      if (playing) frame = requestAnimationFrame(render);
+      const elapsed = lastFrameAt ? Math.min(now - lastFrameAt, 100) : 0;
+      lastFrameAt = now;
+      setRecordAngle(recordAngle + elapsed * spinDegreesPerMillisecond);
+      frame = requestAnimationFrame(spin);
+    };
+    const startSpin = () => {
+      if (playing && !reducedMotion.matches && !frame) {
+        lastFrameAt = 0;
+        frame = requestAnimationFrame(spin);
+      }
+    };
+    const decelerate = () => {
+      stopFrame();
+      if (reducedMotion.matches) return;
+      const startedAt = performance.now();
+      const startedAngle = recordAngle;
+      const slow = (now: number) => {
+        const progress = Math.min((now - startedAt) / decelerationDuration, 1);
+        const decelerationAngle =
+          (spinDegreesPerMillisecond * decelerationDuration) / 3;
+        setRecordAngle(
+          startedAngle + decelerationAngle * (1 - (1 - progress) ** 3),
+        );
+        if (progress < 1) frame = requestAnimationFrame(slow);
+      };
+      frame = requestAnimationFrame(slow);
+    };
+    const liftArm = () => {
+      pauseTimeout = undefined;
+      playing = false;
+      if (reducedMotion.matches) {
+        stopFrame();
+        tonearm.style.transition = "none";
+        tonearm.style.transform = "rotate(-30deg)";
+        return;
+      }
+      decelerate();
+      tonearm.style.transition =
+        "transform 600ms cubic-bezier(0.23, 1, 0.32, 1)";
+      tonearm.style.transform = "rotate(-30deg)";
+    };
+    const play = () => {
+      if (pauseTimeout) window.clearTimeout(pauseTimeout);
+      pauseTimeout = undefined;
+      if (playing) return;
+      stopFrame();
+      playing = true;
+      if (reducedMotion.matches) {
+        stopFrame();
+        tonearm.style.transition = "none";
+        tonearm.style.transform = "rotate(0deg)";
+        return;
+      }
+      tonearm.style.transition =
+        "transform 600ms cubic-bezier(0.23, 1, 0.32, 1)";
+      tonearm.style.transform = "rotate(0deg)";
+      if (armStartTimeout) window.clearTimeout(armStartTimeout);
+      armStartTimeout = window.setTimeout(() => {
+        armStartTimeout = undefined;
+        startSpin();
+      }, 600);
+    };
+    const pause = () => {
+      if (!playing || pauseTimeout) return;
+      pauseTimeout = window.setTimeout(liftArm, 400);
+    };
+    const handleReducedMotion = () => {
+      const pausing = Boolean(pauseTimeout);
+      if (pauseTimeout) window.clearTimeout(pauseTimeout);
+      pauseTimeout = undefined;
+      if (reducedMotion.matches) {
+        if (pausing) playing = false;
+        if (armStartTimeout) window.clearTimeout(armStartTimeout);
+        armStartTimeout = undefined;
+        stopFrame();
+        tonearm.style.transition = "none";
+        tonearm.style.transform = `rotate(${playing ? 0 : -30}deg)`;
+      } else if (playing) {
+        tonearm.style.transition =
+          "transform 600ms cubic-bezier(0.23, 1, 0.32, 1)";
+        tonearm.style.transform = "rotate(0deg)";
+        armStartTimeout = window.setTimeout(startSpin, 600);
+      }
     };
     const fail = () => {
       if (timeout) window.clearTimeout(timeout);
@@ -269,13 +344,8 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
           embed.classList.add("is-ready");
           if (timeout) window.clearTimeout(timeout);
           controller.addListener("playback_update", (event) => {
-            playing = !event.data.isPaused;
-            position = event.data.position || 0;
-            duration = event.data.duration || 0;
-            updatedAt = performance.now();
-            total.textContent = format(duration);
-            cancelAnimationFrame(frame);
-            render();
+            if (event.data.isPaused) pause();
+            else play();
           });
         },
       );
@@ -307,10 +377,15 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       { rootMargin: "200px" },
     );
     observer.observe(section);
+    tonearm.style.transform = "rotate(-30deg)";
+    reducedMotion.addEventListener("change", handleReducedMotion);
     document.addEventListener(
       "astro:before-swap",
       () => {
-        cancelAnimationFrame(frame);
+        stopFrame();
+        if (armStartTimeout) window.clearTimeout(armStartTimeout);
+        if (pauseTimeout) window.clearTimeout(pauseTimeout);
+        reducedMotion.removeEventListener("change", handleReducedMotion);
         observer?.disconnect();
         if (timeout) window.clearTimeout(timeout);
       },
@@ -369,7 +444,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     }
     .playlist_player-row {
       display: grid;
-      grid-template-areas: "copy" "cassette" "embed";
+      grid-template-areas: "copy" "turntable" "embed";
       gap: var(--space-4);
     }
     .playlist_eyebrow {
@@ -398,30 +473,31 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     .playlist_listen-copy p {
       display: none;
     }
-    .playlist_cassette {
-      grid-area: cassette;
+    .playlist_turntable {
+      grid-area: turntable;
     }
     .playlist_embed {
       grid-area: embed;
     }
-    .playlist_cassette {
+    .playlist_turntable {
       container-type: inline-size;
       position: relative;
       width: 100%;
-      aspect-ratio: 380 / 240;
-      transform: rotate(-2deg);
+      aspect-ratio: 380 / 260;
+      transform: rotate(-3deg);
+      isolation: isolate;
     }
-    .playlist_cassette::before {
+    .playlist_turntable::before {
       position: absolute;
       inset: 0;
       content: "";
       border: 0.1cqw solid #121b3a;
-      border-radius: 4.2cqw;
+      border-radius: 3.68cqw;
       background: linear-gradient(
         165deg,
-        #2b3b6b 0%,
+        #2a3b6b 0%,
         var(--dark-900) 55%,
-        #16224a 100%
+        #18244a 100%
       );
       box-shadow:
         inset 0 0.53cqw 0.26cqw rgb(255 255 255 / 0.18),
@@ -429,208 +505,50 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         0 6.32cqw 10.53cqw rgb(31 47 92 / 0.22),
         0 1.58cqw 3.16cqw rgb(31 47 92 / 0.16);
     }
-    .playlist_cassette-rim,
-    .playlist_label,
-    .playlist_screw,
-    .playlist_transport {
+    .playlist_turntable-rim {
       position: absolute;
-    }
-    .playlist_cassette-rim {
       inset: 1.58cqw;
       border: 0.1cqw solid rgb(255 255 255 / 0.12);
-      border-radius: 2.9cqw;
+      border-radius: 2.37cqw;
+      pointer-events: none;
     }
-    .playlist_screw {
-      width: 3.16cqw;
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background: radial-gradient(
-        circle at 36% 30%,
-        #8a93ae,
-        #4a5578 50%,
-        #232e52 80%
-      );
-    }
-    .playlist_screw-top-left {
-      top: 2.63cqw;
-      left: 2.63cqw;
-    }
-    .playlist_screw-top-right {
-      top: 2.63cqw;
-      right: 2.63cqw;
-    }
-    .playlist_screw-bottom-left {
-      bottom: 2.63cqw;
-      left: 2.63cqw;
-    }
-    .playlist_screw-bottom-right {
-      right: 2.63cqw;
-      bottom: 2.63cqw;
-    }
-    .playlist_label {
-      inset: 5.79cqw 7.89cqw auto;
-      height: 41.05cqw;
-      padding: 3.16cqw 3.68cqw;
-      border: 0.79cqw solid #e9dfcb;
-      border-radius: 2.1cqw;
-      background: var(--light-100);
-    }
-    .playlist_label-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 1.58cqw;
-    }
-    .playlist_label-head > div:first-child {
-      display: grid;
-      gap: 1.58cqw;
-    }
-    .playlist_label-kicker,
-    .playlist_label-meta,
-    .playlist_progress {
-      font-family: var(--mono-family);
-    }
-    .playlist_label-kicker {
-      color: var(--accent-500);
-      font-size: 2.37cqw;
-      letter-spacing: 0.14em;
-      line-height: 1;
-    }
-    .playlist_label strong {
-      font: italic var(--secondary-regular) 5.79cqw/1 var(--secondary-family);
-      letter-spacing: -0.02em;
-    }
-    .playlist_label-meta {
-      display: flex;
-      flex-direction: column;
-      align-items: end;
-      gap: 1.58cqw;
-      font-size: 2.37cqw;
-      line-height: 1;
-    }
-    .playlist_label-meta span {
-      padding: 0.79cqw 1.84cqw;
-      border-radius: 100vw;
-      background: var(--dark-900);
-      color: var(--light-100);
-    }
-    .playlist_label-meta small {
-      color: var(--dark-700);
-      font-size: 2.1cqw;
-    }
-    .playlist_window {
-      position: relative;
-      height: 15.26cqw;
-      margin-top: 2.63cqw;
-    }
-    .playlist_stripes {
+    .playlist_turntable-platter,
+    .playlist_turntable-tonearm {
       position: absolute;
-      inset: 3.68cqw -3.68cqw auto;
-      display: grid;
-      gap: 0.79cqw;
-    }
-    .playlist_stripes i {
-      height: 2.1cqw;
-    }
-    .playlist_stripes i:nth-child(1) {
-      background: var(--accent-500);
-    }
-    .playlist_stripes i:nth-child(2) {
-      background: var(--brand-500);
-    }
-    .playlist_stripes i:nth-child(3) {
-      background: var(--light-300);
-    }
-    .playlist_tape-window {
-      position: absolute;
-      inset: 0 12.11cqw;
-      border-radius: 100vw;
-      background: linear-gradient(180deg, #2a2722, #1b1a18 50%);
-      box-shadow:
-        0 0 0 1.05cqw #e9dfcb,
-        inset 0 0.79cqw 2.1cqw rgb(0 0 0 / 0.6);
-    }
-    .playlist_tape-pack {
-      position: absolute;
-      inset: 2.37cqw auto auto 16.32cqw;
-      width: 18.42cqw;
-      height: 10.53cqw;
-      border: 0.53cqw solid #11100f;
-      border-radius: 0.79cqw;
-      background: #393631;
-      box-shadow: inset 0 0.79cqw 1.58cqw rgb(0 0 0 / 0.7);
-    }
-    .playlist_reel {
-      position: absolute;
-      top: 1.84cqw;
-      width: 11.58cqw;
-    }
-    .playlist_reel-left {
-      left: 14.21cqw;
-    }
-    .playlist_reel-right {
-      right: 14.21cqw;
-    }
-    .playlist_reel-inner {
-      transform-origin: center;
-    }
-    .playlist_reel svg {
       display: block;
-      width: 100%;
-      height: auto;
+      overflow: visible;
     }
-    .playlist_progress {
-      display: flex;
-      align-items: center;
-      gap: 2.1cqw;
-      margin-top: 2.1cqw;
-      color: var(--dark-700);
-      font-size: 2.1cqw;
-      line-height: 1;
+    .playlist_turntable-platter {
+      top: 7.89cqw;
+      left: 5.26cqw;
+      width: 57.89cqw;
+      height: 57.89cqw;
     }
-    .playlist_progress-track {
-      --_progress: 0;
-      position: relative;
-      flex: 1;
-      height: 0.79cqw;
-      margin: 0;
-      overflow: hidden;
-      border-radius: 100vw;
-      background: color-mix(in srgb, var(--dark-900) 22%, transparent);
-    }
-    .playlist_progress-track::before {
-      position: absolute;
-      inset: 0;
-      content: "";
-      background: var(--dark-900);
-      transform: scaleX(var(--_progress));
-      transform-origin: left;
-    }
-    .playlist_transport {
-      right: 26.32cqw;
-      bottom: 3.16cqw;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8.95cqw;
+    .playlist_turntable-tonearm {
+      top: 7.89cqw;
+      left: 47.37cqw;
       width: 47.37cqw;
-      height: 11.58cqw;
-      clip-path: polygon(13% 0, 87% 0, 100% 100%, 0 100%);
-      background: rgb(0 0 0 / 0.18);
+      height: 39.47cqw;
+      overflow: visible;
     }
-    .playlist_transport span {
-      display: block;
-      width: 2.37cqw;
-      height: 2.37cqw;
-      border-radius: 50%;
-      background: #0f1730;
-      box-shadow:
-        inset 0 0.26cqw 0.53cqw rgb(0 0 0 / 0.67),
-        0 0.26cqw 0 rgb(255 255 255 / 0.12);
+    [data-playlist-record] {
+      transform-box: view-box;
+      transform-origin: 50% 50%;
     }
-    .playlist_transport span:nth-child(2) {
-      width: 7.89cqw;
-      height: 3.16cqw;
-      border-radius: 0.53cqw;
+    .playlist_tonearm-moving {
+      transform: rotate(-30deg);
+      transform-box: view-box;
+      transform-origin: 77.78% 17.33%;
+    }
+    .playlist_record-name {
+      fill: var(--light-100);
+      font: italic 14px/14px var(--secondary-family);
+      letter-spacing: -0.01em;
+    }
+    .playlist_record-date {
+      fill: var(--light-100);
+      font: 6px/8px var(--mono-family);
+      letter-spacing: 0.14em;
     }
     .playlist_embed {
       position: relative;
@@ -735,7 +653,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         align-items: start;
       }
       .playlist_player-row {
-        grid-template-areas: "cassette copy" "embed .";
+        grid-template-areas: "turntable copy" "embed .";
         grid-template-columns: 23.75rem minmax(0, 17.5rem);
         column-gap: 2.25rem;
         row-gap: 1.75rem;
@@ -759,7 +677,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         font-size: 0.875rem;
         line-height: 1.43;
       }
-      .playlist_cassette {
+      .playlist_turntable {
         width: 23.75rem;
         transform: rotate(-3deg);
       }
@@ -778,9 +696,11 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .playlist_embed iframe { transition: none; }
-      .playlist_reel-inner {
-        transform: none !important;
+      .playlist_embed iframe {
+        transition: none;
+      }
+      .playlist_tonearm-moving {
+        transition: none !important;
       }
     }
   }

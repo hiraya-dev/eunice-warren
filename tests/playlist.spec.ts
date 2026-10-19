@@ -48,39 +48,41 @@ test.describe("Playlist section", () => {
     await expect(page.locator("#playlist")).toBeInViewport();
   });
 
-  test("renders a passive cassette and a dark Spotify controller", async ({
+  test("renders a passive turntable and a dark Spotify controller", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installSpotify(page);
     await page.goto("/");
     await loadSpotify(page);
-    const cassette = page.locator("[data-playlist-cassette]");
+    const turntable = page.locator("[data-playlist-turntable]");
     const embed = page.locator("[data-playlist-embed]");
-    await expect(cassette.locator("button, input")).toHaveCount(0);
-    await expect(cassette.locator("[tabindex]")).toHaveCount(0);
+    await expect(turntable).toHaveAttribute("aria-hidden", "true");
+    await expect(turntable.locator("button, input, [tabindex]")).toHaveCount(0);
+    await expect(turntable.locator("[data-playlist-record]")).toHaveCount(1);
+    await expect(turntable.locator("[data-playlist-tonearm]")).toHaveCount(1);
     await expect(embed).toHaveCSS("width", "380px");
     const iframe = embed.locator("iframe");
     await expect(iframe).toHaveCount(1);
     await expect(iframe).toHaveCSS("opacity", "1");
     await expect(iframe).toHaveAttribute("src", /theme=0/);
-    const layout = await cassette.evaluate((node) => {
+    const layout = await turntable.evaluate((node) => {
       const element = node as HTMLElement;
       const embedElement = element.parentElement?.querySelector(
         "[data-playlist-embed]",
       ) as HTMLElement;
       const iframeElement = embedElement.querySelector("iframe") as HTMLElement;
       return {
-        cassetteLeft: element.offsetLeft,
-        cassetteWidth: element.offsetWidth,
+        turntableLeft: element.offsetLeft,
+        turntableWidth: element.offsetWidth,
         embedLeft: embedElement.offsetLeft,
         iframeLeft: iframeElement.offsetLeft,
         iframeWidth: iframeElement.offsetWidth,
       };
     });
-    expect(layout.embedLeft).toBe(layout.cassetteLeft);
+    expect(layout.embedLeft).toBe(layout.turntableLeft);
     expect(layout.iframeLeft).toBe(0);
-    expect(layout.iframeWidth).toBe(layout.cassetteWidth);
+    expect(layout.iframeWidth).toBe(layout.turntableWidth);
     await expect
       .poll(() =>
         page.evaluate(() =>
@@ -97,66 +99,62 @@ test.describe("Playlist section", () => {
     await expect(header.locator("[data-fade-in-item]")).toHaveCount(2);
   });
 
-  test("continuously rotates reels while Spotify is playing", async ({
+  test("drops the needle and continuously spins the record while Spotify is playing", async ({
     page,
   }) => {
     await installSpotify(page);
     await page.goto("/");
     await loadSpotify(page);
+    const arm = page.locator("[data-playlist-tonearm]");
+    const record = page.locator("[data-playlist-record]");
+    await expect(arm).toHaveCSS("transform", /matrix\(0\.866/);
     await page.evaluate(() =>
       (window as any).__playlistController.listeners[0][1]({
         data: { isPaused: false, position: 72000, duration: 231000 },
       }),
     );
-    const first = await page
-      .locator(".playlist_reel-inner")
-      .first()
-      .evaluate((element) => getComputedStyle(element).transform);
-    await page.waitForTimeout(300);
-    const second = await page
-      .locator(".playlist_reel-inner")
-      .first()
-      .evaluate((element) => getComputedStyle(element).transform);
-    expect(second).not.toBe(first);
+    await expect(arm).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await page.waitForTimeout(700);
+    const firstCenter = await record.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    });
+    await page.waitForTimeout(350);
+    const secondCenter = await record.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    });
+    expect(Math.abs(secondCenter.x - firstCenter.x)).toBeLessThan(1);
+    expect(Math.abs(secondCenter.y - firstCenter.y)).toBeLessThan(1);
+    const samples: number[] = [];
+    for (let index = 0; index < 4; index += 1) {
+      samples.push(
+        await record.evaluate((element) => {
+          const values = new DOMMatrix(getComputedStyle(element).transform);
+          return Math.atan2(values.b, values.a);
+        }),
+      );
+      await page.waitForTimeout(200);
+    }
+    expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan(0.2);
+    const beforePause = samples.at(-1)!;
     await page.evaluate(() =>
       (window as any).__playlistController.listeners[0][1]({
         data: { isPaused: true, position: 73000, duration: 231000 },
       }),
     );
-    const stopped = await page
-      .locator(".playlist_reel-inner")
-      .first()
-      .evaluate((element) => getComputedStyle(element).transform);
-    await page.waitForTimeout(100);
-    await expect(page.locator(".playlist_reel-inner").first()).toHaveCSS(
-      "transform",
-      stopped,
-    );
-    await expect(page.locator("[data-playlist-progress]")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-  });
-
-  test("draws progress with a compositor transform", async ({ page }) => {
-    await installSpotify(page);
-    await page.goto("/");
-    await loadSpotify(page);
-    await page.evaluate(() =>
-      (window as any).__playlistController.listeners[0][1]({
-        data: { isPaused: true, position: 115500, duration: 231000 },
-      }),
-    );
-    const fill = await page.locator("[data-playlist-progress]").evaluate((track) => {
-      const style = getComputedStyle(track, "::before");
-      return {
-        transform: style.transform,
-        width: parseFloat(style.width),
-        trackWidth: (track as HTMLElement).getBoundingClientRect().width,
-      };
+    await page.waitForTimeout(1500);
+    const afterPause = await record.evaluate((element) => {
+      const values = new DOMMatrix(getComputedStyle(element).transform);
+      return Math.atan2(values.b, values.a);
     });
-    expect(fill.transform).toMatch(/^matrix\(0\.5(?:,|\s)/);
-    expect(fill.width).toBeCloseTo(fill.trackWidth, 0);
+    await expect(arm).toHaveCSS("transform", /matrix\(0\.866/);
+    expect(Math.abs(afterPause - beforePause)).toBeGreaterThan(0.2);
+    const stopped = await record.evaluate(
+      (element) => getComputedStyle(element).transform,
+    );
+    await page.waitForTimeout(200);
+    await expect(record).toHaveCSS("transform", stopped);
   });
 
   test("keeps the embed at least 300px wide without document overflow on mobile", async ({
@@ -177,7 +175,40 @@ test.describe("Playlist section", () => {
     ).toBeLessThanOrEqual(320);
   });
 
-  test("does not rotate reels when reduced motion is requested", async ({
+  test("does not reset the record angle on a repeated play event", async ({
+    page,
+  }) => {
+    await installSpotify(page);
+    await page.goto("/");
+    await loadSpotify(page);
+    const record = page.locator("[data-playlist-record]");
+    const send = async () =>
+      page.evaluate(() =>
+        (window as any).__playlistController.listeners[0][1]({
+          data: { isPaused: false, position: 72000, duration: 231000 },
+        }),
+      );
+    await send();
+    await page.waitForTimeout(850);
+    const before = await record.evaluate((element) => {
+      const values = new DOMMatrix(getComputedStyle(element).transform);
+      return Math.atan2(values.b, values.a);
+    });
+    await send();
+    const after = await record.evaluate((element) => {
+      const values = new DOMMatrix(getComputedStyle(element).transform);
+      return Math.atan2(values.b, values.a);
+    });
+    expect(Math.abs(after - before)).toBeLessThan(0.2);
+    await page.waitForTimeout(200);
+    const later = await record.evaluate((element) => {
+      const values = new DOMMatrix(getComputedStyle(element).transform);
+      return Math.atan2(values.b, values.a);
+    });
+    expect(Math.abs(later - after)).toBeGreaterThan(0.02);
+  });
+
+  test("does not rotate the record when reduced motion is requested", async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -189,15 +220,14 @@ test.describe("Playlist section", () => {
         data: { isPaused: false, position: 72000, duration: 231000 },
       }),
     );
-    const first = await page
-      .locator(".playlist_reel-inner")
-      .first()
-      .evaluate((element) => getComputedStyle(element).transform);
-    await page.waitForTimeout(300);
-    await expect(page.locator(".playlist_reel-inner").first()).toHaveCSS(
-      "transform",
-      first,
+    const record = page.locator("[data-playlist-record]");
+    const arm = page.locator("[data-playlist-tonearm]");
+    const first = await record.evaluate(
+      (element) => getComputedStyle(element).transform,
     );
+    await page.waitForTimeout(300);
+    await expect(record).toHaveCSS("transform", first);
+    await expect(arm).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
   });
 
   test("validates the request form and shows its honest status", async ({
