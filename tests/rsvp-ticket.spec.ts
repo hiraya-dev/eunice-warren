@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 const accept = async (
   page: import("@playwright/test").Page,
   companion = true,
+  beforeSubmit?: () => Promise<void>,
 ) => {
   const rsvp = page.locator("#rsvp");
   await rsvp.locator("[data-rsvp-name]").fill("Liza Santos");
@@ -15,6 +16,7 @@ const accept = async (
   }
   await rsvp.getByRole("button", { name: /Continue/ }).click();
   await rsvp.locator("#rsvp-email").fill("liza@example.com");
+  await beforeSubmit?.();
   await rsvp.getByRole("button", { name: /Send RSVP/ }).click();
   return page.locator("#rsvp-ticket-modal");
 };
@@ -264,57 +266,153 @@ test.describe("RSVP ticket popup", () => {
 
   test("feeds the ticket with stepped motion", async ({ page }) => {
     await page.goto("/");
-    const dialog = await accept(page, false);
-    await page.locator("#rsvp-ticket-modal[open]").waitFor();
-    const samples = await dialog.locator("[data-ticket]").evaluate(
-      (ticket) =>
-        new Promise<Array<[number, number]>>((resolve) => {
-          // Measure against the printer so the dialog's own entrance motion is excluded.
-          const machine = ticket
-            .closest("[data-ticket-graphic]")!
-            .querySelector(".ticket-popup_machine")!;
-          const values: Array<[number, number]> = [];
-          const started = performance.now();
-          const sample = () => {
-            const now = performance.now() - started;
-            values.push([
-              now,
+    await accept(page, false, async () => {
+      await page.evaluate(() => {
+        const state = {
+          samples: [] as Array<[number, number]>,
+          resolved: false,
+          sawPrinting: false,
+        };
+        Object.assign(window, { __ticketFeed: state });
+
+        const started = performance.now();
+        const sample = () => {
+          const modal = document.querySelector("#rsvp-ticket-modal");
+          const ticket = modal?.querySelector<HTMLElement>("[data-ticket]");
+          const popup = ticket?.closest<HTMLElement>("[data-ticket-popup]");
+          const stage = popup?.dataset.stage;
+          if (ticket && popup && stage === "printing") {
+            state.sawPrinting = true;
+            const machine = ticket
+              .closest("[data-ticket-graphic]")!
+              .querySelector(".ticket-popup_machine")!;
+            state.samples.push([
+              performance.now(),
               ticket.getBoundingClientRect().top -
                 machine.getBoundingClientRect().bottom,
             ]);
-            // Stop at the release, when the printer itself starts to move.
-            const released =
-              ticket.closest<HTMLElement>("[data-ticket-popup]")!.dataset
-                .stage === "released";
-            if (now < 2600 && !released) requestAnimationFrame(sample);
-            else resolve(values);
-          };
+          } else if (
+            ticket &&
+            popup &&
+            state.sawPrinting &&
+            (stage === "printed" || stage === "released")
+          ) {
+            const machine = ticket
+              .closest("[data-ticket-graphic]")!
+              .querySelector(".ticket-popup_machine")!;
+            state.samples.push([
+              performance.now(),
+              ticket.getBoundingClientRect().top -
+                machine.getBoundingClientRect().bottom,
+            ]);
+            state.resolved = true;
+            return;
+          }
+          if (performance.now() - started >= 15_000) {
+            state.resolved = true;
+            return;
+          }
           requestAnimationFrame(sample);
-        }),
+        };
+        requestAnimationFrame(sample);
+      });
+    });
+    await page.waitForFunction(
+      () =>
+        (window as Window & { __ticketFeed?: { resolved: boolean } })
+          .__ticketFeed?.resolved === true,
+      undefined,
+      { timeout: 15_000 },
     );
-    const first = samples[0][1];
-    const last = samples.at(-1)![1];
-    expect(last - first).toBeGreaterThan(20);
+    const samples = await page.evaluate(() => {
+      const state = (
+        window as Window & {
+          __ticketFeed?: { samples: Array<[number, number]> };
+        }
+      ).__ticketFeed;
+      return state?.samples ?? [];
+    });
+    expect(samples.length).toBeGreaterThanOrEqual(2);
+    const liveFirst = samples[0][1];
+    const liveLast = samples.at(-1)![1];
+    expect(liveLast - liveFirst).toBeGreaterThan(20);
     for (let index = 1; index < samples.length; index += 1) {
       expect(samples[index][1]).toBeGreaterThanOrEqual(
         samples[index - 1][1] - 1,
       );
     }
-    // Headless frames arrive tens of ms apart, so holds are measured in wall-clock
-    // time, and only between the start and end positions (the feed itself).
-    let plateaus = 0;
-    let runStart = 0;
-    for (let index = 1; index <= samples.length; index += 1) {
-      const still =
-        index < samples.length &&
-        Math.abs(samples[index][1] - samples[index - 1][1]) < 1;
-      if (still) continue;
-      const [startTime, value] = samples[runStart];
-      const span = samples[index - 1][0] - startTime;
-      if (span >= 40 && value > first + 1 && value < last - 1) plateaus += 1;
-      runStart = index;
+
+    const dialog = page.locator("#rsvp-ticket-modal");
+    await page.locator("#rsvp-ticket-modal[open]").waitFor();
+    const ticket = dialog.locator("[data-ticket]");
+
+    const shape = await ticket.evaluate((ticket) => {
+      const probe = ticket.cloneNode(true) as HTMLElement;
+      probe.classList.remove("is-printed", "is-releasing", "is-released");
+      probe.classList.add("is-printing");
+      probe.setAttribute("aria-hidden", "true");
+      probe.style.visibility = "hidden";
+      ticket.parentElement!.append(probe);
+
+      try {
+        const animation = probe
+          .getAnimations()
+          .find(
+            (candidate) =>
+              (candidate as CSSAnimation).animationName === "ticket-feed",
+          );
+        if (!animation) throw new Error("ticket-feed animation not found");
+
+        const duration = Number(animation.effect?.getComputedTiming().duration);
+        if (!Number.isFinite(duration))
+          throw new Error("ticket-feed animation has no finite duration");
+
+        const values: Array<[number, number]> = [];
+        const measure = () => {
+          const transform = getComputedStyle(probe).transform;
+          return transform === "none" ? 0 : new DOMMatrix(transform).f;
+        };
+
+        animation.pause();
+        for (let time = 0; time <= duration; time += 10) {
+          animation.currentTime = Math.min(time, duration);
+          values.push([time, measure()]);
+        }
+        if (values.at(-1)![0] < duration) {
+          animation.currentTime = duration;
+          values.push([duration, measure()]);
+        }
+
+        const first = values[0][1];
+        const last = values.at(-1)![1];
+        let plateaus = 0;
+        let runStart = 0;
+        for (let index = 1; index <= values.length; index += 1) {
+          const still =
+            index < values.length &&
+            Math.abs(values[index][1] - values[index - 1][1]) < 1;
+          if (still) continue;
+          const [startTime, value] = values[runStart];
+          const span = values[index - 1][0] - startTime;
+          if (span >= 40 && value > first + 1 && value < last - 1)
+            plateaus += 1;
+          runStart = index;
+        }
+        return { values, plateaus };
+      } finally {
+        probe.remove();
+      }
+    });
+
+    const shapeFirst = shape.values[0][1];
+    const shapeLast = shape.values.at(-1)![1];
+    expect(shapeLast - shapeFirst).toBeGreaterThan(20);
+    for (let index = 1; index < shape.values.length; index += 1) {
+      expect(shape.values[index][1]).toBeGreaterThanOrEqual(
+        shape.values[index - 1][1] - 1,
+      );
     }
-    expect(plateaus).toBeGreaterThanOrEqual(3);
+    expect(shape.plateaus).toBeGreaterThanOrEqual(3);
   });
 
   test("releases the ticket smoothly into the centred standalone state", async ({
