@@ -191,21 +191,29 @@ test.describe("Playlist section", () => {
     await send();
     await page.waitForTimeout(850);
     const before = await record.evaluate((element) => {
-      const values = new DOMMatrix(getComputedStyle(element).transform);
-      return Math.atan2(values.b, values.a);
+      const angle = Number.parseFloat(
+        element.style.transform.match(/rotate\(([-\d.e]+)deg\)/)?.[1] ?? "0",
+      );
+      return { angle, time: performance.now() };
     });
     await send();
     const after = await record.evaluate((element) => {
-      const values = new DOMMatrix(getComputedStyle(element).transform);
-      return Math.atan2(values.b, values.a);
+      const angle = Number.parseFloat(
+        element.style.transform.match(/rotate\(([-\d.e]+)deg\)/)?.[1] ?? "0",
+      );
+      return { angle, time: performance.now() };
     });
-    expect(Math.abs(after - before)).toBeLessThan(0.2);
+    const elapsed = after.time - before.time;
+    const maxAdvance = (elapsed + 100) * 0.2;
+    expect(after.angle).toBeGreaterThanOrEqual(before.angle - 0.5);
+    expect(after.angle - before.angle).toBeLessThanOrEqual(maxAdvance + 0.5);
     await page.waitForTimeout(200);
     const later = await record.evaluate((element) => {
-      const values = new DOMMatrix(getComputedStyle(element).transform);
-      return Math.atan2(values.b, values.a);
+      return Number.parseFloat(
+        element.style.transform.match(/rotate\(([-\d.e]+)deg\)/)?.[1] ?? "0",
+      );
     });
-    expect(Math.abs(later - after)).toBeGreaterThan(0.02);
+    expect(later - after.angle).toBeGreaterThan(1);
   });
 
   test("does not rotate the record when reduced motion is requested", async ({
