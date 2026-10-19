@@ -185,14 +185,15 @@ test.describe("explore section", () => {
     await page.mouse.move(startX, y);
     await page.mouse.down();
     let previous = before;
-    for (let step = 1; step <= 5; step += 1) {
-      await page.mouse.move(startX - step * 30, y, { steps: 1 });
+    for (let step = 1; step <= 6; step += 1) {
+      await page.mouse.move(startX - step * 35, y, { steps: 1 });
       const during = await track.evaluate(
         (element) => new DOMMatrix(getComputedStyle(element).transform).e,
       );
       expect(during).toBeLessThan(previous);
       previous = during;
     }
+    await page.waitForTimeout(200);
     await page.mouse.up();
     await expect
       .poll(() =>
