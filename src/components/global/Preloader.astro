@@ -20,6 +20,7 @@ const { messageHref = "#" } = Astro.props;
   aria-modal="true"
   aria-labelledby="preloader-title"
   aria-hidden="true"
+  data-lenis-prevent
 >
   <div class="preloader_layout">
     <p class="preloader_eyebrow">Eunice &amp; Warren · 01 · 14 · 2027</p>
@@ -28,9 +29,9 @@ const { messageHref = "#" } = Astro.props;
       <div class="preloader_stage">
         <div class="preloader_envelope">
           <div class="preloader_face">
-            <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} aria-hidden="true" />
-            <Image class="preloader_stamp-ew" src={stampEw} alt="" width={104} height={130} aria-hidden="true" />
-            <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} aria-hidden="true" />
+            <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} widths={[160, 320]} sizes="(max-width: 30rem) 104px, 160px" loading="eager" aria-hidden="true" />
+            <Image class="preloader_stamp-ew" src={stampEw} alt="" width={104} height={130} widths={[104, 208]} sizes="(max-width: 30rem) 64px, 104px" loading="eager" aria-hidden="true" />
+            <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} widths={[176, 352]} sizes="176px" loading="eager" aria-hidden="true" />
             <div class="preloader_address">
               <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
               <input id="preloader-name" name="name" autocomplete="name" required data-preloader-name />
@@ -58,6 +59,7 @@ const { messageHref = "#" } = Astro.props;
   import { actions } from "astro:actions";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
   import { setGuest } from "@/lib/guest";
+  import { lenis } from "@/scripts/scroll.ts";
 
   const initPreloader = () => {
     const overlay = document.querySelector<HTMLElement>("[data-preloader]");
@@ -85,12 +87,16 @@ const { messageHref = "#" } = Astro.props;
     const turnstile = createTurnstileController(isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV));
     let state: "ask" | "found" | "not-found" = "ask";
     let closing = false;
+    const stopLenis = () => lenis?.stop();
 
     document.body.classList.add("preloader-open");
     mobileHint.hidden = false;
     mobileHint.textContent = hint.textContent;
     document.querySelectorAll<HTMLElement>("body > *:not([data-preloader])").forEach((element) => { element.inert = true; });
     overlay.setAttribute("aria-hidden", "false");
+    document.addEventListener("ew:lenis-ready", stopLenis);
+    stopLenis();
+    requestAnimationFrame(stopLenis);
     requestAnimationFrame(() => input.focus());
 
     const setAskState = () => {
@@ -115,11 +121,14 @@ const { messageHref = "#" } = Astro.props;
     };
     const close = () => {
       if (closing) return;
-      closing = true;
       if (state !== "found") setGuest({ skipped: true, at: new Date().toISOString() });
       finishClose();
     };
     const finishClose = () => {
+      if (closing) return;
+      closing = true;
+      lenis?.start();
+      document.removeEventListener("ew:lenis-ready", stopLenis);
       overlay.classList.add("is-closing");
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       window.setTimeout(() => {

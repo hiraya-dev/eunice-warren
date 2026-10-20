@@ -51,6 +51,16 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).toHaveCount(0);
   });
 
+  test("locks page scrolling while open and restores it after closing", async ({ page }) => {
+    await page.mouse.wheel(0, 1200);
+    await page.mouse.wheel(0, 1200);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await preloader(page).getByRole("button", { name: "Just browsing" }).click();
+    await expect(preloader(page)).toHaveCount(0);
+    await page.mouse.wheel(0, 1200);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  });
+
   test("reduced motion does not animate the envelope transform", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.reload();

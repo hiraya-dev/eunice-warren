@@ -93,6 +93,7 @@ export const initScroll = () => {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   lenis = new Lenis({ anchors: true });
+  document.dispatchEvent(new Event("ew:lenis-ready"));
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((time) => {
     lenis?.raf(time * 1000);
