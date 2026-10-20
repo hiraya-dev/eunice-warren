@@ -30,6 +30,7 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
   <body>
     <SkipLink />
     <Nav overlap={overlap} />
+    <slot name="preloader" />
     <main id="main" tabindex="-1">
       <slot />
     </main>

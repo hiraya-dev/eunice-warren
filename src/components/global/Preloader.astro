@@ -1,0 +1,277 @@
+---
+import { Image } from "astro:assets";
+import parAvion from "@/assets/images/preloader/par-avion.png";
+import stampEw from "@/assets/images/preloader/stamp-ew.png";
+import postmark from "@/assets/images/preloader/postmark-received.png";
+
+interface Props {
+  /** Message destination for guests who cannot find an invite. */
+  messageHref?: string;
+}
+
+const { messageHref = "#" } = Astro.props;
+---
+
+<div
+  class="preloader_wrap"
+  data-preloader
+  data-message-href={messageHref}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="preloader-title"
+  aria-hidden="true"
+  data-lenis-prevent
+>
+  <div class="preloader_layout">
+    <p class="preloader_eyebrow">Eunice &amp; Warren · 01 · 14 · 2027</p>
+    <h1 id="preloader-title" class="preloader_title">A letter is waiting for you.</h1>
+    <form class="preloader_form" data-preloader-form novalidate>
+      <div class="preloader_stage">
+        <div class="preloader_envelope">
+          <div class="preloader_face">
+            <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} widths={[160, 320]} sizes="(max-width: 30rem) 104px, 160px" loading="eager" aria-hidden="true" />
+            <Image class="preloader_stamp-ew" src={stampEw} alt="" width={104} height={130} widths={[104, 208]} sizes="(max-width: 30rem) 64px, 104px" loading="eager" aria-hidden="true" />
+            <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} widths={[176, 352]} sizes="176px" loading="eager" aria-hidden="true" />
+            <div class="preloader_address">
+              <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
+              <input id="preloader-name" name="name" autocomplete="name" required data-preloader-name />
+              <p class="preloader_hint" data-preloader-hint>Write your name as it's on your invitation.</p>
+              <p class="preloader_not-you" data-preloader-not-you hidden>
+                Not you? <button type="button" data-preloader-reset>Write your own name</button>
+              </p>
+              <p class="preloader_message" data-preloader-message hidden>Still stuck? <a href={messageHref}>Message us</a></p>
+            </div>
+          </div>
+        </div>
+        <p class="preloader_hint preloader_hint-mobile" data-preloader-hint-mobile hidden></p>
+        <button class="preloader_primary" type="submit" data-preloader-submit>
+          <span data-preloader-submit-label>Open my letter →</span>
+        </button>
+      </div>
+      <p class="preloader_admits" data-preloader-admits hidden>Your invitation admits <span></span>.</p>
+      <button class="preloader_browse" type="button" data-preloader-browse>Just browsing →</button>
+      <div class="preloader_turnstile" data-preloader-turnstile></div>
+    </form>
+  </div>
+</div>
+
+<script>
+  import { actions } from "astro:actions";
+  import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
+  import { setGuest } from "@/lib/guest";
+  import { lenis } from "@/scripts/scroll.ts";
+
+  const initPreloader = () => {
+    const overlay = document.querySelector<HTMLElement>("[data-preloader]");
+    if (!overlay || overlay.dataset.ready === "true") return;
+    overlay.dataset.ready = "true";
+    if (!document.documentElement.classList.contains("ew-preloader-pending")) {
+      overlay.remove();
+      return;
+    }
+
+    const form = overlay.querySelector<HTMLFormElement>("[data-preloader-form]")!;
+    const input = overlay.querySelector<HTMLInputElement>("[data-preloader-name]")!;
+    const title = overlay.querySelector<HTMLElement>("#preloader-title")!;
+    const hint = overlay.querySelector<HTMLElement>("[data-preloader-hint]")!;
+    const mobileHint = overlay.querySelector<HTMLElement>("[data-preloader-hint-mobile]")!;
+    const submit = overlay.querySelector<HTMLButtonElement>("[data-preloader-submit]")!;
+    const submitLabel = overlay.querySelector<HTMLElement>("[data-preloader-submit-label]")!;
+    const admits = overlay.querySelector<HTMLElement>("[data-preloader-admits]")!;
+    const notYou = overlay.querySelector<HTMLElement>("[data-preloader-not-you]")!;
+    const message = overlay.querySelector<HTMLElement>("[data-preloader-message]")!;
+    const browse = overlay.querySelector<HTMLButtonElement>("[data-preloader-browse]")!;
+    const label = overlay.querySelector<HTMLElement>("[data-preloader-label]")!;
+    const main = document.querySelector<HTMLElement>("main");
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const turnstile = createTurnstileController(isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV));
+    let state: "ask" | "found" | "not-found" = "ask";
+    let closing = false;
+    const stopLenis = () => lenis?.stop();
+
+    document.body.classList.add("preloader-open");
+    mobileHint.hidden = false;
+    mobileHint.textContent = hint.textContent;
+    document.querySelectorAll<HTMLElement>("body > *:not([data-preloader])").forEach((element) => { element.inert = true; });
+    overlay.setAttribute("aria-hidden", "false");
+    document.addEventListener("ew:lenis-ready", stopLenis);
+    stopLenis();
+    requestAnimationFrame(stopLenis);
+    requestAnimationFrame(() => input.focus());
+
+    const setAskState = () => {
+      state = "ask";
+      title.textContent = "A letter is waiting for you.";
+      label.textContent = "To · Who's visiting?";
+      input.value = "";
+      input.readOnly = false;
+      input.classList.remove("is-found");
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+      hint.textContent = "Write your name as it's on your invitation.";
+      mobileHint.textContent = hint.textContent;
+      hint.classList.remove("is-error");
+      mobileHint.classList.remove("is-error");
+      notYou.hidden = true;
+      message.hidden = true;
+      admits.hidden = true;
+      submitLabel.textContent = "Open my letter →";
+      submit.disabled = false;
+      input.focus();
+    };
+    const close = () => {
+      if (closing) return;
+      if (state !== "found") setGuest({ skipped: true, at: new Date().toISOString() });
+      finishClose();
+    };
+    const finishClose = () => {
+      if (closing) return;
+      closing = true;
+      lenis?.start();
+      document.removeEventListener("ew:lenis-ready", stopLenis);
+      overlay.classList.add("is-closing");
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.setTimeout(() => {
+        document.removeEventListener("keydown", onKeydown);
+        overlay.remove();
+        document.documentElement.classList.remove("ew-preloader-pending");
+        document.body.classList.remove("preloader-open");
+        document.querySelectorAll<HTMLElement>("body > *").forEach((element) => { element.inert = false; });
+        (main ?? previousFocus)?.focus();
+      }, reduced ? 160 : 700);
+    };
+    const focusables = () => [...overlay.querySelectorAll<HTMLElement>("button, input, a[href]")].filter((element) => !element.hidden && !element.hasAttribute("disabled"));
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); close(); return; }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", onKeydown);
+    browse.addEventListener("click", close);
+    overlay.querySelector<HTMLButtonElement>("[data-preloader-reset]")!.addEventListener("click", setAskState);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (state === "found") { finishClose(); return; }
+      if (!input.value.trim()) { input.focus(); return; }
+      submit.disabled = true;
+      submit.setAttribute("aria-busy", "true");
+      try {
+        const result = await actions.rsvp.find({
+          name: input.value,
+          turnstileToken: await turnstile.getToken(overlay.querySelector<HTMLElement>("[data-preloader-turnstile]")!),
+        });
+        if (result.error || !result.data) throw new Error(result.error?.message || "Something went wrong — please try again.");
+        if (!result.data.invite) {
+          state = "not-found";
+          title.textContent = "Hmm, we can't find that name.";
+          hint.textContent = "Check the spelling, or try the name on your invitation.";
+          mobileHint.textContent = hint.textContent;
+          hint.classList.add("is-error");
+          mobileHint.classList.add("is-error");
+          message.hidden = false;
+          submitLabel.textContent = "Try again →";
+          input.setAttribute("aria-invalid", "true");
+          submit.disabled = false;
+          return;
+        }
+        state = "found";
+        const guest = { name: result.data.matchedName, householdName: result.data.invite.householdName, seats: result.data.invite.seats, at: new Date().toISOString() };
+        setGuest(guest);
+        title.textContent = `Welcome, ${guest.householdName}.`;
+        label.textContent = "To";
+        input.value = guest.householdName;
+        input.readOnly = true;
+        input.classList.add("is-found");
+        hint.textContent = "";
+        mobileHint.textContent = "";
+        hint.classList.remove("is-error");
+        mobileHint.classList.remove("is-error");
+        notYou.hidden = false;
+        message.hidden = true;
+        admits.querySelector("span")!.textContent = String(guest.seats);
+        admits.hidden = false;
+        submitLabel.textContent = "Open my letter →";
+        submit.disabled = false;
+        document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
+      } catch (error) {
+        hint.textContent = error instanceof Error && error.message ? error.message : "Something went wrong — please try again.";
+        mobileHint.textContent = hint.textContent;
+        hint.classList.add("is-error");
+        mobileHint.classList.add("is-error");
+        input.setAttribute("aria-invalid", "true");
+        submit.disabled = false;
+      } finally {
+        submit.removeAttribute("aria-busy");
+        turnstile.reset();
+      }
+    });
+  };
+  initPreloader();
+  document.addEventListener("astro:page-load", initPreloader);
+</script>
+
+<style is:global>
+  @layer components {
+    body.preloader-open { overflow: hidden; }
+    .preloader_wrap { position: fixed; z-index: 100; inset: 0; display: none; overflow-x: clip; overflow-y: auto; background: var(--light-100) url("../../assets/textures/grain-light.jpg") center / 32rem repeat; color: var(--dark-900); opacity: 1; }
+    html.ew-preloader-pending .preloader_wrap { display: block; }
+    .preloader_wrap [hidden] { display: none !important; }
+    .preloader_layout { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100%; align-content: center; justify-items: center; gap: 2.5rem; padding: 3rem var(--site-gutter); box-sizing: border-box; }
+    .preloader_eyebrow { margin: 0; color: var(--dark-700); font: var(--eyebrow) / 0.875rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-align: center; text-transform: uppercase; }
+    .preloader_title { max-width: 100%; margin: -1.625rem 0 0; font: var(--secondary-ultralight) 2.75rem / 3rem var(--secondary-family); font-style: italic; letter-spacing: var(--letter-spacing-snug); text-align: center; }
+    .preloader_form { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.25rem; width: 100%; }
+    .preloader_stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); width: min(45rem, 100%); }
+    .preloader_envelope { width: 100%; aspect-ratio: 12 / 7; padding: .75rem; box-sizing: border-box; transform: rotate(-1.5deg); background: repeating-linear-gradient(135deg, var(--accent-500) 0 1rem, var(--light-200) 1rem 1.625rem, var(--dark-900) 1.625rem 2.625rem, var(--light-200) 2.625rem 3.25rem); box-shadow: 0 1.125rem 2.5rem rgb(31 47 92 / 14%); }
+    .preloader_face { position: relative; display: flex; height: 100%; align-items: flex-end; padding: 3rem 3.5rem; box-sizing: border-box; background: var(--light-200) url("../../assets/textures/postcard-paper.jpg") center / 32rem repeat; }
+    .preloader_par-avion { position: absolute; top: 3rem; left: 3.5rem; width: 10rem; height: auto; mix-blend-mode: multiply; transform: rotate(-4deg); }
+    .preloader_stamp-ew { position: absolute; top: 2.25rem; right: 2.75rem; width: 6.5rem; height: auto; transform: rotate(4deg); }
+    .preloader_postmark { position: absolute; top: 3.75rem; right: 6.5rem; width: 11rem; height: auto; mix-blend-mode: multiply; transform: rotate(-8deg); }
+    .preloader_address { display: grid; gap: .875rem; width: 25rem; max-width: 100%; }
+    .preloader_address label { color: var(--dark-700); font: var(--eyebrow) / .875rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .preloader_address input { width: 100%; padding: 0 0 .375rem; border: 0; border-bottom: .09375rem solid var(--dark-900); border-radius: 0; outline: 0; background: transparent; color: var(--dark-900); caret-color: var(--accent-500); font: var(--secondary-ultralight) 2.5rem / 2.75rem var(--hand-family); }
+    .preloader_address input.is-found { border-color: #b9b2a3; caret-color: transparent; }
+    .preloader_hint, .preloader_message, .preloader_not-you { margin: 0; color: var(--dark-700); font: .875rem / 1.25rem var(--primary-family); }
+    .preloader_hint-mobile { display: none; }
+    .preloader_hint.is-error { color: var(--accent-500); }
+    .preloader_message a, .preloader_not-you button { padding: 0; border: 0; border-bottom: .0625rem solid currentColor; background: none; color: var(--dark-900); cursor: pointer; font: inherit; }
+    .preloader_primary { position: absolute; right: 3.75rem; bottom: 6rem; transform: rotate(-1.5deg); padding: .8125rem 1.5rem; border: 0; border-radius: var(--radius-round); background: var(--accent-500); color: var(--light-200); cursor: pointer; font: var(--primary-regular) 1rem / 1.25rem var(--primary-family); }
+    .preloader_primary:disabled { opacity: .6; cursor: wait; }
+    .preloader_browse { padding: 0 0 .25rem; border: 0; border-bottom: .0625rem solid var(--dark-900); background: none; color: var(--dark-900); cursor: pointer; font: var(--eyebrow) / 1rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .preloader_admits { margin: 0; font: .875rem / 1.25rem var(--primary-family); }
+    .preloader_turnstile { min-height: 0; }
+    .preloader_turnstile:has(iframe) { min-height: 4.0625rem; }
+    .preloader_wrap.is-closing { animation: preloader-fade .3s ease-out .4s forwards; }
+    .preloader_wrap.is-closing .preloader_stage { animation: preloader-lift .65s cubic-bezier(.23, 1, .32, 1) forwards; }
+    @keyframes preloader-lift { to { opacity: 0; transform: translateY(-2rem); } }
+    @keyframes preloader-fade { to { opacity: 0; } }
+    @media (max-width: 30rem) {
+      .preloader_layout { align-content: start; gap: 1.75rem; padding: 2rem 1.25rem 3rem; }
+      .preloader_title { margin-top: -.75rem; font-size: 2rem; line-height: 2.25rem; }
+      .preloader_form { gap: 1.25rem; }
+      .preloader_stage { width: min(21.875rem, 100%); gap: 1.25rem; }
+      .preloader_envelope { aspect-ratio: 7 / 5; padding: .5625rem; transform: rotate(-2deg); }
+      .preloader_face { padding: 1.375rem; }
+      .preloader_par-avion { top: 1.625rem; left: 1.625rem; width: 6.5rem; }
+      .preloader_stamp-ew { top: 1.25rem; right: 1.375rem; width: 4rem; }
+      .preloader_postmark { display: none; }
+      .preloader_address { gap: .625rem; }
+      .preloader_address > .preloader_hint { display: none; }
+      .preloader_hint-mobile { display: block; text-align: center; }
+      .preloader_address input { font-size: 2rem; line-height: 2.25rem; }
+      .preloader_primary { position: static; width: 100%; transform: none; justify-content: center; text-align: center; padding: .9375rem 1.5rem; }
+      .preloader_browse { margin-top: -.25rem; }
+    }
+    @media (max-width: 22.5rem) {
+      .preloader_par-avion { top: 1.25rem; left: 1.25rem; width: 5rem; }
+      .preloader_stamp-ew { width: 3.25rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .preloader_wrap.is-closing .preloader_stage { animation: none; }
+      .preloader_wrap.is-closing { animation-duration: .16s; animation-delay: 0s; }
+    }
+  }
+</style>
