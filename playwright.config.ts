@@ -22,6 +22,13 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: ORIGIN,
+    storageState: {
+      cookies: [],
+      origins: [{
+        origin: ORIGIN,
+        localStorage: [{ name: "ew-guest-v1", value: JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" }) }],
+      }],
+    },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "on-first-retry",

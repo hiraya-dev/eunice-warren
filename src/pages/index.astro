@@ -14,9 +14,11 @@ import WithLove from "@/components/sections/WithLove.astro";
 import Playlist from "@/components/sections/Playlist.astro";
 import Faq from "@/components/sections/Faq.astro";
 import Rsvp from "@/components/sections/Rsvp.astro";
+import Preloader from "@/components/global/Preloader.astro";
 ---
 
 <Layout theme="light">
+  <Preloader slot="preloader" />
   <Hero rsvpHref="#" weekendHref="#" />
   <Invitation />
   <Wedding />

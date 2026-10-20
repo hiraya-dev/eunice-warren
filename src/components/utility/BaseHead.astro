@@ -26,6 +26,15 @@ const socialImage = new URL(image, Astro.site);
   @layer base, patterns, components, utilities;
 </style>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+{Astro.url.pathname === "/" && <script is:inline>
+  try {
+    const raw = localStorage.getItem("ew-guest-v1");
+    const state = raw ? JSON.parse(raw) : null;
+    if (!state || (state.skipped !== true && (typeof state.name !== "string" || !state.name.trim()))) document.documentElement.classList.add("ew-preloader-pending");
+  } catch {
+    document.documentElement.classList.add("ew-preloader-pending");
+  }
+</script>}
 <Font cssVariable="--font-neue-montreal" preload={[{ weight: 400, style: "normal" }]} />
 <Font cssVariable="--font-editorial-new" preload={[{ weight: 200, style: "normal" }]} />
 <Font cssVariable="--font-fraktion-mono" />

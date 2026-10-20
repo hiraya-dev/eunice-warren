@@ -189,10 +189,19 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
 </section>
 
 <script>
+  import { getGuest } from "@/lib/guest";
   const initPlaylist = () => {
     const section = document.querySelector<HTMLElement>("#playlist");
     if (!section || section.dataset.playlistInitialized === "true") return;
     section.dataset.playlistInitialized = "true";
+    const nameInput = section.querySelector<HTMLInputElement>('input[name="name"]');
+    const remembered = getGuest();
+    if (nameInput && remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
+    const onGuest = (event: Event) => {
+      const guestName = (event as CustomEvent<{ name?: string }>).detail?.name;
+      if (nameInput && guestName && !nameInput.value) nameInput.value = guestName;
+    };
+    document.addEventListener("ew:guest", onGuest);
     const embed = section.querySelector<HTMLElement>("[data-playlist-embed]");
     const embedTarget = section.querySelector<HTMLElement>(
       "[data-playlist-embed-target]",

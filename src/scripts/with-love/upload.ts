@@ -1,6 +1,7 @@
 import { actions } from "astro:actions";
 import { processPhoto } from "./photo";
 import { createTurnstileController, isFakeTurnstileMode } from "../turnstile";
+import { getGuest } from "../../lib/guest";
 import { clampPan, pinchZoom, sourceRect, type CropFrame, type CropImage, type CropTransform } from "./crop";
 
 type Note = { id: string; name: string; city: string; message: string; photoUrl: string };
@@ -58,6 +59,13 @@ export function initWithLoveUpload() {
     const empty = root.querySelectorAll<HTMLElement>("[data-photo-empty], [data-photo-hint]");
     const message = root.querySelector<HTMLTextAreaElement>("[data-message]")!;
     const name = root.querySelector<HTMLInputElement>("[data-name]")!;
+    const remembered = getGuest();
+    if (remembered && "name" in remembered && !name.value) name.value = remembered.name;
+    const onGuest = (event: Event) => {
+      const guestName = (event as CustomEvent<{ name?: string }>).detail?.name;
+      if (guestName && !name.value) { name.value = guestName; update(); }
+    };
+    document.addEventListener("ew:guest", onGuest);
     const city = root.querySelector<HTMLInputElement>("[data-city]")!;
     const submit = root.querySelector<HTMLButtonElement>("[data-submit]")!;
     const error = root.querySelector<HTMLElement>("[data-form-error]")!;

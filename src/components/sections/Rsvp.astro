@@ -249,19 +249,8 @@ const {
   import { actions } from "astro:actions";
   import type { Invite } from "@/lib/rsvp/store";
   import { normalizeGuestName } from "@/lib/rsvp/store";
-  declare global {
-    interface Window {
-      turnstile?: {
-        render: (
-          container: HTMLElement,
-          options: Record<string, unknown>,
-        ) => string | number;
-        execute: (widget: string | number | undefined) => void;
-        reset: (widget: string | number | undefined) => void;
-        remove: (widget: string | number | undefined) => void;
-      };
-    }
-  }
+  import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
+  import { getGuest } from "@/lib/guest";
 
   const initRsvp = () => {
     document
@@ -269,46 +258,8 @@ const {
       .forEach((root) => {
         if (root.dataset.rsvpReady) return;
         root.dataset.rsvpReady = "true";
-        const fakeMode =
-          import.meta.env.PUBLIC_RSVP_STORE === "fake" ||
-          (import.meta.env.DEV && !import.meta.env.PUBLIC_RSVP_STORE);
-        let turnstileWidget: string | number | undefined;
-        const getTurnstileToken = async (container: HTMLElement) => {
-          if (fakeMode) return "local-test-token";
-          const load = () =>
-            new Promise<void>((resolve, reject) => {
-              if (window.turnstile) return resolve();
-              const script = document.createElement("script");
-              script.src =
-                "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-              script.async = true;
-              script.defer = true;
-              script.onload = () => resolve();
-              script.onerror = () => reject(new Error("Turnstile unavailable"));
-              document.head.append(script);
-            });
-          await load();
-          if (turnstileWidget !== undefined) {
-            window.turnstile!.remove(turnstileWidget);
-          }
-          container.replaceChildren();
-          return new Promise<string>((resolve, reject) => {
-            turnstileWidget = window.turnstile!.render(container, {
-              // The production widget's site key is public; tests run in
-              // fake mode and never render Turnstile.
-              sitekey:
-                import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ||
-                "0x4AAAAAAFYIhA_8zh_lLnm8",
-              appearance: "interaction-only",
-              execution: "execute",
-              callback: (token: string) => {
-                resolve(token);
-              },
-              "error-callback": () => reject(new Error("Turnstile rejected")),
-            });
-            window.turnstile!.execute(turnstileWidget);
-          });
-        };
+        const fakeMode = isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV);
+        const turnstile = createTurnstileController(fakeMode);
         let invite: Invite | null = null;
         let matchedName = "";
         type Seat = { original: string | null; name: string; attending: boolean };
@@ -328,6 +279,13 @@ const {
         const findButton = root.querySelector<HTMLButtonElement>(
           "[data-rsvp-find] button[type='submit']",
         )!;
+        const remembered = getGuest();
+        if (remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
+        const onGuest = (event: Event) => {
+          const name = (event as CustomEvent<{ name?: string }>).detail?.name;
+          if (name && !nameInput.value) nameInput.value = name;
+        };
+        document.addEventListener("ew:guest", onGuest);
         const setConfirmationCopy = (isAttending: boolean) => {
           title.textContent = isAttending
             ? "See you in Boracay."
@@ -543,7 +501,7 @@ const {
             try {
               const result = await actions.rsvp.find({
                 name: value,
-                turnstileToken: await getTurnstileToken(
+                  turnstileToken: await turnstile.getToken(
                   root.querySelectorAll<HTMLElement>(
                     "[data-rsvp-turnstile]",
                   )[0],
@@ -593,7 +551,7 @@ const {
               nameInput.setAttribute("aria-invalid", "true");
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
             } finally {
-              if (!fakeMode) window.turnstile?.reset(turnstileWidget);
+              turnstile.reset();
               findButton.disabled = false;
               findButton.removeAttribute("aria-busy");
             }
@@ -670,7 +628,7 @@ const {
                 note:
                   (form.elements.namedItem("note") as HTMLTextAreaElement)
                     .value || undefined,
-                turnstileToken: await getTurnstileToken(
+                turnstileToken: await turnstile.getToken(
                   root.querySelectorAll<HTMLElement>(
                     "[data-rsvp-turnstile]",
                   )[1],
@@ -687,7 +645,7 @@ const {
               submitError.hidden = false;
               return;
             } finally {
-              if (!fakeMode) window.turnstile?.reset(turnstileWidget);
+              turnstile.reset();
               submit.disabled = false;
               submit.removeAttribute("aria-busy");
             }
