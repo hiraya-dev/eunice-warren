@@ -16,6 +16,24 @@ const RUNTIME_FILES = new Set([
 
 const RUNTIME_DIRECTORIES = ["src", "public", "tests"];
 
+export const SWEEP_SPECS = new Set([
+  "tests/button-hover.spec.ts",
+  "tests/nav.spec.ts",
+  "tests/nav-scrollbar.spec.ts",
+  "tests/scroll.spec.ts",
+  "tests/parallax.spec.ts",
+  "tests/invitation.spec.ts",
+  "tests/wedding.spec.ts",
+  "tests/entourage.spec.ts",
+  "tests/stay.spec.ts",
+  "tests/explore.spec.ts",
+  "tests/ribbons.spec.ts",
+  "tests/playlist.spec.ts",
+  "tests/rsvp-ticket.spec.ts",
+  "tests/with-love.spec.ts",
+  "tests/footer.spec.ts",
+]);
+
 // Agent instructions and agent tooling config are operational code: .mcp.json
 // wires tools into every session, and t3.json (T3 Code's host settings) runs
 // setup scripts.
