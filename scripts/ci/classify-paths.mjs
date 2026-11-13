@@ -10,6 +10,8 @@ const RUNTIME_FILES = new Set([
   "tsconfig.json",
   "playwright.config.js",
   "playwright.config.ts",
+  "wrangler.jsonc",
+  ".nvmrc",
 ]);
 
 const RUNTIME_DIRECTORIES = ["src", "public", "tests"];
