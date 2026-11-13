@@ -11,6 +11,11 @@ Use this whenever a bug is reported against the site — locally or in productio
 Do not start editing code before step 3. The point of this skill is that the branch,
 the acceptance criteria, and the PR exist before the fix does.
 
+A bug whose cause and fix are layout, CSS, or animation goes to the
+`layout-implementer` subagent instead of Codex (`CLAUDE.md` **Task routing**): it
+diagnoses and fixes in the same run, and can reproduce in the browser itself. Every
+gate below still applies; read "Codex" in steps 4–7 as that implementer.
+
 **Ownership:** Claude owns requirements, acceptance criteria, a current `origin/main`, the
 branch and draft PR, the build, reproduction and the browser check, review, Git,
 merge, and cleanup; CI runs the browser suite. Codex owns repository inspection, root-cause diagnosis,
@@ -187,15 +192,18 @@ Then push to the draft PR. The push starts its CI run and its preview build:
 git push
 ```
 
-### 8. Update the PR and review the draft — Claude
+### 8. Update the PR, review the draft, then Local review — Claude
 
 Rewrite the PR body as the full record: **Problem**, **Root cause**, **Solution**,
 **Files changed**, **Testing performed** (exact commands and results — never a check
 that did not run), **Verification against acceptance criteria**, **Screenshots** for
 visual fixes (described, with their `.context/review/` paths: images are not
 uploaded), **Caveats**. Commit any lessons entry the fix needs now, before the
-review. Then run `.agents/skills/review-pr/SKILL.md` on the draft and post its
-verdict.
+review. As soon as the draft is open, run `.agents/skills/review-pr/SKILL.md`
+on the draft and post its verdict.
+
+A fix on the `runtime` route then goes to **Local review** (`review-pr`). Go on to
+step 9 only once the user ships it.
 
 ### 9. Merge or hand off — Claude
 
@@ -216,7 +224,7 @@ off.
 `git merge-base --is-ancestor origin/main HEAD`; see `review-pr` **Merging** if
 not), then `gh pr ready <pr>` and `gh pr merge <pr> --squash` (never `--merge`,
 never `--delete-branch`; L-001). Merging deploys production, so confirm the Workers
-Build for the merge reached success (`review-pr` **Deploying**), then report what
+Build for the merge reached success (`review-pr` **Merging deploys production**), then report what
 merged, which gates passed, the CI run link, and the deploy result.
 
 Call `unwatch_pull_request` on the PR before either report below.

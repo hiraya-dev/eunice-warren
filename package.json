@@ -13,7 +13,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "format": "prettier --write .",
-    "test:unit": "node --test tests/rsvp-unit.test.ts tests/with-love-unit.test.ts",
+    "test:unit": "node --test tests/rsvp-unit.test.ts tests/with-love-unit.test.ts tests/workers-build-unit.test.ts",
     "test:routing": "node --test scripts/ci/classify-paths.test.mjs",
     "test:ci-scripts": "node --test scripts/ci/classify-paths.test.mjs",
     "test:hooks": "node --test scripts/hooks/guard-git.test.mjs scripts/hooks/guard-deps.test.mjs scripts/hooks/agent-definitions.test.mjs scripts/lessons/select.test.mjs",

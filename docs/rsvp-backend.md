@@ -4,9 +4,14 @@ The RSVP UI remains a prerendered static Astro page. Its browser script calls tw
 Astro actions running in the Cloudflare Worker. The actions validate input, enforce
 the Manila deadline, verify Turnstile, rate-limit invite lookups, sign short-lived
 invite tokens, and use either the server-side fake store or Google Sheets store.
-RSVP_STORE=fake is for local development and Playwright; production is configured
-with RSVP_STORE=sheets, and missing Sheets credentials fail rather than falling
-back to fixtures.
+RSVP_STORE=fake is for local development, Playwright, and Cloudflare Worker
+previews; production is configured with RSVP_STORE=sheets, and missing Sheets
+credentials fail rather than falling back to fixtures. The committed
+`previews.vars` block sets both `RSVP_STORE=fake` and
+`PUBLIC_RSVP_STORE=fake` because previews share the Worker's production
+secrets. Workers Builds also sets the public value at build time for every
+non-`main` branch, so preview bundles skip Turnstile and use the local test
+token. An explicitly configured `PUBLIC_RSVP_STORE` still wins.
 
 ## Sheet layout
 

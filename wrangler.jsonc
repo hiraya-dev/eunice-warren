@@ -42,9 +42,14 @@
     },
   },
 
-  // Required by `npx wrangler preview`, the deploy command Workers Builds runs
-  // for non-production branches. Empty: previews inherit the settings above.
-  "previews": {},
+  // Previews share the Worker's production secrets, so explicitly use the fake
+  // stores and client mode when `npx wrangler preview` publishes a branch.
+  "previews": {
+    "vars": {
+      "RSVP_STORE": "fake",
+      "PUBLIC_RSVP_STORE": "fake",
+    },
+  },
 
   // Add a `routes` entry to serve this on your own domain. Until then it is
   // reachable at https://eunice-warren.<your-subdomain>.workers.dev.

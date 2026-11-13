@@ -14,5 +14,6 @@
   },
   // src/** is site content (content collections), rendered by the build, not
   // workflow prose. .context/** holds local scratch files and saved logs.
-  "ignores": [".claude/**", ".context/**", "src/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
+  // Vendored skills (skills-lock.json) are kept byte-for-byte as published.
+  "ignores": [".claude/**", ".context/**", ".agents/skills/copy-editing/**", "src/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
 }

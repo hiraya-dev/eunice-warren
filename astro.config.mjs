@@ -5,6 +5,12 @@ import sitemap from "@astrojs/sitemap";
 import cloudflare from "@astrojs/cloudflare";
 import { SITE_INDEXABLE, SITE_URL } from "./src/consts.ts";
 import { isNoindexRoute } from "./src/utils/seo.ts";
+import { workersBuildRsvpStore } from "./src/utils/workers-build.ts";
+
+const workersBuildStore = workersBuildRsvpStore(process.env);
+if (workersBuildStore !== undefined) {
+  process.env.PUBLIC_RSVP_STORE = workersBuildStore;
+}
 
 /** @type {import("astro").AstroIntegration} */
 const cloudflareHeaders = {
