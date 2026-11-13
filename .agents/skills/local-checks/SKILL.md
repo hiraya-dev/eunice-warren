@@ -124,8 +124,8 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
   - `e2e (full)` on a ready PR, a draft labelled `ci:full` (add it, then
     `gh run rerun <run-id>`), a push to `main` and a manual run: every test not
     tagged `@sweep`, plus `sweeps (1/2)` and `sweeps (2/2)`, the `@sweep` tests
-    sharded two ways at one worker each. Full runs every project, so the `@smoke`
-    tests also run on `webkit` (iPhone 14 Safari). A local spec run includes
+    sharded two ways at one worker each, plus `webkit`: the `@smoke` tests on
+    WebKit (iPhone 14 Safari) at one worker. A local spec run includes
     `webkit` for any `@smoke` test in it; install it once with
     `npx playwright install webkit`.
 

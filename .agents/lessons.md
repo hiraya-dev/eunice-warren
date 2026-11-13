@@ -175,6 +175,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/rsvp*.spec.ts`, `tests/with-love*.spec.ts`, `src/lib/rsvp/**`
 
+### L-023 — WebKit on the CI runner needs a container to itself
+- **Date:** 2026-11-14
+- **Trigger:** red CI job, #75: three WebKit @smoke tests (nav, RSVP ticket, wedding tabs) timed out in `e2e (full)`, all passing on the Mac's WebKit
+- **Symptom:** WebKit tests hang in Playwright's actionability wait ("visible, enabled and stable", "scrolling into view") or on `press`, then hit the 30 s test timeout; no page error in the trace.
+- **Root cause:** WebKit on the Linux runner renders in software. Sharing the four-vCPU e2e container with two Chromium workers starved it of frames (the trace's screencast had 4–15 s gaps between paints), and actionability checks wait on frames.
+- **Rule:** run WebKit in its own CI job at one worker (`webkit` in `ci.yml`), never alongside the Chromium projects' workers. Before blaming the site or the test for a WebKit-only CI timeout, read the trace's screencast gaps; a starved page is an environment problem, not a reason to skip the test.
+- **Check:** `ci.yml`'s e2e job passes `--project=chromium --project=mobile`, and the `webkit` job runs `--project=webkit` with no `--workers` (`scripts/ci/ci-triggers.test.mjs` asserts both).
+- **Guard:** none
+- **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders

@@ -72,9 +72,10 @@ export default defineConfig({
     },
     {
       // Most guests open the site in Safari on an iPhone. WebKit runs only the
-      // @smoke tests, and only in CI's full tier: the draft smoke tier passes
-      // --project for the two Chromium projects (ci.yml). @single does not skip
-      // it, since @single is about the viewport, not the engine.
+      // @smoke tests, and only in CI's full tier, in the webkit job at one
+      // worker; the e2e job passes --project for the two Chromium projects
+      // (ci.yml). @single does not skip it: @single is about the viewport, not
+      // the engine.
       name: "webkit",
       use: { ...devices["iPhone 14"] },
       grep: /@smoke/,
