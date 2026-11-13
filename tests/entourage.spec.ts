@@ -61,6 +61,8 @@ test.describe("entourage section", () => {
         cord: box(".entourage_secondary-sponsors .entourage_role:nth-child(3)"),
         bestMan: box(".entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(1)"),
         maidOfHonor: box(".entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(2)"),
+        groomsmen: box(".entourage_bridal-party .entourage_row:nth-child(2) .entourage_role:nth-child(1)"),
+        bridesmaids: box(".entourage_bridal-party .entourage_row:nth-child(2) .entourage_role:nth-child(2)"),
       };
     });
     expect(positions.ninang.top).toBeGreaterThan(positions.ninong.bottom);
@@ -69,6 +71,8 @@ test.describe("entourage section", () => {
     for (const role of [positions.candle, positions.veil, positions.cord]) expect(role.left + role.width / 2).toBeCloseTo(195, 0);
     expect(positions.maidOfHonor.top).toBe(positions.bestMan.top);
     expect(positions.maidOfHonor.left).toBeGreaterThan(positions.bestMan.left);
+    expect(positions.bridesmaids.top).toBeGreaterThan(positions.groomsmen.bottom);
+    for (const role of [positions.groomsmen, positions.bridesmaids]) expect(role.left + role.width / 2).toBeCloseTo(195, 0);
   });
 
   test("places desktop keepsakes beside their groups and hides them below desktop", async ({ page }) => {
