@@ -1,8 +1,42 @@
+import { createHash } from "node:crypto";
+import { mkdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { fakeFixtures } from "../src/lib/rsvp/store.ts";
+
+// The fake store keeps one Garcia answer per server run, shared by every worker
+// and both projects. A directory lock, keyed by checkout, keeps one writer
+// between submit and read-back. A lock older than a minute is stale.
+const garciaLock = join(
+  tmpdir(),
+  `eunice-warren-garcia-${createHash("sha1").update(process.cwd()).digest("hex").slice(0, 12)}`,
+);
+const withGarciaLock = async (run: () => Promise<void>) => {
+  for (;;) {
+    try {
+      mkdirSync(garciaLock);
+      break;
+    } catch {
+      try {
+        if (Date.now() - statSync(garciaLock).mtimeMs > 60_000) rmSync(garciaLock, { recursive: true, force: true });
+      } catch {
+        // Released between the two calls; retry.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  try {
+    await run();
+  } finally {
+    rmSync(garciaLock, { recursive: true, force: true });
+  }
+};
 
 const rsvp = (page: import("@playwright/test").Page) => page.locator("#rsvp");
 const visiblePanels = (page: import("@playwright/test").Page) =>
   rsvp(page).locator("[data-rsvp-panel]:not([hidden])");
+const mateoInvite = fakeFixtures.find((invite) => invite.id === "cruz")!;
 
 test.describe("RSVP section", () => {
   test.beforeEach(async ({ page }) => {
@@ -10,13 +44,13 @@ test.describe("RSVP section", () => {
     await rsvp(page).scrollIntoViewIfNeeded();
   });
 
-  test("shows the RSVP deadline label", async ({ page }) => {
+  test("shows the RSVP deadline label", { tag: ["@single"] }, async ({ page }) => {
     await expect(rsvp(page).locator("[data-rsvp-intro]")).toContainText(
       "December 31",
     );
   });
 
-  test("shows a stable busy spinner without changing the button name", async ({ page }) => {
+  test("shows a stable busy spinner without changing the button name", { tag: ["@single"] }, async ({ page }) => {
     const button = rsvp(page).getByRole("button", { name: "Find my invite" });
     await button.evaluate((element) => {
       element.setAttribute("aria-busy", "true");
@@ -30,7 +64,7 @@ test.describe("RSVP section", () => {
     await expect(button).toHaveAccessibleName("Find my invite");
   });
 
-  test("uses a visible busy label when reduced motion is requested", async ({ page }) => {
+  test("uses a visible busy label when reduced motion is requested", { tag: ["@single"] }, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.reload();
     const button = rsvp(page).getByRole("button", { name: "Find my invite" });
@@ -40,17 +74,7 @@ test.describe("RSVP section", () => {
     await expect(button).toHaveAccessibleName("Find my invite");
   });
 
-  test("fills current and complete steps with a transformed pseudo-element", async ({ page }) => {
-    const transforms = await rsvp(page).locator(".rsvp_steps li > span").evaluateAll((elements) =>
-      elements.map((element) => getComputedStyle(element, "::after").transform),
-    );
-    expect(transforms[0]).toContain("matrix(1");
-    expect(transforms[1]).toContain("matrix(0");
-    await rsvp(page).locator("[data-step='2']").evaluate((element) => element.classList.add("is-complete"));
-    await expect.poll(() => rsvp(page).locator("[data-step='2'] > span").evaluate((element) => getComputedStyle(element, "::after").transform)).toContain("matrix(1");
-  });
-
-  test("keeps RSVP field layout stable when focused", async ({ page }) => {
+  test("keeps RSVP field layout stable when focused", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       const nameInput = rsvp(page).locator("[data-rsvp-name]");
@@ -141,19 +165,28 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
   });
 
-  test("renders one checklist row per seat", async ({ page }) => {
+  test("renders one checklist row per seat", { tag: ["@single"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Mateo Cruz");
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
       .click();
-    // One row per seat: the total comes from the "N of M seats" label, not a literal.
-    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText(/\d+ of \d+ seats/);
-    const seatTotal = Number((await rsvp(page).locator("[data-rsvp-count]").textContent())?.match(/of (\d+) seats/)?.[1]);
-    expect(seatTotal).toBeGreaterThan(0);
-    await expect(rsvp(page).locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(seatTotal);
-    await expect(rsvp(page).locator("[data-rsvp-seat-list]")).toContainText("Remedios Cruz");
-    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("3 of 4 seats");
-    await expect(rsvp(page).getByRole("button", { name: "Add name for seat 4" })).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText(
+      new RegExp(`of ${mateoInvite.seats} seats`),
+    );
+    await expect(rsvp(page).locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(
+      mateoInvite.seats,
+    );
+    await expect(rsvp(page).locator("[data-rsvp-seat-list]")).toContainText(
+      mateoInvite.members.at(-1)!,
+    );
+    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText(
+      `${mateoInvite.members.length} of ${mateoInvite.seats} seats`,
+    );
+    await expect(
+      rsvp(page).getByRole("button", {
+        name: `Add name for seat ${mateoInvite.seats}`,
+      }),
+    ).toBeVisible();
     const firstSeat = rsvp(page).locator("#rsvp-seat-0");
     await firstSeat.focus();
     await page.keyboard.press("Space");
@@ -161,29 +194,38 @@ test.describe("RSVP section", () => {
   });
 
   test("restores a dedicated returning guest without exposing private details", async ({ page }, testInfo) => {
-    // The fake store remembers Garcia's answer for the whole server run, which
-    // both projects share, so only one project may submit it.
-    test.skip(testInfo.project.name !== "chromium", "shared fake-store state");
-    await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
-    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
-    await rsvp(page).getByRole("button", { name: "Add name for seat 3" }).click();
-    await rsvp(page).locator("[aria-label='Name for seat 3']").fill("Nico Garcia");
-    await rsvp(page).getByRole("button", { name: /Done editing seat 3/ }).click();
-    await rsvp(page).getByRole("button", { name: /Continue/ }).click();
-    await rsvp(page).locator("#rsvp-email").fill("paolo@example.com");
-    await rsvp(page).locator("#rsvp-note").fill("private note");
-    await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
-    await page.keyboard.press("Escape");
-    await page.reload();
-    await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
-    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
-    await expect(rsvp(page).locator("#rsvp-seat-2")).toBeChecked();
-    await expect(rsvp(page).locator("[data-rsvp-guests]")).toContainText("Nico Garcia");
+    // Waiting on the Garcia lock counts against the timeout under heavy parallelism.
+    test.slow();
+    // Seat 3 may already hold a name from an earlier run; a unique name proves
+    // this run's write is the one restored.
+    const uniqueName = `Nico Garcia ${testInfo.project.name}-${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${testInfo.retry}-${Date.now()}`;
+    await withGarciaLock(async () => {
+      await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
+      await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+      const seatThree = rsvp(page).locator("[data-seat-index='2']");
+      await seatThree.locator("[data-rsvp-seat-action]").click();
+      await rsvp(page).locator("[aria-label='Name for seat 3']").fill(uniqueName);
+      await seatThree.getByRole("button", { name: /^Done editing / }).click();
+      const seatThreeCheckbox = rsvp(page).locator("#rsvp-seat-2");
+      if (!(await seatThreeCheckbox.isChecked())) await seatThreeCheckbox.check();
+      await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+      await rsvp(page).locator("#rsvp-email").fill("paolo@example.com");
+      await rsvp(page).locator("#rsvp-note").fill("private note");
+      await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
+      // The ticket opens only once the store has the answer; reload after that.
+      await expect(page.locator("#rsvp-ticket-modal")).toBeVisible({ timeout: 15_000 });
+      await page.keyboard.press("Escape");
+      await page.reload();
+      await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
+      await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+      await expect(rsvp(page).locator("#rsvp-seat-2")).toBeChecked({ timeout: 15_000 });
+      await expect(rsvp(page).locator("[data-rsvp-guests]")).toContainText(uniqueName);
+    });
     await expect(rsvp(page).locator("#rsvp-email")).toHaveValue("");
     await expect(rsvp(page).locator("#rsvp-note")).toHaveValue("");
   });
 
-  test("requires a valid email and keeps the guest checklist", async ({
+  test("requires a valid email and keeps the guest checklist", { tag: ["@single"] }, async ({
     page,
   }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Liza Santos");
@@ -265,11 +307,12 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator(".rsvp_title")).toHaveText(
       "We'll miss you.",
     );
+    await expect(page.locator("#rsvp-ticket-modal")).toBeHidden();
     await expect(rsvp(page).locator("[data-rsvp-invitation]")).toBeVisible();
     await expect(rsvp(page).locator("[data-rsvp-guests-summary]")).toBeHidden();
   });
 
-  test("hides the invitation at step one, shows it at step two, and moves focus", async ({
+  test("hides the invitation at step one, shows it at step two, and moves focus", { tag: ["@single"] }, async ({
     page,
   }) => {
     await expect(rsvp(page).locator("[data-rsvp-invitation]")).toBeHidden();

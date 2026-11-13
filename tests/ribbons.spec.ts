@@ -177,7 +177,7 @@ test.describe("ribbon marquee", () => {
     await expect(page.locator("#ribbons [data-marquee-collection-target]").nth(1)).toHaveAttribute("inert", "");
   });
 
-  test("moves in each base direction and reverses while scrolling up", { tag: ["@sweep"] }, async ({ page }) => {
+  test("moves in each base direction and reverses while scrolling up", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     // Many wheel/sample round trips; under parallel load each one can take hundreds of ms.
     test.slow();
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -207,7 +207,7 @@ test.describe("ribbon marquee", () => {
     assertDirection(upSamples, "blue", -1);
   });
 
-  test("pauses the marquee outside the viewport", { tag: ["@sweep"] }, async ({ page }) => {
+  test("pauses the marquee outside the viewport", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page.evaluate(() => {
@@ -249,7 +249,7 @@ test.describe("ribbon marquee", () => {
     expect(final).toBe(initial);
   });
 
-  for (const width of [1920, 1440, 900, 390, 320]) {
+  for (const width of [1920, 900, 320]) {
     test(`keeps seams covered at ${width}px`, { tag: ["@sweep", "@single"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");

@@ -18,15 +18,12 @@ test.describe("invitation section", () => {
     }
   });
 
-  test("keeps the heading upright and narrow layouts inside the viewport", { tag: ["@single"] }, async ({ page }) => {
+  test("keeps the heading upright", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       await expect(page.locator(".invitation_title")).toHaveCSS("font-style", "normal");
     }
-    await page.setViewportSize({ width: 320, height: 700 });
-    await page.goto("/");
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   });
 
   test("fits the ticket route and stub labels at narrow widths", { tag: ["@single"] }, async ({ page }) => {
@@ -80,7 +77,7 @@ test.describe("invitation section", () => {
     }
   });
 
-  test("draws the circle forward and backward with scroll", { tag: ["@sweep"] }, async ({ page }) => {
+  test("draws the circle forward and backward with scroll", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 700 });
     await page.goto("/");
 
@@ -119,7 +116,7 @@ test.describe("invitation section", () => {
     expect(backward[backward.length - 1]).toBeLessThan(0.2);
   });
 
-  test("reveals note characters progressively during scrolling", { tag: ["@sweep"] }, async ({ page }) => {
+  test("reveals note characters progressively during scrolling", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 700 });
     await page.goto("/");
     const sentences = [

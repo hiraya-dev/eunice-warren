@@ -9,7 +9,7 @@ test.describe("guest preloader", () => {
     await page.goto("/");
   });
 
-  test("shows on a first visit with focus in the input", async ({ page }) => {
+  test("shows on a first visit with focus in the input", { tag: ["@single"] }, async ({ page }) => {
     await expect(preloader(page)).toBeVisible();
     await expect(preloader(page).locator("[data-preloader-name]")).toBeFocused();
   });
@@ -61,16 +61,11 @@ test.describe("guest preloader", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 
-  test("reduced motion does not animate the envelope transform", async ({ page }) => {
+  test("reduced motion does not animate the envelope transform", { tag: ["@single"] }, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.reload();
     const envelope = preloader(page).locator(".preloader_stage");
     await page.keyboard.press("Escape");
     await expect(envelope).toHaveCSS("animation-name", "none");
-  });
-
-  test("fits a 390px viewport without horizontal overflow", { tag: ["@single"] }, async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 });

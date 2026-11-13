@@ -43,7 +43,7 @@ test.describe("Paper footer", () => {
     }
   });
 
-  test("moves the footer continuously into place while scrolling", { tag: ["@sweep"] }, async ({ page }) => {
+  test("moves the footer continuously into place while scrolling", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/example-components");
     const footerTop = await page.locator("[data-footer-parallax]").evaluate((element) => element.getBoundingClientRect().top + scrollY);
@@ -86,7 +86,7 @@ test.describe("Paper footer", () => {
     }
   });
 
-  test("does not animate the footer under reduced motion", async ({ page }) => {
+  test("does not animate the footer under reduced motion", { tag: ["@single"] }, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/example-components");
