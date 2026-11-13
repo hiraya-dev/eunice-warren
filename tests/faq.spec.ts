@@ -37,7 +37,7 @@ test.describe("FAQ section", () => {
     await expect.poll(() => panelHeight(page, 2)).toBe(0);
   });
 
-  test("opens a focused item with Enter", async ({ page }) => {
+  test("opens a focused item with Enter", { tag: ["@single"] }, async ({ page }) => {
     const toggle = page.locator(".faq_toggle").nth(3);
     await toggle.focus();
     await page.keyboard.press("Enter");
@@ -45,7 +45,7 @@ test.describe("FAQ section", () => {
     await expect.poll(() => panelHeight(page, 3)).toBeGreaterThan(0);
   });
 
-  test("places the contact row after the accordion list", async ({ page }) => {
+  test("places the contact row after the accordion list", { tag: ["@single"] }, async ({ page }) => {
     await expect(page.locator(".faq_list > ul + .faq_contact")).toBeVisible();
     await expect(page.locator(".faq_contact a")).toHaveAttribute("href", /.+/);
   });

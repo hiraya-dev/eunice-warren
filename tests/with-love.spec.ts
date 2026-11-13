@@ -4,7 +4,7 @@ const order = (page: import("@playwright/test").Page) =>
   page.locator("#with-love [data-stacked-cards-list] > [data-note-id]");
 
 test.describe("With love stack", () => {
-  test("renders notes and cycles the top card with Shuffle", async ({ page }) => {
+  test("renders notes and cycles the top card with Shuffle", { tag: ["@smoke"] }, async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#with-love")).toBeVisible();
     await page.locator("#with-love").scrollIntoViewIfNeeded();
@@ -43,11 +43,13 @@ test.describe("With love stack", () => {
     await page.mouse.move(point.x, point.y);
     await page.mouse.down();
     await page.mouse.move(point.x + box!.width * 0.6, point.y, { steps: 8 });
+    // Release at rest so the snap reads a settled pointer, not leftover velocity (L-010).
+    await page.waitForTimeout(200);
     await page.mouse.up();
     await expect.poll(() => order(page).last().getAttribute("data-note-id")).toBe(first);
   });
 
-  test("uses the designed lettering colour and cycles with reduced motion", async ({ page }) => {
+  test("uses the designed lettering colour", { tag: ["@single"] }, async ({ page }) => {
     await page.goto("/");
     await page.locator("#with-love").scrollIntoViewIfNeeded();
     await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");

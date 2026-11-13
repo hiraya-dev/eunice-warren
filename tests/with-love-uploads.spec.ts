@@ -37,7 +37,7 @@ test.describe("With Love guest uploads", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test("loads samples, hides hidden notes, and fills to six cards", async ({ page }) => {
+  test("renders at least three cards and hides hidden notes", async ({ page }) => {
     const list = page.locator("[data-stacked-cards-list]");
     // Other specs pin notes into the shared fake store; once three exist, samples drop out.
     await expect.poll(() => list.locator("> [data-stacked-cards-item]").count()).toBeGreaterThanOrEqual(3);

@@ -107,10 +107,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-009 — Time motion assertions by the clock, never by frames
 - **Date:** 2026-10-17
-- **Trigger:** flaky tests: #56 (ribbon seams), #62 (ticket stepped feed: `plateaus` 2, expected ≥ 3 on CI), #65 (turntable angle: one 66.7 ms CI frame is 0.2327 rad, over a 0.2 rad limit)
+- **Trigger:** flaky tests: #56 (ribbon seams), #62 (ticket stepped feed: `plateaus` 2, expected ≥ 3 on CI), #65 (turntable angle: one 66.7 ms CI frame is 0.2327 rad, over a 0.2 rad limit); PR #74, CHANGES_REQUIRED: the spin test switched to the unwrapped `rotate(deg)` value but kept its 0.2 radian thresholds, so it passed on 0.2°
 - **Symptom:** motion specs passed locally and failed on CI or under load, with numbers that were off by about one frame.
 - **Root cause:** the assertions counted `requestAnimationFrame` samples or compared two reads a fixed number of frames apart. Headless Chrome on a loaded runner delivers frames 40–67 ms apart, and a backgrounded tab freezes rAF entirely. #65 also read the angle through `atan2`, which wraps at ±180°.
-- **Rule:** check an animation's shape by pausing it with the Web Animations API and seeking `currentTime` (on a hidden clone if the live element runs timers). For live playback, sample over wall-clock time with `performance.now()`, bound the change by elapsed time plus one capped frame, and assert the peak or spread, never one reading or a frame count. Read the unwrapped value the component writes, not a derived angle. Measure in Playwright's own browser, never a backgrounded DevTools tab.
+- **Rule:** check an animation's shape by pausing it with the Web Animations API and seeking `currentTime` (on a hidden clone if the live element runs timers). For live playback, sample over wall-clock time with `performance.now()`, bound the change by elapsed time plus one capped frame, and assert the peak or spread, never one reading or a frame count. Read the unwrapped value the component writes, not a derived angle. When you change which value a spec reads, convert every threshold to the new value's unit and restate it from the component's rate. Measure in Playwright's own browser, never a backgrounded DevTools tab.
 - **Check:** the spec passes `--repeat-each 20 --workers 8` locally, or under CPU throttling, and on `flake-check.yml` (20 repeats, 4 workers, no retries).
 - **Guard:** none
 - **Paths:** `tests/**`
@@ -154,6 +154,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** `grep -rn` in `tests/` for strings from `src/content/**` or section copy the diff adds finds no exact-copy assertion.
 - **Guard:** none
 - **Paths:** `tests/**`, `src/content/**`
+
+### L-021 — A de-pinned count comes from the source, never an async label
+- **Date:** 2026-11-13
+- **Trigger:** flaky test, #73: "renders one checklist row per seat" read its expected seat total from the "N of M seats" label, failed locally at 4 workers, fixed in PR A
+- **Symptom:** a spec reads 0 for a count and fails at `toBeGreaterThan(0)` on some runs only.
+- **Root cause:** the label reads "0 of 0 seats" until the invite loads; `toHaveText(/\d+ of \d+ seats/)` matches the placeholder, so the spec read the total before the data arrived.
+- **Rule:** when a spec stops pinning a count (L-017), take the expected value from the source file or fixture (`node:fs`, or an import such as `fakeFixtures`), never from text the page renders asynchronously. Then wait for the page to show that value.
+- **Check:** no spec parses an expected count out of `textContent()` of an element that a client script fills.
+- **Guard:** none
+- **Paths:** `tests/**`
+
+### L-022 — Shared fake-store state needs a spec that is idempotent and serialised
+- **Date:** 2026-11-13
+- **Trigger:** flaky test, #73 audit: "restores a dedicated returning guest" passed once per server run and failed every `--repeat-each` repeat and every CI retry; PR A's first fix still failed 2 in 20 at 2 workers
+- **Symptom:** a spec that submits to the fake store passes on its first run and fails on a repeat or retry, or when another worker submits the same invite between its submit and its read-back.
+- **Root cause:** the fake store keeps submissions for the whole server run, shared by every worker and both projects; the spec assumed a fresh store, and its read-back assumed no concurrent writer.
+- **Rule:** a spec that writes to the fake store must pass on a store that already holds its own earlier write (branch on the current state, write a value unique to the run) and must hold a cross-process lock around write and read-back when other workers or projects can write the same record. Give each such spec its own fixture record.
+- **Check:** the spec passes `--repeat-each 20 --workers 8` locally and on `flake-check.yml`.
+- **Guard:** none
+- **Paths:** `tests/rsvp*.spec.ts`, `tests/with-love*.spec.ts`, `src/lib/rsvp/**`
 
 ## Content and layout
 

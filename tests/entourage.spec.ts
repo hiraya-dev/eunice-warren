@@ -136,7 +136,7 @@ test.describe("entourage section", () => {
     }
   });
 
-  test("fades groups in on scroll and stays visible for reduced motion", { tag: ["@sweep"] }, async ({ page }) => {
+  test("fades groups in on scroll and stays visible for reduced motion", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await expect.poll(() => page.locator(`${bridal} [data-fade-in-item]`).last().evaluate((item) => Number.parseFloat(getComputedStyle(item).opacity))).toBeLessThan(1);

@@ -8,7 +8,7 @@ const bgOffset = (element: Element) => {
 };
 
 test.describe("Button 016 hover controls", () => {
-  test("keeps the control names unique", async ({ page }) => {
+  test("keeps the control names unique", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     const controls = [page.locator(".nav_rsvp"), page.locator(".hero_rsvp"), page.locator(".hero_weekend")];
@@ -24,7 +24,7 @@ test.describe("Button 016 hover controls", () => {
     await expect(page.locator(".hero_rsvp")).toHaveCount(1);
   });
 
-  test("keeps each background flush with its pill", async ({ page }) => {
+  test("keeps each background flush with its pill", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     // Pills only: the weekend link uses the roll without a background layer.
@@ -61,7 +61,7 @@ test.describe("Button 016 hover controls", () => {
     }
   });
 
-  test("preserves the three pill heights", async ({ page }) => {
+  test("preserves the three pill heights", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await expect.poll(() => page.locator(".nav_rsvp").evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(40);
