@@ -1,0 +1,23 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "defaultThreadEnvMode": "worktree",
+  "scripts": [
+    {
+      "name": "setup",
+      "command": "cd \"${T3CODE_WORKTREE_PATH:-$PWD}\" && if [ -f package.json ]; then npm ci; fi && if [ ! -f .dev.vars ] && [ -f .dev.vars.example ]; then cp .dev.vars.example .dev.vars; fi",
+      "icon": "configure",
+      "runOnWorktreeCreate": true,
+      "async": false
+    },
+    {
+      "name": "dev",
+      "command": "cd \"${T3CODE_WORKTREE_PATH:-$PWD}\" && npm run dev -- --host 127.0.0.1",
+      "icon": "play"
+    },
+    {
+      "name": "preview",
+      "command": "cd \"${T3CODE_WORKTREE_PATH:-$PWD}\" && CLOUDFLARE_ENV=test PUBLIC_RSVP_STORE=fake npm run build && env -u CLAUDECODE CLOUDFLARE_ENV=test npm run preview -- --host 127.0.0.1",
+      "icon": "build"
+    }
+  ]
+}

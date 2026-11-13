@@ -1,20 +1,43 @@
 {
+  "model": "claude-opus-5-5",
   "enabledPlugins": {
     "chrome-devtools-mcp@claude-plugins-official": true,
     "paper-desktop@paper": true,
+    "cloudflare@cloudflare": true,
     "context7@claude-plugins-official": false
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-codex-rescue.mjs\""
-          }
-        ]
-      }
+  "permissions": {
+    "deny": [
+      "mcp__claude_ai_Sanity",
+      "mcp__claude_ai_Bonsai",
+      "mcp__claude_ai_Figma",
+      "mcp__claude_ai_Granola",
+      "mcp__claude_ai_Gmail",
+      "mcp__claude_ai_Google_Calendar",
+      "mcp__claude_ai_Google_Docs",
+      "mcp__claude_ai_tldraw",
+      "mcp__claude_ai_Webflow",
+      "mcp__claude_ai_Mobbin",
+      "mcp__claude_ai_mcp_savee_com",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git branch -D *)",
+      "Bash(wrangler deploy*)",
+      "Bash(wrangler delete*)",
+      "Bash(wrangler rollback*)",
+      "Bash(wrangler secret*)",
+      "Bash(wrangler kv*)",
+      "Bash(npx wrangler deploy*)",
+      "Bash(npx wrangler delete*)",
+      "Bash(npx wrangler rollback*)",
+      "Bash(npx wrangler secret*)",
+      "Bash(npx wrangler kv*)",
+      "Bash(gh repo delete*)",
+      "Bash(gh repo edit*)",
+      "Bash(gh api -X DELETE*)",
+      "Bash(gh api --method DELETE*)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)"
     ]
   },
   "extraKnownMarketplaces": {
@@ -24,5 +47,29 @@
         "repo": "paper-design/agent-plugins"
       }
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/guard-git.mjs\"",
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__t3-code__delegate_task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/guard-deps.mjs\"",
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
   }
 }
