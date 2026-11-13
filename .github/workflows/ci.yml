@@ -1,24 +1,32 @@
 name: CI
 
-# Checks chosen from the diff (scripts/ci/classify-paths.mjs), adapted from
-# adc-website (docs/decisions/0001-workflow-from-adc-website.md).
+# Checks chosen from the diff (scripts/ci/classify-paths.mjs) and a test tier,
+# adapted from adc-website (docs/decisions/0001-workflow-from-adc-website.md).
 #
-# runtime   build: type-check, unit tests and the production build;
-#           e2e: every Playwright spec on the fake-store build, in the Playwright
-#           image that matches the lockfile.
-# workflow  checks: Markdown lint, routing, hook and lessons tests, the lessons
-#           ledger, and actionlint.
+# runtime   build: type-check, unit tests and the production build.
+#           e2e: Playwright on the fake-store build, in the Playwright image
+#           that matches the lockfile, two workers:
+#             smoke  (a draft PR): the tests tagged @smoke.
+#             full   (a ready PR, a PR labelled ci:full, a push to main that was
+#                    not already tested, a manual run): every test not tagged
+#                    @sweep, plus the sweeps job.
+#           sweeps: the load-sensitive motion and geometry tests (@sweep),
+#           sharded two ways with one worker each; full tier only.
+# workflow  checks: Markdown lint, routing, CI-script, hook and lessons tests,
+#           the spec map, the lessons ledger, and actionlint.
 # docs      checks: Markdown lint only.
 #
-# Drafts run CI like any PR, so CI and the review finish before Local review and
-# "ship it"; marking a PR ready starts no run (no ready_for_review trigger). A
-# push to main runs its route again. `gh workflow run ci.yml --ref <branch>` runs
-# everything on a branch by hand. A superseded push's run is cancelled. CI never
-# deploys: Cloudflare Workers Builds deploys main to production.
+# main deploys production directly, so the full tier must pass before a merge:
+# marking a runtime PR ready ("ship it") starts the full run, and merging needs a
+# green gate from it on the head (review-pr **Merging**). A push to main whose
+# tree a full-tier PR run already passed skips every check
+# (scripts/ci/already-tested.mjs; fails closed). A superseded push's run is
+# cancelled. CI never deploys: Cloudflare Workers Builds deploys main to
+# production.
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -34,11 +42,17 @@ jobs:
   classify:
     name: classify
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     outputs:
+      tested: ${{ steps.tested.outputs.tested }}
       route: ${{ steps.paths.outputs.route }}
       runtime: ${{ steps.paths.outputs.runtime }}
       workflow: ${{ steps.paths.outputs.workflow }}
       docs: ${{ steps.paths.outputs.docs }}
+      full: ${{ steps.tier.outputs.full }}
       playwright: ${{ steps.playwright.outputs.version }}
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +84,46 @@ jobs:
           node scripts/ci/classify-paths.mjs < changed-files.txt
           echo "Route: $(sed -n 's/^route=//p' "$GITHUB_OUTPUT" | tail -1)"
 
+      # A draft runs the smoke tier; everything else that is runtime runs the
+      # full tier. Labels are read from the API, not the event payload, so
+      # adding ci:full and rerunning the workflow picks the label up.
+      - name: Decide the test tier
+        id: tier
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUNTIME: ${{ steps.paths.outputs.runtime }}
+        run: |
+          full=false
+          if [[ "$RUNTIME" == "true" ]]; then
+            if [[ "$EVENT" != "pull_request" ]]; then
+              full=true; echo "Not a pull request: full tier."
+            elif [[ "$DRAFT" != "true" ]]; then
+              full=true; echo "Ready pull request: full tier."
+            else
+              # Read the labels on their own line so an API error fails this
+              # step instead of reading as "no ci:full label".
+              labels="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels" --jq '.[].name')"
+              if grep -qx 'ci:full' <<< "$labels"; then
+                full=true; echo "Draft labelled ci:full: full tier."
+              else
+                echo "Draft pull request: smoke tier."
+              fi
+            fi
+          fi
+          echo "Full tier: $full"
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+
+      # Fails closed: any doubt or error leaves tested=false and runs the checks.
+      - name: Check whether a full-tier PR run already tested this tree
+        id: tested
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WORKFLOW_FILE: ci.yml
+        run: node scripts/ci/already-tested.mjs
+
       # The e2e container tag. Read from the lockfile, which npm ci installs, so
       # the image's browsers always match @playwright/test.
       - name: Read the Playwright version
@@ -85,7 +139,7 @@ jobs:
   build:
     name: build
     needs: classify
-    if: needs.classify.outputs.runtime == 'true'
+    if: needs.classify.outputs.tested != 'true' && needs.classify.outputs.runtime == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -103,14 +157,16 @@ jobs:
       - name: Build the site
         run: npm run build
 
-  # Every spec, in the Playwright image matching the lockfile's
+  # The smoke or full tier, in the Playwright image matching the lockfile's
   # @playwright/test, which ships the browsers and their system packages.
   # playwright.config.ts builds the fake-store site and serves it with astro
-  # preview inside the container.
+  # preview inside the container. Two workers on the runner's four vCPUs; the
+  # sweeps stay at the config's one (below). The job name carries the tier, so
+  # the merge rule and already-tested.mjs can tell a full run from a smoke run.
   e2e:
-    name: e2e
+    name: e2e (${{ needs.classify.outputs.full == 'true' && 'full' || 'smoke' }})
     needs: classify
-    if: needs.classify.outputs.runtime == 'true'
+    if: needs.classify.outputs.tested != 'true' && needs.classify.outputs.runtime == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -136,11 +192,21 @@ jobs:
             echo "Installed @playwright/test $installed, image v$IMAGE_VERSION."
             exit 1
           fi
-      - name: Run end-to-end tests
-        run: npm run test:e2e
-      # A test that passes only on a retry is flaky. List each one in the job
-      # summary and as a warning, so flakes are counted instead of absorbed by a
-      # green run (L-009, L-010).
+      - name: Check the @sweep tags match SWEEP_SPECS
+        run: npm run check:sweep-tags
+      - name: Run the end-to-end tier
+        shell: bash
+        env:
+          FULL: ${{ needs.classify.outputs.full }}
+        run: |
+          if [[ "$FULL" == "true" ]]; then
+            npm run test:e2e -- --grep-invert @sweep --workers=2
+          else
+            npm run test:e2e -- --grep @smoke --workers=2
+          fi
+      # Retries are 1 in CI, so a test that passes only on its retry is flaky.
+      # List each one in the job summary and as a warning, so flakes are counted
+      # instead of absorbed by a green run (L-009, L-010).
       - name: Report flaky tests
         if: always()
         run: node scripts/ci/flaky-summary.mjs test-results/results.json
@@ -148,7 +214,45 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-e2e
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # The motion and geometry tests (@sweep), sharded two ways with one worker
+  # each: they are load-sensitive, so shards add machines rather than workers.
+  sweeps:
+    name: sweeps (${{ matrix.shard }}/2)
+    needs: classify
+    if: needs.classify.outputs.tested != 'true' && needs.classify.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.classify.outputs.playwright }}-noble
+      options: --ipc=host
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run the sweeps
+        run: npm run test:e2e -- --grep @sweep --shard=${{ matrix.shard }}/2
+      - name: Report flaky tests
+        if: always()
+        run: node scripts/ci/flaky-summary.mjs test-results/results.json
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-sweeps-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/
@@ -160,7 +264,9 @@ jobs:
   checks:
     name: checks
     needs: classify
-    if: needs.classify.outputs.docs == 'true' || needs.classify.outputs.workflow == 'true'
+    if: >-
+      needs.classify.outputs.tested != 'true' &&
+      (needs.classify.outputs.docs == 'true' || needs.classify.outputs.workflow == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -178,6 +284,9 @@ jobs:
       - name: Test path routing and CI scripts
         if: env.WORKFLOW == 'true'
         run: npm run test:ci-scripts
+      - name: Check the Playwright spec map
+        if: env.WORKFLOW == 'true'
+        run: node scripts/ci/select-specs.mjs --check
       - name: Test the hooks and the lessons tooling
         if: env.WORKFLOW == 'true'
         run: npm run test:hooks
@@ -192,21 +301,27 @@ jobs:
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v"${ACTIONLINT_VERSION}"/scripts/download-actionlint.bash) "$ACTIONLINT_VERSION"
           ./actionlint -color
 
+  # Fails closed: a selected job that was skipped, failed or cancelled fails it.
+  # already-tested.mjs counts only a passed gate on a full-tier run, since a run
+  # whose jobs all skip still concludes success.
   gate:
     name: gate
-    needs: [classify, build, e2e, checks]
+    needs: [classify, build, e2e, sweeps, checks]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Enforce the selected route
+      - name: Enforce the selected route and tier
         env:
+          TESTED: ${{ needs.classify.outputs.tested }}
           ROUTE: ${{ needs.classify.outputs.route }}
           RUNTIME: ${{ needs.classify.outputs.runtime }}
           WORKFLOW: ${{ needs.classify.outputs.workflow }}
           DOCS: ${{ needs.classify.outputs.docs }}
+          FULL: ${{ needs.classify.outputs.full }}
           CLASSIFY_RESULT: ${{ needs.classify.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
+          SWEEPS_RESULT: ${{ needs.sweeps.result }}
           CHECKS_RESULT: ${{ needs.checks.result }}
         run: |
           failed=0
@@ -214,11 +329,15 @@ jobs:
             echo "Path classification did not complete successfully."
             exit 1
           fi
+          if [[ "$TESTED" == "true" ]]; then
+            echo "A full-tier PR run already passed this tree; nothing to rerun."
+            exit 0
+          fi
           if [[ "$RUNTIME" != "true" && "$WORKFLOW" != "true" && "$DOCS" != "true" ]]; then
             echo "Path classification selected no route."
             failed=1
           fi
-          for result in "$BUILD_RESULT" "$E2E_RESULT" "$CHECKS_RESULT"; do
+          for result in "$BUILD_RESULT" "$E2E_RESULT" "$SWEEPS_RESULT" "$CHECKS_RESULT"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               failed=1
             fi
@@ -229,6 +348,10 @@ jobs:
             echo "Runtime validation did not complete successfully."
             failed=1
           fi
+          if [[ "$RUNTIME" == "true" && "$FULL" == "true" && "$SWEEPS_RESULT" != "success" ]]; then
+            echo "The full tier was selected but the sweeps did not pass."
+            failed=1
+          fi
           if [[ ( "$WORKFLOW" == "true" || "$DOCS" == "true" ) && "$CHECKS_RESULT" != "success" ]]; then
             echo "The checks job did not complete successfully."
             failed=1
@@ -236,4 +359,10 @@ jobs:
           if [[ "$failed" -ne 0 ]]; then
             exit 1
           fi
-          echo "Route $ROUTE passed."
+          tier=smoke
+          [[ "$FULL" == "true" ]] && tier=full
+          if [[ "$RUNTIME" == "true" ]]; then
+            echo "Route $ROUTE passed ($tier tier)."
+          else
+            echo "Route $ROUTE passed."
+          fi
