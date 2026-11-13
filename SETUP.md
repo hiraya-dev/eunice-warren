@@ -1,201 +1,78 @@
-# Setup — Claude + Codex workflow for Astro
+# Setup — Claude + Codex workflow
 
-This repo carries the agent workflow extracted from the AVPN project: Claude
-orchestrates (design reading, QA, Git, review, merge), Codex implements repository
-code through a supervised launcher, and CI routes every PR by the paths it changes.
+Claude orchestrates (design reading, build, QA, Git, review, merge), Codex
+implements logic through T3 Code's `delegate_task`, and CI routes every PR by the
+paths it changes. Tasks run in T3 Code (`CLAUDE.md` **Host**).
+
+The workflow was first built for the AVPN project, then run here under Conductor
+with a supervised `codex exec` launcher. On 2026-11-13 it moved to T3 Code and was
+re-adapted from adc-website, which had already made that move. `scripts/codex/`,
+`.conductor/`, the `haiku-edit` subagent and the `codex-rescue` hook were removed.
 
 ## What is here
 
 | Path | Purpose |
 | --- | --- |
-| `CLAUDE.md` | Claude's contract: roles, routing (Claude / Haiku / Codex), approval, Git lifecycle, traps |
-| `AGENTS.md` | Codex's contract: what it owns, what its sandbox cannot do |
-| `skills/` | `astro-component`, `codex-handoff`, `fix-bug`, `review-pr` |
-| `.claude/skills` | symlink to `skills/` so Claude Code discovers them |
-| `.claude/settings.json` | Paper + Chrome DevTools plugins; registers the hook that blocks `codex-rescue` via the Agent tool |
-| `.claude/agents/` | `haiku-lookup` and `haiku-edit`, the Claude Haiku 5.5 subagents for read-only lookups and mechanical edits |
-| `.claude/hooks/` | that hook (`block-codex-rescue.mjs`, fails closed) and its test |
-| `scripts/codex/run-handoff.mjs` | supervised `codex exec` launcher (closes stdin, JSONL lifecycle, timeouts, process-group kill, `--resume`) |
+| `CLAUDE.md` | Claude's contract: host, roles, models, routing, approval, Git, deploys, lessons, traps |
+| `AGENTS.md` | Project and Lumos conventions, plus Codex's contract under **Codex: your role** |
+| `.agents/skills/` | `astro-component`, `codex-handoff`, `local-checks`, `review-pr`, `fix-bug`, and the Lumos skills |
+| `.claude/skills/` | links into `.agents/skills/` so Claude Code finds them |
+| `.claude/settings.json` | pins Opus 5.5; enables the Paper and Cloudflare plugins; denies destructive commands and unused connectors; runs `scripts/hooks/guard-git.mjs` before every Bash call and `scripts/hooks/guard-deps.mjs` before T3's `delegate_task` |
+| `.claude/agents/` | `haiku-lookup` (Haiku 5.5, read-only); `scripts/hooks/agent-definitions.test.mjs` checks the definitions |
+| `t3.json` | T3 Code: new threads start in a worktree; `setup` runs `npm ci` and copies `.dev.vars.example`, but T3 does not run it yet (L-006), so Claude runs `npm ci` itself (`CLAUDE.md` **Git** step 1, hook `guard-deps.mjs`); `dev` and a fake-store `preview` on Astro's default port or the next free one |
+| `.agents/lessons.md`, `.agents/lessons-archive.md`, `scripts/lessons/` | the lessons ledger, its archive, and the matcher and validator (`select.mjs`) |
+| `scripts/hooks/` | `guard-git.mjs`, the Git-trap hook; `guard-deps.mjs`, the T3 dependency hook; `agent-definitions.test.mjs`; and their tests |
 | `scripts/ci/classify-paths.mjs` | routes changed paths to `runtime` / `workflow` / `docs` |
+| `scripts/ci/prepush.mjs` | `npm run prepush`, the one local gate before every push (`local-checks`) |
 | `.github/workflows/ci.yml` | `classify` → `build` + `e2e` / `docs` + `workflow` → `gate` |
-| `.markdownlint-cli2.jsonc` | structural Markdown lint for the `docs` job |
-| `docs/claude-codex-handoff-resolution.md` | why the contract looks the way it does |
+| `playwright.config.ts`, `tests/` | Chromium at desktop and Pixel 7; builds and serves the fake-store site on a port derived from the checkout path (L-008) |
+| `.markdownlint-cli2.jsonc` | structural Markdown lint, in `prepush` and the `docs` job |
+| `docs/claude-codex-handoff-resolution.md` | why the handoff contract looks the way it does |
+| `docs/rsvp-backend.md` | the RSVP backend, its Sheet layout and its production setup |
 
 ## Prerequisites
 
-- Node 22 (the settings hook runs on it), `gh` (authenticated)
-- Codex CLI, logged in: `codex login`. Model `gpt-5.6-luna` (ChatGPT-account Codex
-  rejects `gpt-6-luna`).
-- The Paper desktop app and the `paper-desktop@paper` Claude Code plugin. The project
-  settings enable it and register the `paper` marketplace; approve the install the
-  first time Claude Code opens the repo.
+- Node 22.19 or newer, `gh` authenticated.
+- T3 Code, with the Codex provider enabled with models `gpt-5.6-luna` and
+  `gpt-5.6-sol`, and **Delete merged worktrees** turned on in its storage cleanup
+  settings.
+- The Paper desktop app and the `paper-desktop@paper` Claude Code plugin. The
+  project settings enable it; approve the install the first time Claude Code opens
+  the repo.
+- Playwright's browser, once per machine: `npm run test:e2e:install`.
 
-## 1. Scaffold the Astro app
+## Probe the Codex sandbox
 
-Land this workflow on `main` first, on its own (step 7), and scaffold on a fresh
-branch from `origin/main` afterwards. Claude runs the scaffold directly rather than
-handing it to Codex: `npm create` and `npm install` need the network, which Codex's
-workspace-write sandbox does not have by default (step 6 confirms).
+`codex-handoff` states what Codex cannot do. Re-run this on a new machine, or after a
+Codex upgrade. From a T3 thread, run `npm ci` in the worktree first, then send these
+seven commands with `delegate_task` (`target`
+`{"providerInstanceId":"codex","model":"gpt-5.6-luna"}`, `isolation: "shared"`,
+`mode: "async"`):
 
-`npm create astro` will not scaffold cleanly into a non-empty directory, so create it
-beside the repo and copy it in:
+```text
+Capability probe. Run each command and report the exact exit code and the first line of any error: (1) git config --local probe.x 1  (2) node -e "require('net').createServer().listen(4199,'127.0.0.1',()=>{console.log('bound');process.exit(0)}).on('error',e=>{console.log(e.code);process.exit(1)})"  (3) npm run build  (4) npm view astro version  (5) npm run check  (6) git status --short  (7) echo ok > .context/codex-probe.txt. Change no other files.
+```
+
+Then send a one-line task on `gpt-5.6-sol` to confirm that model name is accepted.
+Afterwards delete `.context/codex-probe.txt`, and unset `probe.x` with
+`git config --local --unset probe.x` if the write succeeded. If a result changes,
+update `.agents/skills/codex-handoff/references/codex-sandbox.md` and **What your
+sandbox cannot do** in `AGENTS.md`.
+
+## Deploys: Cloudflare Workers Builds
+
+One Worker, `eunice-warren`, builds from this repository. Every push to `main`
+deploys production at `https://eunice-warren.neil-e89.workers.dev`; every other
+branch builds a preview at `https://<branch, / as ->-eunice-warren.neil-e89.workers.dev`
+with `npx wrangler preview`. CI never deploys and holds no Cloudflare token. The
+RSVP secrets are Worker secrets (`docs/rsvp-backend.md`), shared by previews.
+
+## Check it locally
 
 ```bash
-npm create astro@latest ../ew-scaffold -- --template minimal --no-git --install
-rsync -a --exclude node_modules --exclude .git ../ew-scaffold/ ./
-rm -rf ../ew-scaffold
-npm install
-npm install -D @astrojs/check typescript @playwright/test
-```
-
-Keep this repo's `.gitignore` additions if the scaffold overwrote it (see step 4).
-
-## 2. Add the scripts
-
-Merge into `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "check": "astro check",
-    "test:codex-handoff": "node --test scripts/codex/run-handoff.test.mjs",
-    "test:routing": "node --test scripts/ci/classify-paths.test.mjs",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:report": "playwright show-report",
-    "test:e2e:install": "playwright install chromium chromium-headless-shell"
-  }
-}
-```
-
-## 3. Add `playwright.config.ts`
-
-The port is derived from the checkout path so parallel Conductor worktrees never test
-each other's server (see **Traps** in `CLAUDE.md`).
-
-```ts
-import { createHash } from "node:crypto";
-import { defineConfig, devices } from "@playwright/test";
-
-// A port is machine-wide, but this repository is checked out in several worktrees
-// at once. Deriving the port from this checkout's path keeps it stable here and
-// distinct per worktree. Override with PW_PORT when it has to be pinned by hand.
-const HOST = "127.0.0.1";
-const PORT = Number(process.env.PW_PORT) || derivePort(process.cwd());
-const ORIGIN = `http://${HOST}:${PORT}`;
-
-function derivePort(dir: string) {
-  const digest = createHash("sha1").update(dir).digest();
-  return 41000 + (digest.readUInt16BE(0) % 2000);
-}
-
-export default defineConfig({
-  testDir: "./tests",
-  fullyParallel: true,
-  forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? "github" : "list",
-  use: {
-    baseURL: ORIGIN,
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    video: "on-first-retry",
-  },
-  webServer: {
-    // Test the production build, not the dev server. reuseExistingServer: false
-    // makes Playwright refuse a port something else already answers on.
-    command: `npm run build && npm run preview -- --host ${HOST} --port ${PORT}`,
-    url: ORIGIN,
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
-  ],
-});
-```
-
-Add one smoke spec so `e2e` has something to run:
-
-```ts
-// tests/home.spec.ts
-import { expect, test } from "@playwright/test";
-
-test("home page renders", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator("h1")).toBeVisible();
-});
-```
-
-Then `npm run test:e2e:install` once per machine.
-
-## 4. `.gitignore`
-
-Make sure it contains:
-
-```gitignore
-node_modules/
-dist/
-.astro/
-.env
-.env.*
-!.env.example
-playwright-report/
-test-results/
-.context/
-.DS_Store
-```
-
-`dist/` is never committed — CI builds it. A committed `dist/` path routes `runtime`
-(unknown paths fail closed).
-
-## 5. Fill the placeholders
-
-- `README.md` (from the scaffold): one paragraph on what the site is, plus the
-  scripts. `CLAUDE.md` and `AGENTS.md` point at it.
-- The deploy host. When it is chosen, add its preview-URL pattern to `CLAUDE.md`
-  **Git** (the "Deploying is a separate act" bullet) and `skills/review-pr/SKILL.md`
-  **Deploying is separate**.
-- Design tokens in `src/styles/`, created from Paper's tokens
-  (`get_tokens`), before the first component handoff.
-
-## 6. Probe the Codex sandbox on this machine
-
-`CLAUDE.md` states what Codex cannot do. Confirm it here once:
-
-```bash
-node scripts/codex/run-handoff.mjs --model gpt-5.6-luna --sandbox workspace-write --timeout-seconds 300 --prompt "Run each and report the exact exit code and error: (1) git config --local probe.x 1  (2) node -e \"require('net').createServer().listen(4199,'127.0.0.1',()=>{console.log('bound');process.exit(0)}).on('error',e=>{console.log(e.code);process.exit(1)})\"  (3) npm run build  (4) npm view astro version. Do not change any files."
-```
-
-The probe passes `--sandbox workspace-write` explicitly: that is the sandbox handoffs
-write in, and the launcher defaults to `read-only`.
-
-Expect `could not lock config file`, `EPERM`, a successful build, and a network
-failure from `npm view`. If a result differs, update **What Codex cannot do here** in
-`CLAUDE.md` and the table in `skills/codex-handoff/SKILL.md`.
-
-## 7. Land it
-
-Two PRs, in order:
-
-1. **The workflow alone** — these files, no app. It routes `workflow`, whose jobs call
-   `node --test` directly and so pass before `package.json` exists.
-2. **The scaffold** (steps 1–5) — routes `runtime`, so `build` and `e2e` must both go
-   green before merge. It is the first PR to run the full chain.
-
-```bash
+npm run prepush
 git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
-npm run test:routing && npm run test:codex-handoff
 ```
 
-## Reusing this in another Astro project
-
-Copy everything in the table above, then repeat steps 2–7. The only project-specific
-text is the project name at the top of `CLAUDE.md` and `AGENTS.md`, and the
-**Relevant context → Project** line in `skills/codex-handoff/SKILL.md`.
+`prepush` is the only local gate; a Playwright spec runs locally only once, by its
+author, when it is new or changed (`.agents/skills/local-checks/SKILL.md`).

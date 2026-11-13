@@ -15,22 +15,37 @@ const RUNTIME_FILES = new Set([
 const RUNTIME_DIRECTORIES = ["src", "public", "tests"];
 
 // Agent instructions and agent tooling config are operational code: .mcp.json
-// wires tools into every session, and Conductor settings can run setup scripts.
+// wires tools into every session, and t3.json (T3 Code's host settings) runs
+// setup scripts.
 const WORKFLOW_FILES = new Set([
   "AGENTS.md",
   "CLAUDE.md",
   "SETUP.md",
   ".mcp.json",
+  "t3.json",
   ".markdownlint-cli2.jsonc",
+  // The lessons ledger is read by Codex and the reviewer as rules, and
+  // scripts/lessons/select.mjs --check validates it in the workflow job.
+  ".agents/lessons.md",
+  ".agents/lessons-archive.md",
+  // The skills CLI manifest for vendored skills.
+  "skills-lock.json",
 ]);
 
+// Skills live in .agents/skills (linked into .claude/skills).
 const WORKFLOW_DIRECTORIES = [
-  "skills",
+  ".agents/skills",
   ".claude",
   ".github",
-  "scripts/codex",
   "scripts/ci",
+  "scripts/hooks",
+  "scripts/lessons",
+  // Retired with the move to T3 Code (2026-11-13): Conductor settings, the codex
+  // exec launcher, and the old skills/ directory. Kept so the deletion, or a
+  // stray re-add, routes workflow instead of runtime.
   ".conductor",
+  "scripts/codex",
+  "skills",
 ];
 
 const DOCS_FILES = new Set([".gitignore", ".gitkeep"]);

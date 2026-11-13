@@ -1,15 +1,18 @@
 {
-  // Lightweight docs check for markdown-only PRs. Structural problems only;
-  // prose style is not linted.
+  // Lightweight docs check. Structural problems only; prose style is not linted.
+  // MD022 and MD032 are off because the lessons ledger puts each entry's field
+  // list directly under its heading (the format scripts/lessons/select.mjs parses).
   "config": {
     "default": true,
     "MD013": false,
+    "MD022": false,
     "MD024": { "siblings_only": true },
+    "MD032": false,
     "MD033": false,
     "MD040": false,
     "MD041": false
   },
   // src/** is site content (content collections), rendered by the build, not
-  // workflow prose.
-  "ignores": [".claude/**", "src/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
+  // workflow prose. .context/** holds local scratch files and saved logs.
+  "ignores": [".claude/**", ".context/**", "src/**", "node_modules/**", "dist/**", "playwright-report/**", "test-results/**"]
 }

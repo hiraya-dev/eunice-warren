@@ -1,8 +1,8 @@
 name: CI
 
 # Risk-tiered checks: runtime changes type-check, build, and run Playwright;
-# workflow changes validate routing, the Codex launcher, Actions YAML, and
-# Markdown; ordinary docs only lint Markdown. A stable gate job verifies that
+# workflow changes validate routing, the Claude Code hooks, the lessons ledger,
+# Actions YAML, and Markdown; ordinary docs only lint Markdown. A stable gate job verifies that
 # every check required by the selected tier ran.
 on:
   pull_request:
@@ -138,17 +138,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The lessons check compares IDs with origin/main.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Plain node --test, not npm scripts, so this route works before the
-      # Astro app (and its package.json) exists.
+      # Plain node --test, not npm scripts: none of these needs node_modules.
       - name: Test path routing
         run: node --test scripts/ci/classify-paths.test.mjs
-      - name: Test Codex handoff lifecycle
-        run: node --test scripts/codex/run-handoff.test.mjs
-      - name: Test the codex-rescue hook
-        run: node --test .claude/hooks/block-codex-rescue.test.mjs
+      - name: Test the hooks and the lessons tooling
+        run: node --test scripts/hooks/guard-git.test.mjs scripts/hooks/guard-deps.test.mjs scripts/hooks/agent-definitions.test.mjs scripts/lessons/select.test.mjs
+      - name: Check the lessons ledger
+        run: node scripts/lessons/select.mjs --check --base origin/main
       - name: Validate workflow YAML
         env:
           ACTIONLINT_VERSION: 1.7.7
