@@ -1,11 +1,14 @@
 # Lessons
 
 Mistakes this repo has already paid for, written down so no agent repeats them.
-Claude and Codex read this file. Each entry states what went wrong, the rule that
+Claude, Codex and the `pr-reviewer` subagent all read this file. Each entry states what went wrong, the rule that
 prevents it, and how to check for it.
 
 - **Codex**: before you implement, read the entries whose **Paths** match the files
   you will touch. A handoff quotes the matching ones, but the ledger is the source.
+- **`pr-reviewer`**: the entries matching the diff are saved to
+  `.context/review-<pr>/lessons.md`. Treat each as a checklist item, and cite its ID
+  in a finding (`path:line — breaks L-009: … — fix`).
 - **Claude**: pick entries with `scripts/lessons/select.mjs` (below) for every brief
   and review, and capture new ones as `CLAUDE.md` **Lessons** says.
 

@@ -28,10 +28,13 @@ path (`CLAUDE.md` **Host**). Every handoff sends the
   are needed, it ends with a recommendation and Claude starts a write task (a fresh
   handoff or a fix round on the branch's existing work).
 - While Codex is working: no edits to repository files, no Git writes, and no build.
-  Reading Paper may continue because it does not touch the checkout. One writer at
-  a time.
+  Reading Paper may continue because it does not touch the checkout. Never run
+  `layout-implementer` while Codex is working: one writer at a time.
 - Do not hand off a mechanical edit — Claude makes it directly; see
-  **Mechanical edits** in `CLAUDE.md`.
+  **Task routing** in `CLAUDE.md`.
+- A task that is mainly layout, CSS, or animation goes to the `layout-implementer`
+  subagent instead of Codex (**Briefing `layout-implementer`** below). Logic still
+  comes here.
 - **Never delegate Codex through a Codex plugin, the Agent tool, or a slash command.**
   The plugin's Agent-tool path is background-only, and it once kept writing to the
   shared checkout after the handoff appeared to have returned, overwriting whatever
@@ -138,6 +141,30 @@ Codex writes the code and tests, self-reviews its full working-tree diff, and ru
 `npm run check` and the script tests that match the changed paths (`AGENTS.md`
 **Validation**). Claude runs `local-checks` and owns Git; CI runs the browser suite.
 Codex self-validation is evidence for Claude's review, never merge authorization.
+
+## Briefing `layout-implementer`
+
+A layout task (`CLAUDE.md` **Task routing**) goes to the `layout-implementer`
+subagent (`.claude/agents/layout-implementer.md`), spawned natively with the Agent
+tool and `run_in_background: false`, never with a per-call `model`, except the one
+override in `CLAUDE.md` **Roles**: `model: "opus"` with `effort: "medium"` on a fix
+round for animation or scroll-driven motion, after one failed run at the pinned
+Sonnet 5.5 `high`. Its brief is the **Handoff template** below with these
+differences:
+
+- **Already established** carries a `haiku-lookup` list of the files, components and
+  tokens the task needs, so the implementer does not explore.
+- **Lessons that apply** is the `select.mjs --brief` output, as for Codex.
+- The branch line, the sandbox section and the Git section stay: the implementer can
+  build and run Playwright, but never runs a Git command that changes state, and
+  never submits a form outside the local fake-store build.
+- It returns the **Return** block of its agent file (STATUS, CHANGES, CHECKS, TREE,
+  DOUBTS), not the Codex report.
+
+A fix round is a new run carrying the findings and the previous DOUBTS. After two
+failed runs on the same finding, Claude takes over and says why in the PR body. The
+PR body names the implementer, the runs and the effort used. One writer at a time:
+never run it while Codex is working, and never edit the checkout while it runs.
 
 ## Before handing off
 
@@ -296,9 +323,10 @@ Validation Claude still needs to run:
 **`DONE`** — treat each `PASS` line as a claim to check, not a result to accept.
 Read the diff for scope: files the task did not need, debug code, stray or
 unrelated hunks, and any check the report claims but could not have run. Correctness
-review comes later, in `review-pr`; do not duplicate it here. Then run
-`local-checks` (Codex cannot run its own specs, so they may arrive failing), commit,
-push, open the PR, and run `.agents/skills/review-pr/SKILL.md`.
+review is `pr-reviewer`'s job (and the Codex second opinion's on a risky PR); do not
+duplicate it here. Then run `local-checks` (Codex cannot run its own specs, so they
+may arrive failing), commit, and push: `runtime` to a draft PR for **Local review**,
+`docs` and `workflow` to a ready PR. Then run `.agents/skills/review-pr/SKILL.md`.
 
 **`NEEDS_DESIGN_INPUT`** — Codex hit a design value or decision the handoff did not
 contain. Read it from Paper (or ask the user if Paper does not answer it), then send

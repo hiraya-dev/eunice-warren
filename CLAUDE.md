@@ -15,19 +15,34 @@ waiting for CI is `watch_pull_request`, then end the turn.
 
 ## Roles
 
+Three change classes, read from the diff (`local-checks` **CI routes**):
+
+- **Trivial**: the `docs` and `workflow` routes. `prepush`, a ready PR,
+  `pr-reviewer`, merge on PASS. No Local review.
+- **Normal**: `runtime`. A draft PR, `pr-reviewer` in parallel with CI, the user's
+  preview review, "ship it".
+- **Risky**: `runtime` touching the RSVP, song or With Love actions and stores
+  (`src/actions/**`, `src/lib/**`, `src/pages/api/**`), dependencies, or root config
+  (`wrangler.jsonc`, `astro.config.mjs`). The review adds the Codex second opinion.
+
 Claude owns judgment, Git and every gate. Codex works in a sandbox (`codex-handoff`
-**What Codex cannot do here**). `haiku-lookup` only reads.
+**What Codex cannot do here**). `layout-implementer` can build, run Playwright and
+check the browser, but never touches Git. `haiku-lookup` and `pr-reviewer` only
+read.
 
 | Role | Model | Set in |
 | --- | --- | --- |
 | Orchestrator | Claude Opus 5.5 (Fable 5.2 via `/model` for one truly hard session) | `.claude/settings.json` |
 | Codex | `gpt-5.6-luna`; `gpt-5.6-sol` for a hard round | each `delegate_task` call |
 | `haiku-lookup` | Claude Haiku 5.5, `effort: low` | agent frontmatter |
+| `pr-reviewer`; `layout-implementer` | Claude Sonnet 5.5, both at `effort: high` | agent frontmatter |
 
 Spawn `.claude/agents` subagents natively with the Agent tool, never with a per-call
-`model` and never as a `fork` (it re-reads the thread). A hard Codex round is a
-second failed fix round on one finding, a flaky test, or tricky animation logic; the
-PR body says which rounds ran on `sol` and why.
+`model` and never as a `fork` (it re-reads the thread). The one allowed override is
+`model: "opus"` with `effort: "medium"` on a `layout-implementer` fix round for
+animation or scroll-driven motion, after one failed run at the pinned Sonnet 5.5
+`high`. A hard Codex round is a second failed fix round on one finding, a flaky
+test, or tricky animation logic; the PR body says which rounds ran on `sol` and why.
 
 When a run is not good enough: first check it can verify its own work (a test, build
 or script), then raise effort one level, then move up one model at a lower effort
@@ -38,18 +53,25 @@ launch inherits the parent's model otherwise), except for the one truly hard ses
 ## Task routing
 
 Classify before implementing. Needs no logic and no understanding of the code around
-it → Claude makes it directly. Otherwise → Codex. Judgment, Git and gates stay with
-Claude.
+it → Claude makes it directly. Otherwise mainly layout, CSS or animation →
+`layout-implementer`. Otherwise (the RSVP, song and With Love actions and stores,
+client-script behavior, content schemas, scripts, tests, CI) → Codex. Judgment, Git
+and gates stay with Claude. A task with both halves runs them one after the other.
 
 | Lane | Takes |
 | --- | --- |
-| Claude, inline | classifying, criteria, Paper, builds, visual QA, Git, merges, workflow rule changes, mechanical edits |
+| Claude, inline | classifying, criteria, Paper, builds, visual QA, Git, merges, workflow rule changes, mechanical edits, copy edits (`copy-editing`) |
 | `haiku-lookup` | where X is defined or used, file or diff summaries, inventories, the failure in a log saved to `.context/` |
-| Codex | sections and components, client scripts and animation, the RSVP, song and With Love actions, content schemas, tests, root-cause bug fixes, refactors, scripts, CI |
+| Codex | actions and stores, API routes, client-script behavior, content schemas, tests, root-cause bug fixes, refactors, scripts, CI |
+| `layout-implementer` | sections and components from Paper, responsive fixes, motion and scroll effects |
+| `pr-reviewer` | the verdict on every PR, started when the PR opens; Codex second opinion only on a risky PR |
 
 - **Design → code**: Claude reads Paper and writes the criteria with the values at
-  390 and 1440 (`astro-component` **From Paper**); Codex implements; Claude measures
-  the result at both widths. Never edit the Paper file unasked.
+  390 and 1440 (`astro-component` **From Paper**); the implementer builds; Claude
+  measures the result at both widths. Never edit the Paper file unasked.
+- **Layout work**: brief and fix rounds per `codex-handoff` **Briefing
+  `layout-implementer`**; after two failed runs on one finding, Claude takes over
+  and says so in the PR body.
 - **Mechanical edits** (copy, typos, alt text, a token value, lint fixes, config
   values, pins): mechanical only when it adds no logic (no new branch, loop,
   listener, prop, island, route or schema field, no change to what existing code
@@ -67,15 +89,26 @@ Read `.agents/skills/codex-handoff/SKILL.md` before any Codex task. Never delega
 Codex through a Codex plugin, the Agent tool or a slash command. Claude does not
 touch delegated files until the run is terminal; if Codex fails or errors, Claude
 implements the change once the run has ended and says so in the PR body. **One
-writer at a time**: Codex and Claude never edit the checkout together;
-`haiku-lookup` only reads, so it may run alongside.
+writer at a time**: Codex, `layout-implementer` and Claude never edit the checkout
+together; `haiku-lookup` and `pr-reviewer` only read, so they may run alongside.
 
 ## Approval
 
 After classifying, state the classification, the lane and the acceptance criteria,
 then stop for the user's OK. For a new section or visual feature, recommend an
 approach first (options, trade-offs) and stop. Once approved, the chain runs without
-check-ins.
+check-ins, except the **Local review** stop on `runtime`; after "ship it", the rest
+runs without asking.
+
+## Local review
+
+A `runtime` change waits for the user on its draft PR's Cloudflare preview
+(`https://<branch, / as ->-eunice-warren.neil-e89.workers.dev`). CI and the
+`pr-reviewer` verdict run on the draft first; then Claude posts the review pack and
+**stops**. Feedback → a fix round and a new pack. "Ship it" (or "push", "merge",
+"go") authorizes ready + merge. A fix after "ship it" comes back only if it changes
+what renders. `docs` and `workflow` skip this. Procedure: `review-pr` **Local
+review**.
 
 ## Git
 
@@ -96,10 +129,11 @@ checkout.
 6. Review the returned diff, then `local-checks`: `npm run prepush && git push …`
    before every push; a new or changed spec runs once, by its author. No full
    Playwright run gates a commit; CI runs the suite.
-7. Open the PR (`gh pr create --base main`), `link_pull_request`, then
-   `watch_pull_request` and end the turn.
-8. Review, merge and clean up per `review-pr`: a posted `PASS` on the head, green
-   `gate` on it, and the branch up to date with `origin/main`; merge with
+7. Open the PR: `runtime` as a draft (`gh pr create --draft --base main`), `docs`
+   and `workflow` ready. `link_pull_request`, then start `review-pr` at once.
+8. Verdict, merge and cleanup run per `review-pr` **Verdicts** and **Merging**: a
+   posted `PASS` on the head, green `gate` on it, the branch up to date with
+   `origin/main`, and "ship it" for `runtime`; merge with
    `gh pr merge <pr> --squash`. Otherwise hand the PR to the user. Any new push voids
    the head's CI result and verdict.
 
@@ -114,26 +148,27 @@ out of the task's commits unless they belong to it.
 
 Merging to `main` deploys production (Workers Builds, Worker `eunice-warren`);
 Claude confirms that build succeeded and reports it (`review-pr` **Deploying**).
-Every other branch builds a preview. Never deploy by hand, roll back, or change
-Workers routes, settings or secrets unless asked.
+Every other branch builds a preview for **Local review**. Never deploy by hand, roll
+back, or change Workers routes, settings or secrets unless asked.
 
-- **Previews use the live Google Sheet.** They inherit `RSVP_STORE=sheets` and the
-  Worker's secrets, so never submit an RSVP, a song or a With Love note on a preview
-  or on production. Verify forms on the local fake-store build.
+- Previews run the fake store (`wrangler.jsonc` `previews`), so a reviewer can try
+  the RSVP, song and With Love forms there. Never submit any of them on production.
 - `SITE_INDEXABLE` in `src/consts.ts` stays `false` until the user says to launch.
 
 ## Skills
 
 Check `.agents/skills/` before related work (`.claude/skills/` links to them).
-Sections, components and Paper → `astro-component` and `LUMOS.md`; Codex handoffs →
-`codex-handoff`; before every commit and push → `local-checks`; reviewing and merging
-→ `review-pr`; a reported bug → `fix-bug`.
+Sections, components and Paper → `astro-component` and `LUMOS.md`; Codex handoffs
+and `layout-implementer` briefs → `codex-handoff`; before every commit and push →
+`local-checks`; reviewing, Local review and merging → `review-pr`; a reported bug →
+`fix-bug`; editing site copy → `copy-editing`, with the voice and rules in
+`.agents/product-marketing.md`.
 
 ## Lessons
 
 Claude writes or updates a `.agents/lessons.md` entry on the task branch after a
 `CHANGES_REQUIRED`, a red CI job that was not a timeout or cancel (L-013), a revert,
-a flaky test, or a correction from the user (format and upkeep: the file). A bug the
+a flaky test, a Local review fix round, or a correction from the user (format and upkeep: the file). A bug the
 user finds is an `escape: <route> #PR` in **Trigger**, and the fix PR adds a test
 that fails on the old code when one can measure it. A repeat adds the PR to
 **Trigger** and sharpens the rule.

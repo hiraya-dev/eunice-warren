@@ -19,7 +19,9 @@ Use `astro dev stop`, `astro dev status`, and `astro dev logs` to manage it. Cop
 `.dev.vars.example` to `.dev.vars` first (T3's `setup` script does it) so the RSVP,
 song and With Love actions use the fake store. The user can also start `dev` (hot
 reload) or `preview` (a fake-store production build) from T3 Code's scripts menu
-(`t3.json`, Astro's default port or the next free one).
+(`t3.json`, Astro's default port or the next free one). The user's review of a
+`runtime` change happens on the PR's Cloudflare preview (`CLAUDE.md` **Local
+review**), which runs the same fake store.
 
 ## Astro documentation
 
@@ -53,8 +55,12 @@ any scripts they need.
   image, content and client-script conventions.
 - `codex-handoff` — how Claude hands code to Codex, and the report Codex returns.
 - `local-checks` — the checks Claude runs before every commit and push.
-- `review-pr` — the review, merge, and deploy check for every PR.
+- `review-pr` — the `pr-reviewer` verdict, Local review, merge, and deploy check
+  for every PR.
 - `fix-bug` — reproduce, fix, and gate a reported bug.
+- `copy-editing` — edit site copy in focused passes, with the voice and rules in
+  `.agents/product-marketing.md` (vendored from `coreyhaines31/marketingskills`,
+  pinned in `skills-lock.json`).
 - `lumos-audit-props` — check prop order and tooltip consistency.
 - `lumos-scaling-graphic` — build an editable graphic that scales as one piece.
 - `lumos-upgrade-version` — upgrade Lumos without losing customizations.
@@ -74,14 +80,17 @@ Git. You (Codex) own repository code that has logic in it. `CLAUDE.md` holds the
 workflow.
 
 ```
-Claude: classify → approve → delegate → wait → validate → commit → PR → review → merge
+Claude: classify → approve → delegate → wait → validate → commit → draft PR → review → local review → merge
 Codex:  inspect → implement → add tests → report
 ```
 
-You implement sections and components, client scripts and animation, the RSVP, song
-and With Love actions, content schemas, utilities, tests, build config, scripts and
-CI, refactors, and bug fixes that need a root cause. Claude makes purely mechanical
-edits itself, so a handoff you receive is expected to need real implementation.
+You implement repository code with logic in it: the RSVP, song and With Love
+actions and stores, API routes, client-script behavior, content schemas, utilities,
+tests, build config, scripts and CI, refactors, and bug fixes that need a root
+cause. Work that is mainly layout, CSS, or animation goes to the
+`layout-implementer` subagent, which can check the browser, and Claude makes purely
+mechanical edits itself. A handoff you receive is expected to need real
+implementation, usually logic.
 
 You cannot see the Paper designs. Claude puts the values you need (tokens, spacing,
 type, breakpoints, asset paths) in the handoff. If a task needs a design decision
