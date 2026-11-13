@@ -17,7 +17,7 @@ re-adapted from adc-website, which had already made that move. `scripts/codex/`,
 | `AGENTS.md` | Project and Lumos conventions, plus Codex's contract under **Codex: your role** |
 | `.agents/skills/` | `astro-component`, `codex-handoff`, `local-checks`, `review-pr`, `fix-bug`, and the Lumos skills |
 | `.claude/skills/` | links into `.agents/skills/` so Claude Code finds them |
-| `.claude/settings.json` | pins Opus 5.5; enables the Paper and Cloudflare plugins; denies destructive commands and unused connectors; runs `scripts/hooks/guard-git.mjs` before every Bash call and `scripts/hooks/guard-deps.mjs` before T3's `delegate_task` |
+| `.claude/settings.json` | pins Opus 5.5; enables the Paper, Chrome DevTools and Cloudflare plugins; denies destructive commands and unused connectors; runs `scripts/hooks/guard-git.mjs` before every Bash call and `scripts/hooks/guard-deps.mjs` before T3's `delegate_task` |
 | `.claude/agents/` | `haiku-lookup` (Haiku 5.5, read-only); `scripts/hooks/agent-definitions.test.mjs` checks the definitions |
 | `t3.json` | T3 Code: new threads start in a worktree; `setup` runs `npm ci` and copies `.dev.vars.example`, but T3 does not run it yet (L-006), so Claude runs `npm ci` itself (`CLAUDE.md` **Git** step 1, hook `guard-deps.mjs`); `dev` and a fake-store `preview` on Astro's default port or the next free one |
 | `.agents/lessons.md`, `.agents/lessons-archive.md`, `scripts/lessons/` | the lessons ledger, its archive, and the matcher and validator (`select.mjs`) |

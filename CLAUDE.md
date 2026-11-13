@@ -145,8 +145,9 @@ user found.
 ## Traps
 
 One line each; the ledger has the detail. `scripts/hooks/guard-git.mjs` runs before
-every Bash call (subagents too), `guard-deps.mjs` before `delegate_task`. Both fail
-closed (`onFailure: block`): a hook that crashes also blocks. If a hook blocks
+every Bash call (subagents too), `guard-deps.mjs` before `delegate_task`. Both are
+registered with `onFailure: block`, but each script allows a call whose input it
+cannot read rather than break every call (their tests pin this). If a hook blocks
 something the user asked for, say so; never work around it. `permissions.deny` in
 `.claude/settings.json` blocks force pushes, `branch -D`, `wrangler
 deploy/delete/rollback/secret/kv`, `gh repo delete/edit`, `gh` API deletes and
@@ -154,7 +155,8 @@ deploy/delete/rollback/secret/kv`, `gh repo delete/edit`, `gh` API deletes and
 
 - Hooks block: `--merge`, `--rebase`, `--delete-branch` (L-001); checking out `main`
   (L-002); `git worktree add` (L-003); co-author trailers (L-004); any push to
-  `main` (L-005); a commit or push chained after a pipe (`local-checks`); a Codex
+  `main` (L-005); a commit chained after a pipe (`local-checks`; a piped push is
+  not caught, so chain `prepush && git push` without a pipe); a Codex
   handoff without `node_modules` (L-006).
 - `git status -sb` before each handoff, commit and push; others' hunks are not
   "stray" (L-007).

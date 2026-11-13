@@ -105,7 +105,8 @@ maintains it.
 ### What your sandbox cannot do
 
 Claude reaches you through T3 Code's `delegate_task`. It runs you in a
-`workspace-write` sandbox (measured 2026-10-26; table in
+`workspace-write` sandbox (measured 2026-10-26 in adc-website on this machine,
+same T3 setup; table in
 `.agents/skills/codex-handoff/references/codex-sandbox.md`):
 
 - **Git writes fail** (`could not lock config file .git/config: Operation not

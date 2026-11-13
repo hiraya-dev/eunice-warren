@@ -1,7 +1,7 @@
 {
   "model": "claude-opus-5-5",
   "enabledPlugins": {
-    "chrome-devtools-mcp@claude-plugins-official": false,
+    "chrome-devtools-mcp@claude-plugins-official": true,
     "paper-desktop@paper": true,
     "cloudflare@cloudflare": true,
     "context7@claude-plugins-official": false

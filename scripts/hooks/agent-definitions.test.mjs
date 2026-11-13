@@ -1,4 +1,4 @@
-// Guard for L-042: a subagent that sets `omitClaudeMd: true` never receives
+// Guard (from adc-website's lesson L-042): a subagent that sets `omitClaudeMd: true` never receives
 // CLAUDE.md, so its definition must say so and must not tell the agent to follow
 // CLAUDE.md. A mention is allowed only in the description (a pointer for Claude)
 // or as an on-demand Read ("Open `CLAUDE.md` with Read only when …").
