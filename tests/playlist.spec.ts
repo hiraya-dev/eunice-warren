@@ -123,7 +123,8 @@ test.describe("Playlist section", () => {
       );
       await page.waitForTimeout(200);
     }
-    expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan(0.2);
+    // Angles are degrees; the record spins at 200deg/s, so 11.5deg (the old 0.2rad) is a floor.
+    expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan(11.5);
     const beforePause = samples.at(-1)!;
     await page.evaluate(() =>
       (window as any).__playlistController.listeners[0][1]({
@@ -133,7 +134,7 @@ test.describe("Playlist section", () => {
     await page.waitForTimeout(1500);
     const afterPause = await readRecordAngle(record);
     await expect(arm).toHaveCSS("transform", /matrix\(0\.866/);
-    expect(Math.abs(afterPause - beforePause)).toBeGreaterThan(0.2);
+    expect(Math.abs(afterPause - beforePause)).toBeGreaterThan(11.5);
     const stopped = await record.evaluate(
       (element) => getComputedStyle(element).transform,
     );

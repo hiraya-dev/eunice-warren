@@ -107,10 +107,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-009 — Time motion assertions by the clock, never by frames
 - **Date:** 2026-10-17
-- **Trigger:** flaky tests: #56 (ribbon seams), #62 (ticket stepped feed: `plateaus` 2, expected ≥ 3 on CI), #65 (turntable angle: one 66.7 ms CI frame is 0.2327 rad, over a 0.2 rad limit)
+- **Trigger:** flaky tests: #56 (ribbon seams), #62 (ticket stepped feed: `plateaus` 2, expected ≥ 3 on CI), #65 (turntable angle: one 66.7 ms CI frame is 0.2327 rad, over a 0.2 rad limit); PR #74, CHANGES_REQUIRED: the spin test switched to the unwrapped `rotate(deg)` value but kept its 0.2 radian thresholds, so it passed on 0.2°
 - **Symptom:** motion specs passed locally and failed on CI or under load, with numbers that were off by about one frame.
 - **Root cause:** the assertions counted `requestAnimationFrame` samples or compared two reads a fixed number of frames apart. Headless Chrome on a loaded runner delivers frames 40–67 ms apart, and a backgrounded tab freezes rAF entirely. #65 also read the angle through `atan2`, which wraps at ±180°.
-- **Rule:** check an animation's shape by pausing it with the Web Animations API and seeking `currentTime` (on a hidden clone if the live element runs timers). For live playback, sample over wall-clock time with `performance.now()`, bound the change by elapsed time plus one capped frame, and assert the peak or spread, never one reading or a frame count. Read the unwrapped value the component writes, not a derived angle. Measure in Playwright's own browser, never a backgrounded DevTools tab.
+- **Rule:** check an animation's shape by pausing it with the Web Animations API and seeking `currentTime` (on a hidden clone if the live element runs timers). For live playback, sample over wall-clock time with `performance.now()`, bound the change by elapsed time plus one capped frame, and assert the peak or spread, never one reading or a frame count. Read the unwrapped value the component writes, not a derived angle. When you change which value a spec reads, convert every threshold to the new value's unit and restate it from the component's rate. Measure in Playwright's own browser, never a backgrounded DevTools tab.
 - **Check:** the spec passes `--repeat-each 20 --workers 8` locally, or under CPU throttling, and on `flake-check.yml` (20 repeats, 4 workers, no retries).
 - **Guard:** none
 - **Paths:** `tests/**`
