@@ -15,9 +15,19 @@ function derivePort(dir: string) {
 
 export default defineConfig({
   testDir: "./tests",
+  // Only browser specs. tests/*-unit.test.ts are node:test files (npm run
+  // test:unit); loading them here runs them at import and prints TAP into
+  // `playwright test --list --reporter=json`, which check:sweep-tags reads.
+  testMatch: /.*\.spec\.ts$/,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
+  // A broken build fails fast instead of running every test to the end.
+  maxFailures: process.env.CI ? 5 : 0,
+  // One retry: a test that passes only on it is reported as flaky
+  // (scripts/ci/flaky-summary.mjs), not absorbed.
+  retries: process.env.CI ? 1 : 0,
+  // The config default stays one worker in CI, which the @sweep shards use;
+  // the e2e job passes --workers=2 for everything else (ci.yml).
   workers: process.env.CI ? 1 : undefined,
   // CI writes HTML for the failure upload and JSON for the flaky-test summary
   // (scripts/ci/flaky-summary.mjs).
@@ -55,6 +65,12 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    {
+      name: "mobile",
+      use: { ...devices["Pixel 7"] },
+      // Tests that set their own viewport, or do not depend on it, are tagged
+      // @single and run once, under the chromium project.
+      grepInvert: /@single/,
+    },
   ],
 });
