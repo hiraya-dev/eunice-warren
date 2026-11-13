@@ -21,8 +21,6 @@ export default defineConfig({
   testMatch: /.*\.spec\.ts$/,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  // A broken build fails fast instead of running every test to the end.
-  maxFailures: process.env.CI ? 5 : 0,
   // One retry: a test that passes only on it is reported as flaky
   // (scripts/ci/flaky-summary.mjs), not absorbed.
   retries: process.env.CI ? 1 : 0,

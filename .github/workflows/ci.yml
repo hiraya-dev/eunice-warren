@@ -154,6 +154,10 @@ jobs:
         run: npm run check
       - name: Run the unit tests
         run: npm run test:unit
+      # A runtime-only PR can add a spec, so the map is checked here as well as
+      # in checks.
+      - name: Check the Playwright spec map
+        run: node scripts/ci/select-specs.mjs --check
       - name: Build the site
         run: npm run build
 

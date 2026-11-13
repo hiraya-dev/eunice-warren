@@ -61,6 +61,7 @@ test("runtime runs the build, and e2e names its tier and runs it on two workers"
   assert.match(build, /npm run check/);
   assert.match(build, /npm run test:unit/);
   assert.match(build, /npm run build/);
+  assert.match(build, /select-specs\.mjs --check/);
   const e2e = jobBlock("e2e");
   assert.match(e2e, /name: e2e \(\$\{\{ needs\.classify\.outputs\.full == 'true' && 'full' \|\| 'smoke' \}\}\)/);
   assert.match(e2e, /image: mcr\.microsoft\.com\/playwright:v\$\{\{ needs\.classify\.outputs\.playwright \}\}-noble/);

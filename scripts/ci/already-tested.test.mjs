@@ -81,6 +81,8 @@ test("API errors fail closed", async () => {
     async () => {
       throw new Error("fixture API failure");
     },
+    // A one-parent commit, so the API is reached even in CI's shallow checkout.
+    () => "HEAD PARENT",
   );
   assert.equal(result.tested, false);
   assert.match(result.reason, /fixture API failure/);
