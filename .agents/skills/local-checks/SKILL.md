@@ -119,11 +119,15 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
   unknown path) runs `build` (`astro check`, the unit tests, and the production
   `astro build`) and `e2e` on the fake-store build, in the Playwright image matching
   the lockfile, with two workers. The tier is in the job name:
-  - `e2e (smoke)` on a draft PR: the `@smoke` tests only.
+  - `e2e (smoke)` on a draft PR: the `@smoke` tests only, on the `chromium` and
+    `mobile` projects.
   - `e2e (full)` on a ready PR, a draft labelled `ci:full` (add it, then
     `gh run rerun <run-id>`), a push to `main` and a manual run: every test not
     tagged `@sweep`, plus `sweeps (1/2)` and `sweeps (2/2)`, the `@sweep` tests
-    sharded two ways at one worker each.
+    sharded two ways at one worker each, plus `webkit`: the `@smoke` tests on
+    WebKit (iPhone 14 Safari) at one worker. A local spec run includes
+    `webkit` for any `@smoke` test in it; install it once with
+    `npx playwright install webkit`.
 
   CI retries a failed test once. Tests that pass only on the retry are listed as
   flaky in the job summary: treat each as a lesson to capture, not as green.

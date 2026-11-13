@@ -70,5 +70,15 @@ export default defineConfig({
       // @single and run once, under the chromium project.
       grepInvert: /@single/,
     },
+    {
+      // Most guests open the site in Safari on an iPhone. WebKit runs only the
+      // @smoke tests, and only in CI's full tier, in the webkit job at one
+      // worker; the e2e job passes --project for the two Chromium projects
+      // (ci.yml). @single does not skip it: @single is about the viewport, not
+      // the engine.
+      name: "webkit",
+      use: { ...devices["iPhone 14"] },
+      grep: /@smoke/,
+    },
   ],
 });

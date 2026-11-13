@@ -66,8 +66,8 @@ test("runtime runs the build, and e2e names its tier and runs it on two workers"
   assert.match(e2e, /name: e2e \(\$\{\{ needs\.classify\.outputs\.full == 'true' && 'full' \|\| 'smoke' \}\}\)/);
   assert.match(e2e, /image: mcr\.microsoft\.com\/playwright:v\$\{\{ needs\.classify\.outputs\.playwright \}\}-noble/);
   assert.match(e2e, /npm run check:sweep-tags/);
-  assert.match(e2e, /npm run test:e2e -- --grep-invert @sweep --workers=2$/m);
-  assert.match(e2e, /npm run test:e2e -- --grep @smoke --workers=2$/m);
+  assert.match(e2e, /npm run test:e2e -- --grep-invert @sweep --workers=2 --project=chromium --project=mobile$/m);
+  assert.match(e2e, /npm run test:e2e -- --grep @smoke --workers=2 --project=chromium --project=mobile$/m);
   assert.match(e2e, /flaky-summary\.mjs test-results\/results\.json/);
 });
 
@@ -81,8 +81,17 @@ test("sweeps run only on the full tier, sharded two ways at the config's one wor
   assert.doesNotMatch(sweeps, /--workers/);
 });
 
+test("webkit runs the smoke tests on WebKit, full tier only, at the config's one worker", () => {
+  const webkit = jobBlock("webkit");
+  assert.match(webkit, /needs\.classify\.outputs\.full == 'true'/);
+  assert.match(webkit, /image: mcr\.microsoft\.com\/playwright:v\$\{\{ needs\.classify\.outputs\.playwright \}\}-noble/);
+  assert.match(webkit, /npm run test:e2e -- --project=webkit$/m);
+  assert.doesNotMatch(webkit, /--workers/);
+  assert.match(webkit, /flaky-summary\.mjs test-results\/results\.json/);
+});
+
 test("an already-tested tree skips every check job", () => {
-  for (const job of ["build", "e2e", "sweeps", "checks"]) {
+  for (const job of ["build", "e2e", "sweeps", "webkit", "checks"]) {
     assert.match(jobBlock(job), /needs\.classify\.outputs\.tested != 'true'/, job);
   }
 });
@@ -93,7 +102,9 @@ test("checks covers docs and workflow, and gate needs every job and fails closed
     assert.match(checks, new RegExp(step.replace(":", "\\:")));
   }
   const gate = jobBlock("gate");
-  assert.match(gate, /needs: \[classify, build, e2e, sweeps, checks\]/);
+  assert.match(gate, /needs: \[classify, build, e2e, sweeps, webkit, checks\]/);
+  assert.match(gate, /WEBKIT_RESULT: \$\{\{ needs\.webkit\.result \}\}/);
+  assert.match(gate, /"\$FULL" == "true" && "\$WEBKIT_RESULT" != "success"/);
   assert.match(gate, /SWEEPS_RESULT: \$\{\{ needs\.sweeps\.result \}\}/);
   assert.match(gate, /"\$FULL" == "true" && "\$SWEEPS_RESULT" != "success"/);
 });

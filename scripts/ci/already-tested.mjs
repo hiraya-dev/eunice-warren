@@ -9,11 +9,11 @@ export function evaluateFullTierJobs(jobs = []) {
   if (conclusion("gate") !== "success")
     return { passed: false, reason: "gate did not pass" };
   if (!hasE2e) return { passed: true, reason: "gate passed (no e2e job)" };
-  const required = ["e2e (full)", "sweeps (1/2)", "sweeps (2/2)"];
+  const required = ["e2e (full)", "sweeps (1/2)", "sweeps (2/2)", "webkit"];
   const missing = required.find((name) => conclusion(name) !== "success");
   return missing
     ? { passed: false, reason: `${missing} did not pass` }
-    : { passed: true, reason: "full e2e and sweep jobs passed" };
+    : { passed: true, reason: "full e2e, sweep and webkit jobs passed" };
 }
 export const fullTierPassed = (jobs) => evaluateFullTierJobs(jobs).passed;
 

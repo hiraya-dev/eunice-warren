@@ -11,6 +11,7 @@ const jobs = [
   { name: "e2e (full)", conclusion: "success" },
   { name: "sweeps (1/2)", conclusion: "success" },
   { name: "sweeps (2/2)", conclusion: "success" },
+  { name: "webkit", conclusion: "success" },
 ];
 const proven = {
   event: "push",
@@ -37,6 +38,19 @@ for (const [name, change] of [
         [
           { name: "gate", conclusion: "success" },
           { name: "e2e (smoke)", conclusion: "success" },
+        ],
+      ],
+    },
+  ],
+  [
+    "no webkit job",
+    {
+      prRunJobs: [
+        [
+          { name: "gate", conclusion: "success" },
+          { name: "e2e (full)", conclusion: "success" },
+          { name: "sweeps (1/2)", conclusion: "success" },
+          { name: "sweeps (2/2)", conclusion: "success" },
         ],
       ],
     },
@@ -107,6 +121,7 @@ const fixtureJobs = [
   { name: "e2e (full)", conclusion: "success" },
   { name: "sweeps (1/2)", conclusion: "success" },
   { name: "sweeps (2/2)", conclusion: "success" },
+  { name: "webkit", conclusion: "success" },
 ];
 const runs = {
   workflow_runs: [
