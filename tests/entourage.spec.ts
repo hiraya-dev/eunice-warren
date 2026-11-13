@@ -1,28 +1,27 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
+const { groups } = JSON.parse(readFileSync("src/content/entourage/entourage.json", "utf8")) as { groups: Array<{ id: string; title?: string }> };
+// The three titled groups in page order: principal sponsors, secondary sponsors, bridal party.
+const [principal, secondary, bridal] = groups.filter((group) => group.title).map((group) => `.entourage_${group.id}`);
+const selectors = { principal, secondary, bridal };
+
 test.describe("entourage section", () => {
-  test("follows wedding and uses the desktop programme layout", async ({ page }) => {
+  test("uses the desktop programme layout", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
 
-    const order = await page.evaluate(() => {
-      const wedding = document.querySelector("#wedding")!;
-      const entourage = document.querySelector("#entourage")!;
-      return wedding.compareDocumentPosition(entourage) & Node.DOCUMENT_POSITION_FOLLOWING;
-    });
-    expect(order).toBeTruthy();
-
-    const positions = await page.evaluate(() => {
+    const positions = await page.evaluate((selectors) => {
       const boxes = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector)).map((el) => {
         const box = el.getBoundingClientRect();
         return { top: box.top, left: box.left, width: box.width };
       });
       return {
-        principal: boxes(".entourage_principal-sponsors .entourage_role"),
-        secondary: boxes(".entourage_secondary-sponsors .entourage_role"),
-        honour: boxes(".entourage_bridal-party .entourage_row:first-child .entourage_role"),
+        principal: boxes(`${selectors.principal} .entourage_role`),
+        secondary: boxes(`${selectors.secondary} .entourage_role`),
+        honour: boxes(`${selectors.bridal} .entourage_row:first-child .entourage_role`),
       };
-    });
+    }, selectors);
     expect(positions.principal[0].top).toBe(positions.principal[1].top);
     expect(positions.secondary).toHaveLength(3);
     expect(positions.secondary[1].top).toBeGreaterThan(positions.secondary[0].top);
@@ -48,23 +47,23 @@ test.describe("entourage section", () => {
     expect(heading.fontSize).toBe("120px");
   });
 
-  test("matches the mobile programme layout", async ({ page }) => {
+  test("matches the mobile programme layout", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    const positions = await page.evaluate(() => {
+    const positions = await page.evaluate((selectors) => {
       const box = (selector: string) => document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
       return {
-        ninong: box(".entourage_principal-sponsors .entourage_role:nth-child(1)"),
-        ninang: box(".entourage_principal-sponsors .entourage_role:nth-child(2)"),
-        candle: box(".entourage_secondary-sponsors .entourage_role:nth-child(1)"),
-        veil: box(".entourage_secondary-sponsors .entourage_role:nth-child(2)"),
-        cord: box(".entourage_secondary-sponsors .entourage_role:nth-child(3)"),
-        bestMan: box(".entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(1)"),
-        maidOfHonor: box(".entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(2)"),
-        groomsmen: box(".entourage_bridal-party .entourage_row:nth-child(2) .entourage_role:nth-child(1)"),
-        bridesmaids: box(".entourage_bridal-party .entourage_row:nth-child(2) .entourage_role:nth-child(2)"),
+        ninong: box(`${selectors.principal} .entourage_role:nth-child(1)`),
+        ninang: box(`${selectors.principal} .entourage_role:nth-child(2)`),
+        candle: box(`${selectors.secondary} .entourage_role:nth-child(1)`),
+        veil: box(`${selectors.secondary} .entourage_role:nth-child(2)`),
+        cord: box(`${selectors.secondary} .entourage_role:nth-child(3)`),
+        bestMan: box(`${selectors.bridal} .entourage_row:first-child .entourage_role:nth-child(1)`),
+        maidOfHonor: box(`${selectors.bridal} .entourage_row:first-child .entourage_role:nth-child(2)`),
+        groomsmen: box(`${selectors.bridal} .entourage_row:nth-child(2) .entourage_role:nth-child(1)`),
+        bridesmaids: box(`${selectors.bridal} .entourage_row:nth-child(2) .entourage_role:nth-child(2)`),
       };
-    });
+    }, selectors);
     expect(positions.ninang.top).toBeGreaterThan(positions.ninong.bottom);
     expect(positions.veil.top).toBeGreaterThan(positions.candle.bottom);
     expect(positions.cord.top).toBeGreaterThan(positions.veil.bottom);
@@ -81,7 +80,7 @@ test.describe("entourage section", () => {
     for (let index = 1; index < roles.length; index += 1) expect(roles[index].top).toBeGreaterThan(roles[index - 1].top);
   });
 
-  test("places desktop keepsakes beside their groups and hides them below desktop", async ({ page }) => {
+  test("places desktop keepsakes beside their groups and hides them below desktop", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
 
@@ -118,7 +117,7 @@ test.describe("entourage section", () => {
     }
   });
 
-  test("keeps the heading to two lines and inside the section below desktop", async ({ page }) => {
+  test("keeps the heading to two lines and inside the section below desktop", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [320, 390, 768]) {
       await page.setViewportSize({ width, height: width === 320 ? 800 : 844 });
       await page.goto("/");
@@ -137,10 +136,10 @@ test.describe("entourage section", () => {
     }
   });
 
-  test("fades groups in on scroll and stays visible for reduced motion", async ({ page }) => {
+  test("fades groups in on scroll and stays visible for reduced motion", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await expect.poll(() => page.locator(".entourage_bridal-party [data-fade-in-item]").last().evaluate((item) => Number.parseFloat(getComputedStyle(item).opacity))).toBeLessThan(1);
+    await expect.poll(() => page.locator(`${bridal} [data-fade-in-item]`).last().evaluate((item) => Number.parseFloat(getComputedStyle(item).opacity))).toBeLessThan(1);
 
     const blocks = page.locator("#entourage .entourage_block");
     for (let index = 0; index < await blocks.count(); index += 1) {

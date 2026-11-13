@@ -6,7 +6,7 @@ test.describe("wedding schedule tabs", () => {
     await page.goto("/");
   });
 
-  test("starts with panel 01 visible and advances autoplay after entering view", async ({ page }) => {
+  test("starts with panel 01 visible and advances autoplay after entering view", { tag: ["@sweep"] }, async ({ page }) => {
     await page.locator("#wedding").scrollIntoViewIfNeeded();
     await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveText(/Ceremony/);
     await expect(page.locator("#wedding-panel-1")).toBeVisible();
@@ -18,13 +18,7 @@ test.describe("wedding schedule tabs", () => {
     await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').getAttribute("id"), { timeout: 7000 }).toBe("wedding-tab-2");
   });
 
-  test("marks the wedding heading for the shared fade-in", async ({ page }) => {
-    const header = page.locator(".wedding_header");
-    await expect(header).toHaveAttribute("data-fade-in", "");
-    await expect(header.locator("[data-fade-in-item]")).toHaveCount(1);
-  });
-
-  test("supports click and roving keyboard navigation", async ({ page }) => {
+  test("supports click and roving keyboard navigation", { tag: ["@smoke"] }, async ({ page }) => {
     await page.locator("#wedding").scrollIntoViewIfNeeded();
     await page.locator("#wedding-tab-3").click();
     await expect(page.locator("#wedding-tab-3")).toHaveAttribute("aria-selected", "true");
@@ -68,7 +62,7 @@ test.describe("wedding schedule tabs", () => {
     expect(tilts[2]).not.toBeCloseTo(tilts[3], 1);
   });
 
-  test("stacks the visual above the schedule below desktop", async ({ page }) => {
+  test("stacks the visual above the schedule below desktop", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");

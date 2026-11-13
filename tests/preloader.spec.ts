@@ -14,7 +14,7 @@ test.describe("guest preloader", () => {
     await expect(preloader(page).locator("[data-preloader-name]")).toBeFocused();
   });
 
-  test("finds a guest, remembers them, and pre-fills RSVP", async ({ page }) => {
+  test("finds a guest, remembers them, and pre-fills RSVP", { tag: ["@smoke"] }, async ({ page }) => {
     await preloader(page).locator("[data-preloader-name]").fill("Mateo Cruz");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page).getByRole("heading", { name: "Welcome, The Cruz Family." })).toBeVisible();
@@ -29,7 +29,7 @@ test.describe("guest preloader", () => {
     await expect(page.locator("[data-rsvp-name]")).toHaveValue("Mateo Cruz");
   });
 
-  test("shows safe not-found copy without other guest names", async ({ page }) => {
+  test("shows safe not-found copy without other guest names", { tag: ["@single"] }, async ({ page }) => {
     await preloader(page).locator("[data-preloader-name]").fill("Nobody Example");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page)).toContainText("Hmm, we can't find that name.");
@@ -38,7 +38,7 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).not.toContainText("Mateo Cruz");
   });
 
-  test("just browsing persists dismissal", async ({ page }) => {
+  test("just browsing persists dismissal", { tag: ["@single"] }, async ({ page }) => {
     await preloader(page).getByRole("button", { name: "Just browsing" }).click();
     await expect(preloader(page)).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
@@ -46,7 +46,7 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).toHaveCount(0);
   });
 
-  test("Escape closes it", async ({ page }) => {
+  test("Escape closes it", { tag: ["@single"] }, async ({ page }) => {
     await page.keyboard.press("Escape");
     await expect(preloader(page)).toHaveCount(0);
   });
@@ -69,7 +69,7 @@ test.describe("guest preloader", () => {
     await expect(envelope).toHaveCSS("animation-name", "none");
   });
 
-  test("fits a 390px viewport without horizontal overflow", async ({ page }) => {
+  test("fits a 390px viewport without horizontal overflow", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });

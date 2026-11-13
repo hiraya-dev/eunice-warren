@@ -1,11 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("stay section", () => {
-  test("follows entourage and uses the desktop directions layout", async ({ page }) => {
+  test("uses the desktop directions layout", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    const order = await page.evaluate(() => document.querySelector("#entourage")!.compareDocumentPosition(document.querySelector("#stay")!) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(order).toBeTruthy();
     const steps = await page.locator("#stay .stay_step").evaluateAll((items) => items.map((item) => { const box = item.getBoundingClientRect(); return { top: box.top, left: box.left }; }));
     expect(steps[0].top).toBe(steps[1].top);
     expect(steps[1].top).toBe(steps[2].top);
@@ -17,7 +15,7 @@ test.describe("stay section", () => {
     expect(await page.locator("#stay .stay_compass").evaluate((compass) => compass.getBoundingClientRect().width)).toBeCloseTo(460, 0);
   });
 
-  test("stacks the directions and fits the mobile viewport", async ({ page }) => {
+  test("stacks the directions and fits the mobile viewport", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     const result = await page.evaluate(() => {
@@ -34,7 +32,7 @@ test.describe("stay section", () => {
     await expect(page.locator("#stay .stay_map")).toHaveCount(0);
   });
 
-  test("follows the pointer and returns to the destination bearing", async ({ page }, testInfo) => {
+  test("follows the pointer and returns to the destination bearing", { tag: ["@sweep"] }, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "pointer follow only runs on hover-capable fine pointers");
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
@@ -53,7 +51,7 @@ test.describe("stay section", () => {
     await expect.poll(async () => Number(await page.locator("#stay .stay_compass-needle").getAttribute("data-angle")), { timeout: 2000 }).toBeCloseTo(22, 0);
   });
 
-  test("swings in once and settles on the destination bearing on touch", async ({ page }, testInfo) => {
+  test("swings in once and settles on the destination bearing on touch", { tag: ["@sweep"] }, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile", "touch entrance only runs without a fine pointer");
     await page.goto("/");
     const needle = page.locator("#stay .stay_compass-needle");

@@ -30,7 +30,6 @@ test("Nav stops at its three owning specs", () => {
   assert.equal(result.mode, "specs");
   assert.deepEqual(result.specs, [
     "tests/button-hover.spec.ts",
-    "tests/grain-and-buttons.spec.ts",
     "tests/nav-hover.spec.ts",
     "tests/nav-scrollbar.spec.ts",
     "tests/nav.spec.ts",
@@ -44,7 +43,6 @@ test("FAQ stops at its owner before shared layout importers", () => {
   assert.deepEqual(result.specs, [
     "tests/button-hover.spec.ts",
     "tests/faq.spec.ts",
-    "tests/grain-and-buttons.spec.ts",
     "tests/smoke.spec.ts",
     "tests/tokens.spec.ts",
   ]);
@@ -52,7 +50,6 @@ test("FAQ stops at its owner before shared layout importers", () => {
 test("highlight text is owned by invitation and wildcard specs", () => {
   assert.deepEqual(choose(["src/scripts/highlight-text.ts"]).specs, [
     "tests/button-hover.spec.ts",
-    "tests/grain-and-buttons.spec.ts",
     "tests/invitation.spec.ts",
     "tests/smoke.spec.ts",
     "tests/tokens.spec.ts",

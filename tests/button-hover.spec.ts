@@ -11,13 +11,17 @@ test.describe("Button 016 hover controls", () => {
   test("keeps the control names unique", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "RSVP", exact: true })).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "RSVP by December" })).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "See the weekend" })).toHaveCount(1);
+    const controls = [page.locator(".nav_rsvp"), page.locator(".hero_rsvp"), page.locator(".hero_weekend")];
+    for (const control of controls) await expect(control).toHaveCount(1);
+    const names = await Promise.all(controls.map((control) => control.evaluate((element) => (element.getAttribute("aria-label") ?? element.textContent ?? "").trim())));
+    for (const name of names) expect(name).not.toBe("");
+    expect(new Set(names).size).toBe(controls.length);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator('[data-navigation-toggle="toggle"]').click();
-    await expect(page.getByRole("link", { name: "RSVP by December" })).toHaveCount(2);
+    await expect(page.locator(".navigation_rsvp")).toHaveCount(1);
+    await expect(page.locator(".navigation_rsvp")).toBeVisible();
+    await expect(page.locator(".hero_rsvp")).toHaveCount(1);
   });
 
   test("keeps each background flush with its pill", async ({ page }) => {
@@ -34,7 +38,7 @@ test.describe("Button 016 hover controls", () => {
     await expect.poll(() => panelPill.evaluate(bgOffset)).toBeLessThanOrEqual(1);
   });
 
-  test("rolls the text and changes the background on fine-pointer hover", async ({ page }) => {
+  test("rolls the text and changes the background on fine-pointer hover", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     const supportsHover = await page.evaluate(() => matchMedia("(hover: hover) and (pointer: fine)").matches);
@@ -84,7 +88,7 @@ test.describe("Button 016 hover controls", () => {
   });
 });
 
-test("rolls the weekend link's text on fine-pointer hover without a background", async ({ page }) => {
+test("rolls the weekend link's text on fine-pointer hover without a background", { tag: ["@sweep"] }, async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   const supportsHover = await page.evaluate(() => matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)").matches);

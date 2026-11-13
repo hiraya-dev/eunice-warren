@@ -22,7 +22,7 @@ const accept = async (
 };
 
 test.describe("RSVP ticket popup", () => {
-  test("accept prints the matched guest and decline does not open it", async ({
+  test("accept prints the matched guest and decline does not open it", { tag: ["@smoke"] }, async ({
     page,
   }) => {
     await page.goto("/");
@@ -186,7 +186,7 @@ test.describe("RSVP ticket popup", () => {
     await expect(ticket).toBeVisible();
   });
 
-  test("fits the viewport at every target size", async ({ page }) => {
+  test("fits the viewport at every target size", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     // Four full RSVP flows in one test.
     test.setTimeout(90_000);
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -264,7 +264,7 @@ test.describe("RSVP ticket popup", () => {
     }
   });
 
-  test("feeds the ticket with stepped motion", async ({ page }) => {
+  test("feeds the ticket with stepped motion", { tag: ["@sweep"] }, async ({ page }) => {
     await page.goto("/");
     await accept(page, false, async () => {
       await page.evaluate(() => {
@@ -415,7 +415,7 @@ test.describe("RSVP ticket popup", () => {
     expect(shape.plateaus).toBeGreaterThanOrEqual(3);
   });
 
-  test("releases the ticket smoothly into the centred standalone state", async ({
+  test("releases the ticket smoothly into the centred standalone state", { tag: ["@sweep"] }, async ({
     page,
   }) => {
     await page.goto("/");

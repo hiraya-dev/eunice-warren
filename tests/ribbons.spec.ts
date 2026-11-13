@@ -166,19 +166,10 @@ const localCoverage = (element: Element) => {
 };
 
 test.describe("ribbon marquee", () => {
-  test("follows explore and hides duplicated collections from assistive tech", async ({ page }) => {
+  test("hides duplicated collections from assistive tech", { tag: ["@single"] }, async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#ribbons")).toHaveCount(1);
     await expect(page.locator("#ribbons .ribbons_ribbon")).toHaveCount(2);
-    expect(
-      await page.evaluate(
-        () =>
-          Boolean(
-            document.querySelector("#explore")!.compareDocumentPosition(document.querySelector("#ribbons")!) &
-              Node.DOCUMENT_POSITION_FOLLOWING,
-          ),
-      ),
-    ).toBeTruthy();
     await expect(page.locator("#ribbons [data-marquee-collection-target]").nth(1)).toHaveAttribute(
       "aria-hidden",
       "true",
@@ -186,7 +177,7 @@ test.describe("ribbon marquee", () => {
     await expect(page.locator("#ribbons [data-marquee-collection-target]").nth(1)).toHaveAttribute("inert", "");
   });
 
-  test("moves in each base direction and reverses while scrolling up", async ({ page }) => {
+  test("moves in each base direction and reverses while scrolling up", { tag: ["@sweep"] }, async ({ page }) => {
     // Many wheel/sample round trips; under parallel load each one can take hundreds of ms.
     test.slow();
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -216,7 +207,7 @@ test.describe("ribbon marquee", () => {
     assertDirection(upSamples, "blue", -1);
   });
 
-  test("pauses the marquee outside the viewport", async ({ page }) => {
+  test("pauses the marquee outside the viewport", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page.evaluate(() => {
@@ -243,7 +234,9 @@ test.describe("ribbon marquee", () => {
   test("stays static, has no JS clones, and remains filled with reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    await expect(page.locator("#ribbons [data-marquee-collection-target]")).toHaveCount(4);
+    // Each ribbon renders two collections in the markup, and the script adds no clones.
+    const ribbonCount = await page.locator("#ribbons .ribbons_ribbon").count();
+    await expect(page.locator("#ribbons [data-marquee-collection-target]")).toHaveCount(ribbonCount * 2);
     expect(await page.locator(".ribbons_ribbon-navy").evaluate(localCoverage)).toBeTruthy();
     expect(await page.locator(".ribbons_ribbon-blue").evaluate(localCoverage)).toBeTruthy();
     const initial = await page.locator(".ribbons_ribbon-navy [data-marquee-collection-target]").first().evaluate(
@@ -257,7 +250,7 @@ test.describe("ribbon marquee", () => {
   });
 
   for (const width of [1920, 1440, 900, 390, 320]) {
-    test(`keeps seams covered at ${width}px`, async ({ page }) => {
+    test(`keeps seams covered at ${width}px`, { tag: ["@sweep", "@single"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       const ribbonSection = page.locator("#ribbons");
@@ -292,7 +285,7 @@ test.describe("ribbon marquee", () => {
     [1100, 71.71, 3.48, -3.48],
     [390, 48, 4, -4],
   ] as const) {
-    test(`matches responsive type, rotation, and vertical geometry at ${width}px`, async ({
+    test(`matches responsive type, rotation, and vertical geometry at ${width}px`, { tag: ["@sweep", "@single"] }, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });

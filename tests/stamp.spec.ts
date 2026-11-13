@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("stamp component", () => {
   for (const width of [1440, 390]) {
-    test(`keeps every stamp framed and undistorted at ${width}px`, async ({ page }) => {
+    test(`keeps every stamp framed and undistorted at ${width}px`, { tag: ["@single"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto("/");

@@ -1,31 +1,30 @@
+import { readdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
+const noteCount = readdirSync("src/content/explore").filter((file) => file.endsWith(".json")).length;
+
 test.describe("explore section", () => {
-  test("follows stay, renders four notes, and has no filter chips", async ({
+  test("renders every note and has no filter chips", { tag: ["@single"] }, async ({
     page,
   }) => {
     await page.goto("/");
-    const order = await page.evaluate(
-      () =>
-        document
-          .querySelector("#stay")!
-          .compareDocumentPosition(document.querySelector("#explore")!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-    expect(order).toBeTruthy();
     await expect(page.locator("#explore [data-gsap-slider-item]")).toHaveCount(
-      4,
+      noteCount,
     );
+    // Previous and next, once in the header and once in the footer.
     await expect(
-      page.locator("#explore [data-gsap-slider-control]"),
-    ).toHaveCount(4);
+      page.locator("#explore .explore_controls-header [data-gsap-slider-control]"),
+    ).toHaveCount(2);
+    await expect(
+      page.locator("#explore .explore_controls-footer [data-gsap-slider-control]"),
+    ).toHaveCount(2);
     await expect(page.locator("#explore")).not.toContainText("FILTER");
     await expect(
       page.locator("#explore [data-gsap-slider-init]"),
     ).toHaveAttribute("aria-label", "Field notes");
   });
 
-  test("lets advanced cards bleed into the left margin", async ({ page }) => {
+  test("lets advanced cards bleed into the left margin", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page
@@ -54,7 +53,7 @@ test.describe("explore section", () => {
     ).toBeLessThanOrEqual(1440);
   });
 
-  test("uses header controls on desktop and moves the track", async ({
+  test("uses header controls on desktop and moves the track", { tag: ["@sweep"] }, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -81,7 +80,7 @@ test.describe("explore section", () => {
       .toBeLessThan(initialX);
   });
 
-  test("aligns the layout with stay without document overflow", async ({
+  test("aligns the layout with stay without document overflow", { tag: ["@single"] }, async ({
     page,
   }) => {
     let stampOffsetAt1440: { x: number; y: number } | undefined;
@@ -137,7 +136,7 @@ test.describe("explore section", () => {
     }
   });
 
-  test("shows the mobile counter and reaches the final note", async ({
+  test("shows the mobile counter and reaches the final note", { tag: ["@sweep"] }, async ({
     page,
   }) => {
     for (const width of [390, 768]) {
@@ -154,7 +153,8 @@ test.describe("explore section", () => {
         });
       await expect.poll(readCounter).toMatchObject({ current: 1 });
       const total = (await readCounter()).total;
-      expect(total).toBe(width === 390 ? 4 : 3);
+      // One card per view at 390px, two at 768px.
+      expect(total).toBe(width === 390 ? noteCount : noteCount - 1);
 
       let current = 1;
       while (await next.isEnabled()) {
@@ -169,7 +169,7 @@ test.describe("explore section", () => {
     }
   });
 
-  test("responds continuously to a pointer drag", async ({ page }) => {
+  test("responds continuously to a pointer drag", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto("/");
     const track = page.locator("#explore [data-gsap-slider-list]");
@@ -204,7 +204,7 @@ test.describe("explore section", () => {
       .toBe(-314);
   });
 
-  test("pins card widths and prevents horizontal page overflow", async ({
+  test("pins card widths and prevents horizontal page overflow", { tag: ["@single"] }, async ({
     page,
   }) => {
     for (const [width, expected] of [

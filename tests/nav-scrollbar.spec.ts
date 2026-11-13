@@ -17,7 +17,7 @@ test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
 
 test.describe("classic scrollbar navigation", () => {
 
-  test("keeps the panel full width and anchors stable through close", async ({ page }, testInfo) => {
+  test("keeps the panel full width and anchors stable through close", { tag: ["@sweep"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     const before = await page.evaluate(() => ({
@@ -85,7 +85,7 @@ test.describe("classic scrollbar navigation", () => {
   });
 });
 
-test("keeps the page texture still when the scroll lock removes the scrollbar", async ({ page }) => {
+test("keeps the page texture still when the scroll lock removes the scrollbar", { tag: ["@sweep"] }, async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");

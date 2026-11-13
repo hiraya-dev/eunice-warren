@@ -44,7 +44,7 @@ test.describe("With Love guest uploads", () => {
     await expect(list.locator("[data-note-id=hidden-test-note]")).toHaveCount(0);
   });
 
-  test("pins a note, puts it on top, and resets to empty", async ({ page }) => {
+  test("pins a note, puts it on top, and resets to empty", { tag: ["@smoke"] }, async ({ page }) => {
     const form = page.locator("[data-with-love-form]");
     await form.locator("[data-photo-input]").setInputFiles(fixture);
     await form.locator("[data-message]").fill("See you by the shore!");
