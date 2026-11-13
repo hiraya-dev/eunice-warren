@@ -129,7 +129,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-014 — Check list layouts with the real names, not the placeholders
 - **Date:** 2026-11-13
-- **Trigger:** PR #72, Local-review round (the user asked for one column for secondary sponsors, then for the groomsmen and bridesmaids on mobile)
+- **Trigger:** PR #72, Local-review round (the user asked for one column for secondary sponsors, then for the groomsmen and bridesmaids on mobile, then for every entourage group on mobile)
 - **Symptom:** after the real entourage names replaced the short placeholders, the multi-column name lists wrapped names onto two or three lines (a veil sponsor at 1440, most groomsmen and bridesmaids at 390), and paired names no longer lined up.
 - **Root cause:** the grids were sized for placeholder names; real names are longer, and nobody re-checked the layout when the content changed.
 - **Rule:** when names or copy in a multi-column list change, screenshot the list at 390 and 1440 before the PR and propose a layout fix (a single column) for any name that wraps, instead of waiting for the user to spot it.

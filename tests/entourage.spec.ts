@@ -69,10 +69,16 @@ test.describe("entourage section", () => {
     expect(positions.veil.top).toBeGreaterThan(positions.candle.bottom);
     expect(positions.cord.top).toBeGreaterThan(positions.veil.bottom);
     for (const role of [positions.candle, positions.veil, positions.cord]) expect(role.left + role.width / 2).toBeCloseTo(195, 0);
-    expect(positions.maidOfHonor.top).toBe(positions.bestMan.top);
-    expect(positions.maidOfHonor.left).toBeGreaterThan(positions.bestMan.left);
+    expect(positions.maidOfHonor.top).toBeGreaterThan(positions.bestMan.bottom);
     expect(positions.bridesmaids.top).toBeGreaterThan(positions.groomsmen.bottom);
-    for (const role of [positions.groomsmen, positions.bridesmaids]) expect(role.left + role.width / 2).toBeCloseTo(195, 0);
+
+    // Every entourage row is one centred column on mobile, so long names never share a line's width.
+    const roles = await page.locator("#entourage .entourage_role").evaluateAll((elements) => elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { centre: box.left + box.width / 2, top: box.top };
+    }));
+    for (const role of roles) expect(role.centre).toBeCloseTo(195, 0);
+    for (let index = 1; index < roles.length; index += 1) expect(roles[index].top).toBeGreaterThan(roles[index - 1].top);
   });
 
   test("places desktop keepsakes beside their groups and hides them below desktop", async ({ page }) => {
