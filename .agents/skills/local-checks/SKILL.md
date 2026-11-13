@@ -89,5 +89,7 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
 - `gate` fails if any job the route needs did not succeed. A skipped `gate` is
   never green.
 - **Flakes** are proven on a runner, not the Mac:
-  `gh workflow run flake-check.yml --ref <branch> -f grep='<title or file>' -f repeat=20`
-  (4 workers, no retries, so a flake fails the run).
+  `gh workflow run flake-check.yml --ref <branch> -f grep='<test title or spec file name>' -f repeat=20`
+  (4 workers, no retries, so a flake fails the run). `--grep` matches the title
+  path, which starts at the file name, so pass `footer.spec.ts`, not
+  `tests/footer.spec.ts`.

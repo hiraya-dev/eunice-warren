@@ -2,7 +2,9 @@ name: Flake check
 
 # Proves a spec stable under load, or reproduces a load flake, on a CI runner
 # instead of the user's Mac (L-009, L-010). Run it by hand:
-#   gh workflow run flake-check.yml --ref <branch> -f grep='<title or file>' -f repeat=20
+#   gh workflow run flake-check.yml --ref <branch> -f grep='<test title or spec file name>' -f repeat=20
+# The grep matches the title path, which starts at the spec file name: pass
+# footer.spec.ts, not tests/footer.spec.ts (that matches nothing).
 # It runs in the same Playwright image as the CI e2e job, with 4 workers on the
 # runner's 4 vCPUs and no retries, so a flake fails the run instead of being
 # absorbed. It gates nothing and never runs on its own.
@@ -10,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       grep:
-        description: Playwright --grep pattern (a test title or file name)
+        description: Playwright --grep pattern, a test title or spec file name such as footer.spec.ts (no tests/ prefix)
         required: true
         type: string
       repeat:
