@@ -180,7 +180,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Trigger:** red CI job, #75: three WebKit @smoke tests (nav, RSVP ticket, wedding tabs) timed out in `e2e (full)`, all passing on the Mac's WebKit
 - **Symptom:** WebKit tests hang in Playwright's actionability wait ("visible, enabled and stable", "scrolling into view") or on `press`, then hit the 30 s test timeout; no page error in the trace.
 - **Root cause:** WebKit on the Linux runner renders in software. Sharing the four-vCPU e2e container with two Chromium workers starved it of frames (the trace's screencast had 4–15 s gaps between paints), and actionability checks wait on frames.
-- **Rule:** run WebKit in its own CI job at one worker (`webkit` in `ci.yml`), never alongside the Chromium projects' workers. Before blaming the site or the test for a WebKit-only CI timeout, read the trace's screencast gaps; a starved page is an environment problem, not a reason to skip the test.
+- **Rule:** run WebKit in its own CI job at one worker (`webkit` in `ci.yml`), never alongside the Chromium projects' workers. Before blaming the site or the test for a WebKit-only CI timeout, read the trace's screencast gaps and the click's "attempting" to "done" times. Even alone, WebKit there is slow (nav toggle clicks took 6-10 s), so a test with a fixed short poll for a transition gets a narrow, commented `webkit` skip that names the reason, never a longer poll for every project.
 - **Check:** `ci.yml`'s e2e job passes `--project=chromium --project=mobile`, and the `webkit` job runs `--project=webkit` with no `--workers` (`scripts/ci/ci-triggers.test.mjs` asserts both).
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
