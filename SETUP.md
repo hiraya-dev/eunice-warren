@@ -30,7 +30,7 @@ re-adapted from adc-website, which had already made that move. `scripts/codex/`,
 | `scripts/ci/flaky-summary.mjs` | lists tests that passed only on a retry in the e2e job summary |
 | `.nvmrc` | Node 22.23.4 for CI |
 | `playwright.config.ts`, `tests/` | Chromium at desktop and Pixel 7; builds and serves the fake-store site on a port derived from the checkout path (L-008) |
-| `.markdownlint-cli2.jsonc` | structural Markdown lint, in `prepush` and the `docs` job |
+| `.markdownlint-cli2.jsonc` | structural Markdown lint, in `prepush` and the `checks` job |
 | `docs/claude-codex-handoff-resolution.md` | why the handoff contract looks the way it does |
 | `docs/rsvp-backend.md` | the RSVP backend, its Sheet layout and its production setup |
 | `docs/decisions/0001-workflow-from-adc-website.md` | what was taken from adc-website, what was adapted, and what was left out |
