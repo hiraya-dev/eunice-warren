@@ -2,11 +2,17 @@ import { expect, test } from "@playwright/test";
 
 test.describe("smoke", { tag: ["@smoke"] }, () => {
   test("home page renders", async ({ page }) => {
-    const response = await page.goto("/");
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    const response = await page.goto("/", { waitUntil: "load" });
     expect(response?.status()).toBe(200);
     await expect(page.locator("h1")).toBeVisible();
     await expect(page).toHaveTitle(/Eunice & Warren/);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
+    expect(errors).toEqual([]);
   });
 
   test("renders every section in order with an id", async ({ page }) => {
@@ -64,5 +70,17 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
     expect(response?.status()).toBe(200);
     await expect(page.locator("h1")).toHaveText("Style Guide");
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
+  });
+});
+
+test.describe("page overflow", () => {
+  test("never scrolls horizontally from 320 to 1920px", { tag: ["@single"] }, async ({ page }) => {
+    await page.goto("/");
+    for (const width of [320, 390, 632, 768, 968, 1024, 1150, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth), { message: `scrollWidth at ${width}px` })
+        .toBeLessThanOrEqual(width);
+    }
   });
 });

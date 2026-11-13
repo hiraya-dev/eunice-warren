@@ -49,7 +49,7 @@ function transformAxis(element: HTMLElement, axis: string) {
 }
 
 test.describe("global parallax", () => {
-  test("scrubs a default trigger continuously while scrolling", { tag: ["@sweep"] }, async ({
+  test("scrubs a default trigger continuously while scrolling", { tag: ["@sweep", "@single"] }, async ({
     page,
   }) => {
     await injectFixture(page);
@@ -73,7 +73,7 @@ test.describe("global parallax", () => {
     }
   });
 
-  test("animates a target child while leaving its trigger untransformed", { tag: ["@sweep"] }, async ({
+  test("animates a target child while leaving its trigger untransformed", { tag: ["@sweep", "@single"] }, async ({
     page,
   }) => {
     await injectFixture(page);
@@ -95,7 +95,7 @@ test.describe("global parallax", () => {
       .not.toBe(0);
   });
 
-  test("uses x translation for horizontal parallax", { tag: ["@sweep"] }, async ({ page }) => {
+  test("uses x translation for horizontal parallax", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await injectFixture(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/example-components");
@@ -120,7 +120,7 @@ test.describe("global parallax", () => {
       .toBe(true);
   });
 
-  test("disables mobileLandscape parallax at 390px but animates at 1440px", { tag: ["@sweep"] }, async ({
+  test("disables mobileLandscape parallax at 390px but animates at 1440px", { tag: ["@sweep", "@single"] }, async ({
     page,
   }) => {
     await injectFixture(page);

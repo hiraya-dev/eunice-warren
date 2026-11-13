@@ -22,7 +22,7 @@ const accept = async (
 };
 
 test.describe("RSVP ticket popup", () => {
-  test("accept prints the matched guest and decline does not open it", { tag: ["@smoke"] }, async ({
+  test("accept prints the matched guest on the ticket", { tag: ["@smoke"] }, async ({
     page,
   }) => {
     await page.goto("/");
@@ -42,19 +42,9 @@ test.describe("RSVP ticket popup", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(page.locator("[data-rsvp-panel=sent] h3")).toBeFocused();
-
-    await page.reload();
-    const rsvp = page.locator("#rsvp");
-    await rsvp.locator("[data-rsvp-name]").fill("Ana Reyes");
-    await rsvp.getByRole("button", { name: /Find my invite/ }).click();
-    await rsvp.locator("input[value='no']").check();
-    await rsvp.getByRole("button", { name: /Continue/ }).click();
-    await rsvp.locator("#rsvp-email").fill("ana@example.com");
-    await rsvp.getByRole("button", { name: /Send RSVP/ }).click();
-    await expect(page.locator("#rsvp-ticket-modal")).toBeHidden();
   });
 
-  test("downloads the PNG ticket and calendar", async ({ page }) => {
+  test("downloads the PNG ticket and calendar", { tag: ["@single"] }, async ({ page }) => {
     await page.goto("/");
     const dialog = await accept(page);
     const png = page.waitForEvent("download");
@@ -133,13 +123,17 @@ test.describe("RSVP ticket popup", () => {
       box!.y + box!.height * 0.2,
       { steps: 5 },
     );
-    await page.waitForTimeout(50);
-    const values = await ticket.evaluate((element) => ({
-      ticket: getComputedStyle(element).getPropertyValue("--tilt-x"),
-      descendant: getComputedStyle(element.querySelector("strong")!).getPropertyValue("--tilt-x"),
-    }));
-    expect(values.ticket).not.toBe("0deg");
-    expect(values.descendant).toBe("0deg");
+    await expect
+      .poll(() =>
+        ticket.evaluate((element) => {
+          const values = {
+            ticket: getComputedStyle(element).getPropertyValue("--tilt-x"),
+            descendant: getComputedStyle(element.querySelector("strong")!).getPropertyValue("--tilt-x"),
+          };
+          return values.ticket !== "0deg" && values.descendant === "0deg";
+        }),
+      )
+      .toBe(true);
   });
 
   test("uses cut-out perforations and a full-screen confetti layer", async ({

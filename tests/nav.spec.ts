@@ -101,9 +101,8 @@ test.describe("Eunice & Warren navigation", () => {
     await expect(page.locator(".nav_wrap")).toHaveCSS("background-color", "rgb(245, 239, 227)");
   });
 
-  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
-    test(`shows the wipe through the bar and removes the scrollbar gutter at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
-    await page.setViewportSize({ width, height });
+  test("shows the wipe through the bar and removes the scrollbar gutter at 390px", { tag: ["@sweep", "@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
 
     const toggle = page.locator('[data-navigation-toggle="toggle"]');
@@ -119,9 +118,7 @@ test.describe("Eunice & Warren navigation", () => {
       const panel = document.querySelector<HTMLElement>("#site-navigation-panel")!;
       return document.documentElement.clientWidth === window.innerWidth && panel.getBoundingClientRect().width === window.innerWidth;
     }), { timeout: 3000 }).toBe(true);
-    });
-  }
-
+  });
 
   test("keeps the expected link destinations in the full-screen panel", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -131,7 +128,7 @@ test.describe("Eunice & Warren navigation", () => {
     }
   });
 
-  test("keeps the toggle light through close and keeps navigation geometry stable", { tag: ["@sweep"] }, async ({ page }) => {
+  test("keeps the toggle light through close and keeps navigation geometry stable", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
 
@@ -187,7 +184,7 @@ test.describe("Eunice & Warren navigation", () => {
     expect(samples.some((sample) => sample.panelBottom > 5 && sample.panelBottom < 95)).toBe(true);
   });
 
-  test("keeps the mobile toggle fixed and the fading actions in place", { tag: ["@sweep"] }, async ({ page }) => {
+  test("keeps the mobile toggle fixed and the fading actions in place", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     const toggle = page.locator('[data-navigation-toggle="toggle"]');

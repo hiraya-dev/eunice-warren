@@ -6,7 +6,7 @@ test.describe("wedding schedule tabs", () => {
     await page.goto("/");
   });
 
-  test("starts with panel 01 visible and advances autoplay after entering view", { tag: ["@sweep"] }, async ({ page }) => {
+  test("starts with panel 01 visible and advances autoplay after entering view", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.locator("#wedding").scrollIntoViewIfNeeded();
     await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveText(/Ceremony/);
     await expect(page.locator("#wedding-panel-1")).toBeVisible();
@@ -18,7 +18,7 @@ test.describe("wedding schedule tabs", () => {
     await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').getAttribute("id"), { timeout: 7000 }).toBe("wedding-tab-2");
   });
 
-  test("supports click and roving keyboard navigation", { tag: ["@smoke"] }, async ({ page }) => {
+  test("supports click and roving keyboard navigation", { tag: ["@smoke", "@single"] }, async ({ page }) => {
     await page.locator("#wedding").scrollIntoViewIfNeeded();
     await page.locator("#wedding-tab-3").click();
     await expect(page.locator("#wedding-tab-3")).toHaveAttribute("aria-selected", "true");
@@ -28,7 +28,7 @@ test.describe("wedding schedule tabs", () => {
     await expect(page.locator("#wedding-tab-1")).toHaveAttribute("aria-selected", "true");
   });
 
-  test("swaps the complete polaroid at each tab's resting tilt", async ({ page }) => {
+  test("swaps the complete polaroid at each tab's resting tilt", { tag: ["@single"] }, async ({ page }) => {
     await page.locator("#wedding").scrollIntoViewIfNeeded();
     const expectedTilts = [-3, 2.5, -1.5, -3];
     const waitForSettledPanel = (panelNumber: number) => expect.poll(async () => page.locator('[role="tabpanel"][data-tabs="visual-item"]').evaluateAll((panels) => {
@@ -76,11 +76,27 @@ test.describe("wedding schedule tabs", () => {
     }
   });
 
-  test("disables autoplay but keeps reduced-motion switching interactive", async ({ page }) => {
+  test("disables autoplay but keeps reduced-motion switching interactive", { tag: ["@single"] }, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await page.locator("#wedding").scrollIntoViewIfNeeded();
-    await page.waitForTimeout(7000);
+    // Autoplay would drive the active tab's progress bar from scaleX(0); sample it over 500ms of wall-clock time (10% of the 5s duration).
+    const scales = await page.evaluate(
+      () =>
+        new Promise<number[]>((resolve) => {
+          const bar = document.querySelector<HTMLElement>('#wedding [data-tabs="item-progress"]')!;
+          const readings: number[] = [];
+          const started = performance.now();
+          const sample = () => {
+            readings.push(new DOMMatrix(getComputedStyle(bar).transform).a);
+            if (performance.now() - started < 500) setTimeout(sample, 50);
+            else resolve(readings);
+          };
+          sample();
+        }),
+    );
+    expect(scales.length).toBeGreaterThan(4);
+    expect(Math.max(...scales)).toBe(0);
     await expect(page.locator("#wedding-tab-1")).toHaveAttribute("aria-selected", "true");
     await page.locator("#wedding-tab-3").click();
     await expect(page.locator("#wedding-tab-3")).toHaveAttribute("aria-selected", "true");

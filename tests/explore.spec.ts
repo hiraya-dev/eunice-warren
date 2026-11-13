@@ -53,7 +53,7 @@ test.describe("explore section", () => {
     ).toBeLessThanOrEqual(1440);
   });
 
-  test("uses header controls on desktop and moves the track", { tag: ["@sweep"] }, async ({
+  test("uses header controls on desktop and moves the track", { tag: ["@smoke", "@single"] }, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -80,7 +80,7 @@ test.describe("explore section", () => {
       .toBeLessThan(initialX);
   });
 
-  test("aligns the layout with stay without document overflow", { tag: ["@single"] }, async ({
+  test("aligns the layout with stay", { tag: ["@single"] }, async ({
     page,
   }) => {
     let stampOffsetAt1440: { x: number; y: number } | undefined;
@@ -108,7 +108,6 @@ test.describe("explore section", () => {
           controlsVisible: controlsRect
             ? controlsRect.width > 0 && controlsRect.height > 0
             : false,
-          scrollWidth: document.documentElement.scrollWidth,
         };
       });
 
@@ -132,11 +131,10 @@ test.describe("explore section", () => {
           0,
         );
       }
-      expect(measurements.scrollWidth).toBeLessThanOrEqual(width);
     }
   });
 
-  test("shows the mobile counter and reaches the final note", { tag: ["@sweep"] }, async ({
+  test("shows the mobile counter and reaches the final note", { tag: ["@sweep", "@single"] }, async ({
     page,
   }) => {
     for (const width of [390, 768]) {
@@ -169,7 +167,7 @@ test.describe("explore section", () => {
     }
   });
 
-  test("responds continuously to a pointer drag", { tag: ["@sweep"] }, async ({ page }) => {
+  test("responds continuously to a pointer drag", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto("/");
     const track = page.locator("#explore [data-gsap-slider-list]");
@@ -204,7 +202,7 @@ test.describe("explore section", () => {
       .toBe(-314);
   });
 
-  test("pins card widths and prevents horizontal page overflow", { tag: ["@single"] }, async ({
+  test("pins card widths", { tag: ["@single"] }, async ({
     page,
   }) => {
     for (const [width, expected] of [
@@ -219,14 +217,6 @@ test.describe("explore section", () => {
         .first()
         .evaluate((element) => element.getBoundingClientRect().width);
       expect(cardWidth).toBeCloseTo(expected, 0);
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-      ).toBeLessThanOrEqual(width);
     }
-    await page.setViewportSize({ width: 768, height: 900 });
-    await page.goto("/");
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(768);
   });
 });

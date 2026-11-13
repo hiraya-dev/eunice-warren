@@ -64,13 +64,6 @@ test.describe("keepsakes hero", () => {
     expect(Math.abs(angle + 6)).toBeLessThan(0.5);
   });
 
-  test("does not create horizontal overflow at narrow mobile width", { tag: ["@smoke"] }, async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 700 });
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/");
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
-  });
-
   test("keepsakes are immediately visible with reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
