@@ -25,11 +25,12 @@ test.describe("entourage section", () => {
     });
     expect(positions.principal[0].top).toBe(positions.principal[1].top);
     expect(positions.secondary).toHaveLength(3);
-    expect(positions.secondary[1].left).toBeGreaterThan(positions.secondary[0].left);
-    expect(positions.secondary[2].left).toBeGreaterThan(positions.secondary[1].left);
-    expect(positions.honour).toHaveLength(3);
+    expect(positions.secondary[1].top).toBeGreaterThan(positions.secondary[0].top);
+    expect(positions.secondary[2].top).toBeGreaterThan(positions.secondary[1].top);
+    expect(positions.secondary[1].left + positions.secondary[1].width / 2).toBeCloseTo(positions.secondary[0].left + positions.secondary[0].width / 2, 0);
+    expect(positions.honour).toHaveLength(2);
     expect(positions.honour[0].top).toBe(positions.honour[1].top);
-    expect(positions.honour[1].top).toBe(positions.honour[2].top);
+    expect(positions.honour[1].left).toBeGreaterThan(positions.honour[0].left);
 
     const heading = await page.locator("#entourage h2").evaluate((element) => {
       const style = getComputedStyle(element);
@@ -58,12 +59,26 @@ test.describe("entourage section", () => {
         candle: box(".entourage_secondary-sponsors .entourage_role:nth-child(1)"),
         veil: box(".entourage_secondary-sponsors .entourage_role:nth-child(2)"),
         cord: box(".entourage_secondary-sponsors .entourage_role:nth-child(3)"),
+        bestMan: box(".entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(1)"),
+        maidOfHonor: box(".entourage_bridal-party .entourage_row:first-child .entourage_role:nth-child(2)"),
+        groomsmen: box(".entourage_bridal-party .entourage_row:nth-child(2) .entourage_role:nth-child(1)"),
+        bridesmaids: box(".entourage_bridal-party .entourage_row:nth-child(2) .entourage_role:nth-child(2)"),
       };
     });
     expect(positions.ninang.top).toBeGreaterThan(positions.ninong.bottom);
-    expect(positions.cord.top).toBeGreaterThan(positions.candle.bottom);
-    expect(positions.cord.left + positions.cord.width / 2).toBeCloseTo(195, 0);
-    expect(positions.veil.left).toBeGreaterThan(positions.candle.left);
+    expect(positions.veil.top).toBeGreaterThan(positions.candle.bottom);
+    expect(positions.cord.top).toBeGreaterThan(positions.veil.bottom);
+    for (const role of [positions.candle, positions.veil, positions.cord]) expect(role.left + role.width / 2).toBeCloseTo(195, 0);
+    expect(positions.maidOfHonor.top).toBeGreaterThan(positions.bestMan.bottom);
+    expect(positions.bridesmaids.top).toBeGreaterThan(positions.groomsmen.bottom);
+
+    // Every entourage row is one centred column on mobile, so long names never share a line's width.
+    const roles = await page.locator("#entourage .entourage_role").evaluateAll((elements) => elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { centre: box.left + box.width / 2, top: box.top };
+    }));
+    for (const role of roles) expect(role.centre).toBeCloseTo(195, 0);
+    for (let index = 1; index < roles.length; index += 1) expect(roles[index].top).toBeGreaterThan(roles[index - 1].top);
   });
 
   test("places desktop keepsakes beside their groups and hides them below desktop", async ({ page }) => {

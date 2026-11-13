@@ -35,9 +35,9 @@
       "rows": [
         {
           "roles": [
-            { "label": "Candle", "names": ["Paolo D. Santos", "Bea M. Reyes"] },
-            { "label": "Veil", "names": ["Miguel A. Cruz", "Andrea P. Lim"] },
-            { "label": "Cord", "names": ["Rafael T. Mendoza", "Kat R. Bautista"] }
+            { "label": "Candle", "names": ["John Raymond Malaluan", "Maria Mikaelah Malihan"] },
+            { "label": "Veil", "names": ["Steven Isaac Escarcha", "Ma. Agnes Isabelle Malihan-Monfero"] },
+            { "label": "Cord", "names": ["Jian Paulo Toledo", "Jane Krister Toledo-Manalo"] }
           ]
         }
       ]
@@ -49,15 +49,14 @@
       "rows": [
         {
           "roles": [
-            { "label": "Best man", "names": ["Joaquin E. Reyes"] },
-            { "label": "Matron of honor", "names": ["Camille S. Ocampo"] },
-            { "label": "Maid of honor", "names": ["Patricia L. Santos"] }
+            { "label": "Best man", "names": ["Ron Vincent Lasaca"] },
+            { "label": "Maid of honor", "names": ["Fiona Larra Toledo"] }
           ]
         },
         {
           "roles": [
-            { "label": "Groomsmen", "names": ["Carlo B. Dizon", "Nico J. Ramos", "JP A. Villanueva", "Marco T. Lim", "Enzo R. Garcia", "Paulo M. Castillo"] },
-            { "label": "Bridesmaids", "names": ["Bianca C. Tan", "Mika D. Aquino", "Sofia R. Cruz", "Ella P. Mendoza", "Jasmine L. Uy", "Nicole A. Ramirez"] }
+            { "label": "Groomsmen", "names": ["Dylan Ray Fish", "Lawrence De Ocampo", "Marc Bryan Peradilla", "Carl Vincent Mole", "Leo Zedrick Lajara", "Marc Christian Garcia"] },
+            { "label": "Bridesmaids", "names": ["Pauline Nicole Duran", "Vestiah Olave-Garcia", "Anjarie Santos", "Nica Ihsabel Centeno", "Fatima Marie Oba", "Patricia Allison Recio"] }
           ]
         },
         {
