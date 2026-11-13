@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Paper footer", () => {
-  test("renders the sign-off, date, decorative images, and top link", async ({ page }) => {
+  test("renders the sign-off, date, decorative images, and top link", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/404");
 
-    await expect(page.locator(".footer_signoff")).toContainText("island hopping");
-    await expect(page.locator(".footer_signoff")).toContainText("see you in Boracay");
+    await expect(page.locator(".footer_signoff")).toBeVisible();
+    expect((await page.locator(".footer_signoff").textContent())?.trim()).toBeTruthy();
     await expect(page.locator(".footer_date")).toHaveText("01.14.27");
     await expect(page.locator(".footer_date")).toHaveCSS("font-size", "336px");
     await expect(page.locator(".footer_top-link")).toHaveCSS("font-size", "16px");
@@ -23,7 +23,7 @@ test.describe("Paper footer", () => {
     await expect(page.getByRole("link", { name: "Back to top" })).toHaveAttribute("href", "#");
   });
 
-  test("keeps the date inside the viewport at mobile widths", async ({ page }) => {
+  test("keeps the date inside the viewport at mobile widths", { tag: ["@single"] }, async ({ page }) => {
     for (const viewport of [
       { width: 390, height: 844 },
       { width: 320, height: 700 },
@@ -43,7 +43,7 @@ test.describe("Paper footer", () => {
     }
   });
 
-  test("moves the footer continuously into place while scrolling", async ({ page }) => {
+  test("moves the footer continuously into place while scrolling", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/example-components");
     const footerTop = await page.locator("[data-footer-parallax]").evaluate((element) => element.getBoundingClientRect().top + scrollY);

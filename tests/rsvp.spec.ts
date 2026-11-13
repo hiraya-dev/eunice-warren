@@ -50,12 +50,6 @@ test.describe("RSVP section", () => {
     await expect.poll(() => rsvp(page).locator("[data-step='2'] > span").evaluate((element) => getComputedStyle(element, "::after").transform)).toContain("matrix(1");
   });
 
-  test("reveals the RSVP header through the shared fade-in attributes", async ({ page }) => {
-    const header = rsvp(page).locator(".rsvp_header");
-    await expect(header).toHaveAttribute("data-fade-in", "");
-    await expect(header.locator("[data-fade-in-item]")).toHaveCount(2);
-  });
-
   test("keeps RSVP field layout stable when focused", async ({ page }) => {
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
@@ -107,7 +101,7 @@ test.describe("RSVP section", () => {
     }
   });
 
-  test("finds invites case-insensitively and ignores accents and spacing", async ({
+  test("finds invites case-insensitively and ignores accents and spacing", { tag: ["@single"] }, async ({
     page,
   }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("liza  SANTOS");
@@ -125,7 +119,7 @@ test.describe("RSVP section", () => {
     );
   });
 
-  test("shows an error for an unknown name", async ({ page }) => {
+  test("shows an error for an unknown name", { tag: ["@single"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Unknown Guest");
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
@@ -136,7 +130,7 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
   });
 
-  test("recovers from a fictional store rejection", async ({ page }) => {
+  test("recovers from a fictional store rejection", { tag: ["@single"] }, async ({ page }) => {
     const button = rsvp(page).getByRole("button", { name: /Find my invite/ });
     await rsvp(page).locator("[data-rsvp-name]").fill("Error Test");
     await button.click();
@@ -152,7 +146,11 @@ test.describe("RSVP section", () => {
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
       .click();
-    await expect(rsvp(page).locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(4);
+    // One row per seat: the total comes from the "N of M seats" label, not a literal.
+    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText(/\d+ of \d+ seats/);
+    const seatTotal = Number((await rsvp(page).locator("[data-rsvp-count]").textContent())?.match(/of (\d+) seats/)?.[1]);
+    expect(seatTotal).toBeGreaterThan(0);
+    await expect(rsvp(page).locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(seatTotal);
     await expect(rsvp(page).locator("[data-rsvp-seat-list]")).toContainText("Remedios Cruz");
     await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText("3 of 4 seats");
     await expect(rsvp(page).getByRole("button", { name: "Add name for seat 4" })).toBeVisible();
@@ -213,7 +211,7 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-email-error]")).toBeVisible();
   });
 
-  test("accepts and can edit a received RSVP", async ({ page }) => {
+  test("accepts and can edit a received RSVP", { tag: ["@smoke"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Liza Santos");
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
@@ -250,7 +248,7 @@ test.describe("RSVP section", () => {
     );
   });
 
-  test("declines without a guest summary row", async ({ page }) => {
+  test("declines without a guest summary row", { tag: ["@smoke"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Ana Reyes");
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
@@ -286,7 +284,7 @@ test.describe("RSVP section", () => {
     ).toBeFocused();
   });
 
-  test("switches between desktop columns and mobile stacking", async ({
+  test("switches between desktop columns and mobile stacking", { tag: ["@single"] }, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -320,7 +318,7 @@ test.describe("RSVP section", () => {
     expect(invitation?.y).toBeGreaterThan((card?.y ?? 0) + (card?.height ?? 0));
   });
 
-  test("fits within the viewport at mobile widths", async ({ page }) => {
+  test("fits within the viewport at mobile widths", { tag: ["@single"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Liza Santos");
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })

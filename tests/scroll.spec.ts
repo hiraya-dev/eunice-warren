@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("site-wide smooth scroll", () => {
-  test("initializes Lenis and smooth-scrolls the page", async ({ page }) => {
+  test("initializes Lenis and smooth-scrolls the page", { tag: ["@sweep"] }, async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveClass(/\blenis\b/);
 
@@ -40,7 +40,7 @@ test.describe("site-wide smooth scroll", () => {
       { width: 1440, height: 900 },
       { width: 390, height: 844 },
     ]) {
-      test(`clears the navigation for hash anchors at ${viewport.width}px${reducedMotion ? " with reduced motion" : ""}`, async ({ page }) => {
+      test(`clears the navigation for hash anchors at ${viewport.width}px${reducedMotion ? " with reduced motion" : ""}`, { tag: ["@sweep", "@single"] }, async ({ page }) => {
         if (reducedMotion) await page.emulateMedia({ reducedMotion: "reduce" });
         await page.setViewportSize(viewport);
         await page.goto("/example-components");

@@ -23,7 +23,9 @@ const waitForPanelTransition = async (page: import("@playwright/test").Page, ope
 
 test.describe("Eunice & Warren navigation", () => {
   for (const width of [1440, 390]) {
-    test(`opens, closes, and traps focus at ${width}px`, async ({ page }) => {
+    // Only the first width is a smoke test.
+    const tag = width === 1440 ? ["@smoke", "@single"] : ["@single"];
+    test(`opens, closes, and traps focus at ${width}px`, { tag }, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await page.goto("/");
 
@@ -100,7 +102,7 @@ test.describe("Eunice & Warren navigation", () => {
   });
 
   for (const [width, height] of [[1440, 900], [390, 844]] as const) {
-    test(`shows the wipe through the bar and removes the scrollbar gutter at ${width}px`, async ({ page }) => {
+    test(`shows the wipe through the bar and removes the scrollbar gutter at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto("/");
 
@@ -129,7 +131,7 @@ test.describe("Eunice & Warren navigation", () => {
     }
   });
 
-  test("keeps the toggle light through close and keeps navigation geometry stable", async ({ page }) => {
+  test("keeps the toggle light through close and keeps navigation geometry stable", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
 
@@ -185,7 +187,7 @@ test.describe("Eunice & Warren navigation", () => {
     expect(samples.some((sample) => sample.panelBottom > 5 && sample.panelBottom < 95)).toBe(true);
   });
 
-  test("keeps the mobile toggle fixed and the fading actions in place", async ({ page }) => {
+  test("keeps the mobile toggle fixed and the fading actions in place", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     const toggle = page.locator('[data-navigation-toggle="toggle"]');
@@ -225,7 +227,7 @@ test.describe("Eunice & Warren navigation", () => {
   });
 
   for (const [width, height] of [[1440, 900], [390, 844]] as const) {
-    test(`keeps the palm clear of every link label at ${width}px`, async ({ page }) => {
+    test(`keeps the palm clear of every link label at ${width}px`, { tag: ["@single"] }, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto("/");
       await page.locator('[data-navigation-toggle="toggle"]').click();

@@ -138,7 +138,8 @@ checkout.
    the head's CI result and verdict.
 
 "CI is green" means the `gate` job of the `CI` workflow passed on the head commit; a
-skipped `gate` is never green. `main` has no branch protection, so every merge gate
+skipped `gate` is never green. A `runtime` merge needs it from the full tier (a draft
+runs `@smoke`; `gh pr ready` starts the full run). `main` has no branch protection, so every merge gate
 is self-enforced.
 
 If the working tree already has uncommitted changes when a task starts, keep them

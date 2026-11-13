@@ -25,11 +25,14 @@ re-adapted from adc-website, which had already made that move. `scripts/codex/`,
 | `scripts/hooks/` | `guard-git.mjs`, the Git-trap hook; `guard-deps.mjs`, the T3 dependency hook; `agent-definitions.test.mjs`; and their tests |
 | `scripts/ci/classify-paths.mjs` | routes changed paths to `runtime` / `workflow` / `docs` |
 | `scripts/ci/prepush.mjs` | `npm run prepush`, the one local gate before every push (`local-checks`) |
-| `.github/workflows/ci.yml` | `classify` → `build` (type-check, unit tests, production build) + `e2e` (every spec, in the Playwright image matching the lockfile) / `checks` (docs and workflow) → `gate`; runs on drafts, pushes to `main`, and by hand |
+| `.github/workflows/ci.yml` | `classify` → `build` (type-check, unit tests, production build) + `e2e` (the `@smoke` tier on a draft; on a ready PR, `ci:full`, `main` or by hand, every non-`@sweep` test plus `sweeps (1/2, 2/2)`; two workers, in the Playwright image matching the lockfile) / `checks` (docs and workflow) → `gate`; skips a `main` push whose tree a full-tier PR run passed |
 | `.github/workflows/flake-check.yml` | repeats a spec on a runner by hand, 4 workers, no retries (L-009, L-010) |
 | `scripts/ci/flaky-summary.mjs` | lists tests that passed only on a retry in the e2e job summary |
+| `scripts/ci/select-specs.mjs` | maps changed paths to the specs to run locally, or `broad` (`local-checks` **Select the specs**) |
+| `scripts/ci/sweep-tags.mjs` | `npm run check:sweep-tags`: the files holding `@sweep` tests equal `SWEEP_SPECS` |
+| `scripts/ci/already-tested.mjs` | lets a squash-merge push to `main` skip CI when a full-tier PR run passed the same tree; fails closed |
 | `.nvmrc` | Node 22.23.4 for CI |
-| `playwright.config.ts`, `tests/` | Chromium at desktop and Pixel 7; builds and serves the fake-store site on a port derived from the checkout path (L-008) |
+| `playwright.config.ts`, `tests/` | Chromium at desktop and Pixel 7 (`@single` tests skip Pixel 7); one retry in CI; builds and serves the fake-store site on a port derived from the checkout path (L-008) |
 | `.markdownlint-cli2.jsonc` | structural Markdown lint, in `prepush` and the `checks` job |
 | `docs/claude-codex-handoff-resolution.md` | why the handoff contract looks the way it does |
 | `docs/rsvp-backend.md` | the RSVP backend, its Sheet layout and its production setup |

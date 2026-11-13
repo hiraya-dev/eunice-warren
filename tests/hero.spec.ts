@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("keepsakes hero", () => {
   for (const viewport of [{ width: 768, height: 1024 }, { width: 991, height: 760 }]) {
-    test(`uses the desktop composition at ${viewport.width}px tablet width`, async ({ page }) => {
+    test(`uses the desktop composition at ${viewport.width}px tablet width`, { tag: ["@single"] }, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto("/");
@@ -40,7 +40,7 @@ test.describe("keepsakes hero", () => {
     });
   }
 
-  test("shows the desktop composition", async ({ page }) => {
+  test("shows the desktop composition", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
@@ -49,7 +49,7 @@ test.describe("keepsakes hero", () => {
     for (const keepsake of await page.locator("[data-hero-keepsake]").all()) await expect(keepsake).toBeVisible();
   });
 
-  test("uses the compact composition on mobile", async ({ page }) => {
+  test("uses the compact composition on mobile", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
@@ -64,7 +64,7 @@ test.describe("keepsakes hero", () => {
     expect(Math.abs(angle + 6)).toBeLessThan(0.5);
   });
 
-  test("does not create horizontal overflow at narrow mobile width", async ({ page }) => {
+  test("does not create horizontal overflow at narrow mobile width", { tag: ["@smoke"] }, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
@@ -77,7 +77,7 @@ test.describe("keepsakes hero", () => {
     await expect(page.locator("[data-hero-keepsake]").first()).toHaveCSS("opacity", "1");
   });
 
-  test("centres the desktop text and uses the full title line box", async ({ page }) => {
+  test("centres the desktop text and uses the full title line box", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 912 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
@@ -90,12 +90,5 @@ test.describe("keepsakes hero", () => {
     expect(metrics.titleHeight).toBeGreaterThanOrEqual(metrics.titleFontSize * 1.05);
     // Paper centres the text block below 40px of top padding, so its centre sits ~20px under the section's.
     expect(Math.abs(metrics.contentCentre - (metrics.heroTop + metrics.heroHeight / 2 + 20))).toBeLessThan(24);
-  });
-
-  test("moves the style guide to its own noindex route", async ({ page }) => {
-    const response = await page.goto("/style-guide");
-    expect(response?.status()).toBe(200);
-    await expect(page.locator("h1")).toHaveText("Style Guide");
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
   });
 });

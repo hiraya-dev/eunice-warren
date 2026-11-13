@@ -22,7 +22,7 @@ test.describe("With love stack", () => {
     await expect(order(page).last()).toHaveAttribute("data-note-id", first!);
   });
 
-  test("moves the top card after a large drag and ignores a small drag", async ({ page }) => {
+  test("moves the top card after a large drag and ignores a small drag", { tag: ["@sweep"] }, async ({ page }) => {
     await page.goto("/");
     await page.locator("#with-love").scrollIntoViewIfNeeded();
     await expect(page.locator("#with-love")).toHaveAttribute("data-with-love-notes", "loaded");
@@ -58,7 +58,7 @@ test.describe("With love stack", () => {
     expect(Number(alpha)).toBeCloseTo(0.5);
   });
 
-  test("Shuffle still cycles when reduced motion is requested", async ({ browser }) => {
+  test("Shuffle still cycles when reduced motion is requested", { tag: ["@single"] }, async ({ browser }) => {
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const page = await context.newPage();
     await page.goto("/");

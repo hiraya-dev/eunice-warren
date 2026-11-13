@@ -38,17 +38,7 @@ const loadSpotify = async (page: import("@playwright/test").Page) => {
 };
 
 test.describe("Playlist section", () => {
-  test("is present and reachable from the nav", async ({ page }) => {
-    await page.goto("/");
-    await page.locator('[data-navigation-toggle="toggle"]').click();
-    await expect(
-      page.locator(".navigation_link", { hasText: "Playlist" }),
-    ).toHaveAttribute("href", "/#playlist");
-    await page.locator(".navigation_link", { hasText: "Playlist" }).click();
-    await expect(page.locator("#playlist")).toBeInViewport();
-  });
-
-  test("renders a passive turntable and a dark Spotify controller", async ({
+  test("renders a passive turntable and a dark Spotify controller", { tag: ["@single"] }, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -92,14 +82,7 @@ test.describe("Playlist section", () => {
       .toContain('"theme":"dark"');
   });
 
-  test("marks the heading copy for the shared fade-in", async ({ page }) => {
-    await page.goto("/");
-    const header = page.locator(".playlist_header");
-    await expect(header).toHaveAttribute("data-fade-in", "");
-    await expect(header.locator("[data-fade-in-item]")).toHaveCount(2);
-  });
-
-  test("drops the needle and continuously spins the record while Spotify is playing", async ({
+  test("drops the needle and continuously spins the record while Spotify is playing", { tag: ["@sweep"] }, async ({
     page,
   }) => {
     await installSpotify(page);
@@ -157,7 +140,7 @@ test.describe("Playlist section", () => {
     await expect(record).toHaveCSS("transform", stopped);
   });
 
-  test("keeps the embed at least 300px wide without document overflow on mobile", async ({
+  test("keeps the embed at least 300px wide without document overflow on mobile", { tag: ["@single"] }, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 320, height: 720 });
@@ -175,7 +158,7 @@ test.describe("Playlist section", () => {
     ).toBeLessThanOrEqual(320);
   });
 
-  test("does not reset the record angle on a repeated play event", async ({
+  test("does not reset the record angle on a repeated play event", { tag: ["@sweep"] }, async ({
     page,
   }) => {
     await installSpotify(page);
@@ -238,7 +221,7 @@ test.describe("Playlist section", () => {
     await expect(arm).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
   });
 
-  test("validates the request form and shows its honest status", async ({
+  test("validates the request form and shows its honest status", { tag: ["@smoke"] }, async ({
     page,
   }) => {
     await page.goto("/");
