@@ -110,7 +110,8 @@ verdict until `gate` settles.
 CI runs on every push to a PR, draft or ready, and `gh pr ready <pr>` starts no
 run. A skipped `gate` is not green. After each push, start the review,
 then wait for CI on the head: call `watch_pull_request` on the PR (its URL, or
-`repository` plus `number`) and end the turn. Do not poll, sleep, or run
+`repository` plus `number`), confirm `watching: true` with
+`list_thread_pull_requests` (L-015), and end the turn. Do not poll, sleep, or run
 `gh pr checks --watch`. T3 checks the PR every two minutes and wakes the thread when
 a check fails, the required checks pass, someone else comments or reviews, or the
 branch starts to conflict with its base. Only comments posted after the call wake

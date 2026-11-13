@@ -93,6 +93,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `tests/**`
 
+### L-015 — Confirm a PR watch; never report one from memory
+- **Date:** 2026-11-13
+- **Trigger:** PR #72, the user's correction ("why are you not watching the pr?")
+- **Symptom:** Claude told the user three times it was "watching" PR #72, but `list_thread_pull_requests` showed `watching: false`; `gate` went green at 09:39 and the PR sat unmerged until the user asked.
+- **Root cause:** Claude reported the watch from what it had said earlier, not from T3's state, so a watch that never registered went unnoticed.
+- **Rule:** right after `watch_pull_request`, and whenever the user asks for status, confirm `watching: true` with `list_thread_pull_requests`; if it is false, watch again before ending the turn. Answer status questions from `gh pr checks` and `gh run view`, not from the last thing said.
+- **Check:** each "watching" claim in the thread follows a `list_thread_pull_requests` result showing `watching: true` for that PR.
+- **Guard:** none
+- **Paths:** `**`
+
 ## Motion and tests
 
 ### L-009 — Time motion assertions by the clock, never by frames
