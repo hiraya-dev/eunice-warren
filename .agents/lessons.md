@@ -135,6 +135,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/scripts/**`
 
+### L-016 — Specs written blind fail the first run
+- **Date:** 2026-11-13
+- **Trigger:** carried over from adc-website (its L-039): a spec Codex rewrote without running it failed three selectors in the first real run and cost two full CI runs
+- **Symptom:** a spec that `npm run check` accepts fails on its first Playwright run.
+- **Root cause:** Codex's sandbox cannot bind a port or build the site, so it writes specs from the source alone and guesses the rendered DOM.
+- **Rule:** whoever writes a browser spec runs it before handing it back (`local-checks` **A new or changed spec runs once**). When Codex returns a new or changed spec, Claude or `layout-implementer` runs that spec file alone before the push.
+- **Check:** every new or changed `tests/*.spec.ts` in the diff appears in the `Local:` line as run.
+- **Guard:** none
+- **Paths:** `tests/**`, `.agents/skills/codex-handoff/**`
+
+### L-017 — Specs assert structure, not the couple's copy
+- **Date:** 2026-11-13
+- **Trigger:** carried over from adc-website (its L-031: a content publish turned a footer spec red with no code change); this repo's audit found specs pinning FAQ and Explore counts, entourage group slugs, attire swatch names, the footer sign-off and button labels
+- **Symptom:** a content or copy edit (`src/content/**`, a section's text) turns a spec red with no code change.
+- **Root cause:** the spec asserted the current copy or item count instead of the structure the code guarantees.
+- **Rule:** specs that render content assert structure (the element exists, has a label or href, sits in the right group, one item per content file read with `node:fs`), not the current copy. Facts the site states as facts (the date, the RSVP deadline, the couple's names) may stay. When a PR changes copy, grep `tests/` for the old values first.
+- **Check:** `grep -rn` in `tests/` for strings from `src/content/**` or section copy the diff adds finds no exact-copy assertion.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/content/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders
@@ -146,3 +166,35 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** at 390 and 1440, every name in `.entourage_role li` fits on one line.
 - **Guard:** none
 - **Paths:** `src/content/entourage/**`, `src/components/sections/Entourage.astro`
+
+### L-018 — Sweep widths, not just the artboard widths
+- **Date:** 2026-11-13
+- **Trigger:** carried over from adc-website (its L-017): layouts that held at the artboard widths broke between them (576–744, 850–1023, 1024–1400), where the user drags the window
+- **Symptom:** a layout checked at 390 and 1440 overlaps or wraps badly in between.
+- **Root cause:** QA measured only Paper's artboard widths; the user reviews by resizing through every width.
+- **Rule:** after a layout change, sweep 320–1920 for overlaps, a shared content edge and wrapping, including odd widths (632, 968, 1032, 1150) as well as 390, 768, 1023, 1024 and 1440. Paper is the design intent, not a pixel spec: write criteria around structure and the sweep, not small offsets.
+- **Check:** the `@sweep` specs of the touched sections ran (`select-specs`, or the full tier), and the review pack lists the widths checked.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/styles/**`, `src/layouts/**`
+
+## CI scripts
+
+### L-019 — Build a parser's test fixtures from the real output
+- **Date:** 2026-11-13
+- **Trigger:** carried over from adc-website (its L-034: a hand-written Playwright JSON fixture hid a bug with nested `describe` titles); on this branch, Codex's first `check-sweep-tags` fixtures were flat and hand-written
+- **Symptom:** a script's unit tests pass on a fixture shaped from memory, and the script fails on the tool's real output.
+- **Root cause:** the fixture left out fields or nesting the real output carries at every level.
+- **Rule:** shape fixtures for code that reads a tool's output (Playwright JSON, the GitHub API, Workers Builds) from a real sample of that output, trimmed; key on structure the format documents, not on a field's absence.
+- **Check:** each fixture in a `scripts/**/*.test.mjs` that models tool output names where its shape came from and keeps the real nesting.
+- **Guard:** none
+- **Paths:** `scripts/**`
+
+### L-020 — A selector's "no match" means run more, not nothing
+- **Date:** 2026-11-13
+- **Trigger:** carried over from adc-website (its L-037: `select-specs.mjs` printed `none` for a page no spec mapped); on this branch, Codex's first `select-specs` narrowed the shared `fade-in.ts` to one spec
+- **Symptom:** a changed file went untested locally while the selector looked green.
+- **Root cause:** each fail-closed rule covered the inputs it named, and the leftover case (an unmapped file, an import form the parser skips) fell to the narrow default.
+- **Rule:** in any script that narrows what runs (spec selection, CI routing, `already-tested`), make the default for an unmapped or unparsed input the widest option, and add a test for the leftover case.
+- **Check:** for each lookup in the diff, "what does a key with no entry return?" is answered by the broad path, and a test pins it.
+- **Guard:** none
+- **Paths:** `scripts/ci/**`

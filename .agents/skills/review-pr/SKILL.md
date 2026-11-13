@@ -107,8 +107,9 @@ running on this head. The reviewer judges the diff, the criteria and the evidenc
 and treats CI as unknown: it returns its verdict on the code alone. Claude holds that
 verdict until `gate` settles.
 
-CI runs on every push to a PR, draft or ready, and `gh pr ready <pr>` starts no
-run. A skipped `gate` is not green. After each push, start the review,
+CI runs on every push to a PR, draft or ready, and again when `gh pr ready <pr>`
+marks a draft ready. A `runtime` draft runs the `@smoke` tier; the ready run is the
+full tier (`local-checks` **CI routes**). A skipped `gate` is not green. After each push, start the review,
 then wait for CI on the head: call `watch_pull_request` on the PR (its URL, or
 `repository` plus `number`), confirm `watching: true` with
 `list_thread_pull_requests` (L-015), and end the turn. Do not poll, sleep, or run
@@ -137,8 +138,9 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
 - **Full (`runtime`)** — `src/**`, `public/**`, `tests/**`, Astro / TypeScript /
   Playwright config, `wrangler.jsonc`, or dependencies. Run the full process below:
   review in parallel with CI, judge every applicable axis, and allow up to three
-  rounds. Bug-fix gates still apply. CI runs the full suite (`local-checks` **CI
-  routes**). `task.md` records the `Local:` line from
+  rounds. Bug-fix gates still apply. The draft runs the `@smoke` tier and the
+  ready PR the full suite (`local-checks` **CI routes**); add `ci:full` to a draft
+  whose `select-specs` result is `broad`. `task.md` records the `Local:` line from
   `local-checks` (`prepush`, the specs the author ran once, the browser check); a
   new or changed spec with no recorded run is a finding. Before the review, Claude
   performs browser and responsive verification where the diff reaches them,
@@ -357,11 +359,16 @@ and With Love store, so nothing a reviewer submits reaches the guest sheet.
 - **`docs` and `workflow`**: a posted `PASS` on the PR's head commit plus green
   `gate` authorizes Claude to merge, without asking the user, once the branch is up
   to date with `main`. A PR opened as a draft is marked ready first
-  (`gh pr ready <pr>`; it starts no run).
+  (`gh pr ready <pr>`), and the run that starts must pass `gate` too.
 - **`runtime`**: the merge needs the user's "ship it" **and** a posted `PASS` on
-  the current head. On "ship it", verify that `PASS`, green `gate` on the same head,
-  and the up-to-date check below; if all hold, run `gh pr ready <pr>` and
-  `gh pr merge <pr> --squash` at once. There is no new CI run to wait for.
+  the current head, **and** a green `gate` from the full tier on that head
+  (`e2e (full)` plus both `sweeps` jobs; a smoke-tier `gate` never authorizes a
+  merge). On "ship it", verify that `PASS` and the up-to-date check below, then run
+  `gh pr ready <pr>`, which starts the full run (skip it if a `ci:full` run already
+  passed on the head). `watch_pull_request`, confirm the watch (L-015), and end the
+  turn. When `gate` passes, merge with `gh pr merge <pr> --squash`; when it fails,
+  that is a `CHANGES_REQUIRED` finding (L-013 first). The merge push to `main` then
+  skips CI (`already-tested.mjs`).
 
 Check immediately before merging. `main` has no branch protection (the user
 declined the paid plan), so this check is the only guard against a race:
