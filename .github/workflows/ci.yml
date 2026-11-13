@@ -6,10 +6,12 @@ name: CI
 # runtime   build: type-check, unit tests and the production build.
 #           e2e: Playwright on the fake-store build, in the Playwright image
 #           that matches the lockfile, two workers:
-#             smoke  (a draft PR): the tests tagged @smoke.
+#             smoke  (a draft PR): the tests tagged @smoke, on the two
+#                    Chromium projects (chromium, mobile).
 #             full   (a ready PR, a PR labelled ci:full, a push to main that was
 #                    not already tested, a manual run): every test not tagged
-#                    @sweep, plus the sweeps job.
+#                    @sweep on every project, which adds the @smoke tests on
+#                    the webkit project (iPhone 14), plus the sweeps job.
 #           sweeps: the load-sensitive motion and geometry tests (@sweep),
 #           sharded two ways with one worker each; full tier only.
 # workflow  checks: Markdown lint, routing, CI-script, hook and lessons tests,
@@ -206,7 +208,8 @@ jobs:
           if [[ "$FULL" == "true" ]]; then
             npm run test:e2e -- --grep-invert @sweep --workers=2
           else
-            npm run test:e2e -- --grep @smoke --workers=2
+            # WebKit is full tier only (playwright.config.ts).
+            npm run test:e2e -- --grep @smoke --workers=2 --project=chromium --project=mobile
           fi
       # Retries are 1 in CI, so a test that passes only on its retry is flaky.
       # List each one in the job summary and as a warning, so flakes are counted

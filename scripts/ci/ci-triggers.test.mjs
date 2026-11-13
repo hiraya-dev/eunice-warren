@@ -67,7 +67,7 @@ test("runtime runs the build, and e2e names its tier and runs it on two workers"
   assert.match(e2e, /image: mcr\.microsoft\.com\/playwright:v\$\{\{ needs\.classify\.outputs\.playwright \}\}-noble/);
   assert.match(e2e, /npm run check:sweep-tags/);
   assert.match(e2e, /npm run test:e2e -- --grep-invert @sweep --workers=2$/m);
-  assert.match(e2e, /npm run test:e2e -- --grep @smoke --workers=2$/m);
+  assert.match(e2e, /npm run test:e2e -- --grep @smoke --workers=2 --project=chromium --project=mobile$/m);
   assert.match(e2e, /flaky-summary\.mjs test-results\/results\.json/);
 });
 

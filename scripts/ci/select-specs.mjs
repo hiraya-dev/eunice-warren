@@ -79,6 +79,11 @@ export const SPEC_SOURCES = {
     "src/components/sections/RsvpTicketPrinter.astro",
     "src/lib/rsvp/",
   ],
+  "tests/rsvp-paths.spec.ts": [
+    "src/components/sections/Rsvp.astro",
+    "src/actions/",
+    "src/lib/rsvp/",
+  ],
   "tests/rsvp.spec.ts": [
     "src/components/sections/Rsvp.astro",
     "src/actions/",
