@@ -101,7 +101,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Symptom:** motion specs passed locally and failed on CI or under load, with numbers that were off by about one frame.
 - **Root cause:** the assertions counted `requestAnimationFrame` samples or compared two reads a fixed number of frames apart. Headless Chrome on a loaded runner delivers frames 40–67 ms apart, and a backgrounded tab freezes rAF entirely. #65 also read the angle through `atan2`, which wraps at ±180°.
 - **Rule:** check an animation's shape by pausing it with the Web Animations API and seeking `currentTime` (on a hidden clone if the live element runs timers). For live playback, sample over wall-clock time with `performance.now()`, bound the change by elapsed time plus one capped frame, and assert the peak or spread, never one reading or a frame count. Read the unwrapped value the component writes, not a derived angle. Measure in Playwright's own browser, never a backgrounded DevTools tab.
-- **Check:** the spec passes `--repeat-each 20 --workers 8` locally, or under CPU throttling, and on `flake-check.yml` when it exists.
+- **Check:** the spec passes `--repeat-each 20 --workers 8` locally, or under CPU throttling, and on `flake-check.yml` (20 repeats, 4 workers, no retries).
 - **Guard:** none
 - **Paths:** `tests/**`
 

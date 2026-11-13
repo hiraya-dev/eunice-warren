@@ -19,7 +19,11 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? "github" : "list",
+  // CI writes HTML for the failure upload and JSON for the flaky-test summary
+  // (scripts/ci/flaky-summary.mjs).
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never" }], ["json", { outputFile: "test-results/results.json" }]]
+    : "list",
   use: {
     baseURL: ORIGIN,
     storageState: {

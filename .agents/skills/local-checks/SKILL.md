@@ -48,7 +48,7 @@ Never on the Mac:
 - the whole suite as a gate. CI runs it on every `runtime` push.
 - a long flake hunt. Reproduce briefly with `--repeat-each 20 --workers 6-8`
   (raise workers, not repeats, for pointer and overlay races), then prove the fix
-  on CI.
+  with `flake-check.yml` (**CI routes**).
 - any load against a hosted deploy (L-012).
 
 ## Browser check
@@ -73,11 +73,21 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
 ```
 
 - **`runtime`** (`src/**`, `public/**`, `tests/**`, `package.json`, the lockfile,
-  Astro, TypeScript and Playwright config, and any unknown path) runs `build`
-  (`astro check` and `astro build`) and `e2e` (every spec).
-- **`workflow`** (the paths in `WORKFLOW_FILES` and `WORKFLOW_DIRECTORIES`) runs
-  `docs` and `workflow`: markdownlint, the routing, hook and lessons tests, and
-  actionlint.
-- **`docs`** (other Markdown) runs `docs` only.
+  Astro, TypeScript and Playwright config, `wrangler.jsonc`, `.nvmrc`, and any
+  unknown path) runs `build` (`astro check`, the unit tests, and the production
+  `astro build`) and `e2e` (every spec on the fake-store build, in the Playwright
+  image matching the lockfile). Tests that pass only on a retry are listed as
+  flaky in the job summary: treat each as a lesson to capture, not as green.
+- **`workflow`** (the paths in `WORKFLOW_FILES` and `WORKFLOW_DIRECTORIES`) and
+  **`docs`** run one `checks` job: markdownlint, plus the routing, CI-script, hook
+  and lessons tests, the lessons ledger and actionlint when a workflow path
+  changed.
+- CI runs on drafts too, on every push to `main`, and by hand:
+  `gh workflow run ci.yml --ref <branch>` runs everything on a branch. A PR that
+  adds or changes a CI job proves it on that PR, by touching a path that selects
+  it or by running it by hand.
 - `gate` fails if any job the route needs did not succeed. A skipped `gate` is
   never green.
+- **Flakes** are proven on a runner, not the Mac:
+  `gh workflow run flake-check.yml --ref <branch> -f grep='<title or file>' -f repeat=20`
+  (4 workers, no retries, so a flake fails the run).

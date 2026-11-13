@@ -211,8 +211,9 @@ Where the diff reaches them:
 - Playwright specs: they assert width-independent invariants and time motion by the
   clock, not frame counts (L-009)
 - flake fixes: the PR body shows the failure reproduced under load before the fix
-  and gone after (`--repeat-each 20 --workers 8` locally, or `flake-check.yml` once
-  it exists). A green "before" run cited as proof is `CHANGES_REQUIRED`
+  and gone after: a `flake-check.yml` run (20 repeats under load, no retries)
+  before and after, or `--repeat-each 20 --workers 8` locally when the flake
+  reproduces there. A green "before" run cited as proof is `CHANGES_REQUIRED`
 
 ## Verdicts
 

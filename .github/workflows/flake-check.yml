@@ -1,0 +1,84 @@
+name: Flake check
+
+# Proves a spec stable under load, or reproduces a load flake, on a CI runner
+# instead of the user's Mac (L-009, L-010). Run it by hand:
+#   gh workflow run flake-check.yml --ref <branch> -f grep='<title or file>' -f repeat=20
+# It runs in the same Playwright image as the CI e2e job, with 4 workers on the
+# runner's 4 vCPUs and no retries, so a flake fails the run instead of being
+# absorbed. It gates nothing and never runs on its own.
+on:
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: Playwright --grep pattern (a test title or file name)
+        required: true
+        type: string
+      repeat:
+        description: Times to repeat each matching test (--repeat-each)
+        required: false
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    outputs:
+      playwright: ${{ steps.playwright.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      # The container tag. Read from the lockfile, which npm ci installs, so the
+      # image's browsers always match @playwright/test (as in ci.yml).
+      - name: Read the Playwright version
+        id: playwright
+        run: |
+          version="$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test']?.version ?? ''")"
+          if [[ -z "$version" ]]; then
+            echo "@playwright/test is not in the lockfile."
+            exit 1
+          fi
+          echo "Playwright: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  repeat:
+    name: repeat
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.version.outputs.playwright }}-noble
+      # Chromium runs out of shared memory in Docker's default 64 MB /dev/shm.
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      # Inputs go through env, never inline in the script, so a pattern with
+      # shell syntax in it stays a string.
+      - name: Repeat the matching tests under load
+        shell: bash
+        env:
+          GREP: ${{ inputs.grep }}
+          REPEAT: ${{ inputs.repeat }}
+        run: |
+          if [[ ! "$REPEAT" =~ ^[1-9][0-9]*$ ]]; then
+            echo "repeat must be a positive integer, got: $REPEAT"
+            exit 1
+          fi
+          npx playwright test --grep "$GREP" --repeat-each "$REPEAT" --workers 4 --retries 0
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-flake-check
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
