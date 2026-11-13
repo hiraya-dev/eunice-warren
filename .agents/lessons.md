@@ -157,11 +157,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-021 — A de-pinned count comes from the source, never an async label
 - **Date:** 2026-11-13
-- **Trigger:** flaky test, #73: "renders one checklist row per seat" read its expected seat total from the "N of M seats" label, failed locally at 4 workers, fixed in PR A
+- **Trigger:** flaky test, #73: "renders one checklist row per seat" read its expected seat total from the "N of M seats" label, failed locally at 4 workers, fixed in PR A; repeat, #75: `tests/rsvp-paths.spec.ts` (written by Codex) read its starting count from the label again, caught in review
 - **Symptom:** a spec reads 0 for a count and fails at `toBeGreaterThan(0)` on some runs only.
 - **Root cause:** the label reads "0 of 0 seats" until the invite loads; `toHaveText(/\d+ of \d+ seats/)` matches the placeholder, so the spec read the total before the data arrived.
 - **Rule:** when a spec stops pinning a count (L-017), take the expected value from the source file or fixture (`node:fs`, or an import such as `fakeFixtures`), never from text the page renders asynchronously. Then wait for the page to show that value.
-- **Check:** no spec parses an expected count out of `textContent()` of an element that a client script fills.
+- **Check:** no spec parses an expected count out of `textContent()` of an element that a client script fills, even when an earlier wait (row count) makes it pass today. Put this rule in every Codex brief for a spec that reads a count.
 - **Guard:** none
 - **Paths:** `tests/**`
 
@@ -211,10 +211,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-020 — A selector's "no match" means run more, not nothing
 - **Date:** 2026-11-13
-- **Trigger:** carried over from adc-website (its L-037: `select-specs.mjs` printed `none` for a page no spec mapped); on this branch, Codex's first `select-specs` narrowed the shared `fade-in.ts` to one spec
+- **Trigger:** carried over from adc-website (its L-037: `select-specs.mjs` printed `none` for a page no spec mapped); on this branch, Codex's first `select-specs` narrowed the shared `fade-in.ts` to one spec; repeat, #75: a new spec's `SPEC_SOURCES` entry copied its sibling's sources and missed `RsvpTicketPrinter.astro`, whose modal it asserts
 - **Symptom:** a changed file went untested locally while the selector looked green.
 - **Root cause:** each fail-closed rule covered the inputs it named, and the leftover case (an unmapped file, an import form the parser skips) fell to the narrow default.
 - **Rule:** in any script that narrows what runs (spec selection, CI routing, `already-tested`), make the default for an unmapped or unparsed input the widest option, and add a test for the leftover case.
-- **Check:** for each lookup in the diff, "what does a key with no entry return?" is answered by the broad path, and a test pins it.
+- **Check:** for each lookup in the diff, "what does a key with no entry return?" is answered by the broad path, and a test pins it. A new `SPEC_SOURCES` entry lists every component whose markup the spec asserts, not only its sibling spec's sources.
 - **Guard:** none
 - **Paths:** `scripts/ci/**`

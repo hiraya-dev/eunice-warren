@@ -48,11 +48,10 @@ test.describe("RSVP paths", () => {
     await findInvite(page, cruz.members[0], cruz);
 
     const count = section.locator("[data-rsvp-count]");
-    await expect(count).toHaveText(/\d+ of \d+ seats/);
-    const initialCount = Number(
-      (await count.textContent())?.match(/^(\d+) of (\d+) seats$/)?.[1],
-    );
-    expect(initialCount).toBeGreaterThan(0);
+    // Every named member starts ticked; open seats do not (L-021: the expected
+    // count comes from the fixture, never from the async label).
+    const initialCount = cruz.members.length;
+    await expect(count).toHaveText(`${initialCount} of ${cruz.seats} seats`);
 
     const untickedGuest = cruz.members[0];
     await section.locator("#rsvp-seat-0").uncheck();
