@@ -147,7 +147,7 @@ out of the task's commits unless they belong to it.
 ## Deploys
 
 Merging to `main` deploys production (Workers Builds, Worker `eunice-warren`);
-Claude confirms that build succeeded and reports it (`review-pr` **Deploying**).
+Claude confirms that build succeeded and reports it (`review-pr` **Merging deploys production**).
 Every other branch builds a preview for **Local review**. Never deploy by hand, roll
 back, or change Workers routes, settings or secrets unless asked.
 

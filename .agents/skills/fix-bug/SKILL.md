@@ -224,7 +224,7 @@ off.
 `git merge-base --is-ancestor origin/main HEAD`; see `review-pr` **Merging** if
 not), then `gh pr ready <pr>` and `gh pr merge <pr> --squash` (never `--merge`,
 never `--delete-branch`; L-001). Merging deploys production, so confirm the Workers
-Build for the merge reached success (`review-pr` **Deploying**), then report what
+Build for the merge reached success (`review-pr` **Merging deploys production**), then report what
 merged, which gates passed, the CI run link, and the deploy result.
 
 Call `unwatch_pull_request` on the PR before either report below.
