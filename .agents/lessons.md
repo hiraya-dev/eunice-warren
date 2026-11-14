@@ -195,6 +195,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`
 
+### L-041 — A fake third-party API must copy its timing, not just its methods
+- **Date:** 2026-11-14
+- **Trigger:** Local-review round, escape: runtime #76
+- **Symptom:** the envelope tap called Spotify's `play()`, every spec passed, but on the preview nothing played until the guest scrolled to the Playlist section.
+- **Root cause:** Spotify's iFrame API creates its iframe with `loading="lazy"` and queues commands until the embed loads; the spec's fake counted `play()` at once and had no lazy iframe, so it could not show the delay.
+- **Rule:** before faking a third-party embed or SDK, read its shipped bundle for iframe attributes, queues and ready events, and make the fake defer the same way; a spec for "it happens without the user scrolling or waiting" asserts the element is still off-screen.
+- **Check:** the fake in the spec sets the same loading attribute and delivery rule as the vendor code, and the regression spec fails when the fix is reverted.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/scripts/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders

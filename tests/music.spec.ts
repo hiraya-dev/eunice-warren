@@ -1,26 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 const fakeSpotify = `
-  window.__playlistController = {
-    listeners: [], playCalls: 0, pauseCalls: 0,
-    addListener(name, callback) { this.listeners.push([name, callback]); },
-    play() { this.playCalls += 1; },
-    pause() { this.pauseCalls += 1; }
-  };
   window.onSpotifyIframeApiReady({ createController(element, options, callback) {
+    const queuedCommands = [];
+    let iframeLoaded = false;
+    const deliver = (command) => {
+      if (!iframeLoaded) {
+        queuedCommands.push(command);
+        return;
+      }
+      window.__playlistController[command + 'Calls'] += 1;
+    };
+    window.__playlistController = {
+      listeners: [], playCalls: 0, pauseCalls: 0,
+      addListener(name, callback) { this.listeners.push([name, callback]); },
+      play() { deliver('play'); },
+      pause() { deliver('pause'); }
+    };
     const iframe = document.createElement('iframe');
+    iframe.loading = 'lazy';
     iframe.src = 'https://open.spotify.com/embed/playlist/test';
     iframe.style.width = '100%';
     iframe.style.height = options.height + 'px';
+    iframe.addEventListener('load', () => {
+      iframeLoaded = true;
+      queuedCommands.splice(0).forEach(deliver);
+    });
     element.replaceWith(iframe);
     callback(window.__playlistController);
   } });
 `;
 
 const installSpotify = async (page: import("@playwright/test").Page) => {
-  await page.route("https://open.spotify.com/embed/iframe-api/v1", (route) =>
-    route.fulfill({ status: 200, contentType: "application/javascript", body: fakeSpotify }),
-  );
+  await page.route("https://open.spotify.com/embed/**", (route) => {
+    if (route.request().url().endsWith("/iframe-api/v1")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/javascript",
+        body: fakeSpotify,
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<!doctype html><title>embed</title>",
+    });
+  });
 };
 
 const controller = (page: import("@playwright/test").Page) =>
@@ -34,6 +59,22 @@ test.describe("shared music player", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Just browsing" }).click();
     await expect.poll(async () => (await controller(page))?.playCalls).toBe(1);
+  });
+
+  test("plays before the off-screen Playlist section loads", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installSpotify(page);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Just browsing" }).click();
+    expect(
+      await page.locator("#playlist").evaluate((section) => {
+        const rect = section.getBoundingClientRect();
+        return rect.top < window.innerHeight && rect.bottom > 0;
+      }),
+    ).toBe(false);
+    await expect
+      .poll(async () => (await controller(page))?.playCalls, { timeout: 5000 })
+      .toBe(1);
   });
 
   test("plays from Open my letter once the guest is found", { tag: ["@single"] }, async ({ page }) => {

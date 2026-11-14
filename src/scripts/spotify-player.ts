@@ -86,6 +86,10 @@ const createController = (api: SpotifyAPI) => {
     { uri, width: "100%", height: 80, theme: "dark" },
     (created) => {
       controller = created;
+      embed.querySelector<HTMLIFrameElement>("iframe")?.setAttribute(
+        "loading",
+        "eager",
+      );
       embed.classList.add("is-ready");
       if (failTimeout !== undefined) window.clearTimeout(failTimeout);
       failTimeout = undefined;
