@@ -60,6 +60,7 @@ const { messageHref = "#" } = Astro.props;
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
   import { setGuest } from "@/lib/guest";
   import { lenis } from "@/scripts/scroll.ts";
+  import { playSpotify } from "@/scripts/spotify-player";
 
   const initPreloader = () => {
     const overlay = document.querySelector<HTMLElement>("[data-preloader]");
@@ -151,11 +152,11 @@ const { messageHref = "#" } = Astro.props;
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     };
     document.addEventListener("keydown", onKeydown);
-    browse.addEventListener("click", close);
+    browse.addEventListener("click", () => { playSpotify(); close(); });
     overlay.querySelector<HTMLButtonElement>("[data-preloader-reset]")!.addEventListener("click", setAskState);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (state === "found") { finishClose(); return; }
+      if (state === "found") { playSpotify(); finishClose(); return; }
       if (!input.value.trim()) { input.focus(); return; }
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
