@@ -58,8 +58,9 @@ const { messageHref = "#" } = Astro.props;
 <script>
   import { actions } from "astro:actions";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
-  import { setGuest } from "@/lib/guest";
+  import { getGuest, setGuest, type RememberedGuest } from "@/lib/guest";
   import { lenis } from "@/scripts/scroll.ts";
+  import { clearMusicPreference, playSpotify } from "@/scripts/spotify-player";
 
   const initPreloader = () => {
     const overlay = document.querySelector<HTMLElement>("[data-preloader]");
@@ -119,6 +120,29 @@ const { messageHref = "#" } = Astro.props;
       submit.disabled = false;
       input.focus();
     };
+    const showFound = (guest: RememberedGuest, { welcomeBack = false } = {}) => {
+      state = "found";
+      title.textContent = `${welcomeBack ? "Welcome back" : "Welcome"}, ${guest.householdName || guest.name}.`;
+      label.textContent = "To";
+      input.value = guest.householdName || guest.name;
+      input.readOnly = true;
+      input.classList.add("is-found");
+      hint.textContent = "";
+      mobileHint.textContent = "";
+      hint.classList.remove("is-error");
+      mobileHint.classList.remove("is-error");
+      notYou.hidden = false;
+      message.hidden = true;
+      if (typeof guest.seats === "number") {
+        admits.querySelector("span")!.textContent = String(guest.seats);
+        admits.hidden = false;
+      } else {
+        admits.hidden = true;
+      }
+      submitLabel.textContent = "Open my letter →";
+      submit.disabled = false;
+      document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
+    };
     const close = () => {
       if (closing) return;
       if (state !== "found") setGuest({ skipped: true, at: new Date().toISOString() });
@@ -151,11 +175,11 @@ const { messageHref = "#" } = Astro.props;
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     };
     document.addEventListener("keydown", onKeydown);
-    browse.addEventListener("click", close);
+    browse.addEventListener("click", () => { playSpotify(); clearMusicPreference(); close(); });
     overlay.querySelector<HTMLButtonElement>("[data-preloader-reset]")!.addEventListener("click", setAskState);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (state === "found") { finishClose(); return; }
+      if (state === "found") { playSpotify(); clearMusicPreference(); finishClose(); return; }
       if (!input.value.trim()) { input.focus(); return; }
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
@@ -178,25 +202,9 @@ const { messageHref = "#" } = Astro.props;
           submit.disabled = false;
           return;
         }
-        state = "found";
         const guest = { name: result.data.matchedName, householdName: result.data.invite.householdName, seats: result.data.invite.seats, at: new Date().toISOString() };
         setGuest(guest);
-        title.textContent = `Welcome, ${guest.householdName}.`;
-        label.textContent = "To";
-        input.value = guest.householdName;
-        input.readOnly = true;
-        input.classList.add("is-found");
-        hint.textContent = "";
-        mobileHint.textContent = "";
-        hint.classList.remove("is-error");
-        mobileHint.classList.remove("is-error");
-        notYou.hidden = false;
-        message.hidden = true;
-        admits.querySelector("span")!.textContent = String(guest.seats);
-        admits.hidden = false;
-        submitLabel.textContent = "Open my letter →";
-        submit.disabled = false;
-        document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
+        showFound(guest);
       } catch (error) {
         hint.textContent = error instanceof Error && error.message ? error.message : "Something went wrong — please try again.";
         mobileHint.textContent = hint.textContent;
@@ -209,6 +217,8 @@ const { messageHref = "#" } = Astro.props;
         turnstile.reset();
       }
     });
+    const guest = getGuest();
+    if (guest && !("skipped" in guest)) showFound(guest, { welcomeBack: true });
   };
   initPreloader();
   document.addEventListener("astro:page-load", initPreloader);

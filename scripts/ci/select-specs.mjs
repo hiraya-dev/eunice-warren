@@ -47,6 +47,12 @@ export const SPEC_SOURCES = {
     "src/scripts/draw-path.ts",
     "src/scripts/highlight-text.ts",
   ],
+  "tests/music.spec.ts": [
+    "src/scripts/spotify-player.ts",
+    "src/components/global/Nav.astro",
+    "src/components/global/Preloader.astro",
+    "src/components/sections/Playlist.astro",
+  ],
   "tests/nav-hover.spec.ts": [
     "src/components/global/Nav.astro",
     "src/components/global/NavLink.astro",
@@ -57,17 +63,20 @@ export const SPEC_SOURCES = {
   ],
   "tests/nav.spec.ts": [
     "src/components/global/Nav.astro",
+    "src/scripts/spotify-player.ts",
     "src/components/global/NavLink.astro",
   ],
   "tests/parallax.spec.ts": ["src/scripts/scroll.ts"],
   "tests/playlist.spec.ts": [
     "src/components/sections/Playlist.astro",
+    "src/scripts/spotify-player.ts",
     "src/actions/",
     "src/lib/guest.ts",
   ],
   "tests/pre-wedding.spec.ts": ["src/components/sections/PreWedding.astro"],
   "tests/preloader.spec.ts": [
     "src/components/global/Preloader.astro",
+    "src/scripts/spotify-player.ts",
     "src/lib/guest.ts",
     "src/scripts/turnstile.ts",
   ],

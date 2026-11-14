@@ -31,17 +31,20 @@ const links = [
       <div class="nav_inner">
         <a class="nav_logo" href="/" aria-label={SITE_NAME}>E &amp; W</a>
         <div class="nav_actions">
-          <div class="nav_now-playing" aria-hidden="true">
-            <Image src={disc} alt="" width={144} height={144} />
+          <button class="nav_now-playing" type="button" data-music-widget data-music-state="loading" aria-label="Play our playlist" title="Side A · Our playlist">
+            <Image src={disc} alt="" width={144} height={144} aria-hidden="true" />
             <span class="nav_now-playing_text">
-              <span class="nav_now-playing_label">NOW PLAYING</span>
-              <span class="nav_now-playing_title">Dancing Queen · ABBA</span>
+              <span class="nav_now-playing_label" data-music-label>TAP TO PLAY</span>
+              <span class="nav_now-playing_title">Side A · Our playlist</span>
             </span>
-            <svg class="nav_now-playing_pause" viewBox="0 0 10 12" aria-hidden="true">
+            <svg class="nav_now-playing_pause" data-music-pause data-music-hidden viewBox="0 0 10 12" aria-hidden="true">
               <rect width="3" height="12" x="0" fill="currentColor" />
               <rect width="3" height="12" x="7" fill="currentColor" />
             </svg>
-          </div>
+            <svg class="nav_now-playing_play" data-music-play viewBox="0 0 10 12" aria-hidden="true">
+              <path d="M1 1.2 9 6 1 10.8Z" fill="currentColor" />
+            </svg>
+          </button>
           <Button class="nav_rsvp" element="link" href="/#rsvp" shape="pill">RSVP</Button>
           <button type="button" data-navigation-toggle="toggle" class="nav_toggle" aria-expanded="false" aria-controls="site-navigation-panel" aria-label="Open menu">
             <span class="nav_toggle-label"><span class="nav_toggle-menu">MENU</span><span class="nav_toggle-close">CLOSE</span></span>
@@ -64,11 +67,12 @@ const links = [
           ))}
         </ul>
         <div class="navigation_bottom">
-          <div class="navigation_now-playing">
+          <button class="navigation_now-playing" type="button" data-music-widget data-music-state="loading" aria-label="Play our playlist" title="Side A · Our playlist">
             <Image src={disc} alt="" width={144} height={144} aria-hidden="true" />
-            <span class="navigation_now-playing_text"><span class="navigation_now-playing_label">NOW PLAYING</span><span class="navigation_now-playing_title">Dancing Queen · ABBA</span></span>
-            <svg class="navigation_now-playing_pause" viewBox="0 0 10 12" aria-hidden="true"><rect width="3" height="12" x="0" fill="currentColor" /><rect width="3" height="12" x="7" fill="currentColor" /></svg>
-          </div>
+            <span class="navigation_now-playing_text"><span class="navigation_now-playing_label" data-music-label>TAP TO PLAY</span><span class="navigation_now-playing_title">Side A · Our playlist</span></span>
+            <svg class="navigation_now-playing_pause" data-music-pause data-music-hidden viewBox="0 0 10 12" aria-hidden="true"><rect width="3" height="12" x="0" fill="currentColor" /><rect width="3" height="12" x="7" fill="currentColor" /></svg>
+            <svg class="navigation_now-playing_play" data-music-play viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1.2 9 6 1 10.8Z" fill="currentColor" /></svg>
+          </button>
           <Button class="navigation_rsvp" element="link" href="/#rsvp" shape="pill">RSVP by December</Button>
           <div class="navigation_meta"><span>01 · 14 · 2027</span><span class="navigation_location">BORACAY, <span class="navigation_location-full">PHILIPPINES</span><span class="navigation_location-short">PH</span></span></div>
           <div class="navigation_palm"><Stamp><Image src={palm} alt="" width={90} height={116} densities={[1, 2]} aria-hidden="true" /></Stamp></div>
@@ -90,6 +94,17 @@ const links = [
 
 <script>
   import { lenis } from "@/scripts/scroll.ts";
+  import {
+    ensureSpotifyPlayer,
+    playSpotify,
+    pauseSpotify,
+    subscribeSpotifyPlayer,
+    getSpotifyPlayerState,
+    hasSpotifyController,
+    hasSpotifyEmbed,
+    rememberMusicPaused,
+    clearMusicPreference,
+  } from "@/scripts/spotify-player";
 
   const initNavigation = () => {
     const navigation = document.querySelector<HTMLElement>("#site-navigation-panel");
@@ -98,6 +113,37 @@ const links = [
     const links = navigation ? Array.from(navigation.querySelectorAll<HTMLAnchorElement>(".navigation_link, .navigation_rsvp")) : [];
     if (!navigation || !header || !toggle || navigation.dataset.navigationInitialized === "true") return;
     navigation.dataset.navigationInitialized = "true";
+    const musicWidgets = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-music-widget]"));
+    const updateMusicWidget = (widget: HTMLButtonElement, state: ReturnType<typeof getSpotifyPlayerState>) => {
+      const playing = state === "playing";
+      widget.dataset.musicState = state;
+      widget.setAttribute("aria-label", playing ? "Pause music" : "Play our playlist");
+      widget.querySelector<HTMLElement>("[data-music-label]")!.textContent = playing ? "NOW PLAYING" : "TAP TO PLAY";
+      const pauseIcon = widget.querySelector<SVGElement>("[data-music-pause]")!;
+      const playIcon = widget.querySelector<SVGElement>("[data-music-play]")!;
+      pauseIcon.toggleAttribute("data-music-hidden", !playing);
+      playIcon.toggleAttribute("data-music-hidden", playing);
+    };
+    musicWidgets.forEach((widget) => widget.addEventListener("click", () => {
+      if (!hasSpotifyEmbed()) { window.location.href = "/#playlist"; return; }
+      if (getSpotifyPlayerState() === "blocked" && !hasSpotifyController()) {
+        const playlist = document.querySelector<HTMLElement>("#playlist");
+        if (playlist) {
+          if (lenis) lenis.scrollTo(playlist);
+          else playlist.scrollIntoView({ behavior: "smooth" });
+        }
+        return;
+      }
+      if (getSpotifyPlayerState() === "playing") {
+        pauseSpotify();
+        rememberMusicPaused();
+      } else {
+        playSpotify();
+        clearMusicPreference();
+      }
+    }));
+    const unsubscribeMusic = subscribeSpotifyPlayer((state) => musicWidgets.forEach((widget) => updateMusicWidget(widget, state)));
+    ensureSpotifyPlayer();
     let previousOverflow = "";
     let previousBodyPaddingRight = "";
     let previousScrollbarCompensation = "";
@@ -173,7 +219,7 @@ const links = [
         Boolean(element && element.getClientRects().length && getComputedStyle(element).visibility !== "hidden" && getComputedStyle(element).display !== "none");
       const panelLinks = links.filter((link) => link.classList.contains("navigation_link"));
       const panelActions = links.filter((link) => !link.classList.contains("navigation_link"));
-      const focusables = [toggle, ...panelLinks, ...panelActions, document.querySelector<HTMLAnchorElement>(".nav_rsvp")]
+      const focusables = [toggle, ...panelLinks, ...navigation.querySelectorAll<HTMLButtonElement>(".navigation_now-playing"), ...panelActions, document.querySelector<HTMLAnchorElement>(".nav_rsvp")]
         .filter((element): element is HTMLButtonElement | HTMLAnchorElement =>
           isVisible(element),
         );
@@ -182,6 +228,7 @@ const links = [
       event.preventDefault();
       focusables[nextIndex].focus();
     });
+    document.addEventListener("astro:before-swap", () => unsubscribeMusic(), { once: true });
   };
   if (!document.documentElement.dataset.navigationInitialized) { document.documentElement.dataset.navigationInitialized = "true"; initNavigation(); }
 </script>
@@ -193,12 +240,19 @@ const links = [
     .nav_inner { width: 100%; max-width: var(--max-width-main); display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); }
     .nav_logo { flex: 0 0 auto; color: var(--text); font-family: var(--secondary-family); font-size: 1.375rem; font-weight: var(--secondary-regular); line-height: 1.2; text-decoration: none; transition: color 0.1s var(--open-ease) 0.6s; }
     .nav_actions { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-4); }
-    .nav_now-playing { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2); background: var(--background-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-round); transition: opacity var(--open-duration) var(--open-ease) 0.6s, visibility 0s linear 0.6s; }
+    .nav_now-playing { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2); background: var(--background-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-round); color: inherit; cursor: pointer; font: inherit; text-align: left; transition: opacity var(--open-duration) var(--open-ease) 0.6s, visibility 0s linear 0.6s; }
     .nav_now-playing > img { width: 1.875rem; height: 1.875rem; border-radius: 50%; }
     .nav_now-playing_text { display: flex; flex-direction: column; gap: 0.125rem; }
     .nav_now-playing_label { color: var(--accent-500); font-family: var(--mono-family); font-size: var(--eyebrow); letter-spacing: var(--letter-spacing-wider); line-height: 1; text-transform: uppercase; }
     .nav_now-playing_title { color: var(--text); font-family: var(--primary-family); font-size: 0.75rem; font-weight: var(--primary-medium); line-height: 1; }
-    .nav_now-playing_pause { flex: 0 0 auto; width: 0.625rem; height: 0.75rem; margin-left: 0.25rem; }
+    .nav_now-playing_pause, .nav_now-playing_play { flex: 0 0 auto; width: 0.625rem; height: 0.75rem; margin-left: 0.25rem; }
+    [data-music-hidden] { display: none; }
+    /* The disc spins once per 1.8s like the Playlist turntable. It stays paused outside "playing" so it stops in place rather than snapping to 0deg. */
+    @keyframes nav-disc-spin { to { transform: rotate(360deg); } }
+    :is(.nav_now-playing, .navigation_now-playing) > img { animation: nav-disc-spin 1.8s linear infinite paused; }
+    [data-music-widget][data-music-state="playing"] > img { animation-play-state: running; }
+    .nav_now-playing:focus-visible { outline: 0; box-shadow: 0 0 0 0.125rem var(--dark-900); }
+    .navigation_now-playing:focus-visible { outline: 0; box-shadow: 0 0 0 0.125rem var(--light-100); }
     .nav_rsvp { transition: opacity var(--open-duration) var(--open-ease) 0.6s, visibility 0s linear 0.6s; }
     .nav_toggle { position: relative; display: inline-flex; align-items: center; gap: var(--space-3); padding: 0; color: var(--text); cursor: pointer; background: none; border: 0; transition: color 0.1s var(--open-ease) 0.6s; }
     .nav_toggle-label { display: grid; justify-items: end; color: currentColor; font-family: var(--mono-family); font-size: var(--eyebrow); letter-spacing: var(--letter-spacing-wider); line-height: 1; transition: color 0.1s var(--open-ease) 0.6s; }
@@ -231,12 +285,12 @@ const links = [
     .navigation_label { display: block; overflow: clip; font-family: var(--secondary-family); font-size: var(--h3); font-weight: var(--secondary-regular); line-height: var(--line-height-medium); letter-spacing: var(--letter-spacing-snug); }
     .navigation_label-text { display: block; text-shadow: 0 1.1em 0 currentColor; transform: none; transition: transform 0.5s cubic-bezier(.7, 0, .3, 1); }
     .navigation_bottom { position: relative; display: flex; flex-direction: column; gap: var(--space-4); margin-top: auto; padding-bottom: max(2.125rem, env(safe-area-inset-bottom)); }
-    .navigation_now-playing { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2); background: #26386a; /* Paper's dark now-playing variant. */ border: var(--border-width) solid var(--dark-800); border-radius: var(--radius-round); }
+    .navigation_now-playing { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2); background: #26386a; /* Paper's dark now-playing variant. */ border: var(--border-width) solid var(--dark-800); border-radius: var(--radius-round); color: var(--light-100); cursor: pointer; font: inherit; text-align: left; }
     .navigation_now-playing > img { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
     .navigation_now-playing_text { display: flex; flex: 1; flex-direction: column; gap: 0.125rem; }
     .navigation_now-playing_label { color: #e8857a; /* Paper's light accent for the dark panel. */ font-family: var(--mono-family); font-size: 0.625rem; letter-spacing: 0.14em; line-height: 1.2; }
     .navigation_now-playing_title { color: var(--light-100); font-family: var(--primary-family); font-size: 1rem; font-weight: var(--primary-medium); line-height: 1.125; }
-    .navigation_now-playing_pause { flex: 0 0 auto; width: 0.75rem; height: 0.875rem; color: var(--light-100); }
+    .navigation_now-playing_pause, .navigation_now-playing_play { flex: 0 0 auto; width: 0.75rem; height: 0.875rem; color: var(--light-100); }
     /* Out-specify Button.astro's `.button_wrap.pill` padding: Paper's panel RSVP is 17px all round. */
     .button_wrap.pill.navigation_rsvp { --button-016-color-background: var(--accent-500); --button-016-color: var(--light-100); --button-016-hover-color: var(--dark-900); --button-016-hover-color-background: var(--light-100); --button-016-color-focus: var(--light-100); width: 100%; grid-template-columns: 100%; padding: 0; line-height: 1.25; }
     .button_wrap.pill.navigation_rsvp .button-016__inner { width: 100%; box-sizing: border-box; padding: 1.0625rem; }
@@ -246,9 +300,11 @@ const links = [
     .navigation[data-navigation-status="active"] .navigation_palm { opacity: 1; }
     @media (width < 62rem) {
       .nav_actions { gap: var(--space-3); }
-      .nav_now-playing { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; }
+      .nav_now-playing { position: relative; width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; }
       .nav_now-playing > img { width: 1.75rem; height: 1.75rem; }
       .nav_now-playing_text, .nav_now-playing_pause { display: none; }
+      /* The play glyph sits over the disc so the circle reads as tappable; it is removed while playing (data-music-hidden), where the spin is the cue. */
+      .nav_now-playing_play { position: absolute; top: 50%; left: 50%; width: 0.5rem; height: 0.625rem; margin: 0; transform: translate(-50%, -50%); color: var(--light-100); filter: drop-shadow(0 0 0.1875rem var(--dark-900)); pointer-events: none; }
       .nav_toggle-label { position: absolute; right: calc(100% + var(--space-3)); display: none; }
       /* Paper's mobile bar shows only the button when closed, and "CLOSE" beside it when open. */
       .nav_wrap[data-navigation-status="active"] .nav_toggle-label { display: inline; }
@@ -265,6 +321,10 @@ const links = [
       .navigation_now-playing, .navigation_rsvp { display: none; }
       .navigation_palm { right: 5%; top: 42%; width: 7.5rem; height: 9.375rem; transform: translateY(-50%) rotate(8deg); }
     }
+    @media (hover: hover) {
+      .nav_now-playing:hover { border-color: var(--accent-500); }
+      .navigation_now-playing:hover { border-color: var(--brand-500); }
+    }
     @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
       .navigation_item { transition: opacity 0.5s cubic-bezier(.7, 0, .3, 1); }
       /* Hover uses the list's own :hover rather than :has(:hover): WebKit doesn't reliably restyle
@@ -274,6 +334,6 @@ const links = [
       .navigation_links .navigation_item:is(:hover, :has(> .navigation_link:focus-visible)) { opacity: 1; }
       .navigation_link:is(:hover, :focus-visible) .navigation_label-text { transform: translateY(-100%); }
     }
-    @media (prefers-reduced-motion: reduce) { .nav_wrap, .nav_wrap::after, .nav_logo, .nav_toggle, .nav_toggle-label, .nav_now-playing, .nav_rsvp, .nav_toggle-bar, .navigation, .navigation_link, .navigation_palm, .navigation_label-text { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .nav_wrap, .nav_wrap::after, .nav_logo, .nav_toggle, .nav_toggle-label, .nav_now-playing, .nav_rsvp, .nav_toggle-bar, .navigation, .navigation_link, .navigation_palm, .navigation_label-text { transition: none; } [data-music-widget] > img { animation: none; } }
   }
 </style>

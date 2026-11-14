@@ -30,7 +30,20 @@ const socialImage = new URL(image, Astro.site);
   try {
     const raw = localStorage.getItem("ew-guest-v1");
     const state = raw ? JSON.parse(raw) : null;
-    if (!state || (state.skipped !== true && (typeof state.name !== "string" || !state.name.trim()))) document.documentElement.classList.add("ew-preloader-pending");
+    if (!state || (state.skipped !== true && (typeof state.name !== "string" || !state.name.trim()))) {
+      document.documentElement.classList.add("ew-preloader-pending");
+    } else if (state.skipped !== true) {
+      try {
+        const welcomeBackShown = sessionStorage.getItem("ew-welcome-back-v1") === "true";
+        const musicPreference = JSON.parse(localStorage.getItem("ew-music-v1") || "null");
+        if (!welcomeBackShown && musicPreference?.paused !== true) {
+          sessionStorage.setItem("ew-welcome-back-v1", "true");
+          document.documentElement.classList.add("ew-preloader-pending");
+        }
+      } catch {
+        // Storage may be disabled; a remembered guest should not block the page.
+      }
+    }
   } catch {
     document.documentElement.classList.add("ew-preloader-pending");
   }

@@ -185,6 +185,36 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
 
+### L-040 — A "never happens" assertion must be able to fail
+- **Date:** 2026-11-14
+- **Trigger:** #76 CHANGES_REQUIRED
+- **Symptom:** a spec asserted Escape does not start music with `expect.poll(() => playCalls).toBe(0)`; it passed on its first read, before the Escape handler ran, so a regression would still pass. The same spec skipped one of the two code paths the criteria named ("Open my letter").
+- **Root cause:** polling waits for a value to appear; for an absence it returns at once. Nothing tied the read to the action having finished.
+- **Rule:** to assert something did not happen, first prove the setup is live (the spy exists), then wait for the action's own visible result (the overlay closed), then read once. Every code path a criterion names gets its own test.
+- **Check:** no spec polls for `toBe(0)`, `toBe(false)` or `toHaveCount(0)` of a side effect without first awaiting the triggering action's visible outcome; each criterion's named path appears in a test title.
+- **Guard:** none
+- **Paths:** `tests/**`
+
+### L-041 — A fake third-party API must copy its timing, not just its methods
+- **Date:** 2026-11-14
+- **Trigger:** Local-review round, escape: runtime #76
+- **Symptom:** the envelope tap called Spotify's `play()`, every spec passed, but on the preview nothing played until the guest scrolled to the Playlist section.
+- **Root cause:** Spotify's iFrame API creates its iframe with `loading="lazy"` and queues commands until the embed loads; the spec's fake counted `play()` at once and had no lazy iframe, so it could not show the delay.
+- **Rule:** before faking a third-party embed or SDK, read its shipped bundle for iframe attributes, queues and ready events, and make the fake defer the same way; a spec for "it happens without the user scrolling or waiting" asserts the element is still off-screen.
+- **Check:** the fake in the spec sets the same loading attribute and delivery rule as the vendor code, and the regression spec fails when the fix is reverted.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/scripts/**`
+
+### L-042 — A gesture-gated feature needs a gesture on every entry path
+- **Date:** 2026-11-14
+- **Trigger:** Local-review round, escape: runtime #76
+- **Symptom:** music started from the envelope tap on a first visit, but a returning guest, whose remembered name skips the envelope, got no music at all.
+- **Root cause:** audible autoplay needs a user gesture on every page load. The criteria covered the first-visit path and treated "returning guest" as a fallback, without asking whether the user wanted that path to autoplay too.
+- **Rule:** for anything that needs a user gesture (sound, fullscreen, clipboard, popups), list every way a visitor enters the page (first visit, remembered, skipped, deep link, reload) in the criteria, and say which gesture starts it on each, or that it does not start.
+- **Check:** the PR's acceptance criteria name each entry path and its gesture; a spec covers each path that is meant to start the feature.
+- **Guard:** none
+- **Paths:** `src/components/global/**`, `src/scripts/**`, `src/components/utility/BaseHead.astro`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders
