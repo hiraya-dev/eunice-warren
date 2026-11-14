@@ -205,6 +205,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/**`
 
+### L-042 — A gesture-gated feature needs a gesture on every entry path
+- **Date:** 2026-11-14
+- **Trigger:** Local-review round, escape: runtime #76
+- **Symptom:** music started from the envelope tap on a first visit, but a returning guest, whose remembered name skips the envelope, got no music at all.
+- **Root cause:** audible autoplay needs a user gesture on every page load. The criteria covered the first-visit path and treated "returning guest" as a fallback, without asking whether the user wanted that path to autoplay too.
+- **Rule:** for anything that needs a user gesture (sound, fullscreen, clipboard, popups), list every way a visitor enters the page (first visit, remembered, skipped, deep link, reload) in the criteria, and say which gesture starts it on each, or that it does not start.
+- **Check:** the PR's acceptance criteria name each entry path and its gesture; a spec covers each path that is meant to start the feature.
+- **Guard:** none
+- **Paths:** `src/components/global/**`, `src/scripts/**`, `src/components/utility/BaseHead.astro`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders

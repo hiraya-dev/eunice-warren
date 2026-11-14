@@ -102,6 +102,8 @@ const links = [
     getSpotifyPlayerState,
     hasSpotifyController,
     hasSpotifyEmbed,
+    rememberMusicPaused,
+    clearMusicPreference,
   } from "@/scripts/spotify-player";
 
   const initNavigation = () => {
@@ -132,8 +134,13 @@ const links = [
         }
         return;
       }
-      if (getSpotifyPlayerState() === "playing") pauseSpotify();
-      else playSpotify();
+      if (getSpotifyPlayerState() === "playing") {
+        pauseSpotify();
+        rememberMusicPaused();
+      } else {
+        playSpotify();
+        clearMusicPreference();
+      }
     }));
     const unsubscribeMusic = subscribeSpotifyPlayer((state) => musicWidgets.forEach((widget) => updateMusicWidget(widget, state)));
     ensureSpotifyPlayer();

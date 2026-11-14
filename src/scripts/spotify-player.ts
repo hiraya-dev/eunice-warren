@@ -5,6 +5,24 @@ export type SpotifyPlayerState =
   | "paused"
   | "blocked";
 
+export const MUSIC_PREFERENCE_KEY = "ew-music-v1";
+
+export const rememberMusicPaused = () => {
+  try {
+    window.localStorage.setItem(MUSIC_PREFERENCE_KEY, JSON.stringify({ paused: true, at: new Date().toISOString() }));
+  } catch {
+    // Storage may be disabled; playback remains usable without the preference.
+  }
+};
+
+export const clearMusicPreference = () => {
+  try {
+    window.localStorage.removeItem(MUSIC_PREFERENCE_KEY);
+  } catch {
+    // Storage may be disabled; playback remains usable without the preference.
+  }
+};
+
 interface SpotifyPlaybackEvent {
   data: { isPaused: boolean; position: number; duration: number };
 }
