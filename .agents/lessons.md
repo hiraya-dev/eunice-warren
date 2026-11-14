@@ -185,6 +185,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
 
+### L-040 — A "never happens" assertion must be able to fail
+- **Date:** 2026-11-14
+- **Trigger:** #76 CHANGES_REQUIRED
+- **Symptom:** a spec asserted Escape does not start music with `expect.poll(() => playCalls).toBe(0)`; it passed on its first read, before the Escape handler ran, so a regression would still pass. The same spec skipped one of the two code paths the criteria named ("Open my letter").
+- **Root cause:** polling waits for a value to appear; for an absence it returns at once. Nothing tied the read to the action having finished.
+- **Rule:** to assert something did not happen, first prove the setup is live (the spy exists), then wait for the action's own visible result (the overlay closed), then read once. Every code path a criterion names gets its own test.
+- **Check:** no spec polls for `toBe(0)`, `toBe(false)` or `toHaveCount(0)` of a side effect without first awaiting the triggering action's visible outcome; each criterion's named path appears in a test title.
+- **Guard:** none
+- **Paths:** `tests/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders
