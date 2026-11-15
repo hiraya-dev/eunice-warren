@@ -32,6 +32,7 @@ export const SWEEP_SPECS = new Set([
   "tests/rsvp-ticket.spec.ts",
   "tests/with-love.spec.ts",
   "tests/footer.spec.ts",
+  "tests/preloader.spec.ts",
 ]);
 
 // Agent instructions and agent tooling config are operational code: .mcp.json

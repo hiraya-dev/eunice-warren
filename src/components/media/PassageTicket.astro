@@ -1,0 +1,95 @@
+---
+import { Image } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+import postmark from "@/assets/images/invitation/postmark-ticket.png";
+
+interface Props extends HTMLAttributes<"div"> {
+  /** Set to `false` to omit the component. */
+  render?: boolean;
+  /** Loading hint for the stub postmark. */
+  loading?: "eager" | "lazy";
+  /** Fetch priority for the stub postmark. */
+  fetchpriority?: "high" | "low" | "auto";
+}
+
+const { render = true, loading, fetchpriority, class: className, ...rest } = Astro.props;
+---
+
+{
+  render && (
+    <div class:list={["invitation_ticket", className]} {...rest}>
+      <div class="invitation_ticket-main">
+        <div class="invitation_ticket-row invitation_ticket-header"><span>PASSAGE TICKET</span><span>Nº 011427</span></div>
+        <div class="invitation_route">
+          <span class="invitation_airport">MNL</span><span class="invitation_dash"></span><span class="invitation_via">via Caticlan</span><span class="invitation_dash"></span><span class="invitation_airport">MPH</span>
+        </div>
+        <div class="invitation_ticket-meta">
+          <div><span>ARRIVE BY</span><strong>Wed, Jan 13</strong></div>
+          <div><span>THEN</span><strong><span class="invitation_then-full">Boat to Cagban · 15 min</span><span class="invitation_then-short">Boat · 15 min</span></strong></div>
+        </div>
+      </div>
+      <div class="invitation_perforation" aria-hidden="true"></div>
+      <div class="invitation_ticket-stub">
+        <span>ADMIT ONE</span>
+        <Image src={postmark} alt="" width={100} height={77} widths={[100, 200]} sizes="(min-width: 62rem) 100px, 76px" loading={loading} fetchpriority={fetchpriority} />
+        <span>Nº 011427</span>
+      </div>
+    </div>
+  )
+}
+
+<style>
+  @layer components {
+    .invitation_ticket-header, .invitation_ticket-meta > div > span, .invitation_ticket-stub { font: var(--primary-regular) var(--eyebrow) / 1.1 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
+    .invitation_ticket { display: flex; height: 13.75rem; overflow: hidden; background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat; transform: rotate(-1.5deg); -webkit-mask-image: radial-gradient(circle at calc(100% - 8.3125rem) 0, transparent 0.8125rem, #000 0.84375rem), radial-gradient(circle at calc(100% - 8.3125rem) 100%, transparent 0.8125rem, #000 0.84375rem); mask-image: radial-gradient(circle at calc(100% - 8.3125rem) 0, transparent 0.8125rem, #000 0.84375rem), radial-gradient(circle at calc(100% - 8.3125rem) 100%, transparent 0.8125rem, #000 0.84375rem); -webkit-mask-size: 100% 50%; mask-size: 100% 50%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%; }
+    .invitation_ticket-main { display: flex; flex: 1; flex-direction: column; justify-content: space-between; min-width: 0; margin: var(--space-2) 0 var(--space-2) var(--space-2); padding: var(--space-3) var(--space-4); border-top: 0.0625rem solid var(--dark-900); border-bottom: 0.0625rem solid var(--dark-900); border-left: 0.0625rem solid var(--dark-900); }
+    .invitation_ticket-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+    .invitation_ticket-header { color: var(--accent-500); letter-spacing: var(--letter-spacing-wider); white-space: nowrap; }
+    .invitation_ticket-header span:last-child { color: var(--dark-900); letter-spacing: var(--letter-spacing-wide); }
+    .invitation_route { display: flex; align-items: center; gap: var(--space-2); }
+    .invitation_airport { font: var(--secondary-regular) 3rem / 1 var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }
+    .invitation_dash { flex: 1; min-width: 1rem; border-top: 0.09375rem dashed var(--dark-900); }
+    .invitation_via { font: italic var(--secondary-ultralight) 1.25rem / 1.2 var(--secondary-family); white-space: nowrap; }
+    .invitation_ticket-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); padding-top: var(--space-2); border-top: 0.0625rem solid var(--dark-900); }
+    .invitation_ticket-meta > div { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+    .invitation_ticket-meta > div > span { color: #4a5a85; letter-spacing: var(--letter-spacing-wider); }
+    .invitation_ticket-meta strong { font: var(--primary-regular) 1rem / 1.25 var(--mono-family); font-weight: var(--primary-regular); white-space: nowrap; }
+    .invitation_perforation { flex: 0 0 0.125rem; margin-block: var(--space-3); border-left: 0.125rem dashed var(--light-100); }
+    .invitation_ticket-stub { display: flex; width: 7.5rem; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); margin: var(--space-2) var(--space-2) var(--space-2) 0; color: var(--dark-900); letter-spacing: 0.14em; text-align: center; }
+    .invitation_ticket-stub img { width: 6.25rem; height: 4.375rem; object-fit: contain; mix-blend-mode: multiply; transform: rotate(-10deg); }
+    .invitation_ticket-stub span:last-child { letter-spacing: var(--letter-spacing-wide); }
+    .invitation_then-short { display: none; }
+  }
+
+  @media (min-width: 62rem) {
+    .invitation_ticket { height: 13.75rem; }
+    .invitation_airport { font-size: clamp(1.75rem, calc(4.464vw - 1.04rem), 3rem); }
+  }
+
+  @media (max-width: 61.999rem) {
+    .invitation_ticket { height: auto; padding: var(--space-2); }
+    .invitation_ticket-main { margin: 0; padding: var(--space-4) var(--space-4) var(--space-3); gap: var(--space-4); }
+    .invitation_ticket-stub { width: 5.75rem; margin: 0; }
+    .invitation_ticket-stub img { width: 4.75rem; height: 3.375rem; }
+    .invitation_ticket { -webkit-mask-image: radial-gradient(circle at calc(100% - 6.3125rem) 0, transparent 0.6875rem, #000 0.71875rem), radial-gradient(circle at calc(100% - 6.3125rem) 100%, transparent 0.6875rem, #000 0.71875rem); mask-image: radial-gradient(circle at calc(100% - 6.3125rem) 0, transparent 0.6875rem, #000 0.71875rem), radial-gradient(circle at calc(100% - 6.3125rem) 100%, transparent 0.6875rem, #000 0.71875rem); }
+    .invitation_airport { font-size: 1.75rem; }
+    .invitation_route { flex-wrap: wrap; justify-content: center; }
+    .invitation_route .invitation_dash:nth-of-type(4) { display: none; }
+    .invitation_via { order: 5; width: 100%; font-size: 1rem; text-align: center; }
+    .invitation_ticket-meta { column-gap: var(--space-4); }
+    .invitation_ticket-meta strong { font-size: 0.75rem; line-height: 1.333; }
+    .invitation_then-full { display: none; }
+    .invitation_then-short { display: inline; }
+  }
+
+  @media (max-width: 22.499rem) {
+    .invitation_route { flex-wrap: wrap; }
+    .invitation_airport { font-size: 1.5rem; }
+    .invitation_ticket-header { font-size: 0.625rem; letter-spacing: 0.04em; }
+    .invitation_ticket-meta { column-gap: var(--space-2); }
+    .invitation_ticket-meta > div > span { white-space: nowrap; }
+    .invitation_ticket-stub { width: 4.75rem; font-size: 0.625rem; }
+    .invitation_ticket-stub img { width: 4rem; height: 2.875rem; }
+    .invitation_ticket-stub span:first-child { letter-spacing: 0.04em; white-space: nowrap; }
+  }
+</style>
