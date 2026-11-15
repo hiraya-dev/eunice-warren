@@ -357,6 +357,8 @@ const holes = Array.from({ length: 8 });
       user-select: none;
       touch-action: pan-y;
     }
+    [data-gsap-slider-list-status="grab"] { cursor: grab; }
+    [data-gsap-slider-list-status="grabbing"] { cursor: grabbing; }
     .attire_item {
       position: relative;
       z-index: 1;
@@ -728,3 +730,7 @@ const holes = Array.from({ length: 8 });
     }
   }
 </style>
+
+<script>
+  import "@/scripts/gsap-slider";
+</script>
