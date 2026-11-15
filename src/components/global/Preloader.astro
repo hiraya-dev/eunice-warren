@@ -1,8 +1,18 @@
 ---
 import { Image } from "astro:assets";
 import parAvion from "@/assets/images/preloader/par-avion.png";
-import stampEw from "@/assets/images/preloader/stamp-ew.png";
 import postmark from "@/assets/images/preloader/postmark-received.png";
+import propPen from "@/assets/images/preloader/prop-pen.png";
+import propRibbon from "@/assets/images/preloader/prop-ribbon.png";
+import Stamp from "@/components/media/Stamp.astro";
+import PassageTicket from "@/components/media/PassageTicket.astro";
+import couple from "@/assets/images/hero/polaroid-couple.jpg";
+import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
+import keepsake from "@/assets/images/entourage/keepsake-sampaguita.jpg";
+import stampEw from "@/assets/images/stamps/ew.jpg";
+import stampPalm from "@/assets/images/stamps/palm.jpg";
+import stampParaw from "@/assets/images/stamps/paraw.jpg";
+import shell from "@/assets/images/explore/sticker-shell.svg";
 
 interface Props {
   /** Message destination for guests who cannot find an invite. */
@@ -23,6 +33,18 @@ const { messageHref = "#" } = Astro.props;
   data-lenis-prevent
 >
   <div class="preloader_layout">
+    <div class="preloader_table" aria-hidden="true" data-preloader-table>
+      <div class="preloader_prop preloader_ribbon" data-depth="1"><div class="preloader_float"><div class="preloader_body"><Image src={propRibbon} alt="" width={580} height={231} widths={[420, 580, 1160]} sizes="(max-width: 30rem) 420px, 580px" format="webp" loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_couple" data-depth="2"><div class="preloader_float"><div class="preloader_body preloader_polaroid"><Image src={couple} alt="" width={244} height={244} widths={[152, 244, 488]} sizes="(max-width: 30rem) 152px, 244px" loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_sunset" data-depth="2"><div class="preloader_float"><div class="preloader_body preloader_polaroid"><Image src={sunsetSail} alt="" width={226} height={226} widths={[142, 226, 452]} sizes="(max-width: 30rem) 142px, 226px" loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_keepsake" data-depth="3"><div class="preloader_float"><div class="preloader_body preloader_polaroid"><Image src={keepsake} alt="" width={148} height={148} widths={[148, 296]} sizes="148px" loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_ticket" data-depth="3"><div class="preloader_float"><div class="preloader_body"><PassageTicket loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_palm" data-depth="4"><div class="preloader_float"><div class="preloader_body"><Stamp><Image src={stampPalm} alt="" width={860} height={1110} widths={[104, 208]} sizes="104px" loading="eager" fetchpriority="low" /></Stamp></div></div></div>
+      <div class="preloader_prop preloader_paraw" data-depth="4"><div class="preloader_float"><div class="preloader_body"><Stamp><Image src={stampParaw} alt="" width={860} height={1110} widths={[96, 192]} sizes="96px" loading="eager" fetchpriority="low" /></Stamp></div></div></div>
+      <div class="preloader_prop preloader_shell" data-depth="5"><div class="preloader_float"><div class="preloader_body"><Image src={shell} alt="" width={78} height={78} loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_shell-small" data-depth="5"><div class="preloader_float"><div class="preloader_body"><Image src={shell} alt="" width={54} height={54} loading="eager" fetchpriority="low" /></div></div></div>
+      <div class="preloader_prop preloader_pen" data-depth="5"><div class="preloader_float"><div class="preloader_body"><Image src={propPen} alt="" width={460} height={353} widths={[460, 920]} sizes="460px" format="webp" loading="eager" fetchpriority="low" /></div></div></div>
+    </div>
     <p class="preloader_eyebrow">Eunice &amp; Warren · 01 · 14 · 2027</p>
     <h1 id="preloader-title" class="preloader_title">A letter is waiting for you.</h1>
     <form class="preloader_form" data-preloader-form novalidate>
@@ -30,7 +52,7 @@ const { messageHref = "#" } = Astro.props;
         <div class="preloader_envelope">
           <div class="preloader_face">
             <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} widths={[160, 320]} sizes="(max-width: 30rem) 104px, 160px" loading="eager" aria-hidden="true" />
-            <Image class="preloader_stamp-ew" src={stampEw} alt="" width={104} height={130} widths={[104, 208]} sizes="(max-width: 30rem) 64px, 104px" loading="eager" aria-hidden="true" />
+            <div class="preloader_stamp-ew" aria-hidden="true"><Stamp><Image src={stampEw} alt="" width={860} height={1110} widths={[104, 208]} sizes="(max-width: 30rem) 64px, 104px" loading="eager" /></Stamp></div>
             <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} widths={[176, 352]} sizes="176px" loading="eager" aria-hidden="true" />
             <div class="preloader_address">
               <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
@@ -214,18 +236,112 @@ const { messageHref = "#" } = Astro.props;
   document.addEventListener("astro:page-load", initPreloader);
 </script>
 
+<script is:inline>
+  if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+    document.querySelector("[data-preloader]")?.setAttribute("data-preloader-motion", "");
+  }
+</script>
+
+<script>
+  import { gsap } from "gsap";
+
+  /** Flat-lay motion: props settle in, drift with a fine pointer, and the close is CSS (`.is-closing`). */
+  const initTable = () => {
+    const overlay = document.querySelector<HTMLElement>("[data-preloader]");
+    const table = overlay?.querySelector<HTMLElement>("[data-preloader-table]");
+    if (!overlay || !table || table.dataset.tableReady === "true") return;
+    if (!document.documentElement.classList.contains("ew-preloader-pending")) return;
+    table.dataset.tableReady = "true";
+    const stage = overlay.querySelector<HTMLElement>(".preloader_stage");
+    // Lower depths first; equal depths keep their paint order.
+    const floats = [...table.querySelectorAll<HTMLElement>("[data-depth]")]
+      .map((prop, index) => ({ prop, index, depth: Number(prop.dataset.depth) }))
+      .sort((a, b) => a.depth - b.depth || a.index - b.index)
+      .map(({ prop }) => prop.querySelector<HTMLElement>(".preloader_float")!);
+    const visible = () => floats.filter((float) => float.getClientRects().length > 0);
+    const media = gsap.matchMedia();
+    let settled = false;
+    let stopPointer = () => {};
+
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      const props = visible();
+      const timeline = gsap.timeline({
+        onComplete: () => { settled = true; },
+      });
+      if (stage) timeline.fromTo(stage, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", clearProps: "opacity,transform" });
+      timeline.fromTo(
+        props,
+        { autoAlpha: 0, y: -24, scale: 1.06, rotation: (index: number) => (index % 2 ? 4 : -4) },
+        { autoAlpha: 1, y: 0, scale: 1, rotation: 0, duration: 0.9, stagger: 0.07, ease: "power3.out", clearProps: "visibility,opacity,transform" },
+        stage ? "<0.1" : 0,
+      );
+      // The tweens have rendered their hidden start state inline, so the CSS pre-paint gate can go.
+      overlay.removeAttribute("data-preloader-motion");
+      return () => timeline.kill();
+    });
+
+    media.add("(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine)", () => {
+      let frame = 0;
+      let nx = 0;
+      let ny = 0;
+      let movers: { x: (value: number) => void; y: (value: number) => void; depth: number }[] | null = null;
+      const apply = () => {
+        frame = 0;
+        if (!settled) return;
+        movers ??= floats.map((float) => ({
+          depth: Number(float.parentElement!.dataset.depth),
+          x: gsap.quickTo(float, "x", { duration: 0.6, ease: "power3.out" }),
+          y: gsap.quickTo(float, "y", { duration: 0.6, ease: "power3.out" }),
+        }));
+        for (const mover of movers) {
+          mover.x(nx * mover.depth * 4);
+          mover.y(ny * mover.depth * 4);
+        }
+      };
+      const onMove = (event: PointerEvent) => {
+        nx = (event.clientX / window.innerWidth) * 2 - 1;
+        ny = (event.clientY / window.innerHeight) * 2 - 1;
+        if (!frame) frame = requestAnimationFrame(apply);
+      };
+      const stop = () => {
+        window.removeEventListener("pointermove", onMove);
+        cancelAnimationFrame(frame);
+        frame = 0;
+      };
+      stopPointer = stop;
+      window.addEventListener("pointermove", onMove, { passive: true });
+      return stop;
+    });
+
+    // Stop listening as soon as the close starts; the exit itself is CSS.
+    const closing = new MutationObserver(() => {
+      if (overlay.classList.contains("is-closing")) { stopPointer(); closing.disconnect(); }
+    });
+    closing.observe(overlay, { attributes: true, attributeFilter: ["class"] });
+
+    document.addEventListener("astro:before-swap", () => {
+      closing.disconnect();
+      media.revert();
+      delete table.dataset.tableReady;
+    }, { once: true });
+  };
+
+  initTable();
+  document.addEventListener("astro:page-load", initTable);
+</script>
+
 <style is:global>
   @layer components {
     body.preloader-open { overflow: hidden; }
-    .preloader_wrap { position: fixed; z-index: 100; inset: 0; display: none; overflow-x: clip; overflow-y: auto; background: var(--light-100) url("../../assets/textures/grain-light.jpg") center / 32rem repeat; color: var(--dark-900); opacity: 1; }
+    .preloader_wrap { position: fixed; z-index: 100; inset: 0; display: none; overflow-x: clip; overflow-y: auto; background-color: #ede4d3; background-image: radial-gradient(ellipse 70% 65% at 42% 38%, rgb(255 250 240 / 55%) 0%, transparent 60%), radial-gradient(ellipse 120% 100% at 50% 50%, transparent 55%, rgb(31 47 92 / 10%) 100%), url("../../assets/textures/grain-light.jpg"); background-position: 0 0, 0 0, center; background-size: auto, auto, 32rem; background-repeat: no-repeat, no-repeat, repeat; background-blend-mode: normal, normal, multiply; color: var(--dark-900); opacity: 1; }
     html.ew-preloader-pending .preloader_wrap { display: block; }
     .preloader_wrap [hidden] { display: none !important; }
-    .preloader_layout { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100%; align-content: center; justify-items: center; gap: 2.5rem; padding: 3rem var(--site-gutter); box-sizing: border-box; }
+    .preloader_layout { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100%; align-content: center; justify-items: center; gap: 2.5rem; padding: 3rem var(--site-gutter); box-sizing: border-box; }
     .preloader_eyebrow { margin: 0; color: var(--dark-700); font: var(--eyebrow) / 0.875rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-align: center; text-transform: uppercase; }
     .preloader_title { max-width: 100%; margin: -1.625rem 0 0; font: var(--secondary-ultralight) 2.75rem / 3rem var(--secondary-family); font-style: italic; letter-spacing: var(--letter-spacing-snug); text-align: center; }
     .preloader_form { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.25rem; width: 100%; }
     .preloader_stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); width: min(45rem, 100%); }
-    .preloader_envelope { width: 100%; aspect-ratio: 12 / 7; padding: .75rem; box-sizing: border-box; transform: rotate(-1.5deg); background: repeating-linear-gradient(135deg, var(--accent-500) 0 1rem, var(--light-200) 1rem 1.625rem, var(--dark-900) 1.625rem 2.625rem, var(--light-200) 2.625rem 3.25rem); box-shadow: 0 1.125rem 2.5rem rgb(31 47 92 / 14%); }
+    .preloader_envelope { width: 100%; aspect-ratio: 12 / 7; padding: .75rem; box-sizing: border-box; transform: rotate(-1.5deg); background: repeating-linear-gradient(135deg, var(--accent-500) 0 1rem, var(--light-200) 1rem 1.625rem, var(--dark-900) 1.625rem 2.625rem, var(--light-200) 2.625rem 3.25rem); box-shadow: .875rem 1.625rem 2.75rem rgb(31 47 92 / 24%), .125rem .25rem .375rem rgb(31 47 92 / 10%); }
     .preloader_face { position: relative; display: flex; height: 100%; align-items: flex-end; padding: 3rem 3.5rem; box-sizing: border-box; background: var(--light-200) url("../../assets/textures/postcard-paper.jpg") center / 32rem repeat; }
     .preloader_par-avion { position: absolute; top: 3rem; left: 3.5rem; width: 10rem; height: auto; mix-blend-mode: multiply; transform: rotate(-4deg); }
     .preloader_stamp-ew { position: absolute; top: 2.25rem; right: 2.75rem; width: 6.5rem; height: auto; transform: rotate(4deg); }
@@ -244,10 +360,54 @@ const { messageHref = "#" } = Astro.props;
     .preloader_admits { margin: 0; font: .875rem / 1.25rem var(--primary-family); }
     .preloader_turnstile { min-height: 0; }
     .preloader_turnstile:has(iframe) { min-height: 4.0625rem; }
+    /* Flat-lay table. Every length is a multiple of --u (1px at the 1440 artboard, 1px per px on a 390 phone),
+       so props scale with the viewport; anchors are the nearest edges. */
+    .preloader_table { --u: min(0.069444cqw, 0.0625rem); --v: 0.0625rem; position: absolute; z-index: -1; inset: 0; overflow: clip; container-type: size; pointer-events: none; }
+    .preloader_prop { position: absolute; translate: 0 0; }
+    .preloader_float, .preloader_body { display: block; }
+    .preloader_body { transform: rotate(var(--r, 0deg)); }
+    .preloader_prop img { display: block; width: 100%; height: auto; }
+    .preloader_polaroid { box-sizing: border-box; padding: calc(var(--pt) * var(--u)) calc(var(--ps) * var(--u)) calc(var(--pb) * var(--u)); background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: calc(12 * var(--u)) calc(20 * var(--u)) calc(30 * var(--u)) rgb(31 47 92 / 20%), calc(2 * var(--u)) calc(3 * var(--u)) calc(4 * var(--u)) rgb(31 47 92 / 10%); }
+    .preloader_polaroid img { aspect-ratio: 1; object-fit: cover; }
+    .preloader_ribbon { --ex: -9rem; --ey: 5rem; left: calc(-60 * var(--u)); bottom: min(calc(28.5 * var(--u)), calc(50cqh - 421.5 * var(--v))); width: calc(580 * var(--u)); }
+    .preloader_couple { --ex: -9rem; --ey: -7.5rem; --r: -11deg; --pt: 13; --ps: 13; --pb: 46; top: min(calc(-44 * var(--u)), calc(50cqh - 494 * var(--v))); left: calc(-36 * var(--u)); width: calc(270 * var(--u)); }
+    .preloader_sunset { --ex: 9rem; --ey: 7.5rem; --r: 9deg; --pt: 12; --ps: 12; --pb: 42; right: calc(-6 * var(--u)); bottom: min(calc(2 * var(--u)), calc(50cqh - 448 * var(--v))); width: calc(250 * var(--u)); }
+    .preloader_keepsake { --ex: -8rem; --ey: 6rem; --r: 7deg; --pt: 10; --ps: 10; --pb: 32; left: calc(34 * var(--u)); bottom: calc(50cqh - 270 * var(--v)); width: calc(168 * var(--u)); }
+    .preloader_keepsake .preloader_polaroid { box-shadow: calc(10 * var(--u)) calc(16 * var(--u)) calc(24 * var(--u)) rgb(31 47 92 / 18%), calc(2 * var(--u)) calc(3 * var(--u)) calc(4 * var(--u)) rgb(31 47 92 / 8%); }
+    .preloader_ticket { --ex: 9rem; --ey: -6rem; --r: 13.5deg; top: min(calc(-10 * var(--u)), calc(50cqh - 460 * var(--v))); right: calc(-134 * var(--u)); width: 35.875rem; transform-origin: 100% 0; filter: drop-shadow(.5rem .875rem 1.125rem rgb(31 47 92 / 22%)); }
+    .preloader_palm { --ex: -7.5rem; --ey: -4rem; --r: -14deg; top: calc(50cqh - 90 * var(--v)); left: calc(150 * var(--u)); width: calc(104 * var(--u)); }
+    .preloader_paraw { --ex: 8rem; --ey: -3rem; --r: 11deg; right: calc(58 * var(--u)); bottom: calc(50cqh - 74 * var(--v)); width: calc(96 * var(--u)); }
+    .preloader_shell { --ex: -8rem; --ey: -6rem; --r: -24deg; top: calc(50cqh - 354 * var(--v)); left: calc(250 * var(--u)); width: calc(78 * var(--u)); }
+    .preloader_shell-small { --ex: 8rem; --ey: 4rem; --r: 38deg; right: calc(210 * var(--u)); bottom: calc(50cqh - 164 * var(--v)); width: calc(54 * var(--u)); }
+    .preloader_shell img, .preloader_shell-small img { filter: drop-shadow(calc(6 * var(--u)) calc(9 * var(--u)) calc(8 * var(--u)) rgb(31 47 92 / 22%)); }
+    .preloader_pen { --ex: 8rem; --ey: 5rem; --r: -18.7deg; left: calc(50cqw + 135 * var(--v)); bottom: calc(50cqh - 393 * var(--v)); width: calc(460 * var(--u)); }
+    html.ew-preloader-pending [data-preloader-motion] .preloader_stage { opacity: 0; }
+    [data-preloader-motion] .preloader_float { visibility: hidden; }
     .preloader_wrap.is-closing { animation: preloader-fade .3s ease-out .4s forwards; }
     .preloader_wrap.is-closing .preloader_stage { animation: preloader-lift .65s cubic-bezier(.23, 1, .32, 1) forwards; }
     @keyframes preloader-lift { to { opacity: 0; transform: translateY(-2rem); } }
     @keyframes preloader-fade { to { opacity: 0; } }
+    @media (min-width: 62rem) and (max-width: 74.999rem) {
+      .preloader_keepsake, .preloader_palm, .preloader_shell-small { display: none; }
+      .preloader_ticket { scale: .8; }
+      .preloader_sunset { right: calc(-50 * var(--u)); }
+    }
+    /* Narrow screens keep only props that fit the free bands above and below the centre stack. */
+    @media (max-width: 61.999rem) {
+      .preloader_table { --u: min(0.25641cqw, 0.078125rem); }
+      .preloader_prop { display: none; }
+      .preloader_ribbon { left: calc(-170 * var(--u)); bottom: calc(-14 * var(--u)); width: calc(420 * var(--u)); }
+      .preloader_couple { --pt: 9; --ps: 9; --pb: 30; top: calc(-58 * var(--u)); left: calc(-46 * var(--u)); width: calc(170 * var(--u)); }
+      .preloader_ticket { --r: 14.5deg; top: calc(-62 * var(--u)); right: calc(-156 * var(--u)); width: 21.875rem; }
+      .preloader_sunset { --pt: 8; --ps: 8; --pb: 28; right: calc(-14 * var(--u)); bottom: calc(-46 * var(--u)); width: calc(158 * var(--u)); }
+      .preloader_shell { top: auto; bottom: calc(30 * var(--u)); left: calc(150 * var(--u)); width: calc(44 * var(--u)); }
+    }
+    @media (max-width: 30rem) {
+      .preloader_table { --u: min(0.25641cqw, 0.0625rem); }
+    }
+    @media (max-width: 61.999rem) and (min-height: 60rem), (max-width: 30rem) and (min-height: 50rem) {
+      .preloader_ribbon, .preloader_couple, .preloader_ticket, .preloader_sunset, .preloader_shell { display: block; }
+    }
     @media (max-width: 30rem) {
       .preloader_layout { align-content: start; gap: 1.75rem; padding: 2rem 1.25rem 3rem; }
       .preloader_title { margin-top: -.75rem; font-size: 2rem; line-height: 2.25rem; }
@@ -265,9 +425,18 @@ const { messageHref = "#" } = Astro.props;
       .preloader_primary { position: static; width: 100%; transform: none; justify-content: center; text-align: center; padding: .9375rem 1.5rem; }
       .preloader_browse { margin-top: -.25rem; }
     }
+    @media (max-width: 30rem) and (min-height: 50rem) {
+      .preloader_layout { align-content: center; }
+    }
     @media (max-width: 22.5rem) {
       .preloader_par-avion { top: 1.25rem; left: 1.25rem; width: 5rem; }
       .preloader_stamp-ew { width: 3.25rem; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .preloader_table { transition: scale .7s cubic-bezier(.55, .085, .68, .53); }
+      .preloader_prop { transition: translate .7s cubic-bezier(.55, .085, .68, .53), opacity .7s cubic-bezier(.55, .085, .68, .53); }
+      .preloader_wrap.is-closing .preloader_table { scale: 1.15; }
+      .preloader_wrap.is-closing .preloader_prop { translate: var(--ex) var(--ey); opacity: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       .preloader_wrap.is-closing .preloader_stage { animation: none; }
