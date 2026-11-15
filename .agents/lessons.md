@@ -228,3 +228,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** for each lookup in the diff, "what does a key with no entry return?" is answered by the broad path, and a test pins it. A new `SPEC_SOURCES` entry lists every component whose markup the spec asserts, not only its sibling spec's sources.
 - **Guard:** none
 - **Paths:** `scripts/ci/**`
+
+### L-024 — A compact layout scales to the space it gets
+- **Date:** 2026-11-15
+- **Trigger:** #77 Local-review round 2 (the user's correction: the preloader's compact envelope stayed at the 350px phone width on 481–748px windows and looked small)
+- **Symptom:** a layout that switches to its compact form by container width keeps phone-sized parts on tablet and narrow-desktop widths, leaving the component small with empty space around it.
+- **Root cause:** the compact rules were the old phone rules moved under a wider container query, with fixed widths and px sizes tuned to 350px.
+- **Rule:** when a compact layout serves more than phone widths, size it to its container (`min(100%, <cap>)`) and scale its internals with container units, clamped so the phone values hold at the phone width. Re-check prop and decoration gates, since the component grows taller.
+- **Check:** the review pack measures the component at the narrowest and widest widths of its compact band, and the overlap sweep covers that band.
+- **Guard:** taste — the user's call on how large the compact envelope reads; no test measures "too small"
+- **Paths:** `src/components/**`

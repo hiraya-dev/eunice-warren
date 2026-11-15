@@ -84,7 +84,7 @@ test.describe("guest preloader", () => {
       ".preloader_message",
       ".preloader_primary",
     ];
-    for (const [width, height] of [[390, 844], [488, 1000], [600, 1000], [768, 1024], [1440, 900]]) {
+    for (const [width, height] of [[390, 844], [488, 1000], [600, 1000], [640, 1000], [720, 1000], [768, 1024], [1440, 900]]) {
       await page.setViewportSize({ width, height });
       await page.goto("/");
       const overlay = preloader(page);

@@ -51,8 +51,8 @@ const { messageHref = "#" } = Astro.props;
       <div class="preloader_stage">
         <div class="preloader_envelope">
           <div class="preloader_face">
-            <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} widths={[160, 320]} sizes="(max-width: 30rem) 104px, 160px" loading="eager" aria-hidden="true" />
-            <div class="preloader_stamp-ew" aria-hidden="true"><Stamp><Image src={stampEw} alt="" width={860} height={1110} widths={[104, 208]} sizes="(max-width: 30rem) 64px, 104px" loading="eager" /></Stamp></div>
+            <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} widths={[160, 320]} sizes="(max-width: 30rem) 104px, (max-width: 47rem) 190px, 160px" loading="eager" aria-hidden="true" />
+            <div class="preloader_stamp-ew" aria-hidden="true"><Stamp><Image src={stampEw} alt="" width={860} height={1110} widths={[104, 208]} sizes="(max-width: 30rem) 64px, (max-width: 47rem) 117px, 104px" loading="eager" /></Stamp></div>
             <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} widths={[176, 352]} sizes="176px" loading="eager" aria-hidden="true" />
             <div class="preloader_address">
               <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
@@ -410,7 +410,9 @@ const { messageHref = "#" } = Astro.props;
     @media (max-width: 30rem) {
       .preloader_table { --u: min(0.25641cqw, 0.0625rem); }
     }
-    @media (max-width: 61.999rem) and (min-height: 60rem), (max-width: 30rem) and (min-height: 50rem) {
+    /* Props show only when the free bands above and below the centre stack can hold them. The compact envelope
+       grows with the window (up to 640px wide), so from 35rem the centre stack needs a taller window. */
+    @media (max-width: 30rem) and (min-height: 53rem), (min-width: 30rem) and (max-width: 34.999rem) and (min-height: 62rem), (min-width: 35rem) and (max-width: 46.8rem) and (min-height: 69rem), (min-width: 46.8125rem) and (max-width: 61.999rem) and (min-height: 60rem) {
       .preloader_ribbon, .preloader_couple, .preloader_ticket, .preloader_sunset, .preloader_shell { display: block; }
     }
     @media (max-width: 30rem) {
@@ -423,16 +425,19 @@ const { messageHref = "#" } = Astro.props;
     /* The envelope picks its layout by its own width: the desktop face (absolute stamps, postmark and button)
        needs about 44rem, so anything narrower stacks the button under a compact envelope. */
     @container preloader-form (max-width: 43.999rem) {
-      .preloader_stage { width: min(21.875rem, 100%); gap: 1.25rem; }
-      .preloader_envelope { aspect-ratio: 7 / 5; padding: .5625rem; transform: rotate(-2deg); }
-      .preloader_face { padding: 1.375rem; }
-      .preloader_par-avion { top: 1.625rem; left: 1.625rem; width: 6.5rem; }
-      .preloader_stamp-ew { top: 1.25rem; right: 1.375rem; width: 4rem; }
+      /* The stage fills the form up to 40rem. --c is 1px at a 350px envelope and grows with it, so every
+         envelope internal below equals the phone value at 350px and scales in proportion up to the cap. */
+      .preloader_stage { container: preloader-stage / inline-size; --c: max(.0625rem, .285714cqw); width: min(100%, 40rem); gap: 1.25rem; }
+      .preloader_envelope { aspect-ratio: 7 / 5; padding: calc(9 * var(--c)); transform: rotate(-2deg); }
+      .preloader_face { padding: calc(22 * var(--c)); }
+      .preloader_par-avion { top: calc(26 * var(--c)); left: calc(26 * var(--c)); width: calc(104 * var(--c)); }
+      .preloader_stamp-ew { top: calc(20 * var(--c)); right: calc(22 * var(--c)); width: calc(64 * var(--c)); }
       .preloader_postmark { display: none; }
-      .preloader_address { gap: .625rem; }
+      .preloader_address { gap: calc(10 * var(--c)); width: 100%; }
+      .preloader_address label { font-size: max(.75rem, calc(12 * var(--c))); line-height: max(.875rem, calc(14 * var(--c))); }
       .preloader_address > .preloader_hint { display: none; }
       .preloader_hint-mobile { display: block; text-align: center; }
-      .preloader_address input { font-size: 2rem; line-height: 2.25rem; }
+      .preloader_address input { padding-bottom: calc(6 * var(--c)); font-size: calc(32 * var(--c)); line-height: calc(36 * var(--c)); }
       .preloader_primary { position: static; width: 100%; transform: none; justify-content: center; text-align: center; padding: .9375rem 1.5rem; }
       .preloader_browse { margin-top: -.25rem; }
     }
