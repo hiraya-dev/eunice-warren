@@ -165,7 +165,8 @@ const localCoverage = (element: Element) => {
     hasNoInteriorGap;
 };
 
-test.describe("ribbon marquee", () => {
+// Skipped while the section is hidden from the home page (src/pages/index.astro); un-skip when it returns.
+test.describe.skip("ribbon marquee", () => {
   test("hides duplicated collections from assistive tech", { tag: ["@single"] }, async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#ribbons")).toHaveCount(1);
