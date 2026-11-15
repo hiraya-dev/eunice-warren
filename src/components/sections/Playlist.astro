@@ -190,6 +190,10 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
 
 <script>
   import { getGuest } from "@/lib/guest";
+  import {
+    ensureSpotifyPlayer,
+    subscribeSpotifyPlayer,
+  } from "@/scripts/spotify-player";
   const initPlaylist = () => {
     const section = document.querySelector<HTMLElement>("#playlist");
     if (!section || section.dataset.playlistInitialized === "true") return;
@@ -202,43 +206,18 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       if (nameInput && guestName && !nameInput.value) nameInput.value = guestName;
     };
     document.addEventListener("ew:guest", onGuest);
-    const embed = section.querySelector<HTMLElement>("[data-playlist-embed]");
-    const embedTarget = section.querySelector<HTMLElement>(
-      "[data-playlist-embed-target]",
-    );
     const record = section.querySelector<SVGElement>("[data-playlist-record]");
     const tonearm = section.querySelector<SVGElement>(
       "[data-playlist-tonearm]",
     );
-    if (!embed || !embedTarget || !record || !tonearm) return;
-    interface SpotifyPlaybackEvent {
-      data: { isPaused: boolean; position: number; duration: number };
-    }
-    interface SpotifyController {
-      addListener: (
-        event: string,
-        callback: (event: SpotifyPlaybackEvent) => void,
-      ) => void;
-    }
-    interface SpotifyAPI {
-      createController: (
-        element: HTMLElement,
-        options: { uri: string; width: string; height: number; theme: "dark" },
-        callback: (controller: SpotifyController) => void,
-      ) => void;
-    }
-    let controller: SpotifyController | undefined;
+    if (!record || !tonearm) return;
     let playing = false;
     let frame = 0;
-    let timeout: number | undefined;
     let armStartTimeout: number | undefined;
     let pauseTimeout: number | undefined;
-    let observer: IntersectionObserver | undefined;
-    let script: HTMLScriptElement | undefined;
     let recordAngle = 0;
     let lastFrameAt = 0;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const playlistUri = embed.dataset.uri;
     const spinDegreesPerMillisecond = 360 / 1800;
     const decelerationDuration = 1000;
     const setRecordAngle = (angle: number) => {
@@ -339,53 +318,11 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         armStartTimeout = window.setTimeout(startSpin, 600);
       }
     };
-    const fail = () => {
-      if (timeout) window.clearTimeout(timeout);
-      if (embed.querySelector("iframe")) embed.classList.add("is-ready");
-    };
-    const ready = (api: SpotifyAPI) => {
-      if (controller || !playlistUri) return;
-      api.createController(
-        embedTarget,
-        { uri: playlistUri, width: "100%", height: 80, theme: "dark" },
-        (created) => {
-          controller = created;
-          embed.classList.add("is-ready");
-          if (timeout) window.clearTimeout(timeout);
-          controller.addListener("playback_update", (event) => {
-            if (event.data.isPaused) pause();
-            else play();
-          });
-        },
-      );
-    };
-    const load = () => {
-      const spotify = (window as Window & { IFrameAPI?: SpotifyAPI }).IFrameAPI;
-      if (spotify) return ready(spotify);
-      (
-        window as Window & {
-          onSpotifyIframeApiReady?: (api: SpotifyAPI) => void;
-        }
-      ).onSpotifyIframeApiReady = ready;
-      script = document.createElement("script");
-      script.src = "https://open.spotify.com/embed/iframe-api/v1";
-      script.async = true;
-      script.addEventListener("error", fail, { once: true });
-      document.head.appendChild(script);
-      timeout = window.setTimeout(() => {
-        if (!controller) fail();
-      }, 10000);
-    };
-    observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          load();
-          observer?.disconnect();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(section);
+    const unsubscribeSpotify = subscribeSpotifyPlayer((state) => {
+      if (state === "playing") play();
+      else if (state === "paused" || state === "blocked") pause();
+    });
+    ensureSpotifyPlayer();
     tonearm.style.transform = "rotate(-30deg)";
     reducedMotion.addEventListener("change", handleReducedMotion);
     document.addEventListener(
@@ -394,9 +331,9 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         stopFrame();
         if (armStartTimeout) window.clearTimeout(armStartTimeout);
         if (pauseTimeout) window.clearTimeout(pauseTimeout);
+        unsubscribeSpotify();
+        document.removeEventListener("ew:guest", onGuest);
         reducedMotion.removeEventListener("change", handleReducedMotion);
-        observer?.disconnect();
-        if (timeout) window.clearTimeout(timeout);
       },
       { once: true },
     );

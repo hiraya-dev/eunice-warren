@@ -25,11 +25,12 @@ test("shared scripts that reach the layout are broad", () => {
   assert.equal(choose(["src/scripts/fade-in.ts"]).mode, "broad");
   assert.equal(choose(["src/scripts/scroll.ts"]).mode, "broad");
 });
-test("Nav stops at its three owning specs", () => {
+test("Nav stops at its four owning specs", () => {
   const result = choose(["src/components/global/Nav.astro"]);
   assert.equal(result.mode, "specs");
   assert.deepEqual(result.specs, [
     "tests/button-hover.spec.ts",
+    "tests/music.spec.ts",
     "tests/nav-hover.spec.ts",
     "tests/nav-scrollbar.spec.ts",
     "tests/nav.spec.ts",
