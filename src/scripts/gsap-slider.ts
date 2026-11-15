@@ -36,6 +36,48 @@ function initBasicGSAPSlider() {
       );
       if (!collection || !track || !items.length) return;
 
+      const styles = getComputedStyle(root);
+      const statusVar = styles.getPropertyValue("--slider-status").trim();
+      const rect = items[0].getBoundingClientRect();
+      const marginRight = parseFloat(getComputedStyle(items[0]).marginRight);
+      const slideW = rect.width + marginRight;
+      const spv = Math.max(
+        1,
+        Math.min(collection.clientWidth / slideW, items.length),
+      );
+      const sliderEnabled = statusVar === "on" && spv < items.length;
+      root.setAttribute(
+        "data-gsap-slider-status",
+        sliderEnabled ? "active" : "not-active",
+      );
+      track.onmouseenter = null;
+      track.onmouseleave = null;
+      if (!sliderEnabled) {
+        gsap.set(track, { clearProps: "transform" });
+        root.removeAttribute("role");
+        root.removeAttribute("aria-roledescription");
+        collection.removeAttribute("role");
+        collection.removeAttribute("aria-roledescription");
+        collection.removeAttribute("aria-label");
+        items.forEach((slide) => {
+          slide.removeAttribute("role");
+          slide.removeAttribute("aria-roledescription");
+          slide.removeAttribute("aria-label");
+          slide.removeAttribute("aria-hidden");
+          slide.removeAttribute("aria-selected");
+          slide.removeAttribute("tabindex");
+          slide.removeAttribute("data-gsap-slider-item-status");
+        });
+        controls.forEach((button) => {
+          button.removeAttribute("role");
+          button.disabled = false;
+          button.removeAttribute("aria-disabled");
+          button.removeAttribute("data-gsap-slider-control-status");
+        });
+        track.removeAttribute("data-gsap-slider-list-status");
+        return;
+      }
+
       root.setAttribute("role", "region");
       root.setAttribute("aria-roledescription", "carousel");
       collection.setAttribute("role", "group");
@@ -59,22 +101,6 @@ function initBasicGSAPSlider() {
         button.disabled = true;
         button.setAttribute("aria-disabled", "true");
       });
-
-      const styles = getComputedStyle(root);
-      const statusVar = styles.getPropertyValue("--slider-status").trim();
-      const rect = items[0].getBoundingClientRect();
-      const marginRight = parseFloat(getComputedStyle(items[0]).marginRight);
-      const slideW = rect.width + marginRight;
-      const spv = Math.max(
-        1,
-        Math.min(collection.clientWidth / slideW, items.length),
-      );
-      const sliderEnabled = statusVar === "on" && spv < items.length;
-      root.setAttribute(
-        "data-gsap-slider-status",
-        sliderEnabled ? "active" : "not-active",
-      );
-      if (!sliderEnabled) return;
 
       track.onmouseenter = () =>
         track.setAttribute("data-gsap-slider-list-status", "grab");

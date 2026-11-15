@@ -141,7 +141,34 @@ test.describe("attire section", () => {
     for (const row of await rows.all()) {
       await expect(row).toHaveAttribute("data-gsap-slider-status", "not-active");
       await expect(row.locator("[data-gsap-slider-controls]")).toBeHidden();
-      await expect(row.locator("[data-gsap-slider-item]")).toHaveCount(lookItemCount);
+      const items = row.locator("[data-gsap-slider-item]");
+      await expect(items).toHaveCount(lookItemCount);
+      // The looks themselves stay readable; their decorations (pegs) are aria-hidden.
+      await expect(row.locator('[data-gsap-slider-item][aria-hidden="true"]')).toHaveCount(0);
+      for (const item of await items.all()) {
+        await expect(item.locator("img")).toBeVisible();
+      }
     }
+  });
+
+  test("clears the mobile slider position when resized to desktop", { tag: ["@sweep", "@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    const row = page.locator("#attire [data-gsap-slider-init]").first();
+    const track = row.locator("[data-gsap-slider-list]");
+    await row.locator('[data-gsap-slider-control="next"]').click();
+    await expect(row.locator("[data-gsap-slider-counter]")).toHaveText(/02\s*\/\s*04/);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect
+      .poll(() => row.getAttribute("data-gsap-slider-status"))
+      .toBe("not-active");
+    await expect
+      .poll(() => track.evaluate((element) => {
+        const transform = new DOMMatrix(getComputedStyle(element).transform);
+        return { x: transform.e, y: transform.f };
+      }))
+      .toEqual({ x: 0, y: 0 });
+    await expect(row.locator('[data-gsap-slider-item][aria-hidden="true"]')).toHaveCount(0);
   });
 });
