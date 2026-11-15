@@ -207,6 +207,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/styles/**`, `src/layouts/**`
 
+### L-025 — A shared script must handle the "off" state its first caller never hit
+- **Date:** 2026-11-16
+- **Trigger:** #79 CHANGES_REQUIRED (the GSAP slider moved from Explore into `src/scripts/gsap-slider.ts` for the Attire looks rows)
+- **Symptom:** on desktop, where the Attire slider is off, every polaroid was `aria-hidden` and untabbable, and a phone swiped to look 3 then rotated past 48rem kept the desktop row shifted by the old inline transform.
+- **Root cause:** the script set the carousel ARIA and the track transform before checking whether the slider was enabled, and returned early without cleanup. Explore's slider is always on, so that path never ran until a second caller used it.
+- **Rule:** when a script becomes shared, read it for every state the new caller can put it in (off at a breakpoint, a resize between states, fewer items than fit) and make each state set up, and undo, its own attributes, transforms and listeners.
+- **Check:** the new caller's spec covers the inactive state (no item `aria-hidden`, no leftover transform) and a resize from active to inactive.
+- **Guard:** none
+- **Paths:** `src/scripts/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

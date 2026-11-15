@@ -1,88 +1,176 @@
+---
+import { Image } from "astro:assets";
+import Arrow from "@/assets/icons/arrow-full.svg";
+import ladiesFlowy from "@/assets/images/attire/ladies-flowy.jpg";
+import ladiesDraped from "@/assets/images/attire/ladies-draped.jpg";
+import ladiesSlip from "@/assets/images/attire/ladies-slip.jpg";
+import ladiesCoord from "@/assets/images/attire/ladies-coord.jpg";
+import gentsLongSleeve from "@/assets/images/attire/gents-long-sleeve.jpg";
+import gentsShortSleeve from "@/assets/images/attire/gents-short-sleeve.jpg";
+import gentsCoord from "@/assets/images/attire/gents-coord.jpg";
+import gentsChineseCollar from "@/assets/images/attire/gents-chinese-collar.jpg";
+import postmark from "@/assets/images/attire/postmark-no-white.png";
+
+const colours = [
+  { name: "Tiffany blue", key: "tiffany" },
+  { name: "Seafoam green", key: "seafoam" },
+  { name: "Champagne", key: "champagne" },
+  { name: "Gold", key: "gold" },
+];
+
+const looks = [
+  {
+    id: "ladies",
+    label: "Looks for the ladies",
+    heading: "ladies",
+    lead: "Opt for solid-coloured, monochromatic dresses in elegant styles.",
+    rest: " Long, flowy dresses, draped silhouettes, slip dresses and sophisticated co-ord sets are welcome.",
+    items: [
+      { caption: "Long & flowy", colour: "Tiffany", src: ladiesFlowy, alt: "Tiffany blue chiffon maxi dress with thin straps" },
+      { caption: "Draped", colour: "Seafoam", src: ladiesDraped, alt: "Seafoam green one-shoulder draped satin gown" },
+      { caption: "Slip dress", colour: "Champagne", src: ladiesSlip, alt: "Champagne silk slip dress with a cowl neckline" },
+      { caption: "Co-ord set", colour: "Gold", src: ladiesCoord, alt: "Gold satin halter top with matching wide-leg trousers" },
+    ],
+  },
+  {
+    id: "gentlemen",
+    label: "Looks for the gentlemen",
+    heading: "gentlemen",
+    lead: "Think relaxed sophistication.",
+    rest: " Wear a long-sleeve or short-sleeve dress shirt, a refined co-ord or a Chinese-collared top in our wedding colours.",
+    items: [
+      { caption: "Long sleeves", colour: "Champagne", src: gentsLongSleeve, alt: "Champagne linen long-sleeve dress shirt with beige trousers" },
+      { caption: "Short sleeves", colour: "Tiffany", src: gentsShortSleeve, alt: "Tiffany blue short-sleeve camp-collar shirt with cream trousers" },
+      { caption: "Refined co-ord", colour: "Seafoam", src: gentsCoord, alt: "Seafoam green linen short-sleeve shirt and matching trousers" },
+      { caption: "Chinese collar", colour: "Gold", src: gentsChineseCollar, alt: "Gold Chinese-collared long-sleeve top with beige trousers" },
+    ],
+  },
+];
+
+const notes = [
+  { label: "Tops", crossed: true, items: ["No T-shirts", "No polo shirts", "No multi-coloured", "No floral"] },
+  { label: "Bottoms", crossed: true, items: ["No shorts", "No black pants"] },
+  { label: "Footwear", crossed: false, items: ["Wear something appropriate for the church."] },
+];
+
+const holes = Array.from({ length: 8 });
+---
+
 <section id="attire" class="attire_wrap">
   <div class="attire_layout">
     <header class="attire_header">
-      <div class="attire_title-group">
-        <p class="attire_eyebrow">Dress code · Island formal · What to wear</p>
-        <h2 class="attire_title">What to<br /><em>pack</em></h2>
+      <p class="attire_eyebrow">Wedding attire guide</p>
+      <div class="attire_title-wrap">
+        <h2 class="attire_title">Island <em>formal</em></h2>
+        <p class="attire_accent">
+          <svg class="attire_accent-arrow" viewBox="0 0 40 28" focusable="false" aria-hidden="true"><path d="M38 23 C27 23 12 18 5 5 M4 4 L6.5 15 M4 4 L15 7.5" fill="none" stroke="var(--accent-500)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          <span class="attire_accent-text">Elegance meets<br />island charm.</span>
+        </p>
       </div>
-      <div class="attire_intro">
-        <p>Think dressed up for a sunset on the sand. Breezy fabrics, shoes you can walk on the beach in, and a little colour from our palette.</p>
-        <p>One rule: leave the all-white to the bride.</p>
-      </div>
+      <p class="attire_intro">We invite you to dress in elevated, elegant attire with a relaxed island feel.</p>
+      <ul class="attire_colours" aria-label="Wedding colours">
+        {colours.map((colour) => (
+          <li class="attire_colour">
+            <span class={`attire_swatch attire_swatch-${colour.key}`} aria-hidden="true"></span>
+            <span class="attire_colour-name">{colour.name}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="attire_suggestions">The looks below are suggestions to inspire you. Any elegant style in our colours is welcome.</p>
     </header>
 
-    <div class="attire_body">
-      <div class="attire_note-column">
-        <div class="attire_note">
-          <div class="attire_note-header">
-            <span class="attire_note-title">Boracay, pack list</span>
-            <span class="attire_note-date">Jan 14 '27</span>
-          </div>
-          <ul class="attire_list">
-            <li>
-              <svg class="attire_item-icon" viewBox="0 0 28 28" focusable="false" aria-hidden="true"><path d="M3 4.5 Q13 3 24.5 3.5 Q25.5 14 24 24.5 Q13 25.5 3.5 24 Q2.5 14 3 4.5Z" fill="none" stroke="var(--dark-900)" stroke-width="1.6" stroke-linejoin="round" /><path d="M7 14 L12 20 L26 2" fill="none" stroke="var(--accent-500)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <div><span class="sr-only">Pack: </span><span class="attire_item-title">Linen, cotton, anything breezy</span><span class="attire_item-note">January on the island is warm, even at sunset.</span></div>
-            </li>
-            <li>
-              <svg class="attire_item-icon" viewBox="0 0 28 28" focusable="false" aria-hidden="true"><path d="M3 4.5 Q13 3 24.5 3.5 Q25.5 14 24 24.5 Q13 25.5 3.5 24 Q2.5 14 3 4.5Z" fill="none" stroke="var(--dark-900)" stroke-width="1.6" stroke-linejoin="round" /><path d="M7 14 L12 20 L26 2" fill="none" stroke="var(--accent-500)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <div><span class="sr-only">Pack: </span><span class="attire_item-title">Flats, wedges or block heels</span><span class="attire_item-note">The ceremony is on the sand. Stilettos sink.</span></div>
-            </li>
-            <li>
-              <svg class="attire_item-icon" viewBox="0 0 28 28" focusable="false" aria-hidden="true"><path d="M3 4.5 Q13 3 24.5 3.5 Q25.5 14 24 24.5 Q13 25.5 3.5 24 Q2.5 14 3 4.5Z" fill="none" stroke="var(--dark-900)" stroke-width="1.6" stroke-linejoin="round" /><path d="M7 14 L12 20 L26 2" fill="none" stroke="var(--accent-500)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <div><span class="sr-only">Pack: </span><span class="attire_item-title">A light layer for after dark</span><span class="attire_item-note">The sea breeze picks up once the sun goes down.</span></div>
-            </li>
-          </ul>
-          <span class="attire_leave-label">Leave at home</span>
-          <ul class="attire_list">
-            <li>
-              <svg class="attire_item-icon" viewBox="0 0 28 28" focusable="false" aria-hidden="true"><path d="M3 4.5 Q13 3 24.5 3.5 Q25.5 14 24 24.5 Q13 25.5 3.5 24 Q2.5 14 3 4.5Z" fill="none" stroke="var(--dark-900)" stroke-width="1.6" stroke-linejoin="round" /><path d="M7.5 8 L20.5 20.5 M20 7.5 L8 21" fill="none" stroke="var(--accent-500)" stroke-width="2.4" stroke-linecap="round" /></svg>
-              <div><span class="sr-only">Leave at home: </span><span class="attire_item-title attire_item-title-skip">An all-white outfit</span><span class="attire_item-note">That look belongs to the bride.</span></div>
-            </li>
-            <li>
-              <svg class="attire_item-icon" viewBox="0 0 28 28" focusable="false" aria-hidden="true"><path d="M3 4.5 Q13 3 24.5 3.5 Q25.5 14 24 24.5 Q13 25.5 3.5 24 Q2.5 14 3 4.5Z" fill="none" stroke="var(--dark-900)" stroke-width="1.6" stroke-linejoin="round" /><path d="M7.5 8 L20.5 20.5 M20 7.5 L8 21" fill="none" stroke="var(--accent-500)" stroke-width="2.4" stroke-linecap="round" /></svg>
-              <div><span class="sr-only">Leave at home: </span><span class="attire_item-title attire_item-title-skip">Heavy suits and velvet</span><span class="attire_item-note">Save them for a December party in the city.</span></div>
-            </li>
-          </ul>
+    {looks.map((group) => (
+      <div class="attire_looks">
+        <div class="attire_looks-header">
+          <h3 class="attire_looks-title">For the <em>{group.heading}</em></h3>
+          <p class="attire_looks-copy"><span>{group.lead}</span>{group.rest}</p>
         </div>
-      </div>
 
-      <div class="attire_details">
-        <div class="attire_palette">
-          <div class="attire_block-header">
-            <span>(01) Wear our colours</span>
-            <span>Optional, but we'd love it</span>
+        <div
+          class="attire_row"
+          data-gsap-slider-init
+          role="region"
+          aria-roledescription="carousel"
+          aria-label={group.label}
+        >
+          <svg class="attire_string attire_string-desktop" viewBox="0 0 1440 80" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M0 18 Q720 78 1440 18" fill="none" stroke="#8c7a5b" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
+          <svg class="attire_string attire_string-mobile" viewBox="0 0 420 40" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M0 12 Q210 30 420 14" fill="none" stroke="#8c7a5b" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
+
+          <div class="attire_collection" data-gsap-slider-collection>
+            <div class="attire_list gsap-slider__list" data-gsap-slider-list>
+              {group.items.map((look) => (
+                <div class="attire_item gsap-slider__item" data-gsap-slider-item>
+                  <figure class="attire_polaroid">
+                    <span class="attire_peg" aria-hidden="true"></span>
+                    <div class="attire_photo">
+                      <Image
+                        src={look.src}
+                        alt={look.alt}
+                        width={480}
+                        height={640}
+                        widths={[264, 528]}
+                        sizes="(min-width: 48rem) 15.5rem, 16.5rem"
+                        loading="lazy"
+                      />
+                    </div>
+                    <figcaption class="attire_caption">
+                      <span class="attire_caption-name">{look.caption}</span>
+                      <span class="attire_caption-colour">{look.colour}</span>
+                    </figcaption>
+                  </figure>
+                </div>
+              ))}
+            </div>
           </div>
-          <div class="attire_swatches">
-            <div class="attire_swatch-item">
-              <span class="attire_swatch attire_swatch-tiffany" aria-hidden="true"></span>
-              <span class="attire_swatch-name">Tiffany blue</span>
-              <span class="attire_swatch-note">the shallows at noon</span>
-            </div>
-            <div class="attire_swatch-item">
-              <span class="attire_swatch attire_swatch-champagne" aria-hidden="true"></span>
-              <span class="attire_swatch-name">Champagne</span>
-              <span class="attire_swatch-note">the first toast</span>
-            </div>
-            <div class="attire_swatch-item">
-              <span class="attire_swatch attire_swatch-gold" aria-hidden="true"></span>
-              <span class="attire_swatch-name">Gold</span>
-              <span class="attire_swatch-note">golden hour</span>
+
+          <div class="attire_controls-row">
+            <span class="attire_counter" data-gsap-slider-counter aria-live="polite">01 / 04</span>
+            <div class="attire_controls" data-gsap-slider-controls>
+              <button class="attire_control attire_control-prev" type="button" data-gsap-slider-control="prev" aria-label="Previous look">
+                <span class="attire_control-icon" aria-hidden="true"><Arrow /></span>
+              </button>
+              <button class="attire_control attire_control-next" type="button" data-gsap-slider-control="next" aria-label="Next look">
+                <span class="attire_control-icon" aria-hidden="true"><Arrow /></span>
+              </button>
             </div>
           </div>
         </div>
+      </div>
+    ))}
 
-        <div class="attire_outfits">
-          <div class="attire_outfit-row">
-            <span class="attire_outfit-number">(02)</span>
-            <h3 class="attire_outfit-label">For <em>him</em></h3>
-            <p>A linen shirt or barong, sleeves rolled. Light chinos and loafers or espadrilles. No tie needed.</p>
-          </div>
-          <div class="attire_outfit-row">
-            <span class="attire_outfit-number">(03)</span>
-            <h3 class="attire_outfit-label">For <em>her</em></h3>
-            <p>A flowy midi or maxi, or a Filipiniana in a light fabric. Block heels, wedges or dressy flats.</p>
-          </div>
-          <p class="attire_footnote">Still unsure? Message us. Comfy and happy beats perfect every time.</p>
+    <div class="attire_note-wrap">
+      <div class="attire_note">
+        <span class="attire_note-tape" aria-hidden="true"></span>
+        <span class="attire_note-holes" aria-hidden="true">{holes.map(() => <i></i>)}</span>
+        <h3 class="attire_note-title">Please take note</h3>
+        <div class="attire_note-groups">
+          {notes.map((group) => (
+            <div class="attire_note-group">
+              <h4 class="attire_note-label">{group.label}</h4>
+              <ul class="attire_note-list">
+                {group.items.map((item) => (
+                  <li>
+                    {group.crossed && (
+                      <svg class="attire_note-cross" viewBox="0 0 28 28" focusable="false" aria-hidden="true"><path d="M6.5 7 L21 21.5 M21.5 6.5 L7 21" fill="none" stroke="var(--accent-500)" stroke-width="3" stroke-linecap="round" /></svg>
+                    )}
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div class="attire_note-seal">
+          <Image
+            class="attire_postmark"
+            src={postmark}
+            alt="Strictly no white"
+            width={340}
+            height={254}
+            densities={[1, 2]}
+            loading="lazy"
+          />
+          <p class="attire_note-sentence">Please reserve this colour for the newlyweds so they stand out in the crowd.</p>
         </div>
       </div>
     </div>
@@ -91,86 +179,558 @@
 
 <style>
   @layer components {
-    .attire_wrap { /* Guest attire motif colours, deliberately not site tokens. */ --_attire-tiffany: #81d8d0; --_attire-champagne: #eedfc4; --_attire-gold: #c9a33f; position: relative; overflow: clip; padding: var(--section-space-medium) var(--site-margin); background: var(--light-100) var(--background-texture) center / 32rem repeat; color: var(--dark-900); }
-    .attire_layout { width: 100%; max-width: var(--max-width-main); margin-inline: auto; }
-    .attire_header { display: flex; flex-direction: column; gap: var(--space-5); }
-    .attire_title-group, .attire_intro { display: flex; flex-direction: column; }
-    .attire_title-group { gap: var(--space-5); }
-    .attire_eyebrow { margin: 0; color: var(--accent-500); font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
-    .attire_title { margin: 0; font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
-    .attire_title em { font-weight: var(--secondary-ultralight); }
-    .attire_intro { gap: var(--space-3); }
-    .attire_intro p { margin: 0; font: var(--primary-regular) var(--text-large) / 1.75rem var(--primary-family); }
-    .attire_intro p:last-child { color: #7e95b6; }
-    .attire_body { display: flex; flex-direction: column; gap: var(--space-8); margin-top: 3rem; }
-    .attire_note-column { display: flex; justify-content: center; }
-    .attire_note { position: relative; width: 32.5rem; max-width: 100%; padding: 2.5rem 2.5rem 2.25rem 4.5rem; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 0.0625rem 0.0625rem rgb(31 47 92 / 10%), 0 0.375rem 0.875rem rgb(31 47 92 / 10%), 0 1.375rem 2.5rem rgb(31 47 92 / 8%); rotate: -1.5deg; }
-    .attire_note::before { position: absolute; top: 0; bottom: 0; left: 3.25rem; width: 0.09375rem; background: color-mix(in srgb, var(--accent-500) 55%, transparent); content: ""; }
-    .attire_note-header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-1); border-bottom: 0.09375rem solid var(--dark-900); }
-    .attire_note-title { color: var(--dark-900); font: 400 2.125rem / 2.5rem var(--hand-family); white-space: nowrap; }
-    .attire_note-date { color: #7e95b6; font: var(--primary-regular) 0.75rem / 1rem var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
-    .attire_list { display: flex; margin: 1.25rem 0 0; padding: 0; flex-direction: column; gap: 1.25rem; list-style: none; }
-    .attire_list li { display: flex; align-items: start; gap: var(--space-3); }
-    .attire_item-icon { width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; margin-top: 0.125rem; }
-    .attire_list li > div { display: flex; min-width: 0; flex-direction: column; gap: 0.125rem; }
-    .attire_item-title { color: var(--dark-900); font: 400 1.75rem / 2rem var(--hand-family); }
-    .attire_item-title-skip { text-decoration: line-through 0.125rem var(--accent-500); }
-    .attire_item-note { color: var(--dark-700); font: var(--primary-regular) var(--text-small) / 1.25rem var(--primary-family); }
-    .attire_leave-label { display: block; margin-top: 1.25rem; padding-top: var(--space-2); color: var(--accent-500); font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
-    .attire_leave-label + .attire_list { margin-top: 1.25rem; }
-    .attire_details { display: flex; min-width: 0; flex-direction: column; gap: var(--space-6); }
-    .attire_palette, .attire_outfits { border-top: 0.09375rem solid var(--dark-900); }
-    .attire_palette { padding-top: var(--space-3); }
-    .attire_block-header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); color: var(--dark-900); font: var(--primary-regular) 1rem / 1.25rem var(--mono-family); letter-spacing: 0.04em; }
-    .attire_block-header span:last-child { color: var(--dark-700); font: var(--primary-regular) var(--text-small) / 1.25rem var(--primary-family); letter-spacing: normal; }
-    .attire_swatches { display: flex; gap: clamp(0.5rem, 1.8vw, 2.5rem); padding-top: var(--space-2); }
-    .attire_swatch-item { display: flex; min-width: 0; flex: 1 1 0; flex-direction: column; gap: 0.875rem; }
-    .attire_swatch-name { color: var(--dark-900); font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: 0.04em; text-transform: uppercase; }
-    .attire_swatch-note { color: var(--dark-700); font: 400 1.25rem / 1.5rem var(--hand-family); }
-    .attire_swatch { position: relative; display: block; width: 100%; aspect-ratio: 168 / 184; box-shadow: 0 0.0625rem 0.0625rem rgb(31 47 92 / 10%), 0 0.5rem 1rem rgb(31 47 92 / 8%); }
-    .attire_swatch::before { position: absolute; top: -0.75rem; left: 22%; width: 4rem; height: 1.5rem; background: rgb(245 239 227 / 72%); box-shadow: 0 0.0625rem 0.125rem rgb(31 47 92 / 8%); content: ""; rotate: 4deg; }
-    .attire_swatch-tiffany { background-color: var(--_attire-tiffany); background-image: var(--background-texture); background-blend-mode: multiply; rotate: -3deg; }
-    .attire_swatch-champagne { background: linear-gradient(135deg, var(--_attire-champagne) 0%, #faf3e6 45%, #ebdbbe 100%); rotate: 2deg; }
-    .attire_swatch-gold { background: linear-gradient(135deg, var(--_attire-gold) 0%, #f0da92 45%, #c59d3a 100%); rotate: -1.5deg; }
-    .attire_swatch-champagne::before { rotate: -5deg; }
-    .attire_swatch-gold::before { rotate: 4deg; }
-    .attire_outfit-row { display: grid; grid-template-columns: 2.75rem 12.5rem minmax(0, 1fr); align-items: start; gap: var(--space-4); padding-block: var(--space-4); border-bottom: var(--border-width) solid var(--light-300); }
-    .attire_outfit-number { font: var(--primary-regular) 1rem / 3rem var(--mono-family); letter-spacing: 0.04em; }
-    .attire_outfit-label { display: flex; align-items: baseline; gap: var(--space-2); margin: 0; font: var(--secondary-regular) var(--h5) / 3rem var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }
-    .attire_outfit-label em { font-weight: var(--secondary-ultralight); }
-    .attire_outfit-row p { min-width: 0; margin: 0; padding-top: 0.25rem; color: var(--dark-900); font: var(--primary-regular) var(--text-main) / var(--line-height-huge) var(--primary-family); }
-    .attire_footnote { margin: var(--space-3) 0 0; color: var(--dark-700); font: var(--primary-regular) var(--text-small) / var(--line-height-huge) var(--primary-family); }
+    .attire_wrap {
+      /* Guest attire motif colours, deliberately not site tokens. */
+      --_attire-tiffany: #81d8d0;
+      --_attire-seafoam: #a8c9a6;
+      --_attire-champagne: #eedfc4;
+      --_attire-gold: #c9a33f;
+      --_attire-string: #8c7a5b;
+      --_attire-paper: #fcfaf4;
+      --_attire-rule: rgb(130 170 205 / 55%);
+      --_attire-ink-soft: rgb(31 47 92 / 14%);
+      position: relative;
+      overflow: clip;
+      padding: var(--section-space-medium) var(--site-margin);
+      background: var(--light-100) var(--background-texture) center / 32rem repeat;
+      color: var(--dark-900);
+    }
+    .attire_layout {
+      display: flex;
+      width: 100%;
+      max-width: var(--max-width-main);
+      margin-inline: auto;
+      flex-direction: column;
+      gap: 4.5rem;
+    }
+
+    /* Header */
+    .attire_header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .attire_eyebrow {
+      margin: 0;
+      color: var(--accent-500);
+      font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .attire_title-wrap {
+      --_title-size: clamp(3.875rem, 19.5vw, 4.75rem);
+      position: relative;
+      width: fit-content;
+      margin: var(--space-3) auto 0;
+      font-size: var(--_title-size);
+    }
+    .attire_title {
+      margin: 0;
+      font: var(--secondary-regular) 1em / 0.95 var(--secondary-family);
+      letter-spacing: var(--letter-spacing-tighter);
+    }
+    .attire_title em {
+      display: block;
+      font-weight: var(--secondary-ultralight);
+    }
+    .attire_accent {
+      position: absolute;
+      top: calc(100% + 0.375rem);
+      left: calc(50% - 2.75rem);
+      display: flex;
+      margin: 0;
+      align-items: flex-start;
+      gap: 0.25rem;
+      color: var(--accent-500);
+      font: 400 max(1.375rem, 0.342em) / 1.0769 var(--hand-family);
+      text-align: left;
+      white-space: nowrap;
+      rotate: -7deg;
+      transform-origin: 0 0;
+    }
+    .attire_accent-arrow {
+      width: 2.5em;
+      height: 1.75em;
+      flex: none;
+      margin-top: -0.35em;
+    }
+    .attire_intro {
+      max-width: 24rem;
+      margin: 5.75rem 0 0;
+      color: var(--dark-900);
+      font: var(--primary-regular) 1.125rem / 1.75rem var(--primary-family);
+    }
+    .attire_colours {
+      display: grid;
+      margin: var(--space-5) 0 0;
+      padding: 0;
+      grid-template-columns: repeat(4, 4.5rem);
+      gap: 1rem 1.125rem;
+      list-style: none;
+    }
+    .attire_colour {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .attire_swatch {
+      display: block;
+      width: 3.25rem;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      outline: 1px dashed rgb(31 47 92 / 35%);
+      outline-offset: -7px;
+      box-shadow: 0 4px 10px rgb(31 47 92 / 14%);
+    }
+    .attire_swatch-tiffany { background: var(--_attire-tiffany); }
+    .attire_swatch-seafoam { background: var(--_attire-seafoam); }
+    .attire_swatch-champagne { background: linear-gradient(135deg, var(--_attire-champagne) 0%, #faf3e6 50%, #ebdbbe 100%); }
+    .attire_swatch-gold { background: linear-gradient(135deg, var(--_attire-gold) 0%, #f0da92 50%, #c59d3a 100%); }
+    .attire_colour-name {
+      color: var(--dark-900);
+      font: var(--primary-regular) 0.6875rem / 1.25 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wide);
+      text-transform: uppercase;
+    }
+    .attire_suggestions {
+      max-width: 35rem;
+      margin: var(--space-6) 0 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) 0.9375rem / 1.375rem var(--primary-family);
+    }
+
+    /* Looks */
+    .attire_looks {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .attire_looks-header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .attire_looks-title {
+      margin: 0;
+      font: var(--secondary-regular) 2.75rem / 3rem var(--secondary-family);
+      letter-spacing: var(--letter-spacing-tight);
+    }
+    .attire_looks-title em {
+      font-weight: var(--secondary-ultralight);
+    }
+    .attire_looks-copy {
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) 1rem / 1.5rem var(--primary-family);
+    }
+    .attire_looks-copy span {
+      color: var(--dark-900);
+    }
+    .attire_row {
+      --slider-status: on;
+      --slider-gap: 1.5rem;
+      position: relative;
+    }
+    .attire_string {
+      position: absolute;
+      z-index: 0;
+      top: 0.5rem;
+      left: 50%;
+      width: 100vw;
+      translate: -50% 0;
+      pointer-events: none;
+    }
+    .attire_string-desktop { display: none; }
+    .attire_string-mobile { height: 2.5rem; }
+    .attire_collection {
+      overflow: hidden;
+      margin: 0 calc(var(--site-margin) * -1) 0 -0.75rem;
+    }
+    .attire_list {
+      display: flex;
+      align-items: flex-start;
+      padding: 2.0625rem 0 1.25rem 0.75rem;
+      user-select: none;
+      touch-action: pan-y;
+    }
+    [data-gsap-slider-list-status="grab"] { cursor: grab; }
+    [data-gsap-slider-list-status="grabbing"] { cursor: grabbing; }
+    .attire_item {
+      position: relative;
+      z-index: 1;
+      width: min(18.25rem, calc(100vw - 2 * var(--site-margin) - 3.5rem));
+      flex: none;
+      margin-right: var(--slider-gap);
+      container-type: inline-size;
+    }
+    [data-gsap-slider-item]:last-child {
+      margin-right: 0;
+    }
+    .attire_polaroid {
+      position: relative;
+      display: flex;
+      margin: 0;
+      padding: 0.875rem 0.875rem 1.125rem;
+      flex-direction: column;
+      gap: 0.75rem;
+      background: var(--light-200);
+      box-shadow: 0 1px 1px rgb(31 47 92 / 10%), 0 10px 22px rgb(31 47 92 / 12%);
+      rotate: var(--_tilt, 0deg);
+    }
+    .attire_item:nth-child(4n + 1) .attire_polaroid { --_tilt: -3deg; }
+    .attire_item:nth-child(4n + 2) .attire_polaroid { --_tilt: 2deg; }
+    .attire_item:nth-child(4n + 3) .attire_polaroid { --_tilt: -1.5deg; }
+    .attire_item:nth-child(4n + 4) .attire_polaroid { --_tilt: 3deg; }
+    .attire_peg {
+      position: absolute;
+      z-index: 2;
+      top: -1.625rem;
+      left: 50%;
+      width: 1rem;
+      height: 2.75rem;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #c9a77a, #e2c79c 50%, #b8956a);
+      box-shadow: 0 2px 3px rgb(31 47 92 / 20%);
+      translate: -50% 0;
+    }
+    .attire_photo {
+      overflow: clip;
+      background: var(--light-300);
+    }
+    .attire_photo :global(img) {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 248 / 310;
+      object-fit: cover;
+    }
+    .attire_caption {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0 0.5rem;
+    }
+    .attire_caption-name {
+      color: var(--dark-900);
+      font: 400 1.625rem / 1.75rem var(--hand-family);
+    }
+    .attire_caption-colour {
+      color: var(--dark-700);
+      font: var(--primary-regular) 0.6875rem / 1.25 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wide);
+      text-transform: uppercase;
+    }
+
+    /* Slider controls (mobile only) */
+    .attire_controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding-top: var(--space-3);
+    }
+    .attire_counter {
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--eyebrow) / 1rem var(--mono-family);
+      letter-spacing: var(--letter-spacing-wide);
+      white-space: nowrap;
+    }
+    .attire_controls {
+      display: flex;
+      flex: none;
+      gap: var(--space-2);
+    }
+    .attire_control {
+      display: grid;
+      width: 2.75rem;
+      height: 2.75rem;
+      flex: none;
+      place-items: center;
+      padding: 0;
+      border: 0.09375rem solid var(--dark-900);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--dark-900);
+      cursor: pointer;
+    }
+    .attire_control-next {
+      background: var(--dark-900);
+      color: var(--light-100);
+    }
+    .attire_control-icon {
+      display: block;
+      width: 1.25rem;
+      height: 1rem;
+    }
+    .attire_control-icon :global(svg) {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .attire_control-prev .attire_control-icon { rotate: 180deg; }
+    .attire_control:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+    [data-gsap-slider-control-status="not-active"] {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    [data-gsap-slider-status="not-active"] [data-gsap-slider-controls] {
+      display: none;
+    }
+
+    /* Notebook page */
+    .attire_note-wrap {
+      display: flex;
+      justify-content: center;
+      padding-block: 0.75rem;
+    }
+    .attire_note {
+      position: relative;
+      width: 100%;
+      padding: 6rem 1.25rem 2rem 3.5rem;
+      background:
+        repeating-linear-gradient(to bottom, transparent 0 31px, var(--_attire-rule) 31px 32px) 0 64px / 100% calc(100% - 64px) no-repeat,
+        var(--_attire-paper);
+      box-shadow: 0 1px 1px rgb(31 47 92 / 10%), 0 14px 28px rgb(31 47 92 / 12%);
+      rotate: -1deg;
+    }
+    .attire_note::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 9px;
+      background: var(--light-100) var(--background-texture) center / 32rem repeat;
+      content: "";
+      mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 18px 100%;
+    }
+    .attire_note::after {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 2.375rem;
+      width: 5px;
+      background: linear-gradient(90deg, rgb(194 59 46 / 55%) 0 1px, transparent 1px 4px, rgb(194 59 46 / 55%) 4px 5px);
+      content: "";
+    }
+    .attire_note-tape {
+      position: absolute;
+      z-index: 1;
+      top: -0.8125rem;
+      left: 30%;
+      width: 5.25rem;
+      height: 1.625rem;
+      background: rgb(129 216 208 / 55%);
+      rotate: -3deg;
+    }
+    .attire_note-holes {
+      position: absolute;
+      top: 18px;
+      right: 1.75rem;
+      left: 1.75rem;
+      display: flex;
+      gap: clamp(0.25rem, 2.2vw, 1.5rem);
+    }
+    .attire_note-holes i {
+      display: block;
+      width: 12px;
+      height: 12px;
+      flex: none;
+      border: 1px solid rgb(31 47 92 / 18%);
+      border-radius: 50%;
+      background: #e9e1d0;
+      box-sizing: border-box;
+    }
+    .attire_note-holes i:nth-child(4) { margin-right: auto; }
+    .attire_note-title {
+      margin: 0;
+      color: var(--dark-900);
+      font: 400 clamp(2rem, 9.75vw, 2.375rem) / 4rem var(--hand-family);
+    }
+    .attire_note-groups {
+      display: flex;
+      margin-top: 4rem;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .attire_note-group {
+      min-width: 0;
+    }
+    .attire_note-label {
+      margin: 0;
+      color: var(--accent-500);
+      font: var(--primary-regular) 0.6875rem / 2rem var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .attire_note-list {
+      display: flex;
+      margin: 0;
+      padding: 0;
+      flex-direction: column;
+      list-style: none;
+    }
+    .attire_note-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.625rem;
+      color: var(--dark-900);
+      font: 400 1.625rem / 2rem var(--hand-family);
+    }
+    .attire_note-cross {
+      width: 1.125rem;
+      height: 1.125rem;
+      flex: none;
+      margin-top: 0.4375rem;
+    }
+    .attire_note-seal {
+      display: flex;
+      margin-top: 2rem;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .attire_postmark {
+      display: block;
+      width: 16.875rem;
+      height: auto;
+      margin-left: -0.75rem;
+      rotate: -7deg;
+    }
+    .attire_note-sentence {
+      margin: 1rem 0 0;
+      color: var(--accent-500);
+      font: 400 1.625rem / 2rem var(--hand-family);
+    }
   }
 
-  @media (min-width: 62rem) {
-    .attire_header { align-items: flex-end; flex-direction: row; justify-content: space-between; gap: 4rem; }
-    .attire_intro { width: min(32.5rem, 45%); gap: var(--space-3); padding-bottom: 1rem; }
-    .attire_intro p { line-height: 2.25rem; }
-    .attire_body { flex-direction: row; align-items: start; gap: var(--space-8); margin-top: 4.5rem; }
-    .attire_note-column { flex: 1 1 0; padding-top: 1.5rem; }
-    .attire_note { rotate: -2deg; }
-    .attire_details { flex: 1.2 1 0; min-width: 0; }
-    .attire_swatch { aspect-ratio: 168 / 184; }
+  @media (min-width: 48rem) {
+    .attire_layout { gap: var(--space-8); }
+    .attire_title-wrap {
+      --_title-size: clamp(4.5rem, 9.444vw, 8.5rem);
+      margin-top: var(--space-4);
+    }
+    .attire_title { line-height: 0.94; }
+    .attire_title em { display: inline; }
+    .attire_accent {
+      top: -0.25em;
+      left: calc(100% + 1em);
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: max(1.375rem, 0.294em);
+      line-height: 1;
+      transform-origin: 0 100%;
+    }
+    .attire_accent-arrow {
+      order: 2;
+      width: 2.4em;
+      height: 1.7em;
+      margin: 0 0 0 0.25em;
+      scale: 1 -1;
+    }
+    .attire_intro {
+      max-width: 27rem;
+      margin-top: var(--space-6);
+      font-size: 1.375rem;
+      line-height: 2rem;
+    }
+    .attire_colours {
+      margin-top: var(--space-6);
+      grid-template-columns: repeat(4, 5.25rem);
+      gap: 1.5rem;
+    }
+    .attire_swatch { width: 4rem; }
+    .attire_suggestions {
+      max-width: 21rem;
+      margin-top: var(--space-6);
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+
+    .attire_looks { gap: var(--space-4); }
+    .attire_looks-header {
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-6);
+    }
+    .attire_looks-title {
+      flex: none;
+      font-size: clamp(2.75rem, 4.45vw, 4rem);
+      line-height: 1;
+    }
+    .attire_looks-copy { max-width: 33.75rem; flex: 0 1 33.75rem; }
+
+    .attire_row { --slider-status: off; }
+    .attire_string-desktop { display: block; height: 5rem; }
+    .attire_string-mobile { display: none; }
+    .attire_collection { overflow: visible; margin: 0; }
+    .attire_list {
+      display: grid;
+      align-items: start;
+      padding: 2.9375rem clamp(0.5rem, 1.7vw, 1.5rem) 0.75rem;
+      column-gap: 1rem;
+      grid-template-columns: repeat(4, minmax(0, 17.25rem));
+      justify-content: space-between;
+    }
+    .attire_item { width: auto; margin-right: 0; }
+    .attire_item:nth-child(2),
+    .attire_item:nth-child(3) { margin-top: 0.875rem; }
+    .attire_caption-colour { margin-left: auto; }
+    .attire_caption-name { font-size: clamp(1.125rem, 9.4cqw, 1.625rem); line-height: 1.1; }
+    .attire_controls-row { display: none; }
+
+    .attire_note-wrap { padding-block: 1rem; }
+    .attire_note {
+      width: min(51.25rem, 100%);
+      padding: 6.375rem 3rem 1.625rem 6.5rem;
+      rotate: -1.5deg;
+    }
+    .attire_note::after { left: 5rem; }
+    .attire_note-tape { top: -0.9375rem; left: 36%; width: 6.5rem; height: 1.875rem; }
+    .attire_note-holes { right: 5.6875rem; left: 5.6875rem; gap: 3.625rem; }
+    .attire_note-holes i { width: 14px; height: 14px; }
+    .attire_note-title { font-size: 2.75rem; }
+    .attire_note-groups {
+      flex-direction: row;
+      gap: 2rem;
+    }
+    .attire_note-group:nth-child(1) { flex: 1.4 1 0; }
+    .attire_note-group:nth-child(2) { flex: 1 1 0; }
+    .attire_note-group:nth-child(3) { flex: 1.2 1 0; }
+    .attire_note-seal {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+    .attire_postmark { width: min(21.25rem, 56%); margin-left: -1.75rem; }
+    .attire_note-sentence {
+      width: min(18.75rem, 100%);
+      margin: 4rem 0 0 0.5rem;
+      font-size: 1.75rem;
+      flex: 0 1 18.75rem;
+    }
   }
 
-  @media (max-width: 61.999rem) {
-    .attire_intro p { line-height: 1.75rem; }
-    .attire_body { gap: 3.5rem; }
-    .attire_note { padding: 1.75rem 1.25rem 1.75rem 3rem; rotate: -1.5deg; }
-    .attire_note::before { left: 2.125rem; }
-    .attire_note-title { font-size: 1.75rem; line-height: 2rem; }
-    .attire_note-date { font-size: 0.625rem; }
-    .attire_list { gap: 1rem; margin-top: 1rem; }
-    .attire_leave-label { margin-top: 1rem; }
-    .attire_leave-label + .attire_list { margin-top: 1rem; }
-    .attire_item-title { font-size: 1.5rem; line-height: 1.75rem; }
-    .attire_block-header { align-items: start; flex-direction: column; gap: var(--space-1); }
-    .attire_swatch-item { gap: 0.625rem; }
-    .attire_swatch-note { font-size: 1.0625rem; line-height: 1.25rem; }
-    .attire_swatch::before { top: -0.5rem; width: 2.5rem; height: 1rem; }
-    .attire_outfit-row { grid-template-columns: 2rem minmax(0, 1fr); gap: var(--space-1); padding-block: var(--space-3); }
-    .attire_outfit-number, .attire_outfit-label { line-height: 3rem; }
-    .attire_outfit-label { gap: var(--space-2); }
-    .attire_outfit-row p { grid-column: 1 / -1; padding-top: 0; }
+  @media (max-width: 23.4375rem) {
+    .attire_colours {
+      width: 100%;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    .attire_swatch { width: 2.75rem; }
+    .attire_colour-name {
+      font-size: 0.625rem;
+      letter-spacing: 0.04em;
+    }
   }
 </style>
+
+<script>
+  import "@/scripts/gsap-slider";
+</script>

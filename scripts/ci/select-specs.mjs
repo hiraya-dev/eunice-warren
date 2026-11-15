@@ -21,7 +21,11 @@ export const BROAD_PREFIXES = [
 ];
 
 export const SPEC_SOURCES = {
-  "tests/attire.spec.ts": ["src/components/sections/Attire.astro"],
+  "tests/attire.spec.ts": [
+    "src/components/sections/Attire.astro",
+    "src/components/sections/Wedding.astro",
+    "src/scripts/gsap-slider.ts",
+  ],
   "tests/button-hover.spec.ts": ["*"],
   "tests/entourage.spec.ts": [
     "src/components/sections/Entourage.astro",
@@ -30,6 +34,7 @@ export const SPEC_SOURCES = {
   "tests/explore.spec.ts": [
     "src/components/sections/Explore.astro",
     "src/content/explore/",
+    "src/scripts/gsap-slider.ts",
   ],
   "tests/faq.spec.ts": [
     "src/components/sections/Faq.astro",

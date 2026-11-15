@@ -96,13 +96,14 @@ const schedule = [
           <div class="wedding_dress">
             <span class="wedding_dress-eyebrow">DRESS CODE</span>
             <h3>Island formal</h3>
-            <p>Light linen and cotton, flat or block heels. The ceremony is on the sand. Wear Tiffany blue, champagne or gold if you like; please skip all-white.</p>
-            <div class="wedding_swatches" aria-label="Suggested colours: Tiffany blue, champagne, gold">
+            <p>Elevated, elegant attire with a relaxed island feel, in our wedding colours. Strictly no white.</p>
+            <div class="wedding_swatches" aria-label="Wedding colours: Tiffany blue, seafoam green, champagne, gold">
               <span class="wedding_swatch wedding_swatch-tiffany" aria-hidden="true"></span>
+              <span class="wedding_swatch wedding_swatch-seafoam" aria-hidden="true"></span>
               <span class="wedding_swatch wedding_swatch-champagne" aria-hidden="true"></span>
               <span class="wedding_swatch wedding_swatch-gold" aria-hidden="true"></span>
             </div>
-            <a class="wedding_dress-link" href="#attire">What to pack <span aria-hidden="true">↓</span></a>
+            <a class="wedding_dress-link" href="#attire">See the attire guide <span aria-hidden="true">↓</span></a>
           </div>
         </div>
       </div>
@@ -113,7 +114,7 @@ const schedule = [
 
 <style>
   @layer components {
-    .wedding_wrap { --_muted: color-mix(in srgb, var(--dark-900) 50%, transparent); /* Guest attire motif colours, deliberately not site tokens. */ --_attire-tiffany: #81d8d0; --_attire-champagne: #eedfc4; --_attire-gold: #c9a33f; position: relative; overflow: clip; padding: var(--section-space-small) var(--site-margin) var(--section-space-medium); background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat; color: var(--dark-900); }
+    .wedding_wrap { --_muted: color-mix(in srgb, var(--dark-900) 50%, transparent); /* Guest attire motif colours, deliberately not site tokens. */ --_attire-tiffany: #81d8d0; --_attire-seafoam: #a8c9a6; --_attire-champagne: #eedfc4; --_attire-gold: #c9a33f; position: relative; overflow: clip; padding: var(--section-space-small) var(--site-margin) var(--section-space-medium); background: var(--brand-500) url("../../assets/textures/grain-brand.jpg") center / 32rem repeat; color: var(--dark-900); }
     .wedding_layout { width: 100%; max-width: var(--max-width-main); margin-inline: auto; }
     .wedding_title { margin: 0 0 var(--space-7); font: var(--secondary-regular) var(--h1) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tight); }
     .wedding_body { display: flex; flex-direction: column; gap: var(--space-7); }
@@ -153,6 +154,7 @@ const schedule = [
     .wedding_swatches { display: flex; gap: var(--space-2); padding-top: var(--space-1); }
     .wedding_swatch { width: 1.875rem; height: 1.875rem; border-radius: 50%; }
     .wedding_swatch-tiffany { background: var(--_attire-tiffany); }
+    .wedding_swatch-seafoam { background: var(--_attire-seafoam); }
     .wedding_swatch-champagne { background: linear-gradient(135deg, var(--_attire-champagne) 0%, #faf3e6 45%, #ebdbbe 100%); }
     .wedding_swatch-gold { background: linear-gradient(135deg, var(--_attire-gold) 0%, #f0da92 45%, #c59d3a 100%); }
     .wedding_scallop { position: absolute; right: 0; bottom: 0; left: 0; height: 0.8125rem; background: linear-gradient(var(--light-100) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--light-100) 0.6875rem, transparent calc(0.6875rem + 0.5px)) 0 0 / 2.25rem 0.6875rem repeat-x; }
