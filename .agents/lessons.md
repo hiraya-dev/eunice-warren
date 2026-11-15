@@ -199,11 +199,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-018 — Sweep widths, not just the artboard widths
 - **Date:** 2026-11-13
-- **Trigger:** carried over from adc-website (its L-017): layouts that held at the artboard widths broke between them (576–744, 850–1023, 1024–1400), where the user drags the window
+- **Trigger:** carried over from adc-website (its L-017): layouts that held at the artboard widths broke between them (576–744, 850–1023, 1024–1400), where the user drags the window; escape: runtime #77 (the preloader envelope's stamps, postmark and button covered its name field at 481–720, under a viewport breakpoint from #66; the round-1 overlap sweep checked props against the envelope but skipped the envelope's own parts)
 - **Symptom:** a layout checked at 390 and 1440 overlaps or wraps badly in between.
-- **Root cause:** QA measured only Paper's artboard widths; the user reviews by resizing through every width.
-- **Rule:** after a layout change, sweep 320–1920 for overlaps, a shared content edge and wrapping, including odd widths (632, 968, 1032, 1150) as well as 390, 768, 1023, 1024 and 1440. Paper is the design intent, not a pixel spec: write criteria around structure and the sweep, not small offsets.
-- **Check:** the `@sweep` specs of the touched sections ran (`select-specs`, or the full tier), and the review pack lists the widths checked.
+- **Root cause:** QA measured only Paper's artboard widths; the user reviews by resizing through every width. An overlap sweep that only compares decorations against content misses parts of one component colliding with each other.
+- **Rule:** after a layout change, sweep 320–1920 for overlaps, a shared content edge and wrapping, including odd widths (632, 968, 1032, 1150) and just past each breakpoint (481, 488) as well as 390, 768, 1023, 1024 and 1440. The overlap check compares every pair of text, form and absolutely positioned parts inside each touched component, not only decorations against content. A component with absolutely positioned internals picks its layout by its own width (a container query), not the viewport's. Paper is the design intent, not a pixel spec: write criteria around structure and the sweep, not small offsets.
+- **Check:** the `@sweep` specs of the touched sections ran (`select-specs`, or the full tier), and the review pack lists the widths checked. For the preloader, `tests/preloader.spec.ts` "keeps the envelope parts from overlapping at every width" pins the in-component pairs.
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/styles/**`, `src/layouts/**`
 

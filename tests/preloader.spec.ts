@@ -68,4 +68,46 @@ test.describe("guest preloader", () => {
     await page.keyboard.press("Escape");
     await expect(envelope).toHaveCSS("animation-name", "none");
   });
+
+  // The envelope picks its layout by its own width, so a window just above the phone breakpoint
+  // must not stack the stamp, postmark, label, input and button on top of each other.
+  test("keeps the envelope parts from overlapping at every width", { tag: ["@sweep", "@single"] }, async ({ page }) => {
+    const parts = [
+      ".preloader_par-avion",
+      ".preloader_stamp-ew",
+      ".preloader_postmark",
+      "[data-preloader-label]",
+      "[data-preloader-name]",
+      ".preloader_address > .preloader_hint",
+      ".preloader_hint-mobile",
+      ".preloader_not-you",
+      ".preloader_message",
+      ".preloader_primary",
+    ];
+    for (const [width, height] of [[390, 844], [488, 1000], [600, 1000], [768, 1024], [1440, 900]]) {
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      const overlay = preloader(page);
+      await expect(overlay.locator("[data-preloader-name]")).toBeFocused();
+      // Wait for the settle to finish and the webfonts to load, so every box is final.
+      await expect(overlay.locator(".preloader_stage")).toHaveCSS("transform", "none");
+      await page.evaluate(() => document.fonts.ready);
+      const boxes = await overlay.evaluate((root, selectors) => selectors.flatMap((selector) => {
+        const element = root.querySelector(selector);
+        if (!element || element.getClientRects().length === 0) return [];
+        const { left, top, right, bottom } = element.getBoundingClientRect();
+        return [{ selector, left, top, right, bottom }];
+      }), parts);
+      // The ask state always shows the photo stamp, the label, the input, the hint and the button.
+      expect(boxes.length, `${width}px`).toBeGreaterThanOrEqual(6);
+      for (const [index, a] of boxes.entries()) {
+        for (const b of boxes.slice(index + 1)) {
+          // The postmark is meant to cancel the stamp, so the desktop face overlaps that one pair on purpose.
+          if (a.selector === ".preloader_stamp-ew" && b.selector === ".preloader_postmark") continue;
+          const apart = a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
+          expect(apart, `${width}px: ${a.selector} overlaps ${b.selector}`).toBe(true);
+        }
+      }
+    }
+  });
 });

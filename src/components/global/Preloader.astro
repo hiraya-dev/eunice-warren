@@ -238,7 +238,10 @@ const { messageHref = "#" } = Astro.props;
 
 <script is:inline>
   if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-    document.querySelector("[data-preloader]")?.setAttribute("data-preloader-motion", "");
+    const overlay = document.querySelector("[data-preloader]");
+    overlay?.setAttribute("data-preloader-motion", "");
+    // Fail-safe: if the motion module is slow or never runs, show the form and props without motion.
+    window.setTimeout(() => overlay?.removeAttribute("data-preloader-motion"), 2000);
   }
 </script>
 
@@ -264,6 +267,8 @@ const { messageHref = "#" } = Astro.props;
     let stopPointer = () => {};
 
     media.add("(prefers-reduced-motion: no-preference)", () => {
+      // The fail-safe already revealed everything: skip the entrance so nothing hides and replays.
+      if (!overlay.hasAttribute("data-preloader-motion")) { settled = true; return; }
       const props = visible();
       const timeline = gsap.timeline({
         onComplete: () => { settled = true; },
@@ -339,7 +344,7 @@ const { messageHref = "#" } = Astro.props;
     .preloader_layout { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100%; align-content: center; justify-items: center; gap: 2.5rem; padding: 3rem var(--site-gutter); box-sizing: border-box; }
     .preloader_eyebrow { margin: 0; color: var(--dark-700); font: var(--eyebrow) / 0.875rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-align: center; text-transform: uppercase; }
     .preloader_title { max-width: 100%; margin: -1.625rem 0 0; font: var(--secondary-ultralight) 2.75rem / 3rem var(--secondary-family); font-style: italic; letter-spacing: var(--letter-spacing-snug); text-align: center; }
-    .preloader_form { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.25rem; width: 100%; }
+    .preloader_form { container: preloader-form / inline-size; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.25rem; width: 100%; }
     .preloader_stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); width: min(45rem, 100%); }
     .preloader_envelope { width: 100%; aspect-ratio: 12 / 7; padding: .75rem; box-sizing: border-box; transform: rotate(-1.5deg); background: repeating-linear-gradient(135deg, var(--accent-500) 0 1rem, var(--light-200) 1rem 1.625rem, var(--dark-900) 1.625rem 2.625rem, var(--light-200) 2.625rem 3.25rem); box-shadow: .875rem 1.625rem 2.75rem rgb(31 47 92 / 24%), .125rem .25rem .375rem rgb(31 47 92 / 10%); }
     .preloader_face { position: relative; display: flex; height: 100%; align-items: flex-end; padding: 3rem 3.5rem; box-sizing: border-box; background: var(--light-200) url("../../assets/textures/postcard-paper.jpg") center / 32rem repeat; }
@@ -411,7 +416,13 @@ const { messageHref = "#" } = Astro.props;
     @media (max-width: 30rem) {
       .preloader_layout { align-content: start; gap: 1.75rem; padding: 2rem 1.25rem 3rem; }
       .preloader_title { margin-top: -.75rem; font-size: 2rem; line-height: 2.25rem; }
-      .preloader_form { gap: 1.25rem; }
+    }
+    @media (max-width: 30rem) and (min-height: 50rem) {
+      .preloader_layout { align-content: center; }
+    }
+    /* The envelope picks its layout by its own width: the desktop face (absolute stamps, postmark and button)
+       needs about 44rem, so anything narrower stacks the button under a compact envelope. */
+    @container preloader-form (max-width: 43.999rem) {
       .preloader_stage { width: min(21.875rem, 100%); gap: 1.25rem; }
       .preloader_envelope { aspect-ratio: 7 / 5; padding: .5625rem; transform: rotate(-2deg); }
       .preloader_face { padding: 1.375rem; }
@@ -425,12 +436,13 @@ const { messageHref = "#" } = Astro.props;
       .preloader_primary { position: static; width: 100%; transform: none; justify-content: center; text-align: center; padding: .9375rem 1.5rem; }
       .preloader_browse { margin-top: -.25rem; }
     }
-    @media (max-width: 30rem) and (min-height: 50rem) {
-      .preloader_layout { align-content: center; }
-    }
-    @media (max-width: 22.5rem) {
+    @container preloader-form (max-width: 20rem) {
       .preloader_par-avion { top: 1.25rem; left: 1.25rem; width: 5rem; }
       .preloader_stamp-ew { width: 3.25rem; }
+    }
+    /* The found and not-found states add a line under the input; a slightly taller envelope keeps it clear of the stamps. */
+    @container preloader-form (max-width: 18.75rem) {
+      .preloader_envelope { aspect-ratio: 7 / 5.6; }
     }
     @media (prefers-reduced-motion: no-preference) {
       .preloader_table { transition: scale .7s cubic-bezier(.55, .085, .68, .53); }
