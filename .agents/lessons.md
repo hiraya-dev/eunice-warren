@@ -225,7 +225,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/fade-in.ts`
 
-### L-030 — Every new validation rule gets a test that fails without it
+### L-032 — Every new validation rule gets a test that fails without it
 - **Date:** 2026-11-17
 - **Trigger:** PR #82, CHANGES_REQUIRED
 - **Symptom:** a new server rule (reject a slipper size on a seat that is not attending) and the inline error's clear-on-change had no assertion; deleting either left the suite green. A `toHaveRole("alert")` check passed whether the error was visible or not.
@@ -237,7 +237,17 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ## Content and layout
 
-### L-031 — Facts in a Paper artboard are not confirmed copy
+### L-031 — More items in a row means smaller photos; show the size before building
+- **Date:** 2026-11-17
+- **Trigger:** #83 Local review fix round (the 7-across clotheslines shrank each polaroid photo from 248 to 148px wide at 1440; the user found the looks too small and picked a two-line layout)
+- **Symptom:** a grid that grows from 4 to 7 items per row was built to fit the row, and every photo became about 60% of its old width.
+- **Root cause:** the redesign fitted the new count into the same width and nobody stated the photo size trade-off before the build.
+- **Rule:** when a row's item count grows, state the rendered photo size before and after at 1440 and 390 in the design proposal, and offer a layout that keeps the size (more rows, a slider) alongside the one that fits the row.
+- **Check:** the proposal or PR body lists the photo width before and after at 1440 and 390.
+- **Guard:** taste — the user judges whether the size is enough; no test can measure it
+- **Paths:** `src/components/sections/**`
+
+### L-033 — Facts in a Paper artboard are not confirmed copy
 - **Date:** 2026-11-17
 - **Trigger:** PR #82, Local-review rounds 1 and 2 (the user had the copy changed twice: the time, then the slippers' purpose)
 - **Symptom:** the after-party header shipped to the preview as "For the after party · 10 PM". The time came from a Paper drawing, and the user had only said "~10 PM, I think".
@@ -277,7 +287,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/scripts/**`
 
-### L-032 — Sweep a form's edit and error states, not only its resting state
+### L-034 — Sweep a form's edit and error states, not only its resting state
 - **Date:** 2026-11-17
 - **Trigger:** escape: runtime #60 (found on #82's preview)
 - **Symptom:** the step 2 rename editor's "Done" button had no padding: its label sat flush against the left edge of a fixed 4rem column.

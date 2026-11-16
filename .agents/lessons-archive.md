@@ -77,3 +77,13 @@ The entry below is guarded by a hook on T3's delegation tool.
 - **Check:** `node_modules/.package-lock.json` exists and is newer than `package-lock.json`.
 - **Guard:** hook `scripts/hooks/guard-deps.mjs` (`PreToolUse` on `mcp__t3-code__delegate_task`), tests in `scripts/hooks/guard-deps.test.mjs` (CI `workflow` job)
 - **Paths:** `**`
+
+### L-030 — A full-bleed decoration must escape the global `svg` max-width
+- **Date:** 2026-11-17
+- **Trigger:** #83, the user's correction; escape: runtime #79 (the attire clothesline string stopped at the content edges on a wide screen)
+- **Symptom:** an SVG sized `width: 100vw` and centred to bleed past its container stopped at the container's width: 64–1376 at 1440 and 240–1680 at 1920.
+- **Root cause:** `src/styles/base.css` caps every `svg` at `max-width: 100%`, which wins over `width: 100vw` and limits the SVG to its parent's width. Nobody measured the string wider than 1440.
+- **Rule:** a full-bleed SVG (or img) sets `max-width: none` beside its viewport width, and its spec measures its box against the viewport at a wide width (1920 and 2560) as well as the artboard widths.
+- **Check:** the spec asserts the decoration's bounding box runs from 0 to the viewport width at 1920 and 2560, and that `scrollWidth` equals the viewport width.
+- **Guard:** test — `tests/attire.spec.ts` ("runs the clothesline string edge to edge at …px", 320–2560)
+- **Paths:** `src/components/**`, `src/styles/base.css`
