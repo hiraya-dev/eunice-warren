@@ -33,6 +33,7 @@ async function submitRsvp(
   const section = rsvp(page);
   await section.getByRole("button", { name: "Continue" }).click();
   await expect(section.locator("[data-rsvp-panel='3']")).toBeVisible();
+  for (const select of await section.locator("[data-rsvp-slipper-list] select").all()) await select.selectOption("W 7");
   await section.locator("#rsvp-email").fill(email);
   await section.getByRole("button", { name: "Send RSVP" }).click();
 }
@@ -74,6 +75,35 @@ test.describe("RSVP paths", () => {
     await expect(summary).not.toContainText(untickedGuest);
   });
 
+  test("rebuilds after-party rows from the checked seats", async ({ page }) => {
+    const section = rsvp(page);
+    await findInvite(page, cruz.members[0], cruz);
+    await section.locator("#rsvp-seat-1").uncheck();
+    await section.getByRole("button", { name: "Continue" }).click();
+    await expect(section.locator("[data-rsvp-slipper-list] .rsvp_after-party-row")).toHaveCount(cruz.members.length - 1);
+    await expect(section.locator("[data-rsvp-slipper-list]")).not.toContainText(cruz.members[1]);
+    await expect(section.locator("[data-rsvp-not-coming]")).toBeVisible();
+    await expect(section.locator("[data-rsvp-not-coming]")).toContainText(cruz.members[1]);
+  });
+
+  test("requires a slipper size before submitting", async ({ page }) => {
+    const section = rsvp(page);
+    await findInvite(page, santos.members[0], santos);
+    await section.getByRole("button", { name: "Continue" }).click();
+    await expect(section.locator("[data-rsvp-not-coming]")).toBeHidden();
+    await section.locator("#rsvp-email").fill("liza-size@example.com");
+    await section.getByRole("button", { name: "Send RSVP" }).click();
+    const select = section.locator("[data-rsvp-slipper-list] select").first();
+    await expect(select).toBeFocused();
+    const rowError = select.locator("xpath=ancestor::*[contains(@class,'rsvp_after-party-row')]").locator(".rsvp_slipper-error");
+    await expect(rowError).toHaveRole("alert");
+    await expect(rowError).toBeVisible();
+    await expect(select).toHaveAttribute("aria-invalid", "true");
+    await select.selectOption("W 7");
+    await expect(rowError).toBeHidden();
+    await expect(select).not.toHaveAttribute("aria-invalid");
+  });
+
   test("renames a member via Edit before submitting", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, cruz.members[0], cruz);
@@ -84,9 +114,18 @@ test.describe("RSVP paths", () => {
       .getByRole("button", { name: `Edit ${oldName}` })
       .click();
     await section.locator("[aria-label='Name for seat 2']").fill(newName);
-    await section
-      .getByRole("button", { name: `Done editing ${oldName}` })
-      .click();
+    const done = section.getByRole("button", { name: `Done editing ${oldName}` });
+    // Escape #82: the label sat flush against the button's left edge.
+    const inset = await done.evaluate((button) => {
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      const text = range.getBoundingClientRect();
+      const box = button.getBoundingClientRect();
+      return { left: text.left - box.left, right: box.right - text.right };
+    });
+    expect(inset.left).toBeGreaterThanOrEqual(8);
+    expect(Math.abs(inset.left - inset.right)).toBeLessThanOrEqual(2);
+    await done.click();
 
     await submitRsvp(page, "mateo-renamed@example.com");
     const ticket = page.locator("#rsvp-ticket-modal");

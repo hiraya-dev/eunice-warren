@@ -225,6 +225,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/fade-in.ts`
 
+### L-032 — Every new validation rule gets a test that fails without it
+- **Date:** 2026-11-17
+- **Trigger:** PR #82, CHANGES_REQUIRED
+- **Symptom:** a new server rule (reject a slipper size on a seat that is not attending) and the inline error's clear-on-change had no assertion; deleting either left the suite green. A `toHaveRole("alert")` check passed whether the error was visible or not.
+- **Root cause:** the brief listed the tests by area ("validation accept/reject") rather than one assertion per acceptance criterion, so tests covered the happy and obvious-reject paths only.
+- **Rule:** a brief that adds a validation branch or an error state names one assertion per branch: each reject rule, the accept case, the decline path, and for an inline error both its visibility after the failed submit and its clearing after the fix. Assert visibility with `toBeVisible`/`toBeHidden`, never with a role or attribute alone.
+- **Check:** for each new `return false` (or thrown error) in the diff, a test exists that fails when that line is removed.
+- **Guard:** none
+- **Paths:** `src/lib/**`, `src/actions/**`, `tests/**`, `.agents/skills/codex-handoff/**`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building
@@ -236,6 +246,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the proposal or PR body lists the photo width before and after at 1440 and 390.
 - **Guard:** taste — the user judges whether the size is enough; no test can measure it
 - **Paths:** `src/components/sections/**`
+
+### L-033 — Facts in a Paper artboard are not confirmed copy
+- **Date:** 2026-11-17
+- **Trigger:** PR #82, Local-review rounds 1 and 2 (the user had the copy changed twice: the time, then the slippers' purpose)
+- **Symptom:** the after-party header shipped to the preview as "For the after party · 10 PM". The time came from a Paper drawing, and the user had only said "~10 PM, I think".
+- **Root cause:** the criteria copied every string from the artboard, so a value drawn as a placeholder became site copy without a check against `src/content` or the user.
+- **Rule:** when criteria take copy from Paper, any time, date, place, price or name in it, and what an item is for (the slippers are the couple's gift to every guest, not an after-party item), must already be on the site or confirmed by the user; otherwise leave it out and ask in the approval message.
+- **Check:** each fact in new copy in the diff is found in `src/content/**` or in the user's words in the thread.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/content/**`, `.agents/skills/astro-component/**`
 
 ### L-014 — Check list layouts with the real names, not the placeholders
 - **Date:** 2026-11-13
@@ -266,6 +286,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the new caller's spec covers the inactive state (no item `aria-hidden`, no leftover transform) and a resize from active to inactive; an overlay's spec closes it, then shows a page key (ArrowDown) is not default-prevented and a resize while closed leaves the reopened canvas the stage's size.
 - **Guard:** none
 - **Paths:** `src/scripts/**`
+
+### L-034 — Sweep a form's edit and error states, not only its resting state
+- **Date:** 2026-11-17
+- **Trigger:** escape: runtime #60 (found on #82's preview)
+- **Symptom:** the step 2 rename editor's "Done" button had no padding: its label sat flush against the left edge of a fixed 4rem column.
+- **Root cause:** the button had no font, padding or centring of its own, and the #60 checks measured the checklist at rest, never with a row in edit mode.
+- **Rule:** when a component has modes (edit, error, open, busy), the width sweep and the Paper comparison cover each mode, and every button sets its own font, padding and alignment rather than relying on browser defaults.
+- **Check:** the review pack lists the modes measured; a spec measures the label inset of any button whose column is sized by the layout (`tests/rsvp-paths.spec.ts` "renames a member via Edit").
+- **Guard:** none
+- **Paths:** `src/components/**`, `tests/**`
 
 ## CI scripts
 

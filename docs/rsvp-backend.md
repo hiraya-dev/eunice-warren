@@ -20,7 +20,9 @@ Keep these header rows on the existing tabs:
 - Guests: id | household | members | seats | notes. Members are comma-separated;
   blank seats means 2. Notes are never read.
 - Responses: submitted_at | invite_id | name | attending | guests | email |
-  companion_name | note. Responses append with RAW values.
+  companion_name | note | attendees | seat_changes | slippers. Responses append
+  with RAW values. `slippers` (K) is `Name: size; …` for each attending guest
+  (US sizes, `W 5`–`W 11`, `M 6`–`M 13`), blank on a decline.
 - Songs, Latest RSVPs, Summary, and How to use are not modified.
 
 ## Production setup

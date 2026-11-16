@@ -1,5 +1,6 @@
 import type { Invite, RsvpSeat } from "./store.ts";
 import { normalizeGuestName } from "./store.ts";
+import { SLIPPER_SIZES } from "./slippers.ts";
 
 export const RSVP_DEADLINE = "2026-12-31T23:59:59+08:00";
 export const RSVP_DEADLINE_TIME = new Date(RSVP_DEADLINE).getTime();
@@ -144,9 +145,11 @@ export function validateSubmission(input: {
     if (seat.name.length > 120) return false;
     if (seat.attending) {
       if (!input.attending || !seat.name) return false;
+      if (!seat.slipperSize || !SLIPPER_SIZES.includes(seat.slipperSize as (typeof SLIPPER_SIZES)[number])) return false;
       attendingCount += 1;
-    } else if (!seat.name && expectedOriginal !== null) {
-      return false;
+    } else {
+      if (seat.slipperSize) return false;
+      if (!seat.name && expectedOriginal !== null) return false;
     }
   }
   return input.attending ? attendingCount > 0 : attendingCount === 0;
