@@ -252,8 +252,11 @@ export function initGalleryOverlay() {
           30,
           Math.min(window.innerWidth * 0.92, window.innerWidth - 32),
         );
+        // The frame hugs the stamp, so its CSS max-height (resolved to px) is the space left.
+        const frame = lightboxStamp.parentElement;
         const frameHeight =
-          lightboxStamp.parentElement?.clientHeight || Infinity;
+          (frame && Number.parseFloat(getComputedStyle(frame).maxHeight)) ||
+          Infinity;
         const maxHeight = Math.max(
           30,
           Math.min(window.innerHeight * 0.74, frameHeight),
