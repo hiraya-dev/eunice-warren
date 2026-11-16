@@ -168,14 +168,17 @@ export function initGalleryOverlay() {
       const coarsePointer = () =>
         window.matchMedia("(pointer: coarse)").matches;
 
-      const focusables = () =>
-        Array.from(
-          overlay.querySelectorAll<HTMLElement>(
+      const focusables = () => {
+        const scope =
+          overlay.dataset.galleryState === "open" ? lightbox : overlay;
+        return Array.from(
+          scope.querySelectorAll<HTMLElement>(
             'button, a[href], [tabindex]:not([tabindex="-1"])',
           ),
         ).filter(
           (element) => !element.hasAttribute("disabled") && visible(element),
         );
+      };
 
       const lockScroll = () => {
         if (lockActive) return;
@@ -372,6 +375,13 @@ export function initGalleryOverlay() {
             onHover: setHoverLabel,
             onHoverEnd: hideHoverLabel,
             onStampClick: openPhoto,
+            onWebGLFailure: () => {
+              // A lost context stays on the DOM grid; rebuilding WebGL would
+              // risk another blank canvas while the browser is recovering.
+              canvas?.destroy();
+              canvas = null;
+              showFallback();
+            },
           });
           if (!canvas) showFallback();
         } catch {
@@ -409,6 +419,9 @@ export function initGalleryOverlay() {
         const delta = event.clientX - touchStartX;
         touchStartX = null;
         if (Math.abs(delta) > 40) nextPhoto(delta < 0 ? 1 : -1);
+      });
+      lightbox.addEventListener("pointercancel", () => {
+        touchStartX = null;
       });
       document.addEventListener("keydown", (event) => {
         if (overlay.hidden) return;

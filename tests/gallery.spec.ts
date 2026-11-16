@@ -80,8 +80,114 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       await expect(overlay).toBeHidden();
       await expect(open).toBeFocused();
       expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+
+      await page.evaluate(() => {
+        window.name = "gallery-arrow-default-prevented:false";
+        window.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowDown")
+            window.name = `gallery-arrow-default-prevented:${event.defaultPrevented}`;
+        });
+      });
+      await page.keyboard.press("ArrowDown");
+      expect(await page.evaluate(() => window.name)).toBe(
+        "gallery-arrow-default-prevented:false",
+      );
     },
   );
+
+  test(
+    "resizes the canvas after a closed-viewport change",
+    { tag: ["@sweep"] },
+    async ({ page }) => {
+      await page.goto("/");
+      const open = page.locator("[data-gallery-open]");
+      const overlay = page.locator("#gallery-overlay");
+      const canvas = page.locator("[data-gallery-stage] canvas");
+      const grid = page.locator("[data-gallery-grid]");
+
+      await open.click();
+      await expect
+        .poll(
+          async () => (await canvas.count()) > 0 || (await grid.isVisible()),
+        )
+        .toBe(true);
+      if (await grid.isVisible()) {
+        test.skip(true, "WebGL is unavailable in this browser");
+        return;
+      }
+
+      await page.keyboard.press("Escape");
+      await expect(overlay).toBeHidden();
+      await page.setViewportSize({ width: 980, height: 700 });
+      await open.click();
+      await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
+      await expect(canvas).toHaveCount(1);
+
+      const sizes = await page.evaluate(() => {
+        const stage = document.querySelector<HTMLElement>(
+          "[data-gallery-stage]",
+        );
+        const canvas = document.querySelector<HTMLCanvasElement>(
+          "[data-gallery-stage] canvas",
+        );
+        return {
+          canvasWidth: canvas?.clientWidth,
+          canvasHeight: canvas?.clientHeight,
+          stageWidth: stage?.clientWidth,
+          stageHeight: stage?.clientHeight,
+        };
+      });
+      expect(sizes.canvasWidth).toBe(sizes.stageWidth);
+      expect(sizes.canvasHeight).toBe(sizes.stageHeight);
+    },
+  );
+
+  test("keeps focus inside the lightbox controls", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("[data-gallery-open]").click();
+    const overlay = page.locator("#gallery-overlay");
+    const firstPhoto = page.locator("[data-gallery-list] button").first();
+    await firstPhoto.focus();
+    await page.keyboard.press("Enter");
+    await expect(overlay).toHaveAttribute("data-gallery-state", "open");
+
+    const lightbox = page.locator("[data-gallery-lightbox]");
+    const controls = await lightbox.locator("button, a[href]").count();
+    for (let index = 0; index < controls + 2; index += 1) {
+      await page.keyboard.press("Tab");
+      expect(
+        await page.evaluate(() =>
+          Boolean(document.activeElement?.closest("[data-gallery-lightbox]")),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  test("shows every photo in the no-WebGL fallback", async ({ page }) => {
+    await page.addInitScript(() => {
+      const originalGetContext = HTMLCanvasElement.prototype.getContext;
+      Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+        configurable: true,
+        value: function (contextId: string, options?: unknown) {
+          if (["webgl", "webgl2", "experimental-webgl"].includes(contextId))
+            return null;
+          return Reflect.apply(originalGetContext, this, [contextId, options]);
+        },
+      });
+    });
+    await page.goto("/");
+    await page.locator("[data-gallery-open]").click();
+
+    const overlay = page.locator("#gallery-overlay");
+    const grid = page.locator("[data-gallery-grid]");
+    await expect(grid).toBeVisible();
+    await expect(grid.locator("button")).toHaveCount(photoCount);
+    await grid.locator("button").first().click();
+    await expect(overlay).toHaveAttribute("data-gallery-state", "open");
+    await expect(page.locator("[data-gallery-lightbox-count]")).toHaveText(
+      new RegExp(`^001 \/ ${String(photoCount).padStart(3, "0")}`),
+    );
+  });
 
   test("keeps open and close immediate with reduced motion", async ({
     page,
@@ -93,6 +199,24 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     const overlay = page.locator("#gallery-overlay");
     await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
     await expect(overlay).toBeVisible();
+    expect(
+      await overlay.evaluate(
+        (element) => element.getAnimations({ subtree: true }).length,
+      ),
+    ).toBe(0);
+
+    const firstPhoto = page.locator("[data-gallery-list] button").first();
+    await firstPhoto.focus();
+    await page.keyboard.press("Enter");
+    await expect(overlay).toHaveAttribute("data-gallery-state", "open");
+    expect(
+      await overlay.evaluate(
+        (element) => element.getAnimations({ subtree: true }).length,
+      ),
+    ).toBe(0);
+
+    await page.keyboard.press("Escape");
+    await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
     await page.keyboard.press("Escape");
     await expect(overlay).toBeHidden();
     await expect(open).toBeFocused();

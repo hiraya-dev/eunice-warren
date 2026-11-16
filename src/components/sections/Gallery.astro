@@ -127,7 +127,8 @@ const stampStyle = ({ d, m }: Slot) =>
                 alt=""
                 aria-hidden="true"
                 width={slot.landscape ? long : short}
-                height={slot.landscape ? short : long}
+                height={slot.landscape ? Math.round(long * 68.8 / 88.8) : Math.round(short * 111 / 86)}
+                fit="cover"
                 loading="lazy"
                 decoding="async"
               />
@@ -511,6 +512,7 @@ const stampStyle = ({ d, m }: Slot) =>
       flex-direction: column;
       align-items: center;
       padding-top: 4.5rem;
+      touch-action: pan-y;
     }
     .gallery_scrim {
       position: absolute;

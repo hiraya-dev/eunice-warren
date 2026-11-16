@@ -31,6 +31,7 @@ type CanvasOptions = {
   onHover: (index: number, x: number, y: number) => void;
   onHoverEnd: () => void;
   onStampClick: (index: number, rect: { left: number; top: number; width: number; height: number }) => void;
+  onWebGLFailure: () => void;
 };
 
 export type GalleryCanvas = {
@@ -102,7 +103,8 @@ const stampData = (
   slotX: number,
   slotY: number,
 ): StampData => {
-  // 7 and 13 keep every photo unique inside any window of 13x11 slots.
+  // The 7/13 strides spread photos deterministically, but a fixed row repeats
+  // every 12 columns for an 84-photo album because gcd(7, 84) is 7.
   const index = modulo(slotX * 7 + slotY * 13, photos.length);
   const landscape = photos[index].orientation === "landscape";
   const pick = seeded(slotX, slotY, 1);
@@ -158,6 +160,7 @@ export function createGalleryCanvas(
     onHover,
     onHoverEnd,
     onStampClick,
+    onWebGLFailure,
   } = options;
   if (!photos.length) return null;
 
@@ -197,9 +200,11 @@ export function createGalleryCanvas(
   const textureQueue: number[] = [];
   const textureQueued = new Set<number>();
   const pointers = new Map<number, { x: number; y: number }>();
+  const failedTextures = new Set<number>();
   let textureQueueRunning = false;
   let destroyed = false;
   let running = true;
+  let windowListenersBound = false;
   let lightboxOpen = false;
   let frame = 0;
   let textureTimer = 0;
@@ -221,9 +226,11 @@ export function createGalleryCanvas(
   let zoom = window.innerWidth < 640 ? 0.65 : 1;
 
   const resize = () => {
+    if (!running) return;
     const rect = stage.getBoundingClientRect();
-    const width = Math.max(1, rect.width);
-    const height = Math.max(1, rect.height);
+    if (!rect.width || !rect.height) return;
+    const width = rect.width;
+    const height = rect.height;
     renderer.setSize(width, height, false);
     camera.left = -width / 2;
     camera.right = width / 2;
@@ -238,7 +245,12 @@ export function createGalleryCanvas(
   });
 
   const queueTexture = (key: number) => {
-    if (textureCache.has(key) || textureQueued.has(key)) return;
+    if (
+      textureCache.has(key) ||
+      textureQueued.has(key) ||
+      failedTextures.has(key)
+    )
+      return;
     textureQueued.add(key);
     textureQueue.push(key);
     if (!textureQueueRunning) void processTextureQueue();
@@ -280,6 +292,7 @@ export function createGalleryCanvas(
         applyTexture(key, texture);
       } catch {
         // A failed texture leaves its sprite transparent; the DOM list remains available.
+        failedTextures.add(key);
       }
       if (performance.now() - started >= 6) break;
     }
@@ -567,6 +580,24 @@ export function createGalleryCanvas(
     if (!reducedMotion) wake();
   };
 
+  const resetGesture = () => {
+    for (const pointerId of pointers.keys()) {
+      if (stage.hasPointerCapture?.(pointerId))
+        stage.releasePointerCapture?.(pointerId);
+    }
+    pointers.clear();
+    dragging = false;
+    moved = false;
+    lastPinchDistance = 0;
+    velocityX = 0;
+    velocityY = 0;
+    stage.style.cursor = "grab";
+  };
+
+  const onPointerCancel = () => {
+    resetGesture();
+  };
+
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
     onInteraction();
@@ -576,8 +607,14 @@ export function createGalleryCanvas(
   const onKeyDown = (event: KeyboardEvent) => {
     if (
       lightboxOpen ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
       (event.target instanceof HTMLElement &&
-        ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName))
+        (["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"].includes(
+          event.target.tagName,
+        ) ||
+          event.target.isContentEditable))
     )
       return;
     const amount = event.shiftKey ? 90 : 45;
@@ -602,15 +639,34 @@ export function createGalleryCanvas(
     wake();
   };
 
+  const bindWindowListeners = () => {
+    if (windowListenersBound) return;
+    windowListenersBound = true;
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onResize);
+  };
+
+  const unbindWindowListeners = () => {
+    if (!windowListenersBound) return;
+    windowListenersBound = false;
+    window.removeEventListener("keydown", onKeyDown);
+    window.removeEventListener("resize", onResize);
+  };
+
+  const onContextLost = (event: Event) => {
+    event.preventDefault();
+    onWebGLFailure();
+  };
+
   resize();
   refreshCells();
   stage.addEventListener("pointerdown", onPointerDown);
   stage.addEventListener("pointermove", onPointerMove);
   stage.addEventListener("pointerup", onPointerUp);
-  stage.addEventListener("pointercancel", onPointerUp);
+  stage.addEventListener("pointercancel", onPointerCancel);
   stage.addEventListener("wheel", onWheel, { passive: false });
-  window.addEventListener("keydown", onKeyDown);
-  window.addEventListener("resize", onResize);
+  renderer.domElement.addEventListener("webglcontextlost", onContextLost);
+  bindWindowListeners();
   wake();
 
   return {
@@ -618,11 +674,15 @@ export function createGalleryCanvas(
       running = false;
       if (frame) cancelAnimationFrame(frame);
       frame = 0;
+      unbindWindowListeners();
+      resetGesture();
       resetHovered();
       onHoverEnd();
     },
     resume() {
       running = true;
+      resize();
+      bindWindowListeners();
       wake();
     },
     setLightboxOpen(open) {
@@ -647,13 +707,14 @@ export function createGalleryCanvas(
       stage.removeEventListener("pointerdown", onPointerDown);
       stage.removeEventListener("pointermove", onPointerMove);
       stage.removeEventListener("pointerup", onPointerUp);
-      stage.removeEventListener("pointercancel", onPointerUp);
+      stage.removeEventListener("pointercancel", onPointerCancel);
       stage.removeEventListener("wheel", onWheel);
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("resize", onResize);
+      unbindWindowListeners();
+      resetGesture();
       resetHovered();
       clearSprites();
       for (const texture of textureCache.values()) texture.dispose();
+      renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
       renderer.dispose();
       renderer.domElement.remove();
     },
