@@ -30,6 +30,8 @@ const perceptibleAnimations = (element: Element) =>
 const openGallery = async (page: Page) => {
   const open = page.locator("[data-gallery-open]");
   await open.scrollIntoViewIfNeeded();
+  // Wait for the fade-in (and its 24px rise) to finish, so the click lands and does not re-scroll (L-029).
+  await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
   await open.click();
 };
 

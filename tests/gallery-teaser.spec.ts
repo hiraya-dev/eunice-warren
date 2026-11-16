@@ -121,6 +121,7 @@ test.describe("gallery teaser, fine pointer", { tag: ["@single", "@sweep"] }, ()
   });
 
   test("Step inside still opens the canvas right after the section arrives", async ({ page }) => {
+    // Deliberately clicks while the copy may still be fading in: the button must work during the reveal.
     await page.goto("/");
     await scrollSectionIn(page);
     await page.locator("[data-gallery-open]").click();
