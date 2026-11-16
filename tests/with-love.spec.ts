@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 const order = (page: import("@playwright/test").Page) =>
   page.locator("#with-love [data-stacked-cards-list] > [data-note-id]");
 
-test.describe("With love stack", () => {
+// Skipped while the section is hidden from the home page (src/pages/index.astro); un-skip when it returns.
+test.describe.skip("With love stack", () => {
   test("renders notes and cycles the top card with Shuffle", { tag: ["@smoke"] }, async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#with-love")).toBeVisible();

@@ -17,7 +17,7 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
 
   test("renders every section in order with an id", async ({ page }) => {
     await page.goto("/");
-    // PreWedding and Ribbons are commented out in src/pages/index.astro.
+    // PreWedding, Ribbons and WithLove are commented out in src/pages/index.astro.
     const ids = await page.locator("main > section").evaluateAll((sections) => sections.map((section) => section.id));
     expect(ids).toEqual([
       "hero",
@@ -27,7 +27,6 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
       "entourage",
       "stay",
       "explore",
-      "with-love",
       "playlist",
       "faq",
       "rsvp",
