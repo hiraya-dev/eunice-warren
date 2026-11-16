@@ -247,7 +247,8 @@ export function initGalleryOverlay() {
           return;
         hoverLabel.hidden = false;
         hoverLabel.textContent = `Open · ${String(index + 1).padStart(3, "0")}`;
-        hoverLabel.style.transform = `translate(${x}px, ${y}px)`;
+        // `translate` (not `transform`): the CSS `rotate: -2deg` would otherwise rotate the offset.
+        hoverLabel.style.translate = `${x}px ${y}px`;
       };
 
       const hideHoverLabel = () => {

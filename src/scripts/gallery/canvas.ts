@@ -1,17 +1,18 @@
 import {
   CanvasTexture,
   Color,
-  Fog,
   LinearFilter,
+  LinearMipmapLinearFilter,
   OrthographicCamera,
   Raycaster,
   Scene,
   Sprite,
   SpriteMaterial,
+  SRGBColorSpace,
   Vector2,
   WebGLRenderer,
 } from "three";
-import { createStampCanvas } from "./stamp-texture.ts";
+import { createStampCanvas, stampPadding } from "./stamp-texture.ts";
 
 export type GalleryCanvasPhoto = {
   index: number;
@@ -39,20 +40,41 @@ export type GalleryCanvas = {
   destroy: () => void;
 };
 
+type Tier = "near" | "mid" | "far";
+
 type StampData = {
   index: number;
+  tier: Tier;
+  textureKey: number;
   targetX: number;
   targetY: number;
   startX: number;
   startY: number;
+  /** The stamp's own size, which is what the screen rect and hover label use. */
   width: number;
   height: number;
+  /** Sprite size: the stamp plus the transparent margin that holds its baked shadow. */
+  fullWidth: number;
+  fullHeight: number;
+  /** Where the stamp sits inside the sprite's uv space (0..1), for hit-testing. */
+  insetU: number;
+  insetV: number;
   rotation: number;
+  opacity: number;
+  renderOrder: number;
 };
 
-const CELL_WIDTH = 720;
-const CELL_HEIGHT = 560;
+// The space is a grid of slots, one stamp per slot, jittered inside the slot. A stamp's rotated
+// bounding box always fits inside its slot, so stamps never overlap across slots or cells.
+const SLOT_WIDTH = 360;
+const SLOT_HEIGHT = 320;
+const SLOT_MARGIN = 8;
+const CELL_SLOTS = 2;
+const CELL_WIDTH = SLOT_WIDTH * CELL_SLOTS;
+const CELL_HEIGHT = SLOT_HEIGHT * CELL_SLOTS;
 const CELL_RADIUS = 4;
+const MAX_TILT = (8 * Math.PI) / 180;
+const FAR_TEXTURE_OFFSET = 100000;
 const INTRO_DURATION = 1200;
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -68,31 +90,58 @@ const seeded = (x: number, y: number, slot: number) => {
   return ((value ^ (value >>> 16)) >>> 0) / 4294967296;
 };
 
+// Long-edge ranges per depth tier (Paper: near ~280, mid ~170-185, far ~100).
+const TIERS: Record<Tier, { min: number; max: number; opacity: number; order: number }> = {
+  near: { min: 240, max: 270, opacity: 1, order: 2 },
+  mid: { min: 160, max: 195, opacity: 1, order: 1 },
+  far: { min: 90, max: 125, opacity: 0.5, order: 0 },
+};
+
 const stampData = (
   photos: GalleryCanvasPhoto[],
-  cellX: number,
-  cellY: number,
-  slot: number,
+  slotX: number,
+  slotY: number,
 ): StampData => {
-  const index = modulo(cellX * 5 + cellY * 17 + slot * 29, photos.length);
-  const photo = photos[index];
-  const random = seeded(cellX, cellY, slot);
-  const randomY = seeded(cellX + 7, cellY - 3, slot + 4);
-  const randomSize = seeded(cellX - 13, cellY + 9, slot + 8);
-  const width = 150 + randomSize * 130;
-  const height = photo.orientation === "landscape" ? width * 0.8 : width * 1.25;
-  const targetX = cellX * CELL_WIDTH + (random - 0.5) * (CELL_WIDTH - width);
+  // 7 and 13 keep every photo unique inside any window of 13x11 slots.
+  const index = modulo(slotX * 7 + slotY * 13, photos.length);
+  const landscape = photos[index].orientation === "landscape";
+  const pick = seeded(slotX, slotY, 1);
+  const tier: Tier = pick < 0.36 ? "near" : pick < 0.84 ? "mid" : "far";
+  const range = TIERS[tier];
+  const longEdge = range.min + seeded(slotX, slotY, 2) * (range.max - range.min);
+  const width = landscape ? longEdge : longEdge * 0.8;
+  const height = landscape ? longEdge * 0.8 : longEdge;
+  const rotation = (seeded(slotX, slotY, 3) * 2 - 1) * MAX_TILT;
+  const cos = Math.abs(Math.cos(rotation));
+  const sin = Math.abs(Math.sin(rotation));
+  const boxWidth = width * cos + height * sin;
+  const boxHeight = height * cos + width * sin;
+  const jitterX = Math.max(0, SLOT_WIDTH - boxWidth - SLOT_MARGIN * 2);
+  const jitterY = Math.max(0, SLOT_HEIGHT - boxHeight - SLOT_MARGIN * 2);
+  const targetX =
+    (slotX + 0.5) * SLOT_WIDTH + (seeded(slotX, slotY, 4) - 0.5) * jitterX;
   const targetY =
-    cellY * CELL_HEIGHT + (randomY - 0.5) * (CELL_HEIGHT - height);
+    (slotY + 0.5) * SLOT_HEIGHT + (seeded(slotX, slotY, 5) - 0.5) * jitterY;
+  const pad = stampPadding(landscape) * width;
+  const fullWidth = width + pad * 2;
+  const fullHeight = height + pad * 2;
   return {
     index,
+    tier,
+    textureKey: tier === "far" ? index + FAR_TEXTURE_OFFSET : index,
     targetX,
     targetY,
     startX: targetX * 0.08,
     startY: targetY * 0.08,
     width,
     height,
-    rotation: (seeded(cellX + 2, cellY + 5, slot + 2) - 0.5) * 0.28,
+    fullWidth,
+    fullHeight,
+    insetU: pad / fullWidth,
+    insetV: pad / fullHeight,
+    rotation,
+    opacity: range.opacity,
+    renderOrder: range.order,
   };
 };
 
@@ -138,13 +187,13 @@ export function createGalleryCanvas(
 
   const scene = new Scene();
   scene.background = new Color(0xf5efe3);
-  scene.fog = new Fog(0xf5efe3, 950, 2400);
   const camera = new OrthographicCamera(-1, 1, 1, -1, -1000, 5000);
   camera.position.z = 1000;
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const sprites: Sprite[] = [];
   const textureCache = new Map<number, CanvasTexture>();
+  const slotList: StampData[] = [];
   const textureQueue: number[] = [];
   const textureQueued = new Set<number>();
   const pointers = new Map<number, { x: number; y: number }>();
@@ -168,7 +217,8 @@ export function createGalleryCanvas(
   let lastPinchDistance = 0;
   let velocityX = 0;
   let velocityY = 0;
-  let zoom = 1;
+  // Narrow screens start a little zoomed out so the scatter reads like the Paper artboard.
+  let zoom = window.innerWidth < 640 ? 0.65 : 1;
 
   const resize = () => {
     const rect = stage.getBoundingClientRect();
@@ -187,29 +237,21 @@ export function createGalleryCanvas(
     y: Math.floor(camera.position.y / CELL_HEIGHT),
   });
 
-  const updateSpriteOpacity = (sprite: Sprite) => {
-    const distance = Math.hypot(
-      sprite.position.x - camera.position.x,
-      sprite.position.y - camera.position.y,
-    );
-    const material = sprite.material as SpriteMaterial;
-    material.opacity = clamp(1.04 - distance / 1900, 0.45, 1);
-  };
-
-  const queueTexture = (index: number) => {
-    if (textureCache.has(index) || textureQueued.has(index)) return;
-    textureQueued.add(index);
-    textureQueue.push(index);
+  const queueTexture = (key: number) => {
+    if (textureCache.has(key) || textureQueued.has(key)) return;
+    textureQueued.add(key);
+    textureQueue.push(key);
     if (!textureQueueRunning) void processTextureQueue();
   };
 
-  const applyTexture = (index: number, texture: CanvasTexture) => {
-    textureCache.set(index, texture);
+  const applyTexture = (key: number, texture: CanvasTexture) => {
+    textureCache.set(key, texture);
     for (const sprite of sprites) {
-      if (sprite.userData.photoIndex !== index) continue;
+      if (sprite.userData.textureKey !== key) continue;
       const material = sprite.material as SpriteMaterial;
       material.map = texture;
       material.needsUpdate = true;
+      sprite.visible = true;
     }
   };
 
@@ -218,19 +260,24 @@ export function createGalleryCanvas(
     textureQueueRunning = true;
     const started = performance.now();
     while (textureQueue.length && !destroyed) {
-      const index = textureQueue.shift()!;
-      textureQueued.delete(index);
-      const photo = photos[index];
+      const key = textureQueue.shift()!;
+      textureQueued.delete(key);
+      const far = key >= FAR_TEXTURE_OFFSET;
+      const photo = photos[far ? key - FAR_TEXTURE_OFFSET : key];
       try {
         const canvas = await createStampCanvas(
           { ...photo, fine: coarsePointer ? photo.coarse : photo.fine },
-          coarsePointer ? 360 : 512,
+          far ? 200 : coarsePointer ? 360 : 512,
+          far,
         );
         const texture = new CanvasTexture(canvas);
-        texture.minFilter = LinearFilter;
+        texture.colorSpace = SRGBColorSpace;
+        // Premultiplied upload keeps the perforation bites and shadow free of dark fringes.
+        texture.premultiplyAlpha = true;
+        texture.minFilter = LinearMipmapLinearFilter;
         texture.magFilter = LinearFilter;
-        texture.generateMipmaps = false;
-        applyTexture(index, texture);
+        texture.generateMipmaps = true;
+        applyTexture(key, texture);
       } catch {
         // A failed texture leaves its sprite transparent; the DOM list remains available.
       }
@@ -255,6 +302,7 @@ export function createGalleryCanvas(
     if (center.x === activeCellX && center.y === activeCellY) return;
     activeCellX = center.x;
     activeCellY = center.y;
+    hovered = null;
     clearSprites();
     for (
       let cellY = center.y - CELL_RADIUS;
@@ -266,36 +314,61 @@ export function createGalleryCanvas(
         cellX <= center.x + CELL_RADIUS;
         cellX += 1
       ) {
-        for (let slot = 0; slot < 5; slot += 1) {
-          const data = stampData(photos, cellX, cellY, slot);
-          const material = new SpriteMaterial({
-            transparent: true,
-            depthTest: false,
-            fog: true,
-            opacity: 0,
-          });
-          const sprite = new Sprite(material);
-          sprite.position.set(
-            reducedMotion ? data.targetX : data.startX,
-            reducedMotion ? data.targetY : data.startY,
-            0,
-          );
-          sprite.scale.set(data.width, data.height, 1);
-          sprite.rotation.z = data.rotation;
-          sprite.userData = { ...data, photoIndex: data.index };
-          scene.add(sprite);
-          sprites.push(sprite);
-          const texture = textureCache.get(data.index);
-          if (texture) {
-            material.map = texture;
-            material.needsUpdate = true;
-          } else {
-            queueTexture(data.index);
+        for (let row = 0; row < CELL_SLOTS; row += 1) {
+          for (let column = 0; column < CELL_SLOTS; column += 1) {
+            slotList.push(
+              stampData(
+                photos,
+                cellX * CELL_SLOTS + column,
+                cellY * CELL_SLOTS + row,
+              ),
+            );
           }
-          updateSpriteOpacity(sprite);
         }
       }
     }
+    // Build the stamps nearest the camera first so their textures are queued first.
+    const cameraX = camera.position.x;
+    const cameraY = camera.position.y;
+    slotList.sort(
+      (a, b) =>
+        Math.hypot(a.targetX - cameraX, a.targetY - cameraY) -
+        Math.hypot(b.targetX - cameraX, b.targetY - cameraY),
+    );
+    for (const data of slotList) {
+      const material = new SpriteMaterial({
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        fog: false,
+        premultipliedAlpha: true,
+        rotation: data.rotation,
+        opacity: data.opacity,
+      });
+      // Premultiplied textures need the colour scaled with the opacity.
+      material.color.setScalar(data.opacity);
+      const sprite = new Sprite(material);
+      sprite.position.set(
+        introActive ? data.startX : data.targetX,
+        introActive ? data.startY : data.targetY,
+        0,
+      );
+      sprite.scale.set(data.fullWidth, data.fullHeight, 1);
+      sprite.renderOrder = data.renderOrder;
+      sprite.userData = data;
+      sprite.visible = false;
+      scene.add(sprite);
+      sprites.push(sprite);
+      const texture = textureCache.get(data.textureKey);
+      if (texture) {
+        material.map = texture;
+        material.needsUpdate = true;
+        sprite.visible = true;
+      } else {
+        queueTexture(data.textureKey);
+      }
+    }
+    slotList.length = 0;
   };
 
   const render = () => {
@@ -310,7 +383,6 @@ export function createGalleryCanvas(
         const data = sprite.userData as StampData;
         sprite.position.x = data.startX + (data.targetX - data.startX) * eased;
         sprite.position.y = data.startY + (data.targetY - data.startY) * eased;
-        updateSpriteOpacity(sprite);
       }
       if (progress >= 1) introActive = false;
     }
@@ -325,7 +397,6 @@ export function createGalleryCanvas(
     camera.zoom = zoom;
     camera.updateProjectionMatrix();
     refreshCells();
-    for (const sprite of sprites) updateSpriteOpacity(sprite);
     renderer.render(scene, camera);
 
     const shouldContinue =
@@ -348,8 +419,20 @@ export function createGalleryCanvas(
   const hitTest = (event: PointerEvent) => {
     setPointer(event);
     raycaster.setFromCamera(pointer, camera);
-    return raycaster.intersectObjects(sprites, false)[0]?.object as
-      Sprite | undefined;
+    // The sprite quad includes the shadow margin; only the stamp itself counts as a hit.
+    for (const hit of raycaster.intersectObjects(sprites, false)) {
+      const data = hit.object.userData as StampData;
+      const { uv } = hit;
+      if (
+        uv &&
+        uv.x >= data.insetU &&
+        uv.x <= 1 - data.insetU &&
+        uv.y >= data.insetV &&
+        uv.y <= 1 - data.insetV
+      )
+        return hit.object as Sprite;
+    }
+    return undefined;
   };
 
   const screenRect = (sprite: Sprite) => {
@@ -366,14 +449,19 @@ export function createGalleryCanvas(
     };
   };
 
+  const resetHovered = () => {
+    if (!hovered) return;
+    const data = hovered.userData as StampData;
+    hovered.scale.set(data.fullWidth, data.fullHeight, 1);
+    hovered.renderOrder = data.renderOrder;
+    hovered = null;
+  };
+
   const updateHover = (event: PointerEvent) => {
     if (!isFinePointer() || dragging || lightboxOpen) return;
     const hit = hitTest(event) ?? null;
     if (hit === hovered) return;
-    if (hovered) {
-      const previous = hovered.userData as StampData;
-      hovered.scale.set(previous.width, previous.height, 1);
-    }
+    resetHovered();
     hovered = hit;
     if (!hit) {
       onHoverEnd();
@@ -382,14 +470,21 @@ export function createGalleryCanvas(
     }
     const rect = stage.getBoundingClientRect();
     const data = hit.userData as StampData;
-    hit.scale.set(data.width * 1.06, data.height * 1.06, 1);
+    hit.scale.set(data.fullWidth * 1.06, data.fullHeight * 1.06, 1);
+    hit.renderOrder = 4;
     const projected = hit.position.clone().project(camera);
-    const width = data.width * camera.zoom;
-    const height = data.height * camera.zoom;
+    // Bottom-left corner of the lifted, tilted stamp, in stage pixels.
+    const halfWidth = (data.width * 1.06 * camera.zoom) / 2;
+    const halfHeight = (data.height * 1.06 * camera.zoom) / 2;
+    const cos = Math.cos(data.rotation);
+    const sin = Math.sin(data.rotation);
     onHover(
       data.index,
-      ((projected.x + 1) * rect.width) / 2 - width / 2,
-      ((1 - projected.y) * rect.height) / 2 + height / 2 + 8,
+      ((projected.x + 1) * rect.width) / 2 - halfWidth * cos + halfHeight * sin,
+      ((1 - projected.y) * rect.height) / 2 +
+        halfWidth * sin +
+        halfHeight * cos +
+        8,
     );
     stage.style.cursor = "pointer";
   };
@@ -523,11 +618,7 @@ export function createGalleryCanvas(
       running = false;
       if (frame) cancelAnimationFrame(frame);
       frame = 0;
-      if (hovered) {
-        const data = hovered.userData as StampData;
-        hovered.scale.set(data.width, data.height, 1);
-        hovered = null;
-      }
+      resetHovered();
       onHoverEnd();
     },
     resume() {
@@ -539,11 +630,7 @@ export function createGalleryCanvas(
       if (open) {
         velocityX = 0;
         velocityY = 0;
-        if (hovered) {
-          const data = hovered.userData as StampData;
-          hovered.scale.set(data.width, data.height, 1);
-          hovered = null;
-        }
+        resetHovered();
         onHoverEnd();
         if (frame) cancelAnimationFrame(frame);
         frame = 0;
@@ -564,10 +651,7 @@ export function createGalleryCanvas(
       stage.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onResize);
-      if (hovered) {
-        const data = hovered.userData as StampData;
-        hovered.scale.set(data.width, data.height, 1);
-      }
+      resetHovered();
       clearSprites();
       for (const texture of textureCache.values()) texture.dispose();
       renderer.dispose();
