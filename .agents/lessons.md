@@ -185,6 +185,46 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
 
+### L-026 — Reduced motion shortens transitions; it does not remove them
+- **Date:** 2026-11-16
+- **Trigger:** flaky test: #80 (`gallery.spec.ts` reduced-motion check expected `getAnimations().length` 0 and read 1 or 42 depending on timing)
+- **Symptom:** a reduced-motion spec that asserts "no animations" passes on one run and fails on the next.
+- **Root cause:** the site-wide rule in `src/styles/base.css` sets `transition-duration: 0.01ms !important` on every element, and the default `transition-property` is `all`, so any inherited change (a parent hiding with `visibility`) starts a 0.01 ms `CSSTransition` on each child. Whether the spec sees them depends on whether they have finished.
+- **Rule:** under reduced motion, assert that nothing perceptible animates: filter `getAnimations()` to effects whose computed `duration + delay` exceeds 1 ms and expect that list empty. Never assert a raw count of 0.
+- **Check:** the reduced-motion spec filters by computed timing and passes `--repeat-each 20 --workers 8`.
+- **Guard:** none
+- **Paths:** `tests/**`
+
+### L-027 — A named reference means its engine, not a look-alike
+- **Date:** 2026-11-16
+- **Trigger:** #80 Local review fix round: the gallery shipped to preview as a flat orthographic "stamps on a desk" canvas; the user had picked the Lunardi infinite canvas (as on chandebootcamp.com/gallery) and asked for its 3D fly-through and its popup.
+- **Symptom:** the build matched the Paper stills but not the reference's motion and feel, and needed a rewrite of the canvas and the lightbox after review.
+- **Root cause:** a visual fix round optimised for the Paper screenshot (no overlap, fixed tiers) and replaced the reference's mechanism (perspective chunks, depth fade, fly-through, FLIP popup) without asking.
+- **Rule:** when the user picks a reference implementation, the criteria name its mechanism and its tuning values (read from its source), and Paper governs only the chrome and the look of the parts. A fix round that would change the mechanism to match a still is a question for the user, not a fix.
+- **Check:** the criteria file lists the reference's source and values; the review pack says which reference behaviours were kept and which were left out.
+- **Guard:** none
+- **Paths:** `src/scripts/**`, `src/components/sections/**`
+
+### L-028 — Measure WebGL and blur smoothness on the real GPU
+- **Date:** 2026-11-16
+- **Trigger:** #80: the gallery popup measured p95 100–133 ms per frame in headless Chromium with SwiftShader, and 16.7 ms on the same build with `--use-angle=metal`.
+- **Symptom:** software-GL frame timings blame the code for compositor costs (a `backdrop-filter` over a full-screen WebGL canvas) that a GPU handles at 60 fps.
+- **Root cause:** SwiftShader renders and composites on the CPU, so blur and large layers cost many times more than on any guest's device.
+- **Rule:** smoothness numbers for the review pack come from Playwright's Chromium launched with `--use-angle=metal --ignore-gpu-blocklist --enable-gpu` on the Mac (confirm the WebGL renderer string says Metal). SwiftShader is fine for correctness checks, never for frame-time claims. Do not take screenshots inside a measured window.
+- **Check:** the `Local:` line's frame times name the renderer.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/scripts/gallery/**`
+
+### L-029 — The shared fade-in hides a section's controls until it is reached
+- **Date:** 2026-11-16
+- **Trigger:** #80 Local review fix round (teaser reveal): putting `data-fade-in` on the gallery copy made "Step inside" `visibility: hidden` until the section scrolled into view, and three existing specs that clicked it straight after `goto` timed out.
+- **Symptom:** a spec that clicks or focuses an element inside a fade-in section fails with a timeout or an unexpected re-scroll, though the element exists.
+- **Root cause:** `src/scripts/fade-in.ts` sets `autoAlpha: 0` (visibility hidden) on every `[data-fade-in-item]` until its ScrollTrigger fires, and the fade's 24px rise moves the element after Playwright scrolls to it.
+- **Rule:** when a section gains `data-fade-in`, its specs reach the section first (scroll the item into view) and wait for the item's opacity to reach 1 before clicking or sampling scroll positions. Keyboard users reach it the same way, so this is the intended behaviour, not something to work around in the component.
+- **Check:** the section's spec opens with a helper that scrolls the item into view and waits for `opacity: 1`.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/scripts/fade-in.ts`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders
@@ -199,21 +239,21 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-018 — Sweep widths, not just the artboard widths
 - **Date:** 2026-11-13
-- **Trigger:** carried over from adc-website (its L-017): layouts that held at the artboard widths broke between them (576–744, 850–1023, 1024–1400), where the user drags the window; escape: runtime #77 (the preloader envelope's stamps, postmark and button covered its name field at 481–720, under a viewport breakpoint from #66; the round-1 overlap sweep checked props against the envelope but skipped the envelope's own parts)
+- **Trigger:** carried over from adc-website (its L-017): layouts that held at the artboard widths broke between them (576–744, 850–1023, 1024–1400), where the user drags the window; escape: runtime #77 (the preloader envelope's stamps, postmark and button covered its name field at 481–720, under a viewport breakpoint from #66; the round-1 overlap sweep checked props against the envelope but skipped the envelope's own parts); #80 Local review fix round (the gallery popup's stamp was top-anchored and its controls pinned to the bottom, so a gap opened on any window not 900px tall)
 - **Symptom:** a layout checked at 390 and 1440 overlaps or wraps badly in between.
 - **Root cause:** QA measured only Paper's artboard widths; the user reviews by resizing through every width. An overlap sweep that only compares decorations against content misses parts of one component colliding with each other.
-- **Rule:** after a layout change, sweep 320–1920 for overlaps, a shared content edge and wrapping, including odd widths (632, 968, 1032, 1150) and just past each breakpoint (481, 488) as well as 390, 768, 1023, 1024 and 1440. The overlap check compares every pair of text, form and absolutely positioned parts inside each touched component, not only decorations against content. A component with absolutely positioned internals picks its layout by its own width (a container query), not the viewport's. Paper is the design intent, not a pixel spec: write criteria around structure and the sweep, not small offsets.
-- **Check:** the `@sweep` specs of the touched sections ran (`select-specs`, or the full tier), and the review pack lists the widths checked. For the preloader, `tests/preloader.spec.ts` "keeps the envelope parts from overlapping at every width" pins the in-component pairs.
+- **Rule:** after a layout change, sweep 320–1920 for overlaps, a shared content edge and wrapping, including odd widths (632, 968, 1032, 1150) and just past each breakpoint (481, 488) as well as 390, 768, 1023, 1024 and 1440. The overlap check compares every pair of text, form and absolutely positioned parts inside each touched component, not only decorations against content. A component with absolutely positioned internals picks its layout by its own width (a container query), not the viewport's. Paper is the design intent, not a pixel spec: write criteria around structure and the sweep, not small offsets. A full-screen overlay or dialog is also swept by viewport height (578, 667, 720, 844, 900, 1080) at a desktop and a phone width; stack its parts as one centred column rather than anchoring some to the top and others to the bottom.
+- **Check:** the `@sweep` specs of the touched sections ran (`select-specs`, or the full tier), and the review pack lists the widths checked. For the preloader, `tests/preloader.spec.ts` "keeps the envelope parts from overlapping at every width" pins the in-component pairs. For overlays, the review pack lists the heights checked and the gaps between the stacked parts.
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/styles/**`, `src/layouts/**`
 
 ### L-025 — A shared script must handle the "off" state its first caller never hit
 - **Date:** 2026-11-16
-- **Trigger:** #79 CHANGES_REQUIRED (the GSAP slider moved from Explore into `src/scripts/gsap-slider.ts` for the Attire looks rows)
+- **Trigger:** #79 CHANGES_REQUIRED (the GSAP slider moved from Explore into `src/scripts/gsap-slider.ts` for the Attire looks rows); #80 CHANGES_REQUIRED (the gallery canvas kept a page-wide `keydown` listener that swallowed arrow keys and Cmd/Ctrl+A/S/D after the overlay closed, resized itself to 1×1 on a `resize` while hidden, and kept a drag alive across close); #80 round 2 CHANGES_REQUIRED (the fix skipped keys on any focused `BUTTON`/`A`, so canvas panning died once focus sat on the close button)
 - **Symptom:** on desktop, where the Attire slider is off, every polaroid was `aria-hidden` and untabbable, and a phone swiped to look 3 then rotated past 48rem kept the desktop row shifted by the old inline transform.
 - **Root cause:** the script set the carousel ARIA and the track transform before checking whether the slider was enabled, and returned early without cleanup. Explore's slider is always on, so that path never ran until a second caller used it.
-- **Rule:** when a script becomes shared, read it for every state the new caller can put it in (off at a breakpoint, a resize between states, fewer items than fit) and make each state set up, and undo, its own attributes, transforms and listeners.
-- **Check:** the new caller's spec covers the inactive state (no item `aria-hidden`, no leftover transform) and a resize from active to inactive.
+- **Rule:** when a script becomes shared, read it for every state the new caller can put it in (off at a breakpoint, a resize between states, fewer items than fit) and make each state set up, and undo, its own attributes, transforms and listeners. The same holds for anything that can be closed or hidden (an overlay, a modal, a paused canvas): bind `window`/`document` listeners on open and remove them on close, reset in-flight gesture state on close, never measure a hidden element, and re-measure on open. Key handlers ignore events with a modifier key and skip only text entry (`input`, `textarea`, `select`, contenteditable), never buttons or links, which is where focus sits in a dialog.
+- **Check:** the new caller's spec covers the inactive state (no item `aria-hidden`, no leftover transform) and a resize from active to inactive; an overlay's spec closes it, then shows a page key (ArrowDown) is not default-prevented and a resize while closed leaves the reopened canvas the stage's size.
 - **Guard:** none
 - **Paths:** `src/scripts/**`
 
@@ -241,10 +281,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-024 — A compact layout scales to the space it gets
 - **Date:** 2026-11-15
-- **Trigger:** #77 Local-review round 2 (the user's correction: the preloader's compact envelope stayed at the 350px phone width on 481–748px windows and looked small)
+- **Trigger:** #77 Local-review round 2 (the user's correction: the preloader's compact envelope stayed at the 350px phone width on 481–748px windows and looked small); #80 round 6 CHANGES_REQUIRED (polaroid photo window used `top: 6%`, which resolves against the polaroid's height, so the top border differed from the 6%-of-width sides)
 - **Symptom:** a layout that switches to its compact form by container width keeps phone-sized parts on tablet and narrow-desktop widths, leaving the component small with empty space around it.
 - **Root cause:** the compact rules were the old phone rules moved under a wider container query, with fixed widths and px sizes tuned to 350px.
-- **Rule:** when a compact layout serves more than phone widths, size it to its container (`min(100%, <cap>)`) and scale its internals with container units, clamped so the phone values hold at the phone width. Re-check prop and decoration gates, since the component grows taller.
+- **Rule:** when a compact layout serves more than phone widths, size it to its container (`min(100%, <cap>)`) and scale its internals with container units, clamped so the phone values hold at the phone width. Re-check prop and decoration gates, since the component grows taller. A border or inset that must scale with the element's width uses percentage `margin`/`padding` (both resolve against width) or container units, never a percentage `top`/`bottom`.
 - **Check:** the review pack measures the component at the narrowest and widest widths of its compact band, and the overlap sweep covers that band.
 - **Guard:** taste — the user's call on how large the compact envelope reads; no test measures "too small"
 - **Paths:** `src/components/**`

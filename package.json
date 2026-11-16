@@ -37,10 +37,12 @@
     "heic-to": "^1.6.6",
     "lenis": "^1.3.26",
     "modern-screenshot": "^4.7.0",
+    "three": "^0.187.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
+    "@types/three": "^0.187.0",
     "prettier": "^3.9.6",
     "prettier-plugin-astro": "^0.14.1",
     "wrangler": "^4.123.0"

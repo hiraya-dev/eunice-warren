@@ -43,6 +43,16 @@ export const SPEC_SOURCES = {
     "src/components/interactive/AccordionItem.astro",
   ],
   "tests/footer.spec.ts": ["src/components/global/Footer.astro"],
+  "tests/gallery.spec.ts": [
+    "src/components/sections/Gallery.astro",
+    "src/scripts/gallery/overlay.ts",
+    "src/scripts/gallery/canvas.ts",
+    "src/scripts/gallery/stamp-texture.ts",
+  ],
+  "tests/gallery-teaser.spec.ts": [
+    "src/components/sections/Gallery.astro",
+    "src/scripts/gallery/teaser.ts",
+  ],
   "tests/hero.spec.ts": [
     "src/components/sections/Hero.astro",
     "src/pages/style-guide.astro",

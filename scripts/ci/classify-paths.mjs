@@ -30,6 +30,8 @@ export const SWEEP_SPECS = new Set([
   "tests/attire.spec.ts",
   "tests/ribbons.spec.ts",
   "tests/playlist.spec.ts",
+  "tests/gallery.spec.ts",
+  "tests/gallery-teaser.spec.ts",
   "tests/rsvp-ticket.spec.ts",
   "tests/with-love.spec.ts",
   "tests/footer.spec.ts",

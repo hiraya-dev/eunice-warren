@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 
 const fixture = "tests/fixtures/tiny.jpg";
 
-test.describe("With Love guest uploads", () => {
+// Skipped while the section is hidden from the home page (src/pages/index.astro); un-skip when it returns.
+test.describe.skip("With Love guest uploads", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await page.locator("[data-with-love-upload]").scrollIntoViewIfNeeded();
