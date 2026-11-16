@@ -10,11 +10,11 @@ const lookGroupCount = (looksSource.match(/id: /g) ?? []).length;
 const lookItemCount =
   (looksSource.match(/caption: /g) ?? []).length / lookGroupCount;
 
-// The viewport width at which the row switches from the swipe slider to seven across.
-const sevenAcrossRem = Number(
-  attireSource.match(/@media \(min-width: ([\d.]+)rem\) \{\s*\.attire_row \{\s*--slider-status: off/)?.[1],
+// The viewport width at which the row switches from the swipe slider to two clotheslines.
+const twoLineRem = Number(
+  attireSource.match(/@media \(min-width: ([\d.]+)rem\) \{(?:(?!@media)[\s\S])*?--slider-status: off/)?.[1],
 );
-const sevenAcrossPx = sevenAcrossRem * 16;
+const twoLinePx = twoLineRem * 16;
 const pad2 = (value: number) => String(value).padStart(2, "0");
 
 function sourceListCount(label: string) {
@@ -180,9 +180,9 @@ test.describe("attire section", () => {
     await expect(row.locator('[data-gsap-slider-item][aria-hidden="true"]')).toHaveCount(0);
   });
 
-  test("clears the slider when resized across the seven-across breakpoint and back", { tag: ["@sweep", "@single"] }, async ({ page }) => {
-    expect(sevenAcrossPx).toBeGreaterThan(0);
-    await page.setViewportSize({ width: sevenAcrossPx - 1, height: 900 });
+  test("clears the slider when resized across the two-line breakpoint and back", { tag: ["@sweep", "@single"] }, async ({ page }) => {
+    expect(twoLinePx).toBeGreaterThan(0);
+    await page.setViewportSize({ width: twoLinePx - 1, height: 900 });
     await page.goto("/");
     const row = page.locator("#attire [data-gsap-slider-init]").first();
     const track = row.locator("[data-gsap-slider-list]");
@@ -192,7 +192,7 @@ test.describe("attire section", () => {
     await row.locator('[data-gsap-slider-control="next"]').click();
     await expect.poll(() => track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).e)).toBeLessThan(-1);
 
-    await page.setViewportSize({ width: sevenAcrossPx, height: 900 });
+    await page.setViewportSize({ width: twoLinePx, height: 900 });
     await expect.poll(() => row.getAttribute("data-gsap-slider-status")).toBe("not-active");
     await expect
       .poll(() => track.evaluate((element) => {
@@ -205,45 +205,100 @@ test.describe("attire section", () => {
     }
     await expect(row.locator("[data-gsap-slider-controls]")).toBeHidden();
 
-    await page.setViewportSize({ width: sevenAcrossPx - 1, height: 900 });
+    await page.setViewportSize({ width: twoLinePx - 1, height: 900 });
     await expect.poll(() => row.getAttribute("data-gsap-slider-status")).toBe("active");
     await expect(row.locator("[data-gsap-slider-counter]")).toHaveText(new RegExp(`01\\s*/\\s*\\d+`));
   });
 
-  test("hangs all looks in one row at the seven-across breakpoint", { tag: ["@sweep", "@single"] }, async ({ page }) => {
-    await page.setViewportSize({ width: sevenAcrossPx, height: 900 });
-    await page.goto("/");
-    for (const row of await page.locator("#attire [data-gsap-slider-init]").all()) {
-      const boxes = await row.locator(".attire_polaroid").evaluateAll((nodes) =>
-        nodes.map((node) => {
-          const { left, right } = (node.parentElement as HTMLElement).getBoundingClientRect();
-          return { left, right, width: (node.parentElement as HTMLElement).offsetWidth };
-        }),
-      );
-      expect(boxes).toHaveLength(lookItemCount);
-      for (let index = 0; index < boxes.length; index += 1) {
-        expect(boxes[index].width).toBeGreaterThanOrEqual(140);
-        if (index > 0) expect(boxes[index].left).toBeGreaterThanOrEqual(boxes[index - 1].right - 0.5);
+  for (const width of [twoLinePx, 1440, 1920]) {
+    test(`hangs the looks on two clotheslines at ${width}px`, { tag: ["@sweep", "@single"] }, async ({ page }) => {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto("/");
+      for (const group of await page.locator("#attire .attire_looks").all()) {
+        await group.scrollIntoViewIfNeeded();
+        const row = group.locator("[data-gsap-slider-init]");
+        const items = row.locator("[data-gsap-slider-item]");
+        await expect(items).toHaveCount(lookItemCount);
+        for (const item of await items.all()) {
+          await item.scrollIntoViewIfNeeded();
+          await expect(item.locator(".attire_polaroid")).toHaveCSS("opacity", "1");
+        }
+        const boxes = await items.evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const { left, right, top, bottom } = node.getBoundingClientRect();
+            return { left, right, top, bottom, width: (node as HTMLElement).offsetWidth };
+          }),
+        );
+        const firstLine = boxes.slice(0, 4);
+        const secondLine = boxes.slice(4);
+        // Cards stay at least ~220px wide and never exceed the 276px design size.
+        for (const box of boxes) {
+          expect(box.width).toBeGreaterThanOrEqual(220);
+          expect(box.width).toBeLessThanOrEqual(276.5);
+        }
+        expect(secondLine).toHaveLength(lookItemCount - 4);
+        // Line 1 sits above line 2, each in reading order with no overlap.
+        const firstBottom = Math.max(...firstLine.map((box) => box.bottom));
+        for (const box of secondLine) expect(box.top).toBeGreaterThan(firstBottom - 1);
+        for (const line of [firstLine, secondLine]) {
+          for (let index = 1; index < line.length; index += 1) {
+            expect(line[index].left).toBeGreaterThanOrEqual(line[index - 1].right - 0.5);
+          }
+        }
+        // Line 2 is centred on the viewport.
+        const lineLeft = secondLine[0].left;
+        const lineRight = secondLine[secondLine.length - 1].right;
+        expect((lineLeft + lineRight) / 2).toBeCloseTo(width / 2, 0);
+        expect(firstLine[0].left).toBeGreaterThanOrEqual(0);
+        expect(firstLine[3].right).toBeLessThanOrEqual(width);
+        // Each line has its own string, and every card peg sits on its string.
+        const strings = row.locator(".attire_string:visible");
+        await expect(strings).toHaveCount(2);
+        const stringBoxes = [await strings.nth(0).boundingBox(), await strings.nth(1).boundingBox()];
+        expect(stringBoxes[0]!.y).toBeLessThan(firstLine[0].top);
+        expect(stringBoxes[1]!.y).toBeGreaterThan(firstBottom - 1);
+        expect(stringBoxes[1]!.y).toBeLessThan(secondLine[0].top);
+        for (const [index, box] of [...firstLine, ...secondLine].entries()) {
+          const peg = await items.nth(index).locator(".attire_peg").boundingBox();
+          const string = stringBoxes[index < 4 ? 0 : 1]!;
+          expect(peg!.y).toBeGreaterThanOrEqual(string.y);
+          expect(peg!.y).toBeLessThan(string.y + string.height);
+          expect(box.top).toBeGreaterThan(string.y);
+        }
+        // The group heading is stacked and centred on the page.
+        const title = await group.locator(".attire_looks-title").boundingBox();
+        const copy = await group.locator(".attire_looks-copy").boundingBox();
+        expect(title!.x + title!.width / 2).toBeCloseTo(width / 2, -1);
+        expect(copy!.x + copy!.width / 2).toBeCloseTo(width / 2, -1);
+        expect(copy!.y).toBeGreaterThanOrEqual(title!.y + title!.height - 1);
+        expect(copy!.width).toBeLessThanOrEqual(480);
+        // Both strings run edge to edge.
+        for (const box of stringBoxes) {
+          expect(box!.x).toBeCloseTo(0, 0);
+          expect(box!.x + box!.width).toBeCloseTo(width, 0);
+        }
       }
-      expect(boxes[0].left).toBeGreaterThanOrEqual(0);
-      expect(boxes[boxes.length - 1].right).toBeLessThanOrEqual(sevenAcrossPx);
-    }
-  });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    });
+  }
 
   // The global `svg { max-width: 100% }` once capped the string at the content width.
-  for (const width of [320, 390, 768, 1199, 1440, 1920, 2560]) {
+  for (const width of [320, 390, 768, 1151, 1152, 1440, 1920, 2560]) {
     test(`runs the clothesline string edge to edge at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       const rows = page.locator("#attire [data-gsap-slider-init]");
       await expect(rows).toHaveCount(lookGroupCount);
       for (const row of await rows.all()) {
-        const string = row.locator(".attire_string:visible");
-        await expect(string).toHaveCount(1);
-        const box = await string.boundingBox();
-        expect(box).not.toBeNull();
-        expect(box!.x).toBeCloseTo(0, 0);
-        expect(box!.x + box!.width).toBeCloseTo(width, 0);
+        const strings = row.locator(".attire_string:visible");
+        // One string in the slider, one per clothesline on desktop.
+        await expect(strings).toHaveCount(width >= twoLinePx ? 2 : 1);
+        for (const string of await strings.all()) {
+          const box = await string.boundingBox();
+          expect(box).not.toBeNull();
+          expect(box!.x).toBeCloseTo(0, 0);
+          expect(box!.x + box!.width).toBeCloseTo(width, 0);
+        }
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     });

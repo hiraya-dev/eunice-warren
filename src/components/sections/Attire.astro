@@ -105,7 +105,6 @@ const holes = Array.from({ length: 8 });
           aria-roledescription="carousel"
           aria-label={group.label}
         >
-          <svg class="attire_string attire_string-desktop" viewBox="0 0 1440 80" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M0 18 Q720 78 1440 18" fill="none" stroke="#8c7a5b" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
           <svg class="attire_string attire_string-mobile" viewBox="0 0 420 40" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M0 12 Q210 30 420 14" fill="none" stroke="#8c7a5b" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
 
           <div class="attire_collection" data-gsap-slider-collection>
@@ -120,8 +119,8 @@ const holes = Array.from({ length: 8 });
                         alt={look.alt}
                         width={888}
                         height={1184}
-                        widths={[176, 352, 704]}
-                        sizes="(min-width: 75rem) 9.25rem, 11rem"
+                        widths={[176, 352, 496, 704]}
+                        sizes="(min-width: 72rem) min(15.5rem, 17.2vw), 11rem"
                         loading="lazy"
                       />
                     </div>
@@ -132,6 +131,8 @@ const holes = Array.from({ length: 8 });
                   </figure>
                 </div>
               ))}
+              <svg class="attire_string attire_string-desktop attire_string-line1" viewBox="0 0 1440 80" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M0 18 Q720 78 1440 18" fill="none" stroke="#8c7a5b" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
+              <svg class="attire_string attire_string-desktop attire_string-line2" viewBox="0 0 1440 80" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M0 18 Q720 78 1440 18" fill="none" stroke="#8c7a5b" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
             </div>
           </div>
 
@@ -381,7 +382,8 @@ const holes = Array.from({ length: 8 });
       margin-right: var(--slider-gap);
       container-type: inline-size;
     }
-    [data-gsap-slider-item]:last-child {
+    /* The two desktop strings follow the looks in the list, so the last look is not :last-child. */
+    .attire_item:has(+ .attire_string) {
       margin-right: 0;
     }
     .attire_polaroid {
@@ -721,32 +723,85 @@ const holes = Array.from({ length: 8 });
     }
   }
 
-  /* Seven polaroids across; narrower than this they swipe (--slider-status: on). */
-  @media (min-width: 75rem) {
+  /*
+   * Two clotheslines per group (looks 1-4, then 5-7 centred); narrower than this
+   * the cards would drop under ~220px, so they swipe instead (--slider-status: on).
+   * One list stays in the DOM; a 4-track grid holds line 1, and line 2 sits in a
+   * full-width second row where each card is offset by percentage margins.
+   * Every size scales with --_u (1px at 1440, capped there).
+   */
+  @media (min-width: 72rem) {
+    .attire_looks {
+      gap: 2.5rem;
+    }
+    .attire_looks-header {
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      text-align: center;
+    }
+    .attire_looks-copy { max-width: 29.375rem; flex: none; }
+
     .attire_row {
       --slider-status: off;
-      --_drop: calc(min(100vw, 90rem) / 1440);
+      --_u: calc(min(100vw, 90rem) / 1440);
+      --_card: calc(276 * var(--_u));
+      --_gap2: calc(110 * var(--_u));
     }
-    .attire_string-desktop { display: block; height: calc(80 * var(--_drop)); }
     .attire_string-mobile { display: none; }
+    .attire_string-desktop {
+      display: block;
+      height: calc(80 * var(--_u));
+      top: 0;
+      grid-column: 1 / -1;
+    }
+    .attire_string-line1 { grid-row: 1; }
+    .attire_string-line2 { grid-row: 2; }
     .attire_collection { overflow: visible; margin: 0; }
     .attire_list {
+      position: relative;
       display: grid;
+      width: 100%;
+      max-width: 82rem;
+      margin-inline: auto;
       align-items: start;
-      padding: 3.0625rem 1.5rem 0.75rem;
-      column-gap: 0.5rem;
-      grid-template-columns: repeat(7, minmax(0, 10.5rem));
+      padding: 0 calc(40 * var(--_u)) calc(8 * var(--_u));
+      row-gap: calc(32 * var(--_u));
+      grid-template-columns: repeat(4, var(--_card));
       justify-content: space-between;
     }
-    .attire_item { width: auto; margin-right: 0; }
+    .attire_item {
+      width: var(--_card);
+      margin-right: 0;
+      margin-top: calc(40 * var(--_u));
+    }
+    .attire_item:nth-child(n + 5) {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: start;
+    }
     .attire_item:nth-child(2),
-    .attire_item:nth-child(6) { margin-top: calc(12 * var(--_drop)); }
-    .attire_item:nth-child(3),
-    .attire_item:nth-child(5) { margin-top: calc(19 * var(--_drop)); }
-    .attire_item:nth-child(4) { margin-top: calc(22 * var(--_drop)); }
-    .attire_polaroid { padding: 0.625rem 0.625rem 0.875rem; gap: 0.625rem; }
-    .attire_peg { top: -1.375rem; width: 0.8125rem; height: 2.25rem; }
-    .attire_caption-name { font-size: clamp(0.9375rem, 11.9cqw, 1.25rem); line-height: 1.2; }
+    .attire_item:nth-child(3) { margin-top: calc(58 * var(--_u)); }
+    .attire_item:nth-child(5) {
+      margin-top: calc(54 * var(--_u));
+      margin-left: calc(50% - (3 * var(--_card) + 2 * var(--_gap2)) / 2);
+    }
+    .attire_item:nth-child(6) {
+      margin-top: calc(62 * var(--_u));
+      margin-left: calc(50% - (3 * var(--_card) + 2 * var(--_gap2)) / 2 + var(--_card) + var(--_gap2));
+    }
+    .attire_item:nth-child(7) {
+      margin-top: calc(54 * var(--_u));
+      margin-left: calc(50% - (3 * var(--_card) + 2 * var(--_gap2)) / 2 + 2 * (var(--_card) + var(--_gap2)));
+    }
+    .attire_polaroid {
+      padding: 5.07cqw 5.07cqw 6.52cqw;
+      gap: 4.35cqw;
+    }
+    .attire_peg { top: -9.42cqw; width: 5.8cqw; height: 15.94cqw; }
+    .attire_caption { gap: 0 4.35cqw; }
+    .attire_caption-name { font-size: 9.42cqw; line-height: 1.077; }
+    .attire_caption-dot { width: 4.35cqw; height: 4.35cqw; }
     .attire_controls-row { display: none; }
   }
 

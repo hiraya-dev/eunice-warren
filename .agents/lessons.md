@@ -227,6 +227,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ## Content and layout
 
+### L-031 — More items in a row means smaller photos; show the size before building
+- **Date:** 2026-11-17
+- **Trigger:** #83 Local review fix round (the 7-across clotheslines shrank each polaroid photo from 248 to 148px wide at 1440; the user found the looks too small and picked a two-line layout)
+- **Symptom:** a grid that grows from 4 to 7 items per row was built to fit the row, and every photo became about 60% of its old width.
+- **Root cause:** the redesign fitted the new count into the same width and nobody stated the photo size trade-off before the build.
+- **Rule:** when a row's item count grows, state the rendered photo size before and after at 1440 and 390 in the design proposal, and offer a layout that keeps the size (more rows, a slider) alongside the one that fits the row.
+- **Check:** the proposal or PR body lists the photo width before and after at 1440 and 390.
+- **Guard:** taste — the user judges whether the size is enough; no test can measure it
+- **Paths:** `src/components/sections/**`
+
 ### L-014 — Check list layouts with the real names, not the placeholders
 - **Date:** 2026-11-13
 - **Trigger:** PR #72, Local-review round (the user asked for one column for secondary sponsors, then for the groomsmen and bridesmaids on mobile, then for every entourage group on mobile)
