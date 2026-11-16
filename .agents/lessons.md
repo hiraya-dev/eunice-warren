@@ -195,6 +195,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`
 
+### L-027 — A named reference means its engine, not a look-alike
+- **Date:** 2026-11-16
+- **Trigger:** #80 Local review fix round: the gallery shipped to preview as a flat orthographic "stamps on a desk" canvas; the user had picked the Lunardi infinite canvas (as on chandebootcamp.com/gallery) and asked for its 3D fly-through and its popup.
+- **Symptom:** the build matched the Paper stills but not the reference's motion and feel, and needed a rewrite of the canvas and the lightbox after review.
+- **Root cause:** a visual fix round optimised for the Paper screenshot (no overlap, fixed tiers) and replaced the reference's mechanism (perspective chunks, depth fade, fly-through, FLIP popup) without asking.
+- **Rule:** when the user picks a reference implementation, the criteria name its mechanism and its tuning values (read from its source), and Paper governs only the chrome and the look of the parts. A fix round that would change the mechanism to match a still is a question for the user, not a fix.
+- **Check:** the criteria file lists the reference's source and values; the review pack says which reference behaviours were kept and which were left out.
+- **Guard:** none
+- **Paths:** `src/scripts/**`, `src/components/sections/**`
+
+### L-028 — Measure WebGL and blur smoothness on the real GPU
+- **Date:** 2026-11-16
+- **Trigger:** #80: the gallery popup measured p95 100–133 ms per frame in headless Chromium with SwiftShader, and 16.7 ms on the same build with `--use-angle=metal`.
+- **Symptom:** software-GL frame timings blame the code for compositor costs (a `backdrop-filter` over a full-screen WebGL canvas) that a GPU handles at 60 fps.
+- **Root cause:** SwiftShader renders and composites on the CPU, so blur and large layers cost many times more than on any guest's device.
+- **Rule:** smoothness numbers for the review pack come from Playwright's Chromium launched with `--use-angle=metal --ignore-gpu-blocklist --enable-gpu` on the Mac (confirm the WebGL renderer string says Metal). SwiftShader is fine for correctness checks, never for frame-time claims. Do not take screenshots inside a measured window.
+- **Check:** the `Local:` line's frame times name the renderer.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/scripts/gallery/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders

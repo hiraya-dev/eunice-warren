@@ -79,7 +79,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
         new RegExp(`^001 \/ ${String(photoCount).padStart(3, "0")}`),
       );
       await expect(page.locator("[data-gallery-lightbox-img]")).toHaveAttribute(
-        "alt",
+        "aria-label",
         `Photo 1 of ${photoCount}`,
       );
 

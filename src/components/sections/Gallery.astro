@@ -175,8 +175,8 @@ const stampStyle = ({ d, m }: Slot) =>
     [data-gallery-list]             visually hidden list for keyboard and screen readers
     [data-gallery-lightbox]         scrim, stamp, count and controls
       [data-gallery-scrim]          click target behind the stamp
-      [data-gallery-lightbox-stamp] stamp; data-orientation="landscape" makes it 5:4
-      [data-gallery-lightbox-img]   photo (set src and alt)
+      [data-gallery-lightbox-stamp] animated frame sized to the photo's own aspect
+      [data-gallery-lightbox-canvas] stamp drawing (`data-gallery-lightbox-img` keeps the a11y hook)
       [data-gallery-lightbox-count] "014 / 084"
       [data-gallery-prev] [data-gallery-next] [data-gallery-save] [data-gallery-lightbox-close]
   -->
@@ -222,9 +222,9 @@ const stampStyle = ({ d, m }: Slot) =>
     <div class="gallery_lightbox" data-gallery-lightbox>
       <div class="gallery_scrim" data-gallery-scrim></div>
       <div class="gallery_lightbox-frame">
-        <Stamp class="gallery_lightbox-stamp" paper="light-200" data-gallery-lightbox-stamp>
-          <img data-gallery-lightbox-img alt="" decoding="async" />
-        </Stamp>
+        <div class="gallery_lightbox-stamp" data-gallery-lightbox-stamp>
+          <canvas class="gallery_lightbox-canvas" data-gallery-lightbox-canvas data-gallery-lightbox-img role="img" aria-label=""></canvas>
+        </div>
       </div>
       <p class="gallery_lightbox-count" data-gallery-lightbox-count>000 / {String(total).padStart(3, "0")}</p>
       <div class="gallery_controls" role="group" aria-label="Photo controls">
@@ -353,6 +353,7 @@ const stampStyle = ({ d, m }: Slot) =>
 
     /* Overlay */
     .gallery_overlay {
+      --gallery-lightbox-duration: 680ms;
       position: fixed;
       inset: 0;
       z-index: 200;
@@ -527,11 +528,14 @@ const stampStyle = ({ d, m }: Slot) =>
       width: 100%;
       height: var(--_height);
     }
-    .gallery_lightbox-frame :global(.gallery_lightbox-stamp) {
-      width: min(calc(var(--_height) * 0.8), calc(100vw - 2rem));
+    .gallery_lightbox-stamp {
+      flex: none;
       rotate: -1.5deg;
       filter: drop-shadow(0 0.125rem 0.125rem color-mix(in srgb, var(--dark-900) 18%, transparent)) drop-shadow(0 1.875rem 3.125rem color-mix(in srgb, var(--dark-900) 26%, transparent));
+      transform-origin: center;
+      will-change: transform, opacity;
     }
+    .gallery_lightbox-canvas { display: block; width: 100%; height: 100%; }
     .gallery_lightbox-count {
       position: relative;
       margin: 2.375rem 0 0;
@@ -599,18 +603,29 @@ const stampStyle = ({ d, m }: Slot) =>
     /* States: closed shows nothing, canvas the stage, top bar and hint, open adds the lightbox. */
     .gallery_stage,
     .gallery_bar,
-    .gallery_hint,
-    .gallery_lightbox {
+    .gallery_hint {
       visibility: hidden;
       transition: opacity 300ms ease, visibility 0s linear 300ms;
       opacity: 0;
     }
+    .gallery_lightbox { visibility: hidden; }
+    .gallery_scrim,
+    .gallery_lightbox-count,
+    .gallery_controls {
+      opacity: 0;
+      transition: opacity var(--gallery-lightbox-duration) cubic-bezier(0.16, 1, 0.3, 1);
+    }
     [data-gallery-state="canvas"] :is(.gallery_stage, .gallery_bar, .gallery_hint),
-    [data-gallery-state="open"] .gallery_stage,
-    [data-gallery-state="open"] .gallery_lightbox {
+    [data-gallery-state="open"] .gallery_stage {
       visibility: visible;
       transition-delay: 0s;
       opacity: 1;
+    }
+    [data-gallery-state="open"] .gallery_lightbox { visibility: visible; }
+    [data-gallery-state="open"] :is(.gallery_scrim, .gallery_lightbox-count, .gallery_controls) { opacity: 1; }
+    [data-gallery-closing="true"] :is(.gallery_scrim, .gallery_lightbox-count, .gallery_controls) {
+      opacity: 0;
+      transition-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
     }
     [data-gallery-state="canvas"] .gallery_hint[data-faded="true"] { opacity: 0; }
 
@@ -622,7 +637,9 @@ const stampStyle = ({ d, m }: Slot) =>
       .gallery_stage,
       .gallery_bar,
       .gallery_hint,
-      .gallery_lightbox { transition: none; }
+      .gallery_scrim,
+      .gallery_lightbox-count,
+      .gallery_controls { transition: none; }
     }
 
     @media (min-width: 40rem) {
@@ -676,7 +693,7 @@ const stampStyle = ({ d, m }: Slot) =>
         padding-top: 6.5rem;
       }
       .gallery_scrim { background: color-mix(in srgb, var(--light-100) 88%, transparent); }
-      .gallery_lightbox-frame :global(.gallery_lightbox-stamp) {
+      .gallery_lightbox-stamp {
         filter: drop-shadow(0 0.125rem 0.125rem color-mix(in srgb, var(--dark-900) 18%, transparent)) drop-shadow(0 1.5rem 2.5rem color-mix(in srgb, var(--dark-900) 26%, transparent));
       }
       .gallery_lightbox-count { margin-top: 2.25rem; font-size: 0.6875rem; }
