@@ -1,5 +1,5 @@
 ---
-import { Image } from "astro:assets";
+import { getImage, Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import type { HTMLAttributes } from "astro/types";
 import Stamp from "@/components/media/Stamp.astro";
@@ -14,8 +14,51 @@ const album = import.meta.glob<ImageMetadata>("@/assets/images/gallery/*.jpg", {
   eager: true,
   import: "default",
 });
-const total = Object.keys(album).length;
+const albumEntries = Object.entries(album).sort(([left], [right]) => left.localeCompare(right));
+const total = albumEntries.length;
 const photo = (name: string) => album[`/src/assets/images/gallery/${name}.jpg`];
+
+const variantWidth = (image: ImageMetadata, longEdge: number) => {
+  const sourceLongEdge = Math.max(image.width, image.height);
+  const edge = Math.min(sourceLongEdge, longEdge);
+  return image.width >= image.height
+    ? Math.max(1, Math.round(edge))
+    : Math.max(1, Math.round(edge * (image.width / image.height)));
+};
+
+const manifest = await Promise.all(
+  albumEntries.map(async ([path, image], index) => {
+    const name = path.split("/").pop()!.replace(/\.jpg$/i, "");
+    const fine = await getImage({
+      src: image,
+      width: variantWidth(image, 512),
+      format: "webp",
+    });
+    const coarse = await getImage({
+      src: image,
+      width: variantWidth(image, 360),
+      format: "webp",
+    });
+    const full = await getImage({
+      src: image,
+      width: variantWidth(image, 1600),
+      format: "webp",
+    });
+
+    return {
+      index,
+      name,
+      width: image.width,
+      height: image.height,
+      orientation: image.width >= image.height ? "landscape" : "portrait",
+      fine: fine.src,
+      coarse: coarse.src,
+      full: full.src,
+      original: image.src,
+    };
+  }),
+);
+const manifestJson = JSON.stringify(manifest);
 
 type Tier = "near" | "mid" | "far";
 type Slot = {
@@ -200,6 +243,7 @@ const stampStyle = ({ d, m }: Slot) =>
         </button>
       </div>
     </div>
+  <script type="application/json" data-gallery-manifest set:html={manifestJson}></script>
   </div>
 </section>
 
@@ -437,6 +481,26 @@ const stampStyle = ({ d, m }: Slot) =>
       &[hidden] { display: none; }
     }
 
+    [data-gallery-list] button:focus-visible {
+      position: fixed;
+      z-index: 6;
+      top: 50%;
+      left: 50%;
+      width: auto;
+      height: auto;
+      margin: 0;
+      padding: 0.625rem 0.875rem;
+      clip: auto;
+      overflow: visible;
+      border: 0;
+      border-radius: var(--radius-round);
+      background: var(--dark-900);
+      color: var(--light-200);
+      font: var(--primary-regular) 0.6875rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wide);
+      text-transform: uppercase;
+    }
+
     /* Photo open */
     .gallery_lightbox {
       --_height: clamp(12.5rem, calc(100dvh - 23.75rem), 32.5rem);
@@ -619,3 +683,10 @@ const stampStyle = ({ d, m }: Slot) =>
     }
   }
 </style>
+
+<script>
+  import { initGalleryOverlay } from "@/scripts/gallery/overlay.ts";
+
+  initGalleryOverlay();
+  document.addEventListener("astro:page-load", initGalleryOverlay);
+</script>
