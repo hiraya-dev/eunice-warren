@@ -189,6 +189,7 @@ const {
                     <span class="rsvp_eyebrow" data-rsvp-after-party-count></span>
                   </div>
                   <div data-rsvp-slipper-list></div>
+                  <p class="rsvp_after-party-absent" data-rsvp-not-coming hidden><span>Not coming:</span> </p>
                   <p class="rsvp_after-party-help">Slipper sizes are US. We'll have a pair waiting for each guest.</p>
                 </div>
                 <div class="rsvp_field">
@@ -350,9 +351,17 @@ const {
         const renderAfterParty = () => {
           const block = root.querySelector<HTMLElement>("[data-rsvp-after-party]")!;
           const list = root.querySelector<HTMLElement>("[data-rsvp-slipper-list]")!;
+          const absent = root.querySelector<HTMLElement>("[data-rsvp-not-coming]")!;
           const selectedSeats = attending ? seats.filter((seat) => seat.attending) : [];
+          const absentSeats = seats.filter((seat) => !seat.attending && seat.name.trim());
           block.hidden = !attending;
           list.replaceChildren();
+          absent.hidden = absentSeats.length === 0;
+          absent.replaceChildren();
+          const absentPrefix = document.createElement("span");
+          absentPrefix.textContent = "Not coming:";
+          absent.textContent = absentSeats.map((seat) => seat.name).join(", ");
+          absent.prepend(absentPrefix, " ");
           const count = root.querySelector<HTMLElement>("[data-rsvp-after-party-count]")!;
           count.textContent = `${selectedSeats.length} ${selectedSeats.length === 1 ? "guest" : "guests"}`;
           selectedSeats.forEach((seat, index) => {
@@ -1061,6 +1070,8 @@ const {
     .rsvp_after-party-control select:invalid { color: var(--_placeholder); }
     .rsvp_after-party-control select:focus-visible { outline: var(--focus-width) solid var(--dark-900); outline-offset: var(--focus-offset); }
     .rsvp_after-party-row .rsvp_slipper-error { flex: 0 0 100%; margin: 0.375rem 0 0; }
+    .rsvp_after-party-absent { margin: 0; padding-top: 0.75rem; color: var(--dark-900); font: var(--primary-regular) var(--text-small) / 1.429 var(--primary-family); }
+    .rsvp_after-party-absent span { color: #4a5a85; }
     .rsvp_after-party-help { max-width: 25rem; margin: 0; padding-top: 0.25rem; color: #4a5a85; font: var(--primary-regular) var(--text-small) / 1.429 var(--primary-family); }
     .rsvp_field input,
     .rsvp_field textarea {

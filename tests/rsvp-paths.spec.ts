@@ -82,12 +82,15 @@ test.describe("RSVP paths", () => {
     await section.getByRole("button", { name: "Continue" }).click();
     await expect(section.locator("[data-rsvp-slipper-list] .rsvp_after-party-row")).toHaveCount(cruz.members.length - 1);
     await expect(section.locator("[data-rsvp-slipper-list]")).not.toContainText(cruz.members[1]);
+    await expect(section.locator("[data-rsvp-not-coming]")).toBeVisible();
+    await expect(section.locator("[data-rsvp-not-coming]")).toContainText(cruz.members[1]);
   });
 
   test("requires a slipper size before submitting", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, santos.members[0], santos);
     await section.getByRole("button", { name: "Continue" }).click();
+    await expect(section.locator("[data-rsvp-not-coming]")).toBeHidden();
     await section.locator("#rsvp-email").fill("liza-size@example.com");
     await section.getByRole("button", { name: "Send RSVP" }).click();
     const select = section.locator("[data-rsvp-slipper-list] select").first();
