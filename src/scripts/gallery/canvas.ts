@@ -610,10 +610,10 @@ export function createGalleryCanvas(
       event.ctrlKey ||
       event.metaKey ||
       event.altKey ||
+      // Only text entry keeps its keys: arrows and WASD do nothing on a button or
+      // link, and focus sits on one after opening the overlay or closing a photo.
       (event.target instanceof HTMLElement &&
-        (["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"].includes(
-          event.target.tagName,
-        ) ||
+        (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) ||
           event.target.isContentEditable))
     )
       return;

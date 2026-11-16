@@ -185,6 +185,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
 
+### L-026 — Reduced motion shortens transitions; it does not remove them
+- **Date:** 2026-11-16
+- **Trigger:** flaky test: #80 (`gallery.spec.ts` reduced-motion check expected `getAnimations().length` 0 and read 1 or 42 depending on timing)
+- **Symptom:** a reduced-motion spec that asserts "no animations" passes on one run and fails on the next.
+- **Root cause:** the site-wide rule in `src/styles/base.css` sets `transition-duration: 0.01ms !important` on every element, and the default `transition-property` is `all`, so any inherited change (a parent hiding with `visibility`) starts a 0.01 ms `CSSTransition` on each child. Whether the spec sees them depends on whether they have finished.
+- **Rule:** under reduced motion, assert that nothing perceptible animates: filter `getAnimations()` to effects whose computed `duration + delay` exceeds 1 ms and expect that list empty. Never assert a raw count of 0.
+- **Check:** the reduced-motion spec filters by computed timing and passes `--repeat-each 20 --workers 8`.
+- **Guard:** none
+- **Paths:** `tests/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders
@@ -209,10 +219,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-025 — A shared script must handle the "off" state its first caller never hit
 - **Date:** 2026-11-16
-- **Trigger:** #79 CHANGES_REQUIRED (the GSAP slider moved from Explore into `src/scripts/gsap-slider.ts` for the Attire looks rows); #80 CHANGES_REQUIRED (the gallery canvas kept a page-wide `keydown` listener that swallowed arrow keys and Cmd/Ctrl+A/S/D after the overlay closed, resized itself to 1×1 on a `resize` while hidden, and kept a drag alive across close)
+- **Trigger:** #79 CHANGES_REQUIRED (the GSAP slider moved from Explore into `src/scripts/gsap-slider.ts` for the Attire looks rows); #80 CHANGES_REQUIRED (the gallery canvas kept a page-wide `keydown` listener that swallowed arrow keys and Cmd/Ctrl+A/S/D after the overlay closed, resized itself to 1×1 on a `resize` while hidden, and kept a drag alive across close); #80 round 2 CHANGES_REQUIRED (the fix skipped keys on any focused `BUTTON`/`A`, so canvas panning died once focus sat on the close button)
 - **Symptom:** on desktop, where the Attire slider is off, every polaroid was `aria-hidden` and untabbable, and a phone swiped to look 3 then rotated past 48rem kept the desktop row shifted by the old inline transform.
 - **Root cause:** the script set the carousel ARIA and the track transform before checking whether the slider was enabled, and returned early without cleanup. Explore's slider is always on, so that path never ran until a second caller used it.
-- **Rule:** when a script becomes shared, read it for every state the new caller can put it in (off at a breakpoint, a resize between states, fewer items than fit) and make each state set up, and undo, its own attributes, transforms and listeners. The same holds for anything that can be closed or hidden (an overlay, a modal, a paused canvas): bind `window`/`document` listeners on open and remove them on close, reset in-flight gesture state on close, never measure a hidden element, and re-measure on open. Key handlers ignore events with a modifier key.
+- **Rule:** when a script becomes shared, read it for every state the new caller can put it in (off at a breakpoint, a resize between states, fewer items than fit) and make each state set up, and undo, its own attributes, transforms and listeners. The same holds for anything that can be closed or hidden (an overlay, a modal, a paused canvas): bind `window`/`document` listeners on open and remove them on close, reset in-flight gesture state on close, never measure a hidden element, and re-measure on open. Key handlers ignore events with a modifier key and skip only text entry (`input`, `textarea`, `select`, contenteditable), never buttons or links, which is where focus sits in a dialog.
 - **Check:** the new caller's spec covers the inactive state (no item `aria-hidden`, no leftover transform) and a resize from active to inactive; an overlay's spec closes it, then shows a page key (ArrowDown) is not default-prevented and a resize while closed leaves the reopened canvas the stage's size.
 - **Guard:** none
 - **Paths:** `src/scripts/**`

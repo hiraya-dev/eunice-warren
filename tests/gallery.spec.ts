@@ -7,6 +7,25 @@ const photoCount = readdirSync(galleryDirectory).filter((file) =>
   file.endsWith(".jpg"),
 ).length;
 
+// The site-wide reduced-motion rule (src/styles/base.css) shortens every transition to
+// 0.01ms rather than removing it, so count only animations a person could see (> 1ms).
+const perceptibleAnimations = (element: Element) =>
+  element
+    .getAnimations({ subtree: true })
+    .filter((animation) => {
+      const timing = animation.effect?.getComputedTiming();
+      return (
+        Number(timing?.duration ?? 0) + Number(timing?.delay ?? 0) > 1
+      );
+    })
+    .map((animation) =>
+      animation instanceof CSSTransition
+        ? `transition:${animation.transitionProperty}`
+        : animation instanceof CSSAnimation
+          ? `animation:${animation.animationName}`
+          : `animation:${animation.id}`,
+    );
+
 test.describe("photo gallery", { tag: ["@single"] }, () => {
   test(
     "opens the canvas and closes back to the page",
@@ -94,6 +113,41 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       );
     },
   );
+
+  test("pans the canvas from the keyboard while a control has focus", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.locator("[data-gallery-open]").click();
+    const overlay = page.locator("#gallery-overlay");
+    await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
+    // The no-WebGL fallback has no canvas to pan.
+    test.skip(
+      await page.locator("[data-gallery-grid]").isVisible(),
+      "WebGL unavailable: fallback grid has no keyboard panning",
+    );
+    // The canvas module loads on first open; its key listener binds once it runs.
+    await expect(page.locator("[data-gallery-stage] canvas")).toBeAttached();
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.activeElement?.tagName ?? ""),
+      )
+      .toMatch(/^(BUTTON|A)$/);
+    await page.evaluate(() => {
+      (window as Window & { galleryPanKeys?: string[] }).galleryPanKeys = [];
+      window.addEventListener("keydown", (event) => {
+        if (event.defaultPrevented)
+          (window as Window & { galleryPanKeys?: string[] }).galleryPanKeys!.push(event.key);
+      });
+    });
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("d");
+    expect(
+      await page.evaluate(
+        () => (window as Window & { galleryPanKeys?: string[] }).galleryPanKeys,
+      ),
+    ).toEqual(["ArrowRight", "d"]);
+  });
 
   test(
     "resizes the canvas after a closed-viewport change",
@@ -200,20 +254,16 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
     await expect(overlay).toBeVisible();
     expect(
-      await overlay.evaluate(
-        (element) => element.getAnimations({ subtree: true }).length,
-      ),
-    ).toBe(0);
+      await overlay.evaluate(perceptibleAnimations),
+    ).toEqual([]);
 
     const firstPhoto = page.locator("[data-gallery-list] button").first();
     await firstPhoto.focus();
     await page.keyboard.press("Enter");
     await expect(overlay).toHaveAttribute("data-gallery-state", "open");
     expect(
-      await overlay.evaluate(
-        (element) => element.getAnimations({ subtree: true }).length,
-      ),
-    ).toBe(0);
+      await overlay.evaluate(perceptibleAnimations),
+    ).toEqual([]);
 
     await page.keyboard.press("Escape");
     await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
