@@ -1276,10 +1276,10 @@ const {
     .rsvp_seat-row.is-editing .rsvp_seat-label { flex: 0 0 1.25rem; min-height: 2.625rem; align-items: flex-start; padding-top: 0.6875rem; }
     .rsvp_seat-row.is-editing .rsvp_seat-label .rsvp_seat-name,
     .rsvp_seat-row.is-editing .rsvp_seat-label .rsvp_seat-meta { display: none; }
-    .rsvp_seat-edit { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr) 4rem; column-gap: var(--space-2); row-gap: var(--space-1); align-items: start; }
+    .rsvp_seat-edit { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr) auto; column-gap: calc(var(--space-2) + 0.125rem + var(--focus-width)); row-gap: var(--space-1); align-items: start; }
     .rsvp_seat-edit input { width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 0.125rem solid var(--dark-900); background: var(--light-200); color: var(--dark-900); font: var(--primary-regular) var(--text-main) / 1.25 var(--primary-family); }
     .rsvp_seat-edit input:focus-visible { outline: var(--focus-width) solid var(--dark-900); outline-offset: 0.125rem; }
-    .rsvp_seat-edit > button { min-height: 2.75rem; border: 0; background: var(--dark-900); color: var(--light-100); cursor: pointer; }
+    .rsvp_seat-edit > button { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; align-self: stretch; min-height: 2.75rem; padding: 0 var(--space-3); border: 0; background: var(--dark-900); color: var(--light-100); font: var(--primary-medium) var(--text-small) / 1.25 var(--primary-family); text-align: center; white-space: nowrap; cursor: pointer; }
     .rsvp_seat-edit .rsvp_error { grid-column: 1 / -1; }
     .rsvp_seat-edit .rsvp_seat-change { grid-column: 1 / -1; }
     .rsvp_guest-help, .rsvp_guest-error { padding-top: 0.75rem; }

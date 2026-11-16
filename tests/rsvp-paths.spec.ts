@@ -114,9 +114,18 @@ test.describe("RSVP paths", () => {
       .getByRole("button", { name: `Edit ${oldName}` })
       .click();
     await section.locator("[aria-label='Name for seat 2']").fill(newName);
-    await section
-      .getByRole("button", { name: `Done editing ${oldName}` })
-      .click();
+    const done = section.getByRole("button", { name: `Done editing ${oldName}` });
+    // Escape #82: the label sat flush against the button's left edge.
+    const inset = await done.evaluate((button) => {
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      const text = range.getBoundingClientRect();
+      const box = button.getBoundingClientRect();
+      return { left: text.left - box.left, right: box.right - text.right };
+    });
+    expect(inset.left).toBeGreaterThanOrEqual(8);
+    expect(Math.abs(inset.left - inset.right)).toBeLessThanOrEqual(2);
+    await done.click();
 
     await submitRsvp(page, "mateo-renamed@example.com");
     const ticket = page.locator("#rsvp-ticket-modal");

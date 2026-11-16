@@ -277,6 +277,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/scripts/**`
 
+### L-032 — Sweep a form's edit and error states, not only its resting state
+- **Date:** 2026-11-17
+- **Trigger:** escape: runtime #60 (found on #82's preview)
+- **Symptom:** the step 2 rename editor's "Done" button had no padding: its label sat flush against the left edge of a fixed 4rem column.
+- **Root cause:** the button had no font, padding or centring of its own, and the #60 checks measured the checklist at rest, never with a row in edit mode.
+- **Rule:** when a component has modes (edit, error, open, busy), the width sweep and the Paper comparison cover each mode, and every button sets its own font, padding and alignment rather than relying on browser defaults.
+- **Check:** the review pack lists the modes measured; a spec measures the label inset of any button whose column is sized by the layout (`tests/rsvp-paths.spec.ts` "renames a member via Edit").
+- **Guard:** none
+- **Paths:** `src/components/**`, `tests/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
