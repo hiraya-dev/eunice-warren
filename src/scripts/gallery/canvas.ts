@@ -37,7 +37,10 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { createStampCanvas, stampPadding } from "./stamp-texture.ts";
+import {
+  createPolaroidCanvas,
+  polaroidPadding,
+} from "./stamp-texture.ts";
 
 export type GalleryCanvasPhoto = {
   index: number;
@@ -91,8 +94,8 @@ type PlaneState = {
   targetX: number;
   targetY: number;
   targetZ: number;
-  stampWidth: number;
-  stampHeight: number;
+  polaroidWidth: number;
+  polaroidHeight: number;
   fullWidth: number;
   fullHeight: number;
   insetU: number;
@@ -450,7 +453,7 @@ export function createGalleryCanvas(
     textureQueued.delete(index);
     const photo = photos[index];
     try {
-      const canvas = await createStampCanvas(
+      const canvas = await createPolaroidCanvas(
         {
           ...photo,
           fine: coarsePointer ? photo.coarse : photo.fine,
@@ -490,11 +493,11 @@ export function createGalleryCanvas(
   ) => {
     const photo = photos[plane.photoIndex];
     const landscape = photo.orientation === "landscape";
-    const stampWidth = landscape ? plane.longEdge : plane.longEdge * 0.8;
-    const stampHeight = landscape ? plane.longEdge * 0.8 : plane.longEdge;
-    const padding = stampPadding(landscape) * stampWidth;
-    const fullWidth = stampWidth + padding * 2;
-    const fullHeight = stampHeight + padding * 2;
+    const polaroidWidth = landscape ? plane.longEdge : plane.longEdge * 0.8;
+    const polaroidHeight = landscape ? plane.longEdge * 0.8 : plane.longEdge;
+    const padding = polaroidPadding(landscape) * polaroidWidth;
+    const fullWidth = polaroidWidth + padding * 2;
+    const fullHeight = polaroidHeight + padding * 2;
     const material = new MeshBasicMaterial({
       transparent: true,
       opacity: 0,
@@ -515,8 +518,8 @@ export function createGalleryCanvas(
       targetX: plane.x,
       targetY: plane.y,
       targetZ: plane.z,
-      stampWidth,
-      stampHeight,
+      polaroidWidth,
+      polaroidHeight,
       fullWidth,
       fullHeight,
       insetU: padding / fullWidth,
@@ -711,7 +714,7 @@ export function createGalleryCanvas(
                 1,
               );
         const projectedHeight =
-          ((data.stampHeight / data.fullHeight) * mesh.scale.y * focalPixels) /
+          ((data.polaroidHeight / data.fullHeight) * mesh.scale.y * focalPixels) /
           depth;
         const nearRatio = projectedHeight / viewportHeight;
         const nearFade =
@@ -761,8 +764,8 @@ export function createGalleryCanvas(
     if (depth <= 0) return null;
     const data = mesh.userData;
     const scaleFactor = mesh.scale.x / data.fullWidth;
-    const halfWidth = (data.stampWidth * scaleFactor) / 2;
-    const halfHeight = (data.stampHeight * scaleFactor) / 2;
+    const halfWidth = (data.polaroidWidth * scaleFactor) / 2;
+    const halfHeight = (data.polaroidHeight * scaleFactor) / 2;
     let left = Number.POSITIVE_INFINITY;
     let top = Number.POSITIVE_INFINITY;
     let right = Number.NEGATIVE_INFINITY;
@@ -886,8 +889,8 @@ export function createGalleryCanvas(
     const data = hit.userData;
     const bottomLeft = projectCorner(
       hit,
-      (-data.stampWidth * 1.06) / 2,
-      (-data.stampHeight * 1.06) / 2,
+      (-data.polaroidWidth * 1.06) / 2,
+      (-data.polaroidHeight * 1.06) / 2,
     );
     onHover(
       data.photoIndex,

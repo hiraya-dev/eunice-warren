@@ -1,6 +1,6 @@
 import { lenis } from "@/scripts/scroll.ts";
 import {
-  drawPopupStamp,
+  drawPopupPolaroid,
   loadGalleryPhoto,
 } from "@/scripts/gallery/stamp-texture.ts";
 
@@ -76,14 +76,14 @@ const readManifest = (root: HTMLElement): GalleryPhoto[] => {
   }
 };
 
-const createFallbackStamp = (
+const createFallbackPolaroid = (
   photo: GalleryPhoto,
   total: number,
   coarse: boolean,
 ) => {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "stamp_wrap gallery_grid-item";
+  button.className = "gallery_polaroid gallery_grid-item";
   button.setAttribute(
     "aria-label",
     `Open photo ${photo.index + 1} of ${total}`,
@@ -94,10 +94,8 @@ const createFallbackStamp = (
   button.style.padding = "0";
   button.style.background = "transparent";
 
-  const paper = document.createElement("span");
-  paper.className = "stamp_paper light-200";
-  const art = document.createElement("span");
-  art.className = "stamp_art";
+  const photoFrame = document.createElement("span");
+  photoFrame.className = "gallery_polaroid-photo";
   const image = document.createElement("img");
   image.src = coarse ? photo.coarse : photo.fine;
   image.alt = `Photo ${photo.index + 1}`;
@@ -105,9 +103,8 @@ const createFallbackStamp = (
   image.decoding = "async";
   image.width = photo.width;
   image.height = photo.height;
-  art.append(image);
-  paper.append(art);
-  button.append(paper);
+  photoFrame.append(image);
+  button.append(photoFrame);
   if (photo.orientation === "landscape")
     button.dataset.orientation = "landscape";
   return button;
@@ -261,42 +258,87 @@ export function initGalleryOverlay() {
           30,
           Math.min(window.innerHeight * 0.74, frameHeight),
         );
-        const margin = 28;
-        const ratio = photo.width / photo.height;
-        const artWidth = Math.max(1, maxWidth - margin);
-        const artHeight = Math.max(1, maxHeight - margin);
-        const fittedWidth = Math.min(artWidth, artHeight * ratio);
-        const fittedHeight = fittedWidth / ratio;
+        // The whole photo sits inside a 6% side/top border and a 20% bottom strip.
+        const outerHeightPerWidth =
+          0.88 * (photo.height / photo.width) + 0.26;
+        const width = Math.min(maxWidth, maxHeight / outerHeightPerWidth);
+        return { width, height: width * outerHeightPerWidth };
+      };
+
+      const popupFont = (width: number) => {
+        const family =
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--font-delicious-handrawn")
+            .trim() || "cursive";
+        const fontSize = width * 0.075;
+        const spec = `400 ${fontSize}px ${family}`;
         return {
-          width: fittedWidth + margin,
-          height: fittedHeight + margin,
+          family,
+          spec,
+          ready: document.fonts.check(spec),
         };
+      };
+
+      const redrawPopupText = async (index: number, token: number) => {
+        const photo = photos[index];
+        const image = currentImage;
+        if (!photo || !image) return;
+        const size = popupSize(photo);
+        const font = popupFont(size.width);
+        let fontFamily = font.family;
+        try {
+          await document.fonts.load(font.spec);
+        } catch {
+          fontFamily = "cursive";
+        }
+        if (
+          token !== lightboxToken ||
+          currentIndex !== index ||
+          !currentImage ||
+          overlay.dataset.galleryState !== "open"
+        )
+          return;
+        drawPopupPolaroid(
+          lightboxCanvas,
+          currentImage,
+          size.width,
+          size.height,
+          Math.min(window.devicePixelRatio || 1, 2),
+          { index, total: photos.length, fontFamily },
+        );
       };
 
       const drawLightbox = (index: number, image: HTMLImageElement) => {
         const photo = photos[index];
         if (!photo) return;
         const size = popupSize(photo);
+        const font = popupFont(size.width);
         lightboxStamp.style.width = `${size.width}px`;
         lightboxStamp.style.height = `${size.height}px`;
-        drawPopupStamp(
+        drawPopupPolaroid(
           lightboxCanvas,
           image,
           size.width,
           size.height,
           Math.min(window.devicePixelRatio || 1, 2),
+          font.ready
+            ? { index, total: photos.length, fontFamily: font.family }
+            : undefined,
         );
         lightboxCanvas.setAttribute(
           "aria-label",
           `Photo ${index + 1} of ${photos.length}`,
         );
+        if (!font.ready) void redrawPopupText(index, lightboxToken);
       };
 
       const setPhotoMetadata = (index: number) => {
         const photo = photos[index];
         if (!photo) return;
         currentIndex = index;
-        lightboxCount.textContent = `${String(index + 1).padStart(3, "0")} / ${String(photos.length).padStart(3, "0")}${coarsePointer() ? " · Swipe for the next one" : ""}`;
+        const coarse = coarsePointer();
+        lightboxCount.hidden = !coarse;
+        lightboxCount.textContent = coarse ? "Swipe for the next one" : "";
         saveLink.href = photo.original;
         saveLink.download = `eunice-warren-${String(index + 1).padStart(3, "0")}.jpg`;
       };
@@ -403,11 +445,11 @@ export function initGalleryOverlay() {
         if (grid.childElementCount) return;
         const coarse = coarsePointer();
         for (const photo of photos) {
-          const stamp = createFallbackStamp(photo, photos.length, coarse);
-          stamp.addEventListener("click", () => {
-            void openPhoto(photo.index, elementRect(stamp));
+          const polaroid = createFallbackPolaroid(photo, photos.length, coarse);
+          polaroid.addEventListener("click", () => {
+            void openPhoto(photo.index, elementRect(polaroid));
           });
-          grid.append(stamp);
+          grid.append(polaroid);
         }
       };
 
@@ -469,6 +511,7 @@ export function initGalleryOverlay() {
           reducedMotion() ? "0.01ms" : "680ms",
         );
         overlay.dataset.galleryState = "open";
+        void redrawPopupText(index, token);
         requestFullImage(index, token);
         lightboxClose.focus({ preventScroll: true });
         lightboxBusy = false;

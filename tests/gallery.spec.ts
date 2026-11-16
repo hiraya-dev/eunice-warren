@@ -75,17 +75,18 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       await firstPhoto.focus();
       await page.keyboard.press("Enter");
       await expect(overlay).toHaveAttribute("data-gallery-state", "open");
-      await expect(page.locator("[data-gallery-lightbox-count]")).toHaveText(
-        new RegExp(`^001 \/ ${String(photoCount).padStart(3, "0")}`),
-      );
+      const count = page.locator("[data-gallery-lightbox-count]");
+      if (isMobile) await expect(count).toHaveText("Swipe for the next one");
+      else await expect(count).toBeHidden();
       await expect(page.locator("[data-gallery-lightbox-img]")).toHaveAttribute(
         "aria-label",
         `Photo 1 of ${photoCount}`,
       );
 
       await page.locator("[data-gallery-next]").click();
-      await expect(page.locator("[data-gallery-lightbox-count]")).toHaveText(
-        new RegExp(`^002 \/ ${String(photoCount).padStart(3, "0")}`),
+      await expect(page.locator("[data-gallery-lightbox-img]")).toHaveAttribute(
+        "aria-label",
+        `Photo 2 of ${photoCount}`,
       );
       const save = page.locator("a[data-gallery-save]");
       expect(
@@ -217,18 +218,11 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       const popupCanvas = page.locator("[data-gallery-lightbox-canvas]");
       await expect(popupCanvas).toHaveJSProperty("tagName", "CANVAS");
       const popupRatio = await page
-        .locator("[data-gallery-lightbox-stamp]")
-        .evaluate((stamp) => {
-          const styles = getComputedStyle(stamp);
-          const paperMargin = 28;
-          return (
-            (Number.parseFloat(styles.width) - paperMargin) /
-            (Number.parseFloat(styles.height) - paperMargin)
-          );
-        });
-      expect(Math.abs(popupRatio - photo.width / photo.height)).toBeLessThan(
-        0.01,
-      );
+        .locator("[data-gallery-lightbox-canvas]")
+        .evaluate((canvas) => canvas.clientWidth / canvas.clientHeight);
+      const expectedRatio =
+        1 / (0.88 * (photo.height / photo.width) + 0.26);
+      expect(Math.abs(popupRatio - expectedRatio)).toBeLessThan(0.02);
 
       const stamp = page.locator("[data-gallery-lightbox-stamp]");
       await stamp.evaluate(async (element) => {
@@ -384,8 +378,12 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     await expect(grid.locator("button")).toHaveCount(photoCount);
     await grid.locator("button").first().click();
     await expect(overlay).toHaveAttribute("data-gallery-state", "open");
-    await expect(page.locator("[data-gallery-lightbox-count]")).toHaveText(
-      new RegExp(`^001 \/ ${String(photoCount).padStart(3, "0")}`),
+    await expect(page.locator("[data-gallery-lightbox-img]")).toHaveAttribute(
+      "aria-label",
+      `Photo 1 of ${photoCount}`,
+    );
+    await expect(grid.locator("button.gallery_polaroid")).toHaveCount(
+      photoCount,
     );
   });
 
@@ -450,9 +448,11 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     await startPhoto.focus();
     await page.keyboard.press("Enter");
     await expect(overlay).toHaveAttribute("data-gallery-state", "open");
-    const count = page.locator("[data-gallery-lightbox-count]");
-    const startLabel = String(startIndex + 1).padStart(3, "0");
-    await expect(count).toHaveText(new RegExp(`^${startLabel} \/`));
+    const lightboxImage = page.locator("[data-gallery-lightbox-img]");
+    await expect(lightboxImage).toHaveAttribute(
+      "aria-label",
+      `Photo ${startIndex + 1} of ${photoCount}`,
+    );
 
     await page.locator("[data-gallery-next]").click();
     await firstStarted;
@@ -466,10 +466,14 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     await expect(overlay).toHaveAttribute("data-gallery-state", "open");
     await page.locator("[data-gallery-next]").click();
     await secondFailed;
-    await expect(count).toHaveText(new RegExp(`^${startLabel} \/`));
+    await expect(lightboxImage).toHaveAttribute(
+      "aria-label",
+      `Photo ${startIndex + 1} of ${photoCount}`,
+    );
     await page.locator("[data-gallery-prev]").click();
-    await expect(count).toHaveText(
-      new RegExp(`^${String(startIndex).padStart(3, "0")} \/`),
+    await expect(lightboxImage).toHaveAttribute(
+      "aria-label",
+      `Photo ${startIndex} of ${photoCount}`,
     );
   });
 
