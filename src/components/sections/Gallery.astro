@@ -285,8 +285,11 @@ const slotStyle = ({ d, m }: Slot) =>
     }
     :global(.gallery_polaroid-photo) {
       position: absolute;
-      top: 6%;
-      left: 6%;
+      /* Percentage margins resolve against the polaroid's width (a percentage top would use its
+         height), so the top border matches the 6% sides and the WebGL polaroids. */
+      top: 0;
+      left: 0;
+      margin: 6%;
       display: block;
       width: 88%;
       aspect-ratio: var(--_window-ratio, 88 / 92);
