@@ -237,6 +237,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ## Content and layout
 
+### L-031 — Facts in a Paper artboard are not confirmed copy
+- **Date:** 2026-11-17
+- **Trigger:** PR #82, Local-review round (the user had the copy changed)
+- **Symptom:** the after-party header shipped to the preview as "For the after party · 10 PM". The time came from a Paper drawing, and the user had only said "~10 PM, I think".
+- **Root cause:** the criteria copied every string from the artboard, so a value drawn as a placeholder became site copy without a check against `src/content` or the user.
+- **Rule:** when criteria take copy from Paper, any time, date, place, price or name in it must already be on the site or confirmed by the user; otherwise leave it out and ask in the approval message.
+- **Check:** each fact in new copy in the diff is found in `src/content/**` or in the user's words in the thread.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/content/**`, `.agents/skills/astro-component/**`
+
 ### L-014 — Check list layouts with the real names, not the placeholders
 - **Date:** 2026-11-13
 - **Trigger:** PR #72, Local-review round (the user asked for one column for secondary sponsors, then for the groomsmen and bridesmaids on mobile, then for every entourage group on mobile)
