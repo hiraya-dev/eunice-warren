@@ -27,9 +27,7 @@ test.describe("stamp component", () => {
           const art = root.querySelector<HTMLElement>(".stamp_art");
           return {
             mask: styles.maskImage !== "none" || styles.getPropertyValue("-webkit-mask-image") !== "none",
-            // Computed size: unrounded (small stamps miss 0.8 on whole pixels) and unaffected by a parent's rotation.
-            aspect: parseFloat(getComputedStyle(root).width) / parseFloat(getComputedStyle(root).height),
-            landscape: root.classList.contains("landscape"),
+            aspect: root.offsetWidth / root.offsetHeight,
             imageLoaded: image?.complete && image.naturalWidth > 0,
             imageAspect: image ? image.offsetWidth / image.offsetHeight : 0,
             naturalAspect: image && image.naturalHeight ? image.naturalWidth / image.naturalHeight : 0,
@@ -40,8 +38,7 @@ test.describe("stamp component", () => {
 
       for (const metric of metrics) {
         expect(metric.mask).toBe(true);
-        // Portrait stamps are 4:5; the landscape variant (Stamp `orientation="landscape"`) is 5:4.
-        expect(metric.aspect).toBeCloseTo(metric.landscape ? 1.25 : 0.8, 2);
+        expect(metric.aspect).toBeCloseTo(0.8, 2);
         expect(metric.imageLoaded).toBe(true);
         expect(metric.artWidthRatio).toBeGreaterThanOrEqual(0.8);
         expect(metric.imageAspect / metric.naturalAspect).toBeGreaterThan(0.98);

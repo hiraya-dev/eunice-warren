@@ -2,7 +2,6 @@
 import { getImage, Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import type { HTMLAttributes } from "astro/types";
-import Stamp from "@/components/media/Stamp.astro";
 import Button from "@/components/Button.astro";
 
 interface Props extends HTMLAttributes<"section"> {}
@@ -71,7 +70,7 @@ type Slot = {
   m?: ["l" | "r", number, "t" | "b", number, number, number];
 };
 
-/** Teaser stamps, fixed picks from the album. Landscape slots are 5:4, the rest 4:5. */
+/** Teaser polaroids, fixed picks from the album. Landscape slots are 5:4, the rest 4:5. */
 const slots: Slot[] = [
   { name: "img-4462", tier: "near", d: [64, 72, 224, -6], m: ["l", -20, "t", 36, 128, -7] },
   { name: "img-2505", tier: "near", landscape: true, d: [1130, 64, 270, 5], m: ["r", 2, "t", 28, 150, 6] },
@@ -89,14 +88,13 @@ const slots: Slot[] = [
   { name: "img-1963", tier: "far", d: [650, -36, 72, -3] },
 ];
 
-/** Source size per tier, about twice the largest rendered size. */
-const source = {
-  near: [400, 500],
-  mid: [280, 350],
-  far: [160, 200],
-} as const;
+/** Photo window width per tier, about twice the largest rendered window (0.88 of the polaroid). */
+const source = { near: 480, mid: 340, far: 200 } as const;
 
-const stampStyle = ({ d, m }: Slot) =>
+/** Photo window as a share of the polaroid width: 0.88 wide, 0.92 tall (portrait) or 0.57 tall (landscape). */
+const windowHeight = (width: number, landscape?: boolean) => Math.round(width * (landscape ? 57 : 92) / 88);
+
+const slotStyle = ({ d, m }: Slot) =>
   [
     `--dx:${d[0]}`,
     `--dy:${d[1]}`,
@@ -115,24 +113,23 @@ const stampStyle = ({ d, m }: Slot) =>
   <div class="gallery_field" aria-hidden="true">
     {
       slots.map((slot) => {
-        const [long, short] = source[slot.tier];
+        const width = source[slot.tier];
         return (
-          <div
-            class:list={["gallery_stamp", slot.tier, !slot.m && "wide"]}
-            style={stampStyle(slot)}
-          >
-            <Stamp paper="light-200" orientation={slot.landscape ? "landscape" : "portrait"}>
-              <Image
-                src={photo(slot.name)}
-                alt=""
-                aria-hidden="true"
-                width={slot.landscape ? long : short}
-                height={slot.landscape ? Math.round(long * 68.8 / 88.8) : Math.round(short * 111 / 86)}
-                fit="cover"
-                loading="lazy"
-                decoding="async"
-              />
-            </Stamp>
+          <div class:list={["gallery_slot", slot.tier, !slot.m && "wide"]} style={slotStyle(slot)}>
+            <span class:list={["gallery_polaroid", slot.landscape && "landscape"]}>
+              <span class="gallery_polaroid-photo">
+                <Image
+                  src={photo(slot.name)}
+                  alt=""
+                  aria-hidden="true"
+                  width={width}
+                  height={windowHeight(width, slot.landscape)}
+                  fit="cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
+            </span>
           </div>
         );
       })
@@ -171,12 +168,12 @@ const stampStyle = ({ d, m }: Slot) =>
     [data-gallery-count]            "The photos · N" / "N photos" label (text only)
     [data-gallery-close]            back-to-site button
     [data-gallery-hint]             hint pill; data-faded="true" fades it out
-    [data-gallery-hover-label]      `hidden` until a stamp is hovered; position it with `transform`
+    [data-gallery-hover-label]      `hidden` until a photo is hovered; position it with `transform`
     [data-gallery-list]             visually hidden list for keyboard and screen readers
-    [data-gallery-lightbox]         scrim, stamp, count and controls
-      [data-gallery-scrim]          click target behind the stamp
+    [data-gallery-lightbox]         scrim, polaroid, count and controls
+      [data-gallery-scrim]          click target behind the polaroid
       [data-gallery-lightbox-stamp] animated frame sized to the photo's own aspect
-      [data-gallery-lightbox-canvas] stamp drawing (`data-gallery-lightbox-img` keeps the a11y hook)
+      [data-gallery-lightbox-canvas] polaroid drawing (`data-gallery-lightbox-img` keeps the a11y hook)
       [data-gallery-lightbox-count] hidden on fine pointers; "Swipe for the next one" on coarse pointers
       [data-gallery-prev] [data-gallery-next] [data-gallery-save] [data-gallery-lightbox-close]
   -->
@@ -222,7 +219,7 @@ const stampStyle = ({ d, m }: Slot) =>
     <div class="gallery_lightbox" data-gallery-lightbox>
       <div class="gallery_scrim" data-gallery-scrim></div>
       <div class="gallery_lightbox-frame">
-        <div class="gallery_lightbox-stamp" data-gallery-lightbox-stamp>
+        <div class="gallery_lightbox-polaroid" data-gallery-lightbox-stamp>
           <canvas class="gallery_lightbox-canvas" data-gallery-lightbox-canvas data-gallery-lightbox-img role="img" aria-label=""></canvas>
         </div>
       </div>
@@ -267,7 +264,49 @@ const stampStyle = ({ d, m }: Slot) =>
       inset: 0;
       pointer-events: none;
     }
-    .gallery_stamp {
+    /* Instant-photo polaroid, shared by the teaser and the fallback grid. Borders are shares of the
+       polaroid's own width: 6% left, right and top, a deep bottom strip. The photo window is 0.88W wide
+       and 0.92W (portrait, 4:5) or 0.57W (landscape, 5:4) tall. */
+    :global(.gallery_polaroid) {
+      position: relative;
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      border-radius: 2px;
+      background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat;
+      box-shadow:
+        0 0.0625rem 0.0625rem color-mix(in srgb, var(--dark-900) 18%, transparent),
+        0 0.5rem 0.875rem color-mix(in srgb, var(--dark-900) 14%, transparent);
+    }
+    :global(.gallery_polaroid.landscape) {
+      --_window-ratio: 88 / 57;
+      aspect-ratio: 5 / 4;
+    }
+    :global(.gallery_polaroid-photo) {
+      position: absolute;
+      top: 6%;
+      left: 6%;
+      display: block;
+      width: 88%;
+      aspect-ratio: var(--_window-ratio, 88 / 92);
+      overflow: hidden;
+      background: var(--light-300);
+    }
+    :global(.gallery_polaroid-photo)::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dark-900) 12%, transparent);
+      pointer-events: none;
+    }
+    :global(.gallery_polaroid-photo img) {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .gallery_slot {
       position: absolute;
       top: calc(var(--_cv) * var(--mtop) / 390);
       bottom: calc(var(--_cv) * var(--mbottom) / 390);
@@ -276,13 +315,13 @@ const stampStyle = ({ d, m }: Slot) =>
       width: calc(var(--_cv) * var(--mw) / 390);
       rotate: var(--mr, 0deg);
     }
-    .gallery_stamp.wide { display: none; }
-    .gallery_stamp.mid { opacity: 0.92; }
-    .gallery_stamp.far {
+    .gallery_slot.wide { display: none; }
+    .gallery_slot.mid { opacity: 0.92; }
+    .gallery_slot.far {
       opacity: 0.5;
       filter: blur(0.075rem);
     }
-    .gallery_stamp.far :global(.stamp_wrap) { filter: none; }
+    .gallery_slot.far .gallery_polaroid { box-shadow: none; }
     .gallery_content {
       position: relative;
       z-index: 1;
@@ -383,6 +422,18 @@ const stampStyle = ({ d, m }: Slot) =>
       overflow-y: auto;
       overscroll-behavior: contain;
       &[hidden] { display: none; }
+    }
+    /* Fallback grid cards: portrait 4:5 polaroids, every photo cover-cropped to the window. */
+    :global(.gallery_grid-item) {
+      cursor: pointer;
+      transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    :global(.gallery_grid-item:focus-visible) {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      :global(.gallery_grid-item:hover) { transform: translateY(-0.25rem) rotate(-1deg); }
     }
     .gallery_bar {
       position: absolute;
@@ -505,7 +556,7 @@ const stampStyle = ({ d, m }: Slot) =>
 
     /* Photo open */
     .gallery_lightbox {
-      /* Stamp, count and controls are one centred column; the stamp gets the height the
+      /* Polaroid, count and controls are one centred column; the polaroid gets the height the
          count and controls leave (capped at 74% of the screen), so no gap opens between them. */
       --_height: max(12.5rem, min(74dvh, calc(100dvh - 14rem)));
       position: absolute;
@@ -529,11 +580,11 @@ const stampStyle = ({ d, m }: Slot) =>
       display: grid;
       place-items: center;
       width: 100%;
-      /* Hugs the stamp; the script sizes the stamp to fit within this max-height. */
+      /* Hugs the polaroid; the script sizes it to fit within this max-height. */
       max-height: var(--_height);
       pointer-events: none;
     }
-    .gallery_lightbox-stamp {
+    .gallery_lightbox-polaroid {
       flex: none;
       rotate: -1.5deg;
       filter: drop-shadow(0 0.125rem 0.125rem color-mix(in srgb, var(--dark-900) 18%, transparent)) drop-shadow(0 1.875rem 3.125rem color-mix(in srgb, var(--dark-900) 26%, transparent));
@@ -549,6 +600,7 @@ const stampStyle = ({ d, m }: Slot) =>
       font: var(--primary-regular) 0.75rem / 1 var(--mono-family);
       letter-spacing: var(--letter-spacing-wider);
       text-transform: uppercase;
+      &[hidden] { display: none; }
     }
     .gallery_controls {
       position: relative;
@@ -659,8 +711,8 @@ const stampStyle = ({ d, m }: Slot) =>
         min-height: calc(var(--_dv) * 1000 / 1440);
         padding-block: 0;
       }
-      .gallery_stamp,
-      .gallery_stamp.wide {
+      .gallery_slot,
+      .gallery_slot.wide {
         display: block;
         top: calc(var(--dy) / 1000 * 100%);
         bottom: auto;
@@ -669,7 +721,7 @@ const stampStyle = ({ d, m }: Slot) =>
         width: calc(var(--_dv) * var(--dw) / 1440);
         rotate: var(--dr);
       }
-      .gallery_stamp.far { filter: blur(0.09375rem); opacity: 0.45; }
+      .gallery_slot.far { filter: blur(0.09375rem); opacity: 0.45; }
     }
     @media (max-width: 39.9375rem) {
       .gallery_bar { padding: 1rem 1rem 2.25rem 1.25rem; }
@@ -697,7 +749,7 @@ const stampStyle = ({ d, m }: Slot) =>
         padding-block: 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
       }
       .gallery_scrim { background: color-mix(in srgb, var(--light-100) 88%, transparent); }
-      .gallery_lightbox-stamp {
+      .gallery_lightbox-polaroid {
         filter: drop-shadow(0 0.125rem 0.125rem color-mix(in srgb, var(--dark-900) 18%, transparent)) drop-shadow(0 1.5rem 2.5rem color-mix(in srgb, var(--dark-900) 26%, transparent));
       }
       .gallery_lightbox-count { margin-top: 2.25rem; font-size: 0.6875rem; }

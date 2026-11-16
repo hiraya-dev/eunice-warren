@@ -92,7 +92,6 @@ const createFallbackPolaroid = (
   button.style.appearance = "none";
   button.style.border = "0";
   button.style.padding = "0";
-  button.style.background = "transparent";
 
   const photoFrame = document.createElement("span");
   photoFrame.className = "gallery_polaroid-photo";

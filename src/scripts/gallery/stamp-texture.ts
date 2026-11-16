@@ -97,6 +97,8 @@ const drawPolaroid = ({
   cover,
   hairline,
 }: DrawStampOptions) => {
+  // The window is centred: equal left and right borders.
+  const photoLeft = (width - photoWidth) / 2;
   context.clearRect(0, 0, width, height);
   context.save();
   roundedRect(context, width, height, radius);
@@ -110,7 +112,7 @@ const drawPolaroid = ({
   context.fillRect(0, 0, width, height);
 
   if (cover) {
-    const art = coverCrop(image, 0, photoTop, photoWidth, photoHeight);
+    const art = coverCrop(image, photoLeft, photoTop, photoWidth, photoHeight);
     context.drawImage(
       image,
       art.sourceX,
@@ -123,13 +125,13 @@ const drawPolaroid = ({
       art.height,
     );
   } else {
-    context.drawImage(image, 0, photoTop, photoWidth, photoHeight);
+    context.drawImage(image, photoLeft, photoTop, photoWidth, photoHeight);
   }
 
   context.strokeStyle = "rgb(31 47 92 / 12%)";
   context.lineWidth = hairline;
   context.strokeRect(
-    hairline / 2,
+    photoLeft + hairline / 2,
     photoTop + hairline / 2,
     Math.max(0, photoWidth - hairline),
     Math.max(0, photoHeight - hairline),
