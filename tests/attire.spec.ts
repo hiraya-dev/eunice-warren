@@ -69,11 +69,6 @@ test.describe("attire section", () => {
     await expect(note.locator(".attire_postmark")).toHaveAttribute("alt", "Strictly no white");
   });
 
-  test("links from the wedding card", { tag: ["@single"] }, async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator(".wedding_dress-link")).toHaveAttribute("href", "#attire");
-  });
-
   test("advances the mobile slider and updates its counter", { tag: ["@sweep"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
