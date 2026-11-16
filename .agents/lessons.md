@@ -215,6 +215,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/gallery/**`
 
+### L-029 — The shared fade-in hides a section's controls until it is reached
+- **Date:** 2026-11-16
+- **Trigger:** #80 Local review fix round (teaser reveal): putting `data-fade-in` on the gallery copy made "Step inside" `visibility: hidden` until the section scrolled into view, and three existing specs that clicked it straight after `goto` timed out.
+- **Symptom:** a spec that clicks or focuses an element inside a fade-in section fails with a timeout or an unexpected re-scroll, though the element exists.
+- **Root cause:** `src/scripts/fade-in.ts` sets `autoAlpha: 0` (visibility hidden) on every `[data-fade-in-item]` until its ScrollTrigger fires, and the fade's 24px rise moves the element after Playwright scrolls to it.
+- **Rule:** when a section gains `data-fade-in`, its specs reach the section first (scroll the item into view) and wait for the item's opacity to reach 1 before clicking or sampling scroll positions. Keyboard users reach it the same way, so this is the intended behaviour, not something to work around in the component.
+- **Check:** the section's spec opens with a helper that scrolls the item into view and waits for `opacity: 1`.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/scripts/fade-in.ts`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders

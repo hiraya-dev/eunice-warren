@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -26,6 +26,13 @@ const perceptibleAnimations = (element: Element) =>
           : `animation:${animation.id}`,
     );
 
+// The teaser copy fades in as the section arrives (data-fade-in), so reach it before clicking.
+const openGallery = async (page: Page) => {
+  const open = page.locator("[data-gallery-open]");
+  await open.scrollIntoViewIfNeeded();
+  await open.click();
+};
+
 test.describe("photo gallery", { tag: ["@single"] }, () => {
   test(
     "opens the canvas and closes back to the page",
@@ -50,6 +57,8 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
 
       const open = page.locator("[data-gallery-open]");
       await open.scrollIntoViewIfNeeded();
+      // Let the copy finish fading in (it also moves 24px), so the click does not re-scroll.
+      await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
       const scrollBefore = await page.evaluate(() => window.scrollY);
       await open.click();
 
@@ -119,7 +128,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     page,
   }) => {
     await page.goto("/");
-    await page.locator("[data-gallery-open]").click();
+    await openGallery(page);
     const overlay = page.locator("#gallery-overlay");
     await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
     // The no-WebGL fallback has no canvas to pan.
@@ -160,6 +169,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       const canvas = page.locator("[data-gallery-stage] canvas");
       const grid = page.locator("[data-gallery-grid]");
 
+      await open.scrollIntoViewIfNeeded();
       await open.click();
       await expect
         .poll(
@@ -208,7 +218,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       const photo = manifest[0];
       expect(photo).toBeDefined();
 
-      await page.locator("[data-gallery-open]").click();
+      await openGallery(page);
       const overlay = page.locator("#gallery-overlay");
       const firstPhoto = page.locator("[data-gallery-list] button").first();
       await firstPhoto.focus();
@@ -278,7 +288,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
         else await route.continue();
       });
       await page.goto("/");
-      await page.locator("[data-gallery-open]").click();
+      await openGallery(page);
       const grid = page.locator("[data-gallery-grid]");
       await expect
         .poll(
@@ -338,7 +348,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
 
   test("keeps focus inside the lightbox controls", async ({ page }) => {
     await page.goto("/");
-    await page.locator("[data-gallery-open]").click();
+    await openGallery(page);
     const overlay = page.locator("#gallery-overlay");
     const firstPhoto = page.locator("[data-gallery-list] button").first();
     await firstPhoto.focus();
@@ -370,7 +380,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       });
     });
     await page.goto("/");
-    await page.locator("[data-gallery-open]").click();
+    await openGallery(page);
 
     const overlay = page.locator("#gallery-overlay");
     const grid = page.locator("[data-gallery-grid]");
@@ -440,7 +450,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       },
     );
 
-    await page.locator("[data-gallery-open]").click();
+    await openGallery(page);
     const overlay = page.locator("#gallery-overlay");
     const startPhoto = page
       .locator("[data-gallery-list] button")

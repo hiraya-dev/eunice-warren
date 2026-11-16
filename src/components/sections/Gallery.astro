@@ -136,13 +136,13 @@ const slotStyle = ({ d, m }: Slot) =>
     }
   </div>
 
-  <div class="gallery_content">
-    <p class="gallery_eyebrow">The photos</p>
-    <h2 class="gallery_title">Wander through <em>our album</em></h2>
-    <p class="gallery_text">
+  <div class="gallery_content" data-fade-in>
+    <p class="gallery_eyebrow" data-fade-in-item>The photos</p>
+    <h2 class="gallery_title" data-fade-in-item>Wander through <em>our album</em></h2>
+    <p class="gallery_text" data-fade-in-item>
       Every photo we couldn't choose between, scattered like polaroids on a desk. <span class="gallery_fine">Drag</span><span class="gallery_coarse">Swipe</span> around and get a little lost.
     </p>
-    <div class="gallery_actions">
+    <div class="gallery_actions" data-fade-in-item>
       <Button
         class="gallery_open"
         shape="pill"
@@ -764,7 +764,13 @@ const slotStyle = ({ d, m }: Slot) =>
 
 <script>
   import { initGalleryOverlay } from "@/scripts/gallery/overlay.ts";
+  import { initGalleryTeaser } from "@/scripts/gallery/teaser.ts";
 
-  initGalleryOverlay();
-  document.addEventListener("astro:page-load", initGalleryOverlay);
+  const initGallery = () => {
+    initGalleryOverlay();
+    initGalleryTeaser();
+  };
+
+  initGallery();
+  document.addEventListener("astro:page-load", initGallery);
 </script>
