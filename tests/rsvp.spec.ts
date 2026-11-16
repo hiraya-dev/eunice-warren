@@ -37,6 +37,9 @@ const rsvp = (page: import("@playwright/test").Page) => page.locator("#rsvp");
 const visiblePanels = (page: import("@playwright/test").Page) =>
   rsvp(page).locator("[data-rsvp-panel]:not([hidden])");
 const mateoInvite = fakeFixtures.find((invite) => invite.id === "cruz")!;
+const chooseSlippers = async (page: import("@playwright/test").Page) => {
+  for (const select of await rsvp(page).locator("[data-rsvp-slipper-list] select").all()) await select.selectOption("W 7");
+};
 
 test.describe("RSVP section", () => {
   test.beforeEach(async ({ page }) => {
@@ -209,6 +212,7 @@ test.describe("RSVP section", () => {
       const seatThreeCheckbox = rsvp(page).locator("#rsvp-seat-2");
       if (!(await seatThreeCheckbox.isChecked())) await seatThreeCheckbox.check();
       await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+      await chooseSlippers(page);
       await rsvp(page).locator("#rsvp-email").fill("paolo@example.com");
       await rsvp(page).locator("#rsvp-note").fill("private note");
       await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
@@ -220,6 +224,8 @@ test.describe("RSVP section", () => {
       await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
       await expect(rsvp(page).locator("#rsvp-seat-2")).toBeChecked({ timeout: 15_000 });
       await expect(rsvp(page).locator("[data-rsvp-guests]")).toContainText(uniqueName);
+      await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+      await expect(rsvp(page).locator("[data-rsvp-slipper-list] select").nth(2)).toHaveValue("W 7");
     });
     await expect(rsvp(page).locator("#rsvp-email")).toHaveValue("");
     await expect(rsvp(page).locator("#rsvp-note")).toHaveValue("");
@@ -262,6 +268,7 @@ test.describe("RSVP section", () => {
       .getByRole("button", { name: /Continue/ })
       .click();
     await rsvp(page).locator("#rsvp-email").fill("liza@example.com");
+    await chooseSlippers(page);
     await rsvp(page)
       .getByRole("button", { name: /Send RSVP/ })
       .click();

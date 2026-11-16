@@ -19,6 +19,7 @@ export interface RsvpSeat {
   original: string | null;
   name: string;
   attending: boolean;
+  slipperSize?: string;
 }
 
 export interface PreviousRsvp {

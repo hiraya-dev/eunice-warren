@@ -33,6 +33,7 @@ async function submitRsvp(
   const section = rsvp(page);
   await section.getByRole("button", { name: "Continue" }).click();
   await expect(section.locator("[data-rsvp-panel='3']")).toBeVisible();
+  for (const select of await section.locator("[data-rsvp-slipper-list] select").all()) await select.selectOption("W 7");
   await section.locator("#rsvp-email").fill(email);
   await section.getByRole("button", { name: "Send RSVP" }).click();
 }
@@ -72,6 +73,26 @@ test.describe("RSVP paths", () => {
       await expect(summary).toContainText(guest);
     }
     await expect(summary).not.toContainText(untickedGuest);
+  });
+
+  test("rebuilds after-party rows from the checked seats", async ({ page }) => {
+    const section = rsvp(page);
+    await findInvite(page, cruz.members[0], cruz);
+    await section.locator("#rsvp-seat-1").uncheck();
+    await section.getByRole("button", { name: "Continue" }).click();
+    await expect(section.locator("[data-rsvp-slipper-list] .rsvp_after-party-row")).toHaveCount(cruz.members.length - 1);
+    await expect(section.locator("[data-rsvp-slipper-list]")).not.toContainText(cruz.members[1]);
+  });
+
+  test("requires a slipper size before submitting", async ({ page }) => {
+    const section = rsvp(page);
+    await findInvite(page, santos.members[0], santos);
+    await section.getByRole("button", { name: "Continue" }).click();
+    await section.locator("#rsvp-email").fill("liza-size@example.com");
+    await section.getByRole("button", { name: "Send RSVP" }).click();
+    const select = section.locator("[data-rsvp-slipper-list] select").first();
+    await expect(select).toBeFocused();
+    await expect(select.locator("xpath=ancestor::*[contains(@class,'rsvp_after-party-row')]").locator(".rsvp_slipper-error")).toHaveRole("alert");
   });
 
   test("renames a member via Edit before submitting", async ({ page }) => {

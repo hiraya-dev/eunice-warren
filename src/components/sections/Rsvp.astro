@@ -183,6 +183,14 @@ const {
                     Please enter a valid email address.
                   </p>
                 </div>
+                <div class="rsvp_after-party" data-rsvp-after-party hidden>
+                  <div class="rsvp_after-party-header">
+                    <span class="rsvp_eyebrow">For the after party · 10 PM</span>
+                    <span class="rsvp_eyebrow" data-rsvp-after-party-count></span>
+                  </div>
+                  <div data-rsvp-slipper-list></div>
+                  <p class="rsvp_after-party-help">Slipper sizes are US. We'll have a pair waiting for each guest.</p>
+                </div>
                 <div class="rsvp_field">
                   <label for="rsvp-note"
                     >A note for Eunice &amp; Warren (optional)</label
@@ -249,6 +257,7 @@ const {
   import { actions } from "astro:actions";
   import type { Invite } from "@/lib/rsvp/store";
   import { normalizeGuestName } from "@/lib/rsvp/store";
+  import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
   import { getGuest } from "@/lib/guest";
 
@@ -262,7 +271,7 @@ const {
         const turnstile = createTurnstileController(fakeMode);
         let invite: Invite | null = null;
         let matchedName = "";
-        type Seat = { original: string | null; name: string; attending: boolean };
+        type Seat = { original: string | null; name: string; attending: boolean; slipperSize?: string };
         let attending = true;
         let seats: Seat[] = [];
         let editingSeat = -1;
@@ -304,6 +313,7 @@ const {
         };
         const setStep = (next: typeof step) => {
           step = next;
+          if (next === "3") renderAfterParty();
           updateInvitation();
           root
             .querySelectorAll<HTMLElement>("[data-rsvp-panel]")
@@ -336,6 +346,72 @@ const {
           const attendingCount = seats.filter((seat) => seat.attending).length;
           count.value = `${attendingCount} of ${invite?.seats ?? 0} seats`;
           count.textContent = `${attendingCount} of ${invite?.seats ?? 0} seats`;
+        };
+        const renderAfterParty = () => {
+          const block = root.querySelector<HTMLElement>("[data-rsvp-after-party]")!;
+          const list = root.querySelector<HTMLElement>("[data-rsvp-slipper-list]")!;
+          const selectedSeats = attending ? seats.filter((seat) => seat.attending) : [];
+          block.hidden = !attending;
+          list.replaceChildren();
+          const count = root.querySelector<HTMLElement>("[data-rsvp-after-party-count]")!;
+          count.textContent = `${selectedSeats.length} ${selectedSeats.length === 1 ? "guest" : "guests"}`;
+          selectedSeats.forEach((seat, index) => {
+            const row = document.createElement("div");
+            row.className = "rsvp_after-party-row";
+            const nameWrap = document.createElement("div");
+            nameWrap.className = "rsvp_after-party-name";
+            const name = document.createElement("span");
+            name.textContent = seat.name;
+            nameWrap.append(name);
+            if (seat.original && normalizeGuestName(seat.original) === normalizeGuestName(matchedName)) {
+              const you = document.createElement("span");
+              you.className = "rsvp_after-party-you";
+              you.textContent = "You";
+              nameWrap.append(you);
+            }
+            const control = document.createElement("div");
+            control.className = "rsvp_after-party-control";
+            const label = document.createElement("label");
+            label.className = "rsvp_eyebrow";
+            label.textContent = "Slippers";
+            const select = document.createElement("select");
+            select.required = true;
+            select.id = `rsvp-slipper-${index}`;
+            select.setAttribute("aria-label", `Slipper size for ${seat.name}`);
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Size";
+            placeholder.disabled = true;
+            placeholder.selected = !seat.slipperSize;
+            select.append(placeholder);
+            for (const group of ["Women's", "Men's"] as const) {
+              const optgroup = document.createElement("optgroup");
+              optgroup.label = group;
+              const prefix = group === "Women's" ? "W " : "M ";
+              SLIPPER_SIZES.filter((size) => size.startsWith(prefix)).forEach((size) => {
+                const option = document.createElement("option");
+                option.value = size;
+                option.textContent = size;
+                option.selected = seat.slipperSize === size;
+                optgroup.append(option);
+              });
+              select.append(optgroup);
+            }
+            const error = document.createElement("p");
+            error.className = "rsvp_error rsvp_slipper-error";
+            error.setAttribute("role", "alert");
+            error.hidden = true;
+            error.textContent = "Please choose a slipper size.";
+            select.addEventListener("change", () => {
+              seat.slipperSize = select.value;
+              error.hidden = true;
+              select.removeAttribute("aria-invalid");
+            });
+            label.htmlFor = select.id;
+            control.append(label, select);
+            row.append(nameWrap, control, error);
+            list.append(row);
+          });
         };
         const renderSeats = (focusIndex = -1, focusTarget: "checkbox" | "action" = "action") => {
           const list = root.querySelector<HTMLElement>("[data-rsvp-seat-list]")!;
@@ -607,6 +683,16 @@ const {
               email.focus();
               return;
             }
+            const missingSeat = attending ? seats.find((seat) => seat.attending && !seat.slipperSize) : undefined;
+            if (missingSeat) {
+              const selectedIndex = seats.filter((seat) => seat.attending).indexOf(missingSeat);
+              const select = root.querySelector<HTMLSelectElement>(`#rsvp-slipper-${selectedIndex}`)!;
+              const rowError = select.closest(".rsvp_after-party-row")?.querySelector<HTMLElement>(".rsvp_slipper-error");
+              select.setAttribute("aria-invalid", "true");
+              if (rowError) rowError.hidden = false;
+              select.focus();
+              return;
+            }
             email.removeAttribute("aria-invalid");
             email.removeAttribute("aria-describedby");
             error.hidden = true;
@@ -623,7 +709,7 @@ const {
                 token: root.dataset.rsvpToken ?? "",
                 name: matchedName,
                 attending,
-                seats: seats.map((seat) => ({ ...seat, attending: attending && seat.attending })),
+                seats: seats.map((seat) => ({ ...seat, attending: attending && seat.attending, slipperSize: attending && seat.attending ? seat.slipperSize : undefined })),
                 email: email.value,
                 note:
                   (form.elements.namedItem("note") as HTMLTextAreaElement)
@@ -912,6 +998,70 @@ const {
       letter-spacing: var(--letter-spacing-wider);
       text-transform: uppercase;
     }
+    .rsvp_after-party-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 0.0625rem solid var(--dark-900);
+    }
+    .rsvp_after-party-header .rsvp_eyebrow:first-child { color: #4a5a85; }
+    .rsvp_after-party-header .rsvp_eyebrow:last-child { flex: none; color: var(--dark-900); white-space: nowrap; }
+    .rsvp_after-party-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0 0.75rem;
+      padding-block: 0.875rem;
+      border-bottom: 0.0625rem solid var(--light-300);
+    }
+    .rsvp_after-party-row:last-child { border-bottom: 0; }
+    .rsvp_after-party-name {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0 0.625rem;
+      color: var(--dark-900);
+      overflow-wrap: anywhere;
+      font: var(--primary-regular) var(--text-main) / 1.25 var(--primary-family);
+    }
+    .rsvp_after-party-you { color: #4a5a85; font: var(--primary-regular) var(--eyebrow) / 1.333 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .rsvp_after-party-control {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .rsvp_after-party-control .rsvp_eyebrow { color: #4a5a85; }
+    /* Phones: the header and helper already say slippers; give the name the room. */
+    @media (max-width: 29.9375rem) {
+      .rsvp_after-party-control .rsvp_eyebrow {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    }
+    .rsvp_after-party-control select {
+      min-width: 6rem;
+      padding: 0.375rem 0.625rem;
+      border: 0.0625rem solid var(--_line);
+      border-radius: 0;
+      background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231F2F5C' stroke-width='1.2'/%3E%3C/svg%3E") right 0.625rem center / 0.625rem 0.375rem no-repeat;
+      appearance: none;
+      color: var(--dark-900);
+      font: var(--primary-regular) var(--text-small) / 1.286 var(--primary-family);
+    }
+    .rsvp_after-party-control select:invalid { color: var(--_placeholder); }
+    .rsvp_after-party-control select:focus-visible { outline: var(--focus-width) solid var(--dark-900); outline-offset: var(--focus-offset); }
+    .rsvp_after-party-row .rsvp_slipper-error { flex: 0 0 100%; margin: 0.375rem 0 0; }
+    .rsvp_after-party-help { max-width: 25rem; margin: 0; padding-top: 0.25rem; color: #4a5a85; font: var(--primary-regular) var(--text-small) / 1.429 var(--primary-family); }
     .rsvp_field input,
     .rsvp_field textarea {
       width: 100%;

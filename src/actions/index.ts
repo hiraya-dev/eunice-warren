@@ -107,6 +107,7 @@ const submitInput = z.object({
     original: z.string().nullable(),
     name: z.string().max(120),
     attending: z.boolean(),
+    slipperSize: z.string().optional(),
   })),
   email: z.string().email().max(254),
   note: z.string().max(1000).optional(),

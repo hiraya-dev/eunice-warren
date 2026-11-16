@@ -15,6 +15,7 @@ const accept = async (
     await rsvp.getByRole("button", { name: /Done editing seat 2/ }).click();
   }
   await rsvp.getByRole("button", { name: /Continue/ }).click();
+  for (const select of await rsvp.locator("[data-rsvp-slipper-list] select").all()) await select.selectOption("W 7");
   await rsvp.locator("#rsvp-email").fill("liza@example.com");
   await beforeSubmit?.();
   await rsvp.getByRole("button", { name: /Send RSVP/ }).click();

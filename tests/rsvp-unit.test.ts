@@ -9,6 +9,7 @@ import {
   verifyRsvpToken,
 } from "../src/lib/rsvp/logic.ts";
 import { normalizeGuestName } from "../src/lib/rsvp/store.ts";
+import { SLIPPER_SIZES } from "../src/lib/rsvp/slippers.ts";
 import {
   buildResponseRow,
   createSheetsRsvpStore,
@@ -56,9 +57,11 @@ test("signs, verifies, expires, and rejects tampered tokens", async () => {
 test("validates seat checklist rules", () => {
   const invite = { id: "x", householdName: "X", members: ["A", "B"], seats: 2 };
   const seats = (a = true, b = false) => [
-    { original: "A", name: "A", attending: a },
-    { original: "B", name: "B", attending: b },
+    { original: "A", name: "A", attending: a, slipperSize: a ? "W 7.5" : undefined },
+    { original: "B", name: "B", attending: b, slipperSize: b ? "M 10" : undefined },
   ];
+  assert.equal(SLIPPER_SIZES[0], "W 5");
+  assert.equal(SLIPPER_SIZES.at(-1), "M 13");
   assert.equal(
     validateSubmission({ attending: true, seats: seats(), invite }),
     true,
@@ -73,6 +76,14 @@ test("validates seat checklist rules", () => {
   );
   assert.equal(
     validateSubmission({ attending: true, seats: seats(false, false), invite }),
+    false,
+  );
+  assert.equal(
+    validateSubmission({ attending: true, seats: [{ ...seats()[0], slipperSize: "XL" }, seats()[1]], invite }),
+    false,
+  );
+  assert.equal(
+    validateSubmission({ attending: true, seats: [{ ...seats()[0], slipperSize: undefined }, seats()[1]], invite }),
     false,
   );
   assert.equal(
@@ -112,24 +123,34 @@ test("builds attendee, companion, and seat-change columns", () => {
     guests: 3,
     email: "mateo@example.com",
     seats: [
-      { original: "Mateo Cruz", name: "Mateo Cruz", attending: true },
-      { original: "Sofía Cruz", name: "Sofia Cruz", attending: true },
+      { original: "Mateo Cruz", name: "Mateo Cruz", attending: true, slipperSize: "M 9" },
+      { original: "Sofía Cruz", name: "Sofia Cruz", attending: true, slipperSize: "W 7" },
       { original: "Remedios Cruz", name: "Remedios Cruz", attending: false },
-      { original: null, name: "Jun Dela Cruz", attending: true },
+      { original: null, name: "Jun Dela Cruz", attending: true, slipperSize: "M 9" },
     ],
   });
   assert.equal(row[6], "Sofia Cruz; Jun Dela Cruz");
   assert.equal(row[8], "Mateo Cruz; Sofia Cruz; Jun Dela Cruz");
   assert.equal(row[9], "(plus-one) → Jun Dela Cruz");
+  assert.equal(row[10], "Mateo Cruz: M 9; Sofia Cruz: W 7; Jun Dela Cruz: M 9");
+  assert.equal(buildResponseRow({
+    inviteId: "cruz", name: "Mateo Cruz", attending: false, guests: 0,
+    email: "mateo@example.com", seats: [
+      { original: "Mateo Cruz", name: "Mateo Cruz", attending: false },
+      { original: "Sofía Cruz", name: "Sofía Cruz", attending: false },
+    ],
+  })[10], "");
 });
 
 test("parses current and legacy previous response rows", () => {
   const invite = { id: "cruz", householdName: "Cruz", members: ["Mateo Cruz", "Sofía Cruz", "Remedios Cruz"], seats: 4 };
   const current = parsePreviousResponseRow([
-    "2026-01-02T00:00:00.000Z", "cruz", "Mateo Cruz", "yes", "2", "a@example.com", "Sofia Cruz", "note", "Mateo Cruz; Sofia Cruz", "",
+    "2026-01-02T00:00:00.000Z", "cruz", "Mateo Cruz", "yes", "2", "a@example.com", "Sofia Cruz", "note", "Mateo Cruz; Sofia Cruz", "", "Mateo Cruz: M 9; Sofia Cruz: W 7",
   ], invite);
   assert.equal(current?.previous.seats[1].name, "Sofia Cruz");
   assert.equal(current?.previous.seats[1].attending, true);
+  assert.equal(current?.previous.seats[0].slipperSize, "M 9");
+  assert.equal(current?.previous.seats[1].slipperSize, "W 7");
   assert.deepEqual(Object.keys(current?.previous ?? {}).sort(), ["attending", "seats"]);
   const legacy = parsePreviousResponseRow([
     "2026-01-01T00:00:00.000Z", "cruz", "Mateo Cruz", "yes", "1", "a@example.com", "", "",

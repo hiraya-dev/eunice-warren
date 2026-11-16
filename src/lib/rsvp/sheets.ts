@@ -129,6 +129,9 @@ export const buildResponseRow = (submission: RsvpSubmission) => {
     })
     .map((seat) => `${seat.original ?? "(plus-one)"} → ${seat.name}`)
     .join("; ");
+  const slippers = attendingSeats
+    .map((seat) => `${seat.name}: ${seat.slipperSize}`)
+    .join("; ");
   return [
     new Date().toISOString(),
     submission.inviteId,
@@ -140,6 +143,7 @@ export const buildResponseRow = (submission: RsvpSubmission) => {
     submission.note ?? "",
     attendingSeats.map((seat) => seat.name).join("; "),
     changes,
+    slippers,
   ];
 };
 
@@ -162,6 +166,10 @@ export const parsePreviousResponseRow = (
     .split(";")
     .map((change) => change.trim())
     .filter(Boolean);
+  const slippers = String(row[10] ?? "")
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
   const openChanges: string[] = [];
   for (const change of changes) {
     const arrow = change.indexOf(" → ");
@@ -181,6 +189,14 @@ export const parsePreviousResponseRow = (
       if (seat) seat.name = name;
     }
     seats.forEach((seat) => { seat.attending = attending && attendees.some((name) => normalizeGuestName(name) === normalizeGuestName(seat.name)); });
+    for (const entry of slippers) {
+      const separator = entry.lastIndexOf(": ");
+      if (separator < 0) continue;
+      const name = entry.slice(0, separator);
+      const size = entry.slice(separator + 2);
+      const seat = seats.find((item) => item.attending && normalizeGuestName(item.name) === normalizeGuestName(name));
+      if (seat) seat.slipperSize = size;
+    }
   } else {
     seats.forEach((seat, index) => { seat.attending = attending && index < guests; });
   }
@@ -230,7 +246,7 @@ export const createSheetsRsvpStore = (
       )!;
       const invite = matches[0];
       if (!cachedResponses || cachedResponses.expiresAt <= Date.now()) {
-        const response = await sheetsFetch(config, "values/Responses!A2:J");
+        const response = await sheetsFetch(config, "values/Responses!A2:K");
         const data = (await response.json()) as { values?: unknown[][] };
         cachedResponses = { expiresAt: Date.now() + 60_000, rows: data.values ?? [] };
       }
@@ -244,7 +260,7 @@ export const createSheetsRsvpStore = (
       const values = [buildResponseRow(submission)];
       await sheetsFetch(
         config,
-        "values/Responses!A:J:append?valueInputOption=RAW&insertDataOption=OVERWRITE",
+        "values/Responses!A:K:append?valueInputOption=RAW&insertDataOption=OVERWRITE",
         { method: "POST", body: JSON.stringify({ values }) },
       );
       cachedResponses = undefined;
