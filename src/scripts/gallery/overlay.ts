@@ -459,7 +459,7 @@ export function initGalleryOverlay() {
 
         // Draw first, then hide the WebGL source and expose the popup in the same task. The browser
         // therefore cannot paint a frame with both representations (or neither) visible.
-        canvas?.setLightboxOpen(true, index);
+        const canvasSource = canvas?.setLightboxOpen(true, index) ?? null;
         hideHoverLabel();
         overlay.style.setProperty(
           "--gallery-lightbox-duration",
@@ -469,7 +469,7 @@ export function initGalleryOverlay() {
         requestFullImage(index, token);
         lightboxClose.focus({ preventScroll: true });
         lightboxBusy = false;
-        await animateStamp(source, true);
+        await animateStamp(canvasSource ?? source, true);
       };
 
       const currentFallbackRect = () => {
@@ -480,7 +480,11 @@ export function initGalleryOverlay() {
       };
 
       const closePhoto = async () => {
-        if (overlay.dataset.galleryState !== "open" || lightboxBusy) return;
+        if (
+          overlay.dataset.galleryState !== "open" ||
+          overlay.dataset.galleryClosing === "true"
+        )
+          return;
         lightboxBusy = true;
         ++lightboxToken;
         ++fullImageRequest;
@@ -611,8 +615,8 @@ export function initGalleryOverlay() {
             onInteraction: setHintFaded,
             onHover: setHoverLabel,
             onHoverEnd: hideHoverLabel,
-            onStampClick: (index, rect) => {
-              void openPhoto(index, rect);
+            onStampClick: (index) => {
+              void openPhoto(index);
             },
             onWebGLFailure: () => {
               canvas?.destroy();

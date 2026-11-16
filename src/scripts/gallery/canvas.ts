@@ -62,7 +62,7 @@ type CanvasOptions = {
   onInteraction: () => void;
   onHover: (index: number, x: number, y: number) => void;
   onHoverEnd: () => void;
-  onStampClick: (index: number, rect: GallerySourceRect) => void;
+  onStampClick: (index: number) => void;
   onWebGLFailure: () => void;
 };
 
@@ -194,7 +194,7 @@ const generateChunkPlanes = (
   const seed = hashString(`${chunkX},${chunkY},${chunkZ}`);
   // Face-adjacent chunks move by at least eleven album positions, so their five-photo runs do
   // not repeat. The coprime x stride eventually visits every photo in the album.
-  const photoBase = modulo(chunkX * 11 + chunkY * 23 + chunkZ * 37, photoCount);
+  const photoBase = modulo(chunkX * 11 + chunkY * 23 + chunkZ * 41, photoCount);
   const photoRotation = seed % PLANES_PER_CHUNK;
   for (let index = 0; index < PLANES_PER_CHUNK; index += 1) {
     const itemSeed = seed + index * 1000;
@@ -304,6 +304,7 @@ export function createGalleryCanvas(
   const geometry = new PlaneGeometry(1, 1);
   const raycaster = new Raycaster();
   const pointer = new Vector2();
+  const projectedCorner = new Vector2();
   const projected = new Vector3();
   const chunks = new Map<string, ChunkEntry>();
   const meshesByPhoto = new Map<number, Set<GalleryMesh>>();
@@ -347,6 +348,7 @@ export function createGalleryCanvas(
   let lastX = 0;
   let lastY = 0;
   let lastPinchDistance = 0;
+  let pointerActive = false;
   let hoverDirty = false;
   let baseX = 0;
   let baseY = 0;
@@ -362,6 +364,9 @@ export function createGalleryCanvas(
   let targetVelocityY = 0;
   let targetVelocityZ = 0;
   let scrollAccum = 0;
+  let viewportLeft = 0;
+  let viewportTop = 0;
+  let viewportWidth = 1;
   let viewportHeight = 1;
 
   const resize = () => {
@@ -369,6 +374,9 @@ export function createGalleryCanvas(
     const rect = stage.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     renderer.setSize(rect.width, rect.height, false);
+    viewportLeft = rect.left;
+    viewportTop = rect.top;
+    viewportWidth = rect.width;
     viewportHeight = rect.height;
     camera.aspect = rect.width / rect.height;
     camera.updateProjectionMatrix();
@@ -548,6 +556,7 @@ export function createGalleryCanvas(
     for (const mesh of entry.meshes) {
       if (mesh === hovered) hovered = null;
       if (mesh === hiddenMesh) hiddenMesh = null;
+      if (mesh === lastClickedMesh) lastClickedMesh = null;
       scene.remove(mesh);
       mesh.material.dispose();
       const photoMeshes = meshesByPhoto.get(mesh.userData.photoIndex);
@@ -602,6 +611,7 @@ export function createGalleryCanvas(
     }
     introEnabled = true;
     introStart = performance.now();
+    camera.updateMatrixWorld(true);
     for (const mesh of meshes) {
       const data = mesh.userData;
       data.intro = true;
@@ -730,7 +740,6 @@ export function createGalleryCanvas(
     mesh: GalleryMesh,
     localX: number,
     localY: number,
-    stageRect: DOMRect,
   ) => {
     const cosine = Math.cos(mesh.rotation.z);
     const sine = Math.sin(mesh.rotation.z);
@@ -741,16 +750,15 @@ export function createGalleryCanvas(
         mesh.position.z,
       )
       .project(camera);
-    return {
-      x: stageRect.left + ((projected.x + 1) * stageRect.width) / 2,
-      y: stageRect.top + ((1 - projected.y) * stageRect.height) / 2,
-    };
+    return projectedCorner.set(
+      viewportLeft + ((projected.x + 1) * viewportWidth) / 2,
+      viewportTop + ((1 - projected.y) * viewportHeight) / 2,
+    );
   };
 
   const screenRect = (mesh: GalleryMesh): GallerySourceRect | null => {
     const depth = camera.position.z - mesh.position.z;
     if (depth <= 0) return null;
-    const stageRect = stage.getBoundingClientRect();
     const data = mesh.userData;
     const scaleFactor = mesh.scale.x / data.fullWidth;
     const halfWidth = (data.stampWidth * scaleFactor) / 2;
@@ -761,7 +769,7 @@ export function createGalleryCanvas(
     let bottom = Number.NEGATIVE_INFINITY;
     for (const x of [-halfWidth, halfWidth]) {
       for (const y of [-halfHeight, halfHeight]) {
-        const point = projectCorner(mesh, x, y, stageRect);
+        const point = projectCorner(mesh, x, y);
         left = Math.min(left, point.x);
         top = Math.min(top, point.y);
         right = Math.max(right, point.x);
@@ -806,6 +814,10 @@ export function createGalleryCanvas(
 
   const restoreHiddenMesh = () => {
     if (!hiddenMesh) return;
+    if (hiddenMesh.parent !== scene) {
+      hiddenMesh = null;
+      return;
+    }
     const data = hiddenMesh.userData;
     data.hiddenForLightbox = false;
     hiddenMesh.material.opacity = data.opacity;
@@ -848,31 +860,39 @@ export function createGalleryCanvas(
   const processHover = () => {
     hoverDirty = false;
     if (coarsePointer || dragging || lightboxOpen) return;
+    if (!pointerActive) {
+      resetHovered();
+      onHoverEnd();
+      stage.style.cursor = "grab";
+      return;
+    }
     const hit = findHit();
-    if (hit === hovered) return;
-    resetHovered();
-    hovered = hit;
+    if (hit !== hovered) {
+      resetHovered();
+      hovered = hit;
+      if (hit) {
+        const data = hit.userData;
+        data.hovered = true;
+        hit.scale.set(data.fullWidth * 1.06, data.fullHeight * 1.06, 1);
+        hit.material.depthTest = false;
+        hit.renderOrder = 10;
+      }
+    }
     if (!hit) {
       onHoverEnd();
       stage.style.cursor = "grab";
       return;
     }
     const data = hit.userData;
-    data.hovered = true;
-    hit.scale.set(data.fullWidth * 1.06, data.fullHeight * 1.06, 1);
-    hit.material.depthTest = false;
-    hit.renderOrder = 10;
-    const stageRect = stage.getBoundingClientRect();
     const bottomLeft = projectCorner(
       hit,
       (-data.stampWidth * 1.06) / 2,
       (-data.stampHeight * 1.06) / 2,
-      stageRect,
     );
     onHover(
       data.photoIndex,
-      bottomLeft.x - stageRect.left,
-      bottomLeft.y - stageRect.top + 8,
+      bottomLeft.x - viewportLeft,
+      bottomLeft.y - viewportTop + 8,
     );
     stage.style.cursor = "pointer";
   };
@@ -926,7 +946,15 @@ export function createGalleryCanvas(
     baseX += velocityX;
     baseY += velocityY;
     baseZ += velocityZ;
-    camera.position.set(baseX + driftX, baseY + driftY, baseZ);
+    const cameraX = baseX + driftX;
+    const cameraY = baseY + driftY;
+    const cameraMoved =
+      Math.abs(camera.position.x - cameraX) > SETTLED_EPSILON ||
+      Math.abs(camera.position.y - cameraY) > SETTLED_EPSILON ||
+      Math.abs(camera.position.z - baseZ) > SETTLED_EPSILON;
+    camera.position.set(cameraX, cameraY, baseZ);
+    camera.updateMatrixWorld(true);
+    if (cameraMoved && pointerActive) hoverDirty = true;
     currentChunkX = Math.floor(baseX / CHUNK_SIZE);
     currentChunkY = Math.floor(baseY / CHUNK_SIZE);
     currentChunkZ = Math.floor(baseZ / CHUNK_SIZE);
@@ -992,6 +1020,7 @@ export function createGalleryCanvas(
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     mouseX = pointer.x;
     mouseY = pointer.y;
+    pointerActive = true;
   };
 
   const resetMovement = () => {
@@ -1044,6 +1073,8 @@ export function createGalleryCanvas(
       return;
     }
     dragging = true;
+    resetHovered();
+    onHoverEnd();
     moved = false;
     dragStartX = lastX = event.clientX;
     dragStartY = lastY = event.clientY;
@@ -1109,10 +1140,9 @@ export function createGalleryCanvas(
     if (tracked && !wasDrag) {
       setPointer(event);
       const hit = findHit();
-      const rect = hit ? screenRect(hit) : null;
-      if (hit && rect) {
+      if (hit && screenRect(hit)) {
         lastClickedMesh = hit;
-        onStampClick(hit.userData.photoIndex, rect);
+        onStampClick(hit.userData.photoIndex);
       }
     }
     wake();
@@ -1125,6 +1155,7 @@ export function createGalleryCanvas(
 
   const onPointerLeave = () => {
     if (dragging) return;
+    pointerActive = false;
     mouseX = 0;
     mouseY = 0;
     hoverDirty = true;
@@ -1168,12 +1199,27 @@ export function createGalleryCanvas(
     wake();
   };
 
+  const resetTransientInput = () => {
+    resetGesture();
+    resetMovement();
+    pointerActive = false;
+    resetHovered();
+    onHoverEnd();
+    wake();
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") resetTransientInput();
+  };
+
   const bindWindowListeners = () => {
     if (windowListenersBound) return;
     windowListenersBound = true;
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
+    window.addEventListener("blur", resetTransientInput);
+    document.addEventListener("visibilitychange", onVisibilityChange);
   };
 
   const unbindWindowListeners = () => {
@@ -1182,6 +1228,8 @@ export function createGalleryCanvas(
     window.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("keyup", onKeyUp);
     window.removeEventListener("resize", onResize);
+    window.removeEventListener("blur", resetTransientInput);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
   };
 
   const onContextLost = (event: Event) => {
@@ -1196,6 +1244,7 @@ export function createGalleryCanvas(
   observedChunkX = currentChunkX;
   observedChunkY = currentChunkY;
   observedChunkZ = currentChunkZ;
+  camera.updateMatrixWorld(true);
   syncChunks(currentChunkX, currentChunkY, currentChunkZ, !reducedMotion);
   hasPendingChunk = false;
   stage.addEventListener("pointerdown", onPointerDown);
@@ -1230,15 +1279,20 @@ export function createGalleryCanvas(
     },
     setLightboxOpen(open, index) {
       if (open) {
+        const wasLightboxOpen = lightboxOpen;
         lightboxOpen = true;
         resetGesture();
         resetMovement();
+        camera.updateMatrixWorld(true);
+        if (hiddenMesh && hiddenMesh.parent !== scene) hiddenMesh = null;
+        if (lastClickedMesh && lastClickedMesh.parent !== scene)
+          lastClickedMesh = null;
         const source =
           hiddenMesh?.userData.photoIndex === index
             ? hiddenMesh
             : lastClickedMesh?.userData.photoIndex === index
               ? lastClickedMesh
-              : index === undefined
+              : !wasLightboxOpen || index === undefined
                 ? null
                 : visiblePhotoMesh(index);
         const rect = source ? screenRect(source) : null;
