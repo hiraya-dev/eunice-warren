@@ -27,6 +27,7 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
       "entourage",
       "stay",
       "explore",
+      "gallery",
       "playlist",
       "faq",
       "rsvp",

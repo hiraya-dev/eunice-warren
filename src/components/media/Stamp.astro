@@ -3,22 +3,27 @@ import type { HTMLAttributes } from "astro/types";
 import { slotContent } from "@/utils/slots.ts";
 
 type Paper = "light-100" | "light-200";
+type Orientation = "portrait" | "landscape";
 
 interface Props extends HTMLAttributes<"span"> {
   /** Set to `false` to omit the component. */
   render?: boolean;
   /** Paper colour. */
   paper?: Paper;
+  /** Stamp shape: 4:5 portrait or 5:4 landscape. A `data-orientation="landscape"` attribute switches it from CSS or script. */
+  orientation?: Orientation;
 }
 
 type AllProps = HTMLAttributes<"span"> & {
   render?: boolean;
   paper?: Paper;
+  orientation?: Orientation;
 };
 
 const {
   render = true,
   paper = "light-100",
+  orientation = "portrait",
   class: className,
   ...rest
 } = Astro.props as AllProps;
@@ -28,7 +33,7 @@ const content = await slotContent(Astro.slots);
 
 {
   render && content && (
-    <span class:list={["stamp_wrap", className]} {...rest}>
+    <span class:list={["stamp_wrap", orientation === "landscape" && "landscape", className]} {...rest}>
       <span class:list={["stamp_paper", paper]}>
         <span class="stamp_art">
           <Fragment set:html={content} />
@@ -54,26 +59,38 @@ const content = await slotContent(Astro.slots);
       box-sizing: border-box;
       width: 100%;
       height: 100%;
-      padding: 7cqw;
+      --stamp-radius: 2.6cqw;
+      padding: var(--stamp-padding, 7cqw);
       background: linear-gradient(145deg, rgb(255 255 255 / 34%), transparent 42%), var(--light-100);
       mask-image:
-        radial-gradient(circle at 50% 0, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem)),
-        radial-gradient(circle at 50% 100%, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem)),
-        radial-gradient(circle at 0 50%, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem)),
-        radial-gradient(circle at 100% 50%, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem));
+        radial-gradient(circle at 50% 0, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem)),
+        radial-gradient(circle at 50% 100%, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem)),
+        radial-gradient(circle at 0 50%, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem)),
+        radial-gradient(circle at 100% 50%, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem));
       mask-position: 0 0, 0 0, 0 0, 0 0;
       mask-size: 10% 100%, 10% 100%, 100% calc(100% / 12), 100% calc(100% / 12);
       mask-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
       mask-composite: intersect, intersect, intersect;
       -webkit-mask-image:
-        radial-gradient(circle at 50% 0, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem)),
-        radial-gradient(circle at 50% 100%, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem)),
-        radial-gradient(circle at 0 50%, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem)),
-        radial-gradient(circle at 100% 50%, transparent 0 2.6cqw, #000 calc(2.6cqw + 0.03125rem));
+        radial-gradient(circle at 50% 0, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem)),
+        radial-gradient(circle at 50% 100%, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem)),
+        radial-gradient(circle at 0 50%, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem)),
+        radial-gradient(circle at 100% 50%, transparent 0 var(--stamp-radius), #000 calc(var(--stamp-radius) + 0.03125rem));
       -webkit-mask-position: 0 0, 0 0, 0 0, 0 0;
       -webkit-mask-size: 10% 100%, 10% 100%, 100% calc(100% / 12), 100% calc(100% / 12);
       -webkit-mask-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
       -webkit-mask-composite: source-in, source-in, source-in;
+    }
+
+    .stamp_wrap:is(.landscape, [data-orientation="landscape"]) {
+      aspect-ratio: 5 / 4;
+    }
+
+    .stamp_wrap:is(.landscape, [data-orientation="landscape"]) .stamp_paper {
+      --stamp-radius: 2.08cqw;
+      --stamp-padding: 5.6cqw;
+      mask-size: calc(100% / 12) 100%, calc(100% / 12) 100%, 100% 10%, 100% 10%;
+      -webkit-mask-size: calc(100% / 12) 100%, calc(100% / 12) 100%, 100% 10%, 100% 10%;
     }
 
     .stamp_paper.light-200 {

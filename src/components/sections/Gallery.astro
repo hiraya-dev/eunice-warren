@@ -1,0 +1,621 @@
+---
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import type { HTMLAttributes } from "astro/types";
+import Stamp from "@/components/media/Stamp.astro";
+import Button from "@/components/Button.astro";
+
+interface Props extends HTMLAttributes<"section"> {}
+
+const { class: className, ...rest } = Astro.props;
+
+/** Every photo in the album; the real count drives the overlay label. */
+const album = import.meta.glob<ImageMetadata>("@/assets/images/gallery/*.jpg", {
+  eager: true,
+  import: "default",
+});
+const total = Object.keys(album).length;
+const photo = (name: string) => album[`/src/assets/images/gallery/${name}.jpg`];
+
+type Tier = "near" | "mid" | "far";
+type Slot = {
+  name: string;
+  tier: Tier;
+  landscape?: boolean;
+  /** Desktop artboard (1440 × 1000): left, top, width, rotation. */
+  d: [number, number, number, number];
+  /** Mobile artboard (390): inline edge and offset, block edge and offset, width, rotation. */
+  m?: ["l" | "r", number, "t" | "b", number, number, number];
+};
+
+/** Teaser stamps, fixed picks from the album. Landscape slots are 5:4, the rest 4:5. */
+const slots: Slot[] = [
+  { name: "img-4462", tier: "near", d: [64, 72, 224, -6], m: ["l", -20, "t", 36, 128, -7] },
+  { name: "img-2505", tier: "near", landscape: true, d: [1130, 64, 270, 5], m: ["r", 2, "t", 28, 150, 6] },
+  { name: "gp010451", tier: "near", landscape: true, d: [56, 650, 250, 4], m: ["l", -18, "b", 42, 160, -4] },
+  { name: "img-1551", tier: "near", d: [1160, 590, 200, -4], m: ["r", 8, "b", 46, 120, 5] },
+  { name: "img-3782", tier: "mid", d: [420, 56, 136, 3] },
+  { name: "img-5295", tier: "mid", landscape: true, d: [850, 84, 170, -3] },
+  { name: "img-1203", tier: "mid", d: [396, 772, 148, -5] },
+  { name: "img-3898", tier: "mid", landscape: true, d: [872, 790, 180, 6] },
+  { name: "img-3994", tier: "far", d: [250, 470, 80, 8] },
+  { name: "img-3269", tier: "far", d: [1170, 380, 76, -8] },
+  { name: "img-5333", tier: "far", landscape: true, d: [1310, 420, 100, 3], m: ["l", 146, "t", 120, 76, -4] },
+  { name: "img-5148", tier: "far", landscape: true, d: [-30, 450, 100, -5] },
+  { name: "img-4477", tier: "far", d: [680, 915, 84, 4], m: ["l", 176, "b", 12, 62, 6] },
+  { name: "img-1963", tier: "far", d: [650, -36, 72, -3] },
+];
+
+/** Source size per tier, about twice the largest rendered size. */
+const source = {
+  near: [400, 500],
+  mid: [280, 350],
+  far: [160, 200],
+} as const;
+
+const stampStyle = ({ d, m }: Slot) =>
+  [
+    `--dx:${d[0]}`,
+    `--dy:${d[1]}`,
+    `--dw:${d[2]}`,
+    `--dr:${d[3]}deg`,
+    m && `--mw:${m[4]}`,
+    m && `--mr:${m[5]}deg`,
+    m && (m[0] === "l" ? `--ml:${m[1] / 3.9}%` : `--mright:${m[1] / 3.9}%`),
+    m && (m[2] === "t" ? `--mtop:${m[3]}` : `--mbottom:${m[3]}`),
+  ]
+    .filter(Boolean)
+    .join(";");
+---
+
+<section id="gallery" class:list={["gallery_wrap", "theme-light", className]} {...rest}>
+  <div class="gallery_field" aria-hidden="true">
+    {
+      slots.map((slot) => {
+        const [long, short] = source[slot.tier];
+        return (
+          <div
+            class:list={["gallery_stamp", slot.tier, !slot.m && "wide"]}
+            style={stampStyle(slot)}
+          >
+            <Stamp paper="light-200" orientation={slot.landscape ? "landscape" : "portrait"}>
+              <Image
+                src={photo(slot.name)}
+                alt=""
+                aria-hidden="true"
+                width={slot.landscape ? long : short}
+                height={slot.landscape ? short : long}
+                loading="lazy"
+                decoding="async"
+              />
+            </Stamp>
+          </div>
+        );
+      })
+    }
+  </div>
+
+  <div class="gallery_content">
+    <p class="gallery_eyebrow">The photos</p>
+    <h2 class="gallery_title">Wander through <em>our album</em></h2>
+    <p class="gallery_text">
+      Every photo we couldn't choose between, scattered like stamps on a desk. <span class="gallery_fine">Drag</span><span class="gallery_coarse">Swipe</span> around and get a little lost.
+    </p>
+    <div class="gallery_actions">
+      <Button
+        class="gallery_open"
+        shape="pill"
+        data-gallery-open
+        aria-haspopup="dialog"
+        aria-controls="gallery-overlay"
+      >
+        Step inside<svg class="gallery_open-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
+      </Button>
+      <p class="gallery_note">Opens full screen<span class="gallery_note-extra"> · drag, scroll or pinch</span></p>
+    </div>
+  </div>
+
+  <!--
+    Overlay hooks (the behaviour script owns everything below; this markup is static).
+    State: data-gallery-state on [data-gallery-overlay] is "closed" | "canvas" | "open".
+      closed  every part hidden (set `hidden` on the overlay too).
+      canvas  stage, top bar and hint show.
+      open    stage stays (behind the scrim), the lightbox shows, top bar and hint hide.
+    Remove the `hidden` attribute to show the overlay; set the state attribute to change the parts.
+    [data-gallery-stage]            full-bleed mount for the WebGL canvas
+    [data-gallery-grid]             no-WebGL fallback grid, `hidden` until used
+    [data-gallery-count]            "The photos · N" / "N photos" label (text only)
+    [data-gallery-close]            back-to-site button
+    [data-gallery-hint]             hint pill; data-faded="true" fades it out
+    [data-gallery-hover-label]      `hidden` until a stamp is hovered; position it with `transform`
+    [data-gallery-list]             visually hidden list for keyboard and screen readers
+    [data-gallery-lightbox]         scrim, stamp, count and controls
+      [data-gallery-scrim]          click target behind the stamp
+      [data-gallery-lightbox-stamp] stamp; data-orientation="landscape" makes it 5:4
+      [data-gallery-lightbox-img]   photo (set src and alt)
+      [data-gallery-lightbox-count] "014 / 084"
+      [data-gallery-prev] [data-gallery-next] [data-gallery-save] [data-gallery-lightbox-close]
+  -->
+  <div
+    id="gallery-overlay"
+    class="gallery_overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Photo gallery"
+    hidden
+    data-gallery-overlay
+    data-gallery-state="closed"
+  >
+    <div class="gallery_stage" data-gallery-stage></div>
+    <div class="gallery_grid" data-gallery-grid hidden></div>
+
+    <header class="gallery_bar">
+      <div class="gallery_bar-title">
+        <span class="gallery_logo" aria-hidden="true">E &amp; W</span>
+        <span class="gallery_label" data-gallery-count>
+          <span class="gallery_label-long">The photos · {total}</span>
+          <span class="gallery_label-short">{total} photos</span>
+        </span>
+      </div>
+      <button class="gallery_close" type="button" aria-label="Back to the site" data-gallery-close>
+        <span class="gallery_close-text">Back to the site</span>
+        <span class="gallery_close-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+        </span>
+      </button>
+    </header>
+
+    <div class="gallery_hint" data-gallery-hint>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"></path></svg>
+      <span class="gallery_fine">Drag or scroll to wander · Tap a stamp to open</span>
+      <span class="gallery_coarse">Swipe to wander · Tap to open</span>
+    </div>
+
+    <div class="gallery_hover-label" data-gallery-hover-label aria-hidden="true" hidden>Open · 000</div>
+
+    <ul class="sr-only" data-gallery-list></ul>
+
+    <div class="gallery_lightbox" data-gallery-lightbox>
+      <div class="gallery_scrim" data-gallery-scrim></div>
+      <div class="gallery_lightbox-frame">
+        <Stamp class="gallery_lightbox-stamp" paper="light-200" data-gallery-lightbox-stamp>
+          <img data-gallery-lightbox-img alt="" decoding="async" />
+        </Stamp>
+      </div>
+      <p class="gallery_lightbox-count" data-gallery-lightbox-count>000 / {String(total).padStart(3, "0")}</p>
+      <div class="gallery_controls" role="group" aria-label="Photo controls">
+        <button class="gallery_control" type="button" aria-label="Previous photo" data-gallery-prev>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+        </button>
+        <button class="gallery_control" type="button" aria-label="Next photo" data-gallery-next>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+        </button>
+        <span class="gallery_divider" aria-hidden="true"></span>
+        <a class="gallery_save" download data-gallery-save>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"></path></svg>
+          Save
+        </a>
+        <button class="gallery_control gallery_control-close" type="button" aria-label="Close photo" data-gallery-lightbox-close>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @layer components {
+    .gallery_wrap {
+      /* Mobile artboard scale: 1 unit = 1px at 390, held at 480 and above. */
+      --_cv: min(100vw, 30rem);
+      --_dv: min(100vw, 108rem);
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding-block: calc(var(--_cv) * 240 / 390);
+      overflow: clip;
+      background: var(--light-100) var(--background-texture) center / 32rem repeat;
+      color: var(--dark-900);
+    }
+    .gallery_field {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .gallery_stamp {
+      position: absolute;
+      top: calc(var(--_cv) * var(--mtop) / 390);
+      bottom: calc(var(--_cv) * var(--mbottom) / 390);
+      left: var(--ml, auto);
+      right: var(--mright, auto);
+      width: calc(var(--_cv) * var(--mw) / 390);
+      rotate: var(--mr, 0deg);
+    }
+    .gallery_stamp.wide { display: none; }
+    .gallery_stamp.mid { opacity: 0.92; }
+    .gallery_stamp.far {
+      opacity: 0.5;
+      filter: blur(0.075rem);
+    }
+    .gallery_stamp.far :global(.stamp_wrap) { filter: none; }
+    .gallery_content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+      width: min(100%, 56.25rem);
+      padding-inline: var(--site-margin);
+      text-align: center;
+    }
+    .gallery_eyebrow {
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--eyebrow) / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .gallery_title {
+      margin: 0;
+      color: var(--dark-900);
+      font: var(--secondary-regular) var(--h1) / var(--line-height-tight) var(--secondary-family);
+      letter-spacing: var(--letter-spacing-tight);
+      text-wrap: wrap;
+    }
+    .gallery_title em { font-weight: var(--secondary-ultralight); }
+    .gallery_text {
+      max-width: 18.75rem;
+      margin: 0;
+      color: var(--dark-900);
+      font: var(--primary-regular) var(--text-main) / var(--line-height-large) var(--primary-family);
+      text-wrap: pretty;
+    }
+    .gallery_coarse { display: none; }
+    .gallery_actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      padding-top: var(--space-3);
+    }
+    .gallery_open {
+      --button-016-color: var(--light-200);
+      --button-016-hover-color: var(--light-200);
+      --button-016-color-background: var(--accent-500);
+      --button-016-hover-color-background: var(--dark-900);
+      --button-016-color-focus: var(--dark-900);
+      padding: 0;
+      box-shadow: 0 0.625rem 1.5rem color-mix(in srgb, var(--accent-500) 28%, transparent);
+    }
+    .gallery_open :global(.button-016__inner) { padding: 0.9375rem 1.625rem; line-height: 1.25; }
+    .gallery_open-icon {
+      display: inline-block;
+      width: 1.125rem;
+      height: 1.125rem;
+      margin-left: 0.875rem;
+      vertical-align: middle;
+      filter: drop-shadow(0 2lh 0 currentColor);
+    }
+    .gallery_note {
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) 0.6875rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .gallery_note-extra { display: none; }
+
+    /* Overlay */
+    .gallery_overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--light-100) var(--background-texture) center / 32rem repeat;
+      color: var(--dark-900);
+      overscroll-behavior: contain;
+      &[hidden] { display: none; }
+    }
+    .gallery_stage {
+      position: absolute;
+      inset: 0;
+      touch-action: none;
+      user-select: none;
+      cursor: grab;
+    }
+    .gallery_grid {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+      align-content: start;
+      gap: 1.25rem;
+      padding: 6rem 2.5rem 3rem;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      &[hidden] { display: none; }
+    }
+    .gallery_bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 2;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: 1.75rem 2.5rem 3rem 2.5rem;
+      background: linear-gradient(180deg, var(--light-100) 0%, color-mix(in srgb, var(--light-100) 55%, transparent) 85%, transparent 100%);
+      pointer-events: none;
+    }
+    .gallery_bar > * { pointer-events: auto; }
+    .gallery_bar-title {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    .gallery_logo {
+      font: var(--secondary-regular) 1.75rem / 1.75rem var(--secondary-family);
+      letter-spacing: var(--letter-spacing-snug);
+    }
+    .gallery_label {
+      color: var(--dark-700);
+      font: var(--primary-regular) 0.75rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .gallery_label-short { display: none; }
+    .gallery_close {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 0.625rem 0.625rem 1.125rem;
+      border: 0;
+      border-radius: var(--radius-round);
+      background: var(--light-200);
+      box-shadow: 0 0.375rem 1.125rem color-mix(in srgb, var(--dark-900) 12%, transparent);
+      color: var(--dark-900);
+      font: var(--primary-regular) 0.75rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .gallery_close-mark {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--dark-900);
+      color: var(--light-200);
+    }
+    .gallery_close-mark svg { width: 0.875rem; height: 0.875rem; }
+    .gallery_hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      width: max-content;
+      max-width: calc(100% - 2rem);
+      margin-inline: auto;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-round);
+      background: var(--dark-900);
+      box-shadow: 0 0.625rem 1.5rem color-mix(in srgb, var(--dark-900) 25%, transparent);
+      color: var(--light-200);
+      font: var(--primary-regular) 0.75rem / 1.2 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+      pointer-events: none;
+      transition: opacity 300ms ease;
+      &[data-faded="true"] { opacity: 0; }
+    }
+    .gallery_hint svg { flex: none; width: 1.125rem; height: 1.125rem; }
+    .gallery_hover-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 3;
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-round);
+      background: var(--accent-500);
+      color: var(--light-200);
+      font: var(--primary-regular) 0.6875rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wide);
+      text-transform: uppercase;
+      white-space: nowrap;
+      rotate: -2deg;
+      pointer-events: none;
+      &[hidden] { display: none; }
+    }
+
+    /* Photo open */
+    .gallery_lightbox {
+      --_height: clamp(12.5rem, calc(100dvh - 23.75rem), 32.5rem);
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 4.5rem;
+    }
+    .gallery_scrim {
+      position: absolute;
+      inset: 0;
+      background: color-mix(in srgb, var(--light-100) 86%, transparent);
+      backdrop-filter: blur(0.375rem);
+    }
+    .gallery_lightbox-frame {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: var(--_height);
+    }
+    .gallery_lightbox-frame :global(.gallery_lightbox-stamp) {
+      width: min(calc(var(--_height) * 0.8), calc(100vw - 2rem));
+      rotate: -1.5deg;
+      filter: drop-shadow(0 0.125rem 0.125rem color-mix(in srgb, var(--dark-900) 18%, transparent)) drop-shadow(0 1.875rem 3.125rem color-mix(in srgb, var(--dark-900) 26%, transparent));
+    }
+    .gallery_lightbox-count {
+      position: relative;
+      margin: 2.375rem 0 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) 0.75rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-transform: uppercase;
+    }
+    .gallery_controls {
+      position: absolute;
+      bottom: 5.5rem;
+      left: 0;
+      right: 0;
+      display: flex;
+      width: fit-content;
+      margin-inline: auto;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.375rem;
+      border-radius: var(--radius-round);
+      background: var(--light-200);
+      box-shadow: 0 0.625rem 1.625rem color-mix(in srgb, var(--dark-900) 16%, transparent);
+    }
+    .gallery_control,
+    .gallery_save {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 3rem;
+      border: 0;
+      border-radius: var(--radius-round);
+      background: transparent;
+      color: var(--dark-900);
+      cursor: pointer;
+    }
+    .gallery_control { width: 3rem; padding: 0; }
+    .gallery_control svg,
+    .gallery_save svg { flex: none; width: 1.25rem; height: 1.25rem; }
+    .gallery_control-close { background: var(--dark-900); color: var(--light-200); }
+    .gallery_control-close svg { width: 1rem; height: 1rem; }
+    .gallery_divider {
+      width: 0.0625rem;
+      height: 1.5rem;
+      background: var(--light-300);
+    }
+    .gallery_save {
+      gap: 0.5rem;
+      padding-inline: 1rem;
+      font: var(--primary-regular) 0.75rem / 1 var(--mono-family);
+      letter-spacing: var(--letter-spacing-wider);
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    @media (hover: hover) {
+      .gallery_control:not(.gallery_control-close):hover,
+      .gallery_save:hover { background: var(--light-100); }
+    }
+    .gallery_close:focus-visible,
+    .gallery_control:focus-visible,
+    .gallery_save:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+
+    /* States: closed shows nothing, canvas the stage, top bar and hint, open adds the lightbox. */
+    .gallery_stage,
+    .gallery_bar,
+    .gallery_hint,
+    .gallery_lightbox {
+      visibility: hidden;
+      transition: opacity 300ms ease, visibility 0s linear 300ms;
+      opacity: 0;
+    }
+    [data-gallery-state="canvas"] :is(.gallery_stage, .gallery_bar, .gallery_hint),
+    [data-gallery-state="open"] .gallery_stage,
+    [data-gallery-state="open"] .gallery_lightbox {
+      visibility: visible;
+      transition-delay: 0s;
+      opacity: 1;
+    }
+    [data-gallery-state="canvas"] .gallery_hint[data-faded="true"] { opacity: 0; }
+
+    @media (pointer: coarse) {
+      .gallery_fine { display: none; }
+      .gallery_coarse { display: inline; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gallery_stage,
+      .gallery_bar,
+      .gallery_hint,
+      .gallery_lightbox { transition: none; }
+    }
+
+    @media (min-width: 40rem) {
+      .gallery_title em { white-space: nowrap; }
+      .gallery_text { max-width: 30rem; font-size: var(--text-large); }
+      .gallery_note-extra { display: inline; }
+      .gallery_open :global(.button-016__inner) { padding: 1rem 1.75rem; }
+    }
+
+    /* Desktop: the 1440 artboard, scaled with the viewport. */
+    @media (min-width: 80rem) {
+      .gallery_wrap {
+        min-height: calc(var(--_dv) * 1000 / 1440);
+        padding-block: 0;
+      }
+      .gallery_stamp,
+      .gallery_stamp.wide {
+        display: block;
+        top: calc(var(--dy) / 1000 * 100%);
+        bottom: auto;
+        left: calc(var(--dx) / 1440 * 100%);
+        right: auto;
+        width: calc(var(--_dv) * var(--dw) / 1440);
+        rotate: var(--dr);
+      }
+      .gallery_stamp.far { filter: blur(0.09375rem); opacity: 0.45; }
+    }
+    @media (max-width: 39.9375rem) {
+      .gallery_bar { padding: 1rem 1rem 2.25rem 1.25rem; }
+      .gallery_bar-title { gap: 0.625rem; }
+      .gallery_logo { font-size: 1.5rem; line-height: 1.5rem; }
+      .gallery_label { font-size: 0.6875rem; }
+      .gallery_label-long { display: none; }
+      .gallery_label-short { display: inline; }
+      .gallery_close {
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        padding: 0;
+        background: var(--dark-900);
+        box-shadow: 0 0.375rem 1rem color-mix(in srgb, var(--dark-900) 20%, transparent);
+        color: var(--light-200);
+      }
+      .gallery_close-text { display: none; }
+      .gallery_close-mark { width: auto; height: auto; background: transparent; }
+      .gallery_close-mark svg { width: 1rem; height: 1rem; }
+      .gallery_hint { bottom: 1.5rem; gap: 0.625rem; padding: 0.6875rem 1rem; font-size: 0.6875rem; }
+      .gallery_hint svg { width: 1rem; height: 1rem; }
+      .gallery_lightbox {
+        --_height: clamp(12.5rem, calc(100dvh - 17.5rem), 24.375rem);
+        padding-top: 6.5rem;
+      }
+      .gallery_scrim { background: color-mix(in srgb, var(--light-100) 88%, transparent); }
+      .gallery_lightbox-frame :global(.gallery_lightbox-stamp) {
+        filter: drop-shadow(0 0.125rem 0.125rem color-mix(in srgb, var(--dark-900) 18%, transparent)) drop-shadow(0 1.5rem 2.5rem color-mix(in srgb, var(--dark-900) 26%, transparent));
+      }
+      .gallery_lightbox-count { margin-top: 2.25rem; font-size: 0.6875rem; }
+      .gallery_controls { bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+      .gallery_grid { padding: 5rem 1.25rem 2rem; }
+    }
+  }
+</style>

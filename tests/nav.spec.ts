@@ -5,6 +5,7 @@ const links = [
   ["The wedding", "/#wedding"],
   ["Entourage", "/#entourage"],
   ["Explore", "/#explore"],
+  ["Gallery", "/#gallery"],
   ["Playlist", "/#playlist"],
   ["FAQ", "/#faq"],
 ] as const;
