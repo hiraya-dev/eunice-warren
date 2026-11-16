@@ -225,6 +225,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/fade-in.ts`
 
+### L-030 — Every new validation rule gets a test that fails without it
+- **Date:** 2026-11-17
+- **Trigger:** PR #82, CHANGES_REQUIRED
+- **Symptom:** a new server rule (reject a slipper size on a seat that is not attending) and the inline error's clear-on-change had no assertion; deleting either left the suite green. A `toHaveRole("alert")` check passed whether the error was visible or not.
+- **Root cause:** the brief listed the tests by area ("validation accept/reject") rather than one assertion per acceptance criterion, so tests covered the happy and obvious-reject paths only.
+- **Rule:** a brief that adds a validation branch or an error state names one assertion per branch: each reject rule, the accept case, the decline path, and for an inline error both its visibility after the failed submit and its clearing after the fix. Assert visibility with `toBeVisible`/`toBeHidden`, never with a role or attribute alone.
+- **Check:** for each new `return false` (or thrown error) in the diff, a test exists that fails when that line is removed.
+- **Guard:** none
+- **Paths:** `src/lib/**`, `src/actions/**`, `tests/**`, `.agents/skills/codex-handoff/**`
+
 ## Content and layout
 
 ### L-014 — Check list layouts with the real names, not the placeholders

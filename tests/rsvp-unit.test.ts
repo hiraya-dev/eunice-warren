@@ -87,8 +87,16 @@ test("validates seat checklist rules", () => {
     false,
   );
   assert.equal(
+    validateSubmission({ attending: true, seats: [seats()[0], { ...seats()[1], slipperSize: "W 7" }], invite }),
+    false,
+  );
+  assert.equal(
     validateSubmission({ attending: false, seats: seats(false, false), invite }),
     true,
+  );
+  assert.equal(
+    validateSubmission({ attending: false, seats: [{ ...seats(false, false)[0], slipperSize: "W 7" }, seats(false, false)[1]], invite }),
+    false,
   );
 });
 

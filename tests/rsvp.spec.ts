@@ -307,6 +307,8 @@ test.describe("RSVP section", () => {
     await rsvp(page)
       .getByRole("button", { name: /Continue/ })
       .click();
+    await expect(rsvp(page).locator("[data-rsvp-panel='3']")).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-after-party]")).toBeHidden();
     await rsvp(page).locator("#rsvp-email").fill("ana@example.com");
     await rsvp(page)
       .getByRole("button", { name: /Send RSVP/ })

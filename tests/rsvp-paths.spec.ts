@@ -92,7 +92,13 @@ test.describe("RSVP paths", () => {
     await section.getByRole("button", { name: "Send RSVP" }).click();
     const select = section.locator("[data-rsvp-slipper-list] select").first();
     await expect(select).toBeFocused();
-    await expect(select.locator("xpath=ancestor::*[contains(@class,'rsvp_after-party-row')]").locator(".rsvp_slipper-error")).toHaveRole("alert");
+    const rowError = select.locator("xpath=ancestor::*[contains(@class,'rsvp_after-party-row')]").locator(".rsvp_slipper-error");
+    await expect(rowError).toHaveRole("alert");
+    await expect(rowError).toBeVisible();
+    await expect(select).toHaveAttribute("aria-invalid", "true");
+    await select.selectOption("W 7");
+    await expect(rowError).toBeHidden();
+    await expect(select).not.toHaveAttribute("aria-invalid");
   });
 
   test("renames a member via Edit before submitting", async ({ page }) => {
