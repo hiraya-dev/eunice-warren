@@ -39,7 +39,7 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
     await page.goto("/");
     for (const [selector, items] of [
       [".wedding_header", 1],
-      [".playlist_header", 2],
+      [".playlist_header", 1],
       [".faq_header", 2],
       ["#rsvp .rsvp_header", 2],
     ] as const) {

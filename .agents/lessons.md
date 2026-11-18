@@ -317,6 +317,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/content/**`
 
+### L-037 — Every round runs select-specs, including subagent rounds
+- **Date:** 2026-11-18
+- **Trigger:** #84 red CI (`smoke.spec` "marks section headings for the shared fade-in" counted 2 items in `.playlist_header` after a `layout-implementer` round moved the intro into the postcard)
+- **Symptom:** a Local-review round ran only the spec its implementer touched (`playlist.spec`), pushed, and `e2e (full)` and `webkit` went red on a site-wide spec that counts the header's fade-in items.
+- **Root cause:** the round's specs were picked by hand from the implementer's report instead of from `select-specs.mjs`, which lists `smoke.spec` for any section change.
+- **Rule:** before every push, including after a `layout-implementer` or Codex round, run `select-specs.mjs` on the round's paths and run the specs it returns, not only the ones the implementer names.
+- **Check:** the round's entry in `task.md` and the PR's `Local:` line name the `select-specs` output for that round.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/components/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
