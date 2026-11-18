@@ -91,7 +91,7 @@ async function guard(
   if (!withinLimit)
     throw new ActionError({
       code: "TOO_MANY_REQUESTS",
-      message: "Too many tries — wait a minute and try again.",
+      message: "Too many tries. Wait a minute and try again.",
     });
 }
 
@@ -217,9 +217,9 @@ export const server = {
             if (!isWithinLength(message, 140)) loveFail("Please write a note (up to 140 characters).");
             if (!isWithinLength(name, 60)) loveFail("Please add your name.");
             if (city.length > 60) loveFail("Please shorten the city name.");
-            if (input.photo.size > 2 * 1024 * 1024) loveFail("That photo is too large — try another one.");
+            if (input.photo.size > 2 * 1024 * 1024) loveFail("That photo is too large. Try another one.");
             const bytes = new Uint8Array(await input.photo.arrayBuffer());
-            if (!isJpeg(bytes)) loveFail("That file doesn't look like a photo — try another one.");
+            if (!isJpeg(bytes)) loveFail("That file doesn't look like a photo. Try another one.");
             if (storeName === "fake" && name.toLocaleLowerCase() === "error test") throw new Error("fictional upload failure");
             const notes = await store.listNotes();
             if (notes.length >= 2000)

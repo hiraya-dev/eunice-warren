@@ -133,10 +133,10 @@ export function initWithLoveUpload() {
         cropControls.hidden = true;
         const heic = /image\/(heic|heif)/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
         error.textContent = caught instanceof Error && caught.message === "photo-too-large"
-          ? "That photo is too large — try another one."
+          ? "That photo is too large. Try another one."
           : heic
             ? "This photo is in iPhone format (HEIC) and couldn't be opened here. Try uploading it from your phone, or save it as a JPEG first."
-            : "That file doesn't look like a photo — try another one.";
+            : "That file doesn't look like a photo. Try another one.";
         error.hidden = false;
       }
     };
