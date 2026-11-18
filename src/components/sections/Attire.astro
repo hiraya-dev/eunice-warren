@@ -517,11 +517,25 @@ const holes = Array.from({ length: 8 });
       padding-block: 0.75rem;
     }
     .attire_note {
+      /*
+       * The ruled lines and the writing share one pitch. Every padding, margin, gap and
+       * line-height inside the card is a whole number of rows, so each line box ends on
+       * a rule. A hand font's baseline sits above the bottom of its line box, so the text
+       * is nudged down by the difference: half a row, less --_*-k em (half the font's
+       * ascent minus descent), less the 1px rule, which leaves the baseline on the rule.
+       */
+      --_rule: 2rem;
+      --_rule-start: calc(var(--_rule) * 2);
+      --_hand-k: 0.39;
+      --_mono-k: 0.36;
+      --_stamp-w: 16.875rem;
+      /* Mirrors the postmark's width and height attributes (340 x 254). */
+      --_stamp-h: calc(var(--_stamp-w) * 254 / 340);
       position: relative;
       width: 100%;
-      padding: 6rem 1.25rem 2rem 3.5rem;
+      padding: calc(var(--_rule) * 3) 1.25rem 2rem 3.5rem;
       background:
-        repeating-linear-gradient(to bottom, transparent 0 31px, var(--_attire-rule) 31px 32px) 0 64px / 100% calc(100% - 64px) no-repeat,
+        repeating-linear-gradient(to bottom, transparent 0 calc(var(--_rule) - 1px), var(--_attire-rule) calc(var(--_rule) - 1px) var(--_rule)) 0 var(--_rule-start) / 100% calc(100% - var(--_rule-start)) no-repeat,
         var(--_attire-paper);
       box-shadow: 0 1px 1px rgb(31 47 92 / 10%), 0 14px 28px rgb(31 47 92 / 12%);
       rotate: -1deg;
@@ -574,16 +588,24 @@ const holes = Array.from({ length: 8 });
       box-sizing: border-box;
     }
     .attire_note-holes i:nth-child(4) { margin-right: auto; }
+    /* No leading trim on the writing: its line boxes are whole rows. */
+    .attire_note-title,
+    .attire_note-label,
+    .attire_note-sentence {
+      --_trim-top: 0.5lh;
+      --_trim-bottom: 0.5lh;
+    }
     .attire_note-title {
       margin: 0;
       color: var(--dark-900);
-      font: 400 clamp(2rem, 9.75vw, 2.375rem) / 4rem var(--hand-family);
+      font: 400 clamp(2rem, 9.75vw, 2.375rem) / calc(var(--_rule) * 2) var(--hand-family);
+      translate: 0 calc(var(--_rule) - var(--_hand-k) * 1em - 1px);
     }
     .attire_note-groups {
       display: flex;
-      margin-top: 4rem;
+      margin-top: calc(var(--_rule) * 2);
       flex-direction: column;
-      gap: 2rem;
+      gap: var(--_rule);
     }
     .attire_note-group {
       min-width: 0;
@@ -591,9 +613,10 @@ const holes = Array.from({ length: 8 });
     .attire_note-label {
       margin: 0;
       color: var(--accent-500);
-      font: var(--primary-regular) 0.6875rem / 2rem var(--mono-family);
+      font: var(--primary-regular) 0.6875rem / var(--_rule) var(--mono-family);
       letter-spacing: var(--letter-spacing-wider);
       text-transform: uppercase;
+      translate: 0 calc(var(--_rule) / 2 - var(--_mono-k) * 1em - 1px);
     }
     .attire_note-list {
       display: flex;
@@ -607,7 +630,8 @@ const holes = Array.from({ length: 8 });
       align-items: flex-start;
       gap: 0.625rem;
       color: var(--dark-900);
-      font: 400 1.625rem / 2rem var(--hand-family);
+      font: 400 1.625rem / var(--_rule) var(--hand-family);
+      translate: 0 calc(var(--_rule) / 2 - var(--_hand-k) * 1em - 1px);
     }
     .attire_note-cross {
       width: 1.125rem;
@@ -617,21 +641,23 @@ const holes = Array.from({ length: 8 });
     }
     .attire_note-seal {
       display: flex;
-      margin-top: 2rem;
+      margin-top: var(--_rule);
       flex-direction: column;
       align-items: flex-start;
     }
     .attire_postmark {
       display: block;
-      width: 16.875rem;
-      height: auto;
-      margin-left: -0.75rem;
+      width: var(--_stamp-w);
+      height: var(--_stamp-h);
+      /* The stamp may sit off the rules; the sentence below it comes back on them. */
+      margin: 0 0 calc(round(up, var(--_stamp-h), var(--_rule)) - var(--_stamp-h)) -0.75rem;
       rotate: -7deg;
     }
     .attire_note-sentence {
-      margin: 1rem 0 0;
+      margin: 0;
       color: var(--accent-500);
-      font: 400 1.625rem / 2rem var(--hand-family);
+      font: 400 1.625rem / var(--_rule) var(--hand-family);
+      translate: 0 calc(var(--_rule) / 2 - var(--_hand-k) * 1em - 1px);
     }
   }
 
@@ -695,7 +721,7 @@ const holes = Array.from({ length: 8 });
     .attire_note-wrap { padding-block: 1rem; }
     .attire_note {
       width: min(51.25rem, 100%);
-      padding: 6.375rem 3rem 1.625rem 6.5rem;
+      padding: calc(var(--_rule) * 3) 3rem 1.625rem 6.5rem;
       rotate: -1.5deg;
     }
     .attire_note::after { left: 5rem; }
@@ -714,10 +740,10 @@ const holes = Array.from({ length: 8 });
       flex-direction: row;
       align-items: flex-start;
     }
-    .attire_postmark { width: min(21.25rem, 56%); margin-left: -1.75rem; }
+    .attire_postmark { width: min(21.25rem, 56%); height: auto; margin: 0 0 0 -1.75rem; }
     .attire_note-sentence {
       width: min(18.75rem, 100%);
-      margin: 4rem 0 0 0.5rem;
+      margin: calc(var(--_rule) * 2) 0 0 1rem;
       font-size: 1.75rem;
       flex: 0 1 18.75rem;
     }

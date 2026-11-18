@@ -282,6 +282,98 @@ test.describe("attire section", () => {
     });
   }
 
+  // The handwriting sits on the ruled lines of the notebook card, like writing on lined paper.
+  for (const width of [390, 768, 1024, 1440]) {
+    test(`sets the notebook text on the ruled lines at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      const note = page.locator("#attire .attire_note");
+      await note.scrollIntoViewIfNeeded();
+      await page.evaluate(() => document.fonts.ready);
+
+      const measured = await note.evaluate((card) => {
+        // Measure in the card's own frame: the rotation turns text and rules together.
+        (card as HTMLElement).style.rotate = "none";
+        const cardTop = card.getBoundingClientRect().top;
+        const length = (value: string) => {
+          const probe = document.createElement("div");
+          probe.style.cssText = `position:absolute;visibility:hidden;height:${value}`;
+          card.append(probe);
+          const height = probe.getBoundingClientRect().height;
+          probe.remove();
+          return height;
+        };
+        const pitch = length("var(--_rule)");
+        const start = length("var(--_rule-start)");
+
+        const markers: { marker: HTMLElement; text: string; role: string }[] = [];
+        const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+        const texts: Text[] = [];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if ((node.textContent ?? "").trim()) texts.push(node as Text);
+        }
+        for (const text of texts) {
+          const range = document.createRange();
+          const starts: number[] = [];
+          let previous = Number.NaN;
+          for (let index = 0; index < text.length; index += 1) {
+            range.setStart(text, index);
+            range.setEnd(text, index + 1);
+            const rect = range.getClientRects()[0];
+            if (!rect || !rect.width) continue;
+            if (Number.isNaN(previous) || Math.abs(rect.top - previous) > rect.height / 2) starts.push(index);
+            previous = rect.top;
+          }
+          const words = (text.textContent ?? "").trim().slice(0, 12);
+          // Insert from the end so earlier offsets stay valid.
+          for (const index of starts.reverse()) {
+            const marker = document.createElement("span");
+            marker.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
+            // Keep the marker on the line it measures: wrap it with the line's first character.
+            const keep = document.createElement("span");
+            keep.style.whiteSpace = "nowrap";
+            range.setStart(text, index);
+            range.setEnd(text, index + 1);
+            range.surroundContents(keep);
+            keep.prepend(marker);
+            const owner = keep.closest(".attire_note-label, .attire_note-list li");
+            markers.push({ marker, text: words, role: owner?.matches(".attire_note-label") ? "label" : owner ? "item" : "other" });
+          }
+        }
+        const lines = markers.map(({ marker, text, role }) => ({
+          text,
+          role,
+          group: Array.from(card.querySelectorAll(".attire_note-group")).findIndex((group) => group.contains(marker)),
+          baseline: marker.getBoundingClientRect().bottom - cardTop,
+        }));
+        for (const { marker } of markers) marker.remove();
+        return { pitch, start, lines };
+      });
+
+      expect(measured.pitch).toBeGreaterThan(0);
+      expect(measured.lines.length).toBeGreaterThan(0);
+      for (const line of measured.lines) {
+        // Rules sit at the bottom edge of each row, one pixel thick.
+        const rows = Math.max(1, Math.round((line.baseline - measured.start) / measured.pitch));
+        const rule = measured.start + rows * measured.pitch - 0.5;
+        expect(Math.abs(line.baseline - rule), `"${line.text}" baseline ${line.baseline.toFixed(1)} vs rule ${rule.toFixed(1)}`).toBeLessThanOrEqual(2);
+      }
+
+      if (width >= 768) {
+        // The columns share one label line, and every first item sits on the line after it.
+        const labels = measured.lines.filter((line) => line.role === "label");
+        expect(labels.length).toBeGreaterThan(1);
+        for (const label of labels) {
+          expect(Math.abs(label.baseline - labels[0].baseline)).toBeLessThanOrEqual(2);
+          const firstItem = Math.min(
+            ...measured.lines.filter((line) => line.role === "item" && line.group === label.group).map((line) => line.baseline),
+          );
+          expect(Math.abs(firstItem - (label.baseline + measured.pitch))).toBeLessThanOrEqual(2);
+        }
+      }
+    });
+  }
+
   // The global `svg { max-width: 100% }` once capped the string at the content width.
   for (const width of [320, 390, 768, 1151, 1152, 1440, 1920, 2560]) {
     test(`runs the clothesline string edge to edge at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
