@@ -283,7 +283,7 @@ test.describe("attire section", () => {
   }
 
   // The handwriting sits on the ruled lines of the notebook card, like writing on lined paper.
-  for (const width of [390, 768, 1024, 1440]) {
+  for (const width of [320, 375, 390, 481, 488, 632, 767, 768, 968, 1023, 1024, 1032, 1150, 1440, 1920]) {
     test(`sets the notebook text on the ruled lines at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
@@ -352,6 +352,21 @@ test.describe("attire section", () => {
 
       expect(measured.pitch).toBeGreaterThan(0);
       expect(measured.lines.length).toBeGreaterThan(0);
+
+      // The postmark scales with its box: its 340:254 ratio holds and it is never cropped.
+      const stamp = await note.evaluate((card) => {
+        (card as HTMLElement).style.rotate = "none";
+        const image = card.querySelector<HTMLElement>(".attire_postmark")!;
+        image.style.rotate = "none";
+        const box = image.getBoundingClientRect();
+        const seal = card.querySelector(".attire_note-seal")!;
+        const sealStyle = getComputedStyle(seal);
+        const sealBox = seal.getBoundingClientRect();
+        const sealWidth = sealBox.width - parseFloat(sealStyle.paddingLeft) - parseFloat(sealStyle.paddingRight);
+        return { width: box.width, height: box.height, margin: parseFloat(getComputedStyle(image).marginLeft), sealWidth };
+      });
+      expect(Math.abs(stamp.width / stamp.height / (340 / 254) - 1), `postmark ${stamp.width}x${stamp.height}`).toBeLessThanOrEqual(0.01);
+      expect(stamp.width, "postmark stays inside its box").toBeLessThanOrEqual(stamp.sealWidth - stamp.margin + 0.5);
       for (const line of measured.lines) {
         // Rules sit at the bottom edge of each row, one pixel thick.
         const rows = Math.max(1, Math.round((line.baseline - measured.start) / measured.pitch));

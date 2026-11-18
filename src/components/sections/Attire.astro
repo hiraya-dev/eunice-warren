@@ -528,9 +528,6 @@ const holes = Array.from({ length: 8 });
       --_rule-start: calc(var(--_rule) * 2);
       --_hand-k: 0.39;
       --_mono-k: 0.36;
-      --_stamp-w: 16.875rem;
-      /* Mirrors the postmark's width and height attributes (340 x 254). */
-      --_stamp-h: calc(var(--_stamp-w) * 254 / 340);
       position: relative;
       width: 100%;
       padding: calc(var(--_rule) * 3) 1.25rem 2rem 3.5rem;
@@ -644,8 +641,13 @@ const holes = Array.from({ length: 8 });
       margin-top: var(--_rule);
       flex-direction: column;
       align-items: flex-start;
+      /* The stamp scales to the seal's own width, so a narrow phone never crops it. */
+      container-type: inline-size;
     }
     .attire_postmark {
+      /* Resolved here, against the seal container; --_stamp-h mirrors the 340 x 254 attributes. */
+      --_stamp-w: min(16.875rem, 100cqi);
+      --_stamp-h: calc(var(--_stamp-w) * 254 / 340);
       display: block;
       width: var(--_stamp-w);
       height: var(--_stamp-h);
@@ -739,6 +741,7 @@ const holes = Array.from({ length: 8 });
     .attire_note-seal {
       flex-direction: row;
       align-items: flex-start;
+      container-type: normal;
     }
     .attire_postmark { width: min(21.25rem, 56%); height: auto; margin: 0 0 0 -1.75rem; }
     .attire_note-sentence {
