@@ -41,7 +41,7 @@ const closed = () => {
       message: "RSVPs closed on December 12.",
     });
 };
-const fail = (message = "Something went wrong — please try again.") => {
+const fail = (message = "Something went wrong. Please try again.") => {
   throw new ActionError({ code: "INTERNAL_SERVER_ERROR", message });
 };
 
@@ -121,7 +121,7 @@ const loveSubmitInput = z.object({
   turnstileToken: z.string().max(4096),
 });
 
-const loveFail = (message = "Something went wrong — please try again.") => {
+const loveFail = (message = "Something went wrong. Please try again.") => {
   throw new ActionError({ code: "INTERNAL_SERVER_ERROR", message });
 };
 
@@ -135,7 +135,7 @@ export const server = {
         try {
           const result = await getStore().findInvite(input.name);
           if (!result) return { invite: null };
-          if (!tokenSecret) fail("Something went wrong — please try again.");
+          if (!tokenSecret) fail("Something went wrong. Please try again.");
           const token = await signRsvpToken(
             result.invite.id,
             Date.now() + 2 * 60 * 60 * 1000,
@@ -167,7 +167,7 @@ export const server = {
         if (!tokenData)
           throw new ActionError({
             code: "UNAUTHORIZED",
-            message: "Something went wrong — please try again.",
+            message: "Something went wrong. Please try again.",
           });
         try {
           const result = await getStore().findInvite(input.name);
@@ -182,7 +182,7 @@ export const server = {
           )
             throw new ActionError({
               code: "BAD_REQUEST",
-              message: "Something went wrong — please try again.",
+              message: "Something went wrong. Please try again.",
             });
           await getStore().submit({
             inviteId: result.invite.id,

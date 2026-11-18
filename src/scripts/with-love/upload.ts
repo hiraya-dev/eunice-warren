@@ -221,7 +221,7 @@ export function initWithLoveUpload() {
         form.hidden = true;
         root.querySelector<HTMLElement>("[data-sent]")!.hidden = false;
       } catch (caught) {
-        error.textContent = caught instanceof Error && caught.message ? caught.message : "Something went wrong — please try again.";
+        error.textContent = caught instanceof Error && caught.message ? caught.message : "Something went wrong. Please try again.";
         error.hidden = false;
         submit.disabled = false;
         submit.textContent = "Pin it to the stack";

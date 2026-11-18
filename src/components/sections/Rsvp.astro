@@ -128,7 +128,7 @@ const {
             <div class="rsvp_panel" data-rsvp-panel="2" hidden>
               <form data-rsvp-attending>
                 <h3 tabindex="-1" data-rsvp-heading>
-                  Hi <span data-rsvp-first-name></span> — can you make it?
+                  Hi <span data-rsvp-first-name></span>, can you make it?
                 </h3>
                 <fieldset class="rsvp_options">
                   <legend>Will you be attending?</legend><label
@@ -215,7 +215,7 @@ const {
                   role="alert"
                   hidden
                 >
-                  Something went wrong — please try again.
+                  Something went wrong. Please try again.
                 </p>
               </form>
             </div>
@@ -595,7 +595,7 @@ const {
               if (result.error || !result.data) {
                 error.textContent =
                   result.error?.message ||
-                  "Something went wrong — please try again.";
+                  "Something went wrong. Please try again.";
                 error.hidden = false;
                 nameInput.setAttribute("aria-invalid", "true");
                 nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -631,7 +631,7 @@ const {
               root.dataset.rsvpToken = token;
               setStep("2");
             } catch {
-              error.textContent = "Something went wrong — please try again.";
+              error.textContent = "Something went wrong. Please try again.";
               error.hidden = false;
               nameInput.setAttribute("aria-invalid", "true");
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -736,7 +736,7 @@ const {
               }
             } catch {
               submitError.textContent =
-                "Something went wrong — please try again.";
+                "Something went wrong. Please try again.";
               submitError.hidden = false;
               return;
             } finally {

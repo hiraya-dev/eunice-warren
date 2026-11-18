@@ -307,6 +307,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `tests/**`
 
+### L-036 — Run copy-editing on new copy before the review pack
+- **Date:** 2026-11-18
+- **Trigger:** #84 Local-review round (the user asked to fix the copy with `copy-editing` after the pack went out)
+- **Symptom:** a content PR filled in facts but left em dashes in the sections it touched and long two-clause sentences in the new copy, so the user had to ask for a copy pass.
+- **Root cause:** the facts were checked against the source, but the voice rules in `.agents/product-marketing.md` (no em dashes in sections that are touched, short sentences, "we" to "you") weren't run before the review pack.
+- **Rule:** any PR that adds or changes guest-facing copy runs the `copy-editing` AI-tell and voice checks on that copy, and clears the em dashes in every section it touches, before the first review pack.
+- **Check:** `grep -rn "—" src/components src/content` shows no hits in the touched sections, apart from code comments and the hidden With Love attribution marks.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/content/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

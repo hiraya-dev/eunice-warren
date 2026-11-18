@@ -236,7 +236,7 @@ test.describe("Playlist section", () => {
     await page.locator(".playlist_submit").click();
     await expect(
       page.locator('.playlist_form-wrap .form_note-sent[role="status"]'),
-    ).toHaveText("Song requests open soon — hold that thought.");
+    ).toHaveText("Song requests open soon. Hold that thought.");
   });
 
   test("keeps postcard fields empty, lined, and stable on focus", async ({
