@@ -85,11 +85,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-013 — A red e2e may be a cancel
 - **Date:** 2026-10-11
-- **Trigger:** carried over from the source workflow (CLAUDE.md **Traps**)
-- **Symptom:** `gate` went red with no failing test.
-- **Root cause:** the `e2e` job hit `timeout-minutes`, or a newer push cancelled the run.
-- **Rule:** before blaming the PR, check whether the job was cancelled or timed out. Raising the timeout or sharding is its own `chore` PR; a superseded run is rerun with `gh run rerun`.
-- **Check:** the job log ends in a test failure, not "The job running on runner … has exceeded the maximum execution time" or "cancelled".
+- **Trigger:** carried over from the source workflow (CLAUDE.md **Traps**); user correction #85 (on "ship it", Claude pushed a merge of `main` and ran `gh pr ready` a second later; the `ready_for_review` run (full) was queued first and cancelled by the `synchronize` run, which still read the PR as a draft and ran only smoke; Claude reported the surviving run as the full tier)
+- **Symptom:** `gate` went red with no failing test; or a green `gate` on a ready PR came from the smoke tier.
+- **Root cause:** the `e2e` job hit `timeout-minutes`, or a newer event cancelled the run (`cancel-in-progress`), including a push and `gh pr ready` sent back to back.
+- **Rule:** before blaming the PR, check whether the job was cancelled or timed out. Raising the timeout or sharding is its own `chore` PR; a superseded run is rerun with `gh run rerun`. Never push and `gh pr ready` together: wait for the push's run to start, or mark ready first and push after. Before calling a run full-tier or merging, read the job name on the head (`e2e (full)`, both `sweeps` and `webkit` ran), not the run order.
+- **Check:** the job log ends in a test failure, not "The job running on runner … has exceeded the maximum execution time" or "cancelled"; the merge's `gate` comes from a run whose `e2e` job is named `e2e (full)`.
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `tests/**`
 
