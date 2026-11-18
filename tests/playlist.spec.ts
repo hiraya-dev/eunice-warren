@@ -315,4 +315,60 @@ test.describe("Playlist section", () => {
       expect(focused.boxShadow).toMatch(/0px -3px 0px 0px inset/);
     }
   });
+
+  test("puts a labelled intro first in the postcard, clear of the stamp", { tag: ["@sweep"] }, async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const postcard = page.locator(".playlist_postcard");
+    await expect(page.locator(".playlist_header p")).toHaveCount(0);
+    const title = postcard.locator("h3.playlist_postcard-title");
+    await expect(title).toHaveCount(1);
+    await expect(postcard.locator("p.playlist_postcard-text")).toHaveCount(1);
+    await expect(page.locator("form[name='song-request']")).toHaveAttribute(
+      "aria-labelledby",
+      (await title.getAttribute("id")) ?? "",
+    );
+    const order = await postcard.evaluate((card) => {
+      const intro = card.querySelector(".playlist_postcard-intro");
+      const field = card.querySelector(".field-control");
+      return Boolean(
+        intro &&
+          field &&
+          intro.compareDocumentPosition(field) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(order).toBe(true);
+    await postcard.scrollIntoViewIfNeeded();
+    const rects = await postcard.evaluate((card) => {
+      const box = (selector: string) => {
+        const rect = card.querySelector(selector)!.getBoundingClientRect();
+        return {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+        };
+      };
+      return {
+        stamp: box(".playlist_stamp"),
+        title: box(".playlist_postcard-title"),
+        text: box(".playlist_postcard-text"),
+      };
+    });
+    for (const part of [rects.title, rects.text]) {
+      const apart =
+        part.right <= rects.stamp.left ||
+        part.left >= rects.stamp.right ||
+        part.bottom <= rects.stamp.top ||
+        part.top >= rects.stamp.bottom;
+      expect(apart).toBe(true);
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
 });
