@@ -235,6 +235,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/lib/**`, `src/actions/**`, `tests/**`, `.agents/skills/codex-handoff/**`
 
+### L-035 — Measure layout shift in the element's own frame, not the viewport
+- **Date:** 2026-11-18
+- **Trigger:** #84 flaky test (`rsvp.spec.ts` "keeps RSVP field layout stable when focused" failed 1 of 3 on `origin/main`'s source too)
+- **Symptom:** the next block's `getBoundingClientRect().top` moved 56px between blur and focus while the input itself kept its size, so the test failed with nothing wrong in the field.
+- **Root cause:** the assertion reads viewport coordinates, so any scroll on focus or a late layout shift above the RSVP (lazy images, fonts) moves `top` without the field changing.
+- **Rule:** a "layout stays stable" assertion compares positions relative to a stable ancestor (the next block's top minus the form's top), or pins the scroll position first, never raw viewport `top` across an action that can scroll.
+- **Check:** the spec subtracts an ancestor's rect or asserts `scrollY` unchanged, and passes `--repeat-each 20 --workers 8`.
+- **Guard:** none
+- **Paths:** `tests/**`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building
