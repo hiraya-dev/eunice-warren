@@ -18,9 +18,6 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     <div class="playlist_left">
       <header class="playlist_header" data-fade-in>
         <h2 class="playlist_title" data-fade-in-item>What gets<br />you dancing?</h2>
-        <p class="playlist_intro" data-fade-in-item>
-          Send a song to the DJ. We'll play as many as we can.
-        </p>
       </header>
       <div class="playlist_player">
         <div class="playlist_player-row">
@@ -131,7 +128,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
           <div class="playlist_listen-copy">
             <div class="playlist_eyebrow">
               <span aria-hidden="true"></span>SIDE A · LISTEN ALONG
-            </div><h3>Side A — Boracay ’27</h3><p>
+            </div><h3>Side A · Boracay ’27</h3><p>
               Press play below and the needle drops. Every song you send lands
               on it.
             </p>
@@ -150,14 +147,23 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     </div>
     <Form
       name="song-request"
-      successMessage="Song requests open soon — hold that thought."
+      successMessage="Song requests open soon. Hold that thought."
       class="playlist_form-wrap"
+      aria-labelledby="playlist-postcard-title"
     >
       <div
         class="playlist_postcard"
         style={`--postcard-texture: url("${postcardPaper.src}")`}
       >
-        <div class="playlist_stamp"><Stamp><Image src={stamp} alt="" width={72} height={93} densities={[1, 2]} aria-hidden="true" /></Stamp></div><Input
+        <div class="playlist_stamp"><Stamp><Image src={stamp} alt="" width={72} height={93} densities={[1, 2]} aria-hidden="true" /></Stamp></div><div class="playlist_postcard-intro">
+          <h3 class="playlist_postcard-title" id="playlist-postcard-title">
+            Request a song
+          </h3>
+          <p class="playlist_postcard-text">
+            Tell our DJ the song that gets you on the dance floor. We'll play as
+            many requests as we can at the reception.
+          </p>
+        </div><Input
           appearance="postcard"
           label="Your name"
           name="name"
@@ -440,12 +446,6 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       padding-bottom: var(--secondary-trim-bottom);
       letter-spacing: var(--letter-spacing-tight);
     }
-    .playlist_intro {
-      max-width: 32ch;
-      margin: 0;
-      font-size: var(--text-main);
-      line-height: 1.5;
-    }
     .playlist_player {
       display: grid;
       gap: var(--space-4);
@@ -609,6 +609,26 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         0 1.375rem 2.5rem rgb(31 47 92 / 0.08);
       transform: rotate(1.5deg);
     }
+    .playlist_postcard-intro {
+      display: grid;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+      padding-right: 4.5rem;
+    }
+    .playlist_postcard-title {
+      margin: 0;
+      font-family: var(--secondary-family);
+      font-size: 1.75rem;
+      font-weight: var(--secondary-regular);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    .playlist_postcard-text {
+      margin: 0;
+      color: var(--dark-700);
+      font-size: var(--text-small);
+      line-height: 1.5;
+    }
     .playlist_stamp {
       position: absolute;
       top: 1rem;
@@ -696,6 +716,9 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       .playlist_postcard {
         padding: 2.25rem;
         transform: rotate(2.5deg);
+      }
+      .playlist_postcard-intro {
+        padding-right: 5.25rem;
       }
       .playlist_stamp {
         top: 1.25rem;

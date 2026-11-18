@@ -235,6 +235,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/lib/**`, `src/actions/**`, `tests/**`, `.agents/skills/codex-handoff/**`
 
+### L-035 — Measure layout shift in the element's own frame, not the viewport
+- **Date:** 2026-11-18
+- **Trigger:** #84 flaky test (`rsvp.spec.ts` "keeps RSVP field layout stable when focused" failed 1 of 3 on `origin/main`'s source too)
+- **Symptom:** the next block's `getBoundingClientRect().top` moved 56px between blur and focus while the input itself kept its size, so the test failed with nothing wrong in the field.
+- **Root cause:** the assertion reads viewport coordinates, so any scroll on focus or a late layout shift above the RSVP (lazy images, fonts) moves `top` without the field changing.
+- **Rule:** a "layout stays stable" assertion compares positions relative to a stable ancestor (the next block's top minus the form's top), or pins the scroll position first, never raw viewport `top` across an action that can scroll.
+- **Check:** the spec subtracts an ancestor's rect or asserts `scrollY` unchanged, and passes `--repeat-each 20 --workers 8`.
+- **Guard:** none
+- **Paths:** `tests/**`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building
@@ -296,6 +306,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the review pack lists the modes measured; a spec measures the label inset of any button whose column is sized by the layout (`tests/rsvp-paths.spec.ts` "renames a member via Edit").
 - **Guard:** none
 - **Paths:** `src/components/**`, `tests/**`
+
+### L-036 — Run copy-editing on new copy before the review pack
+- **Date:** 2026-11-18
+- **Trigger:** #84 Local-review round (the user asked to fix the copy with `copy-editing` after the pack went out)
+- **Symptom:** a content PR filled in facts but left em dashes in the sections it touched and long two-clause sentences in the new copy, so the user had to ask for a copy pass.
+- **Root cause:** the facts were checked against the source, but the voice rules in `.agents/product-marketing.md` (no em dashes in sections that are touched, short sentences, "we" to "you") weren't run before the review pack.
+- **Rule:** any PR that adds or changes guest-facing copy runs the `copy-editing` AI-tell and voice checks on that copy, and clears the em dashes in every section it touches, before the first review pack.
+- **Check:** `grep -rn "—" src/components src/content` shows no hits in the touched sections, apart from code comments and the hidden With Love attribution marks.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/content/**`
+
+### L-037 — Every round runs select-specs, including subagent rounds
+- **Date:** 2026-11-18
+- **Trigger:** #84 red CI (`smoke.spec` "marks section headings for the shared fade-in" counted 2 items in `.playlist_header` after a `layout-implementer` round moved the intro into the postcard)
+- **Symptom:** a Local-review round ran only the spec its implementer touched (`playlist.spec`), pushed, and `e2e (full)` and `webkit` went red on a site-wide spec that counts the header's fade-in items.
+- **Root cause:** the round's specs were picked by hand from the implementer's report instead of from `select-specs.mjs`, which lists `smoke.spec` for any section change.
+- **Rule:** before every push, including after a `layout-implementer` or Codex round, run `select-specs.mjs` on the round's paths and run the specs it returns, not only the ones the implementer names.
+- **Check:** the round's entry in `task.md` and the PR's `Local:` line name the `select-specs` output for that round.
+- **Guard:** none
+- **Paths:** `tests/**`, `src/components/**`
 
 ## CI scripts
 

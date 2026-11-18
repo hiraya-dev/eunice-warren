@@ -20,8 +20,8 @@ interface Props extends HTMLAttributes<"section"> {
 }
 
 const {
-  venue = "[Venue]",
-  deadline = "[Deadline]",
+  venue = "Our Lady of the Most Holy Rosary Parish",
+  deadline = "Dec 12, 2026",
   calendarHref = "#",
   mapsHref = "#",
   rsvpHref = "#",
@@ -30,7 +30,7 @@ const {
 } = Astro.props;
 
 const welcomeParagraphs = [
-  "We fell for Boracay on our first trip together, and we've wanted to share it with you ever since.",
+  "We're getting married, and the day wouldn't be complete without you there to share it.",
   "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
 ];
 
@@ -54,7 +54,7 @@ const welcomeParagraphs = [
           <span class="invitation_fact-label">WHERE</span>
           <div class="invitation_fact-content">
             <span class="invitation_fact-value">{venue}</span>
-            <span class="invitation_fact-detail">White Beach, Boracay</span>
+            <span class="invitation_fact-detail">Boracay Island, Malay, Aklan</span>
             <a class="invitation_fact-link" href={mapsHref}>OPEN IN MAPS <span aria-hidden="true">↗</span></a>
           </div>
         </div>

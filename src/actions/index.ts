@@ -38,10 +38,10 @@ const closed = () => {
   if (isRsvpClosed())
     throw new ActionError({
       code: "GONE",
-      message: "RSVPs closed on December 31.",
+      message: "RSVPs closed on December 12.",
     });
 };
-const fail = (message = "Something went wrong — please try again.") => {
+const fail = (message = "Something went wrong. Please try again.") => {
   throw new ActionError({ code: "INTERNAL_SERVER_ERROR", message });
 };
 
@@ -91,7 +91,7 @@ async function guard(
   if (!withinLimit)
     throw new ActionError({
       code: "TOO_MANY_REQUESTS",
-      message: "Too many tries — wait a minute and try again.",
+      message: "Too many tries. Wait a minute and try again.",
     });
 }
 
@@ -121,7 +121,7 @@ const loveSubmitInput = z.object({
   turnstileToken: z.string().max(4096),
 });
 
-const loveFail = (message = "Something went wrong — please try again.") => {
+const loveFail = (message = "Something went wrong. Please try again.") => {
   throw new ActionError({ code: "INTERNAL_SERVER_ERROR", message });
 };
 
@@ -135,7 +135,7 @@ export const server = {
         try {
           const result = await getStore().findInvite(input.name);
           if (!result) return { invite: null };
-          if (!tokenSecret) fail("Something went wrong — please try again.");
+          if (!tokenSecret) fail("Something went wrong. Please try again.");
           const token = await signRsvpToken(
             result.invite.id,
             Date.now() + 2 * 60 * 60 * 1000,
@@ -167,7 +167,7 @@ export const server = {
         if (!tokenData)
           throw new ActionError({
             code: "UNAUTHORIZED",
-            message: "Something went wrong — please try again.",
+            message: "Something went wrong. Please try again.",
           });
         try {
           const result = await getStore().findInvite(input.name);
@@ -182,7 +182,7 @@ export const server = {
           )
             throw new ActionError({
               code: "BAD_REQUEST",
-              message: "Something went wrong — please try again.",
+              message: "Something went wrong. Please try again.",
             });
           await getStore().submit({
             inviteId: result.invite.id,
@@ -217,9 +217,9 @@ export const server = {
             if (!isWithinLength(message, 140)) loveFail("Please write a note (up to 140 characters).");
             if (!isWithinLength(name, 60)) loveFail("Please add your name.");
             if (city.length > 60) loveFail("Please shorten the city name.");
-            if (input.photo.size > 2 * 1024 * 1024) loveFail("That photo is too large — try another one.");
+            if (input.photo.size > 2 * 1024 * 1024) loveFail("That photo is too large. Try another one.");
             const bytes = new Uint8Array(await input.photo.arrayBuffer());
-            if (!isJpeg(bytes)) loveFail("That file doesn't look like a photo — try another one.");
+            if (!isJpeg(bytes)) loveFail("That file doesn't look like a photo. Try another one.");
             if (storeName === "fake" && name.toLocaleLowerCase() === "error test") throw new Error("fictional upload failure");
             const notes = await store.listNotes();
             if (notes.length >= 2000)

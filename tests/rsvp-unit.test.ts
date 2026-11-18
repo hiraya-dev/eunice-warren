@@ -102,12 +102,12 @@ test("validates seat checklist rules", () => {
 
 test("keeps the deadline boundary exact", () => {
   assert.equal(
-    new Date("2026-12-31T23:59:59+08:00").getTime(),
+    new Date("2026-12-12T23:59:59+08:00").getTime(),
     RSVP_DEADLINE_TIME,
   );
   assert.equal(
     RSVP_DEADLINE_TIME + 1000,
-    new Date("2027-01-01T00:00:00+08:00").getTime(),
+    new Date("2026-12-13T00:00:00+08:00").getTime(),
   );
 });
 

@@ -120,7 +120,7 @@ test.describe("invitation section", () => {
     await page.setViewportSize({ width: 1440, height: 700 });
     await page.goto("/");
     const sentences = [
-      "We fell for Boracay on our first trip together, and we've wanted to share it with you ever since.",
+      "We're getting married, and the day wouldn't be complete without you there to share it.",
       "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
     ];
     const chars = page.locator(".invitation_note [data-highlight-text] > div > div");

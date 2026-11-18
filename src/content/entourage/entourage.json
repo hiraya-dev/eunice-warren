@@ -9,8 +9,8 @@
       "rows": [
         {
           "roles": [
-            { "label": "Parents of the groom", "names": ["Eduardo M. Reyes", "Liza C. Reyes"] },
-            { "label": "Parents of the bride", "names": ["Ramon D. Santos", "Teresita L. Santos"] }
+            { "label": "Parents of the groom", "names": ["Hector Meera Malihan", "Editha Malaluan Malihan"] },
+            { "label": "Parents of the bride", "names": ["Lauro Valencia Toledo", "Gloria Paz Olave Toledo"] }
           ]
         }
       ]
@@ -22,8 +22,8 @@
       "rows": [
         {
           "roles": [
-            { "label": "Ninongs", "names": ["Hon. Antonio R. Villanueva", "Benjamin S. Cruz", "Engr. Danilo P. Mendoza", "Atty. Francisco G. Bautista", "Gregorio T. Aquino", "Rogelio C. Tan", "Capt. Manuel V. Navarro (RET)", "Arturo L. Domingo"] },
-            { "label": "Ninangs", "names": ["Dra. Carmela A. Villanueva", "Rosario M. Cruz", "Josefina D. Mendoza", "Imelda R. Bautista", "Lourdes F. Aquino", "Marivic S. Tan", "Corazon B. Navarro", "Gloria E. Domingo"] }
+            { "label": "Ninongs", "names": ["Loreto C. De Ocampo", "Pedrito Martin M. Dijan Jr.", "Rodrigo D. Garcia", "Leo P. Lajara", "Hon. Mayor Wilson V. Maralit", "Ericson D. Mole", "Nonato R. Monfero", "Bernardino L. Olave Jr.", "Antonio C. Resma", "Atiwong Teachaburanatapaporn"] },
+            { "label": "Ninangs", "names": ["Maia Ruvien D. Nearents", "Florida M. Dijan", "Marjorie Q. Garcia", "Olyn D. Lajara", "Mayora Olalia C. Maralit", "Gina A. Mole", "Ervenilda P. Monfero", "Tita Josie", "Judy M. Macasaet", "May M. Curtis"] }
           ]
         }
       ]
@@ -64,7 +64,8 @@
             { "label": "Ring & Bible bearer", "names": ["Lucas D. Reyes"] },
             { "label": "Coin bearer", "names": ["Gabriel S. Santos"] },
             { "label": "Junior groomsman", "names": ["Mateo L. Cruz"] },
-            { "label": "Flower girls", "names": ["Sophia M. Tan", "Isabel C. Aquino"] }
+            { "label": "Flower girls", "names": ["Sophia M. Tan", "Isabel C. Aquino"] },
+            { "label": "Readers", "names": ["Andrea P. Lim", "Miguel R. Castro"] }
           ]
         }
       ]

@@ -133,10 +133,10 @@ export function initWithLoveUpload() {
         cropControls.hidden = true;
         const heic = /image\/(heic|heif)/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
         error.textContent = caught instanceof Error && caught.message === "photo-too-large"
-          ? "That photo is too large — try another one."
+          ? "That photo is too large. Try another one."
           : heic
             ? "This photo is in iPhone format (HEIC) and couldn't be opened here. Try uploading it from your phone, or save it as a JPEG first."
-            : "That file doesn't look like a photo — try another one.";
+            : "That file doesn't look like a photo. Try another one.";
         error.hidden = false;
       }
     };
@@ -221,7 +221,7 @@ export function initWithLoveUpload() {
         form.hidden = true;
         root.querySelector<HTMLElement>("[data-sent]")!.hidden = false;
       } catch (caught) {
-        error.textContent = caught instanceof Error && caught.message ? caught.message : "Something went wrong — please try again.";
+        error.textContent = caught instanceof Error && caught.message ? caught.message : "Something went wrong. Please try again.";
         error.hidden = false;
         submit.disabled = false;
         submit.textContent = "Pin it to the stack";
