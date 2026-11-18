@@ -4,7 +4,7 @@ export const RSVP_EVENT = {
   dateLabel: "14.01.27",
   vowsLabel: "15:00",
   dressLabel: "ISLAND",
-  location: "White Beach, Boracay",
+  location: "Our Lady of the Most Holy Rosary Parish in Boracay",
 } as const;
 
 const SEAT_WORDS = [
