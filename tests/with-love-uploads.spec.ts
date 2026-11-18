@@ -70,7 +70,7 @@ test.describe.skip("With Love guest uploads", () => {
     await form.locator("[data-message]").fill("Keep this note");
     await form.locator("[data-name]").fill("Error Test");
     await form.locator("[data-submit]").click();
-    await expect(form.locator("[data-form-error]")).toHaveText("Something went wrong — please try again.");
+    await expect(form.locator("[data-form-error]")).toHaveText("Something went wrong. Please try again.");
     await expect(form.locator("[data-message]")).toHaveValue("Keep this note");
     await expect(form.locator("[data-name]")).toHaveValue("Error Test");
   });

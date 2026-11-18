@@ -49,7 +49,7 @@ test.describe("RSVP section", () => {
 
   test("shows the RSVP deadline label", { tag: ["@single"] }, async ({ page }) => {
     await expect(rsvp(page).locator("[data-rsvp-intro]")).toContainText(
-      "December 31",
+      "December 12",
     );
   });
 
@@ -162,7 +162,7 @@ test.describe("RSVP section", () => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Error Test");
     await button.click();
     await expect(rsvp(page).locator("[data-rsvp-name-error]")).toHaveText(
-      "Something went wrong — please try again.",
+      "Something went wrong. Please try again.",
     );
     await expect(button).toBeEnabled();
     await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
