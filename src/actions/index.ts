@@ -38,7 +38,7 @@ const closed = () => {
   if (isRsvpClosed())
     throw new ActionError({
       code: "GONE",
-      message: "RSVPs closed on December 31.",
+      message: "RSVPs closed on December 12.",
     });
 };
 const fail = (message = "Something went wrong — please try again.") => {

@@ -79,8 +79,9 @@ const questions = (await getCollection("faq")).sort(
       <div class="faq_contact">
         <span class="faq_avatar" aria-hidden="true"></span>
         <div class="faq_contact-copy">
-          <p>Still unsure? Ask <span>[Contact name]</span></p>
-          <a href="#">[email / Viber] <span aria-hidden="true">↗</span></a>
+          <p>Still unsure? Ask <span>Eunice or Warren</span></p>
+          <a href="tel:+639362300539">Eunice · 0936 230 0539 <span aria-hidden="true">↗</span></a>
+          <a href="tel:+639362300525">Warren · 0936 230 0525 <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </div>
@@ -332,14 +333,6 @@ const questions = (await getCollection("faq")).sort(
       left: 0;
       height: 0.8125rem;
       background: linear-gradient(var(--dark-900) 0 0) bottom / 100% 0.125rem no-repeat, radial-gradient(circle at 1.125rem 0.6875rem, var(--dark-900) 0.6875rem, transparent calc(0.6875rem + 0.03125rem)) 0 0 / 2.25rem 0.6875rem repeat-x;
-    }
-
-    @media (hover: hover) {
-      .faq_toggle:hover .faq_question {
-        text-decoration: underline;
-        text-decoration-thickness: 0.0625rem;
-        text-underline-offset: 0.15em;
-      }
     }
 
     @media (prefers-reduced-motion: reduce) {

@@ -4,6 +4,7 @@ import type { HTMLAttributes } from "astro/types";
 import arch from "@/assets/images/wedding/polaroid-arch.jpg";
 import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
 import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
+import couple from "@/assets/images/hero/polaroid-couple.jpg";
 
 interface Props extends HTMLAttributes<"section"> {
   /** Calendar event destination. */
@@ -17,11 +18,11 @@ const schedule = [
     number: "01",
     title: "Ceremony",
     time: "3:00 PM",
-    location: "[Location]",
+    location: "Holy Rosary Parish",
     mapLabel: "Map for Ceremony",
     image: arch,
     alt: "A white wedding arch draped in fabric and flowers on the sand by the water",
-    caption: "Where we'll say yes — White Beach, 3 PM",
+    caption: "Where we'll say yes · Holy Rosary Parish, 3 PM",
     tilt: -3,
   },
   {
@@ -29,24 +30,37 @@ const schedule = [
     title: "Sunset",
     italic: "cocktails",
     time: "5:00 PM",
-    location: "[Location]",
+    location: "Belmont Hotel",
     mapLabel: "Map for Sunset cocktails",
     image: sunsetSail,
     alt: "A sailboat on the water at sunset",
-    caption: "Where we'll toast — [Location], 5 PM",
+    caption: "Where we'll toast · Belmont Hotel, 5 PM",
     tilt: 2.5,
   },
   {
     number: "03",
     title: "Reception &",
     italic: "dancing",
-    time: "7:00 PM",
-    location: "[Location]",
+    time: "6:30 PM",
+    location: "Belmont Hotel",
     mapLabel: "Map for Reception and dancing",
     image: whiteBeach,
     alt: "White Beach, Boracay",
-    caption: "Where we'll dance — [Location], 7 PM",
+    caption: "Where we'll dance · Belmont Hotel, 6:30 PM",
     tilt: -1.5,
+  },
+  {
+    number: "04",
+    title: "After",
+    italic: "party",
+    time: "10:00 PM",
+    location: "Savoy Hotel",
+    mapLabel: "Map for After party",
+    // Placeholder photo until the couple sends one for the after party.
+    image: couple,
+    alt: "Eunice and Warren walking hand in hand on the beach at sunset",
+    caption: "Where we'll keep going · Savoy Hotel, around 10 PM",
+    tilt: 2,
   },
 ];
 ---

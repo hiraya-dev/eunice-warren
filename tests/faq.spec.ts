@@ -47,6 +47,8 @@ test.describe("FAQ section", () => {
 
   test("places the contact row after the accordion list", { tag: ["@single"] }, async ({ page }) => {
     await expect(page.locator(".faq_list > ul + .faq_contact")).toBeVisible();
-    await expect(page.locator(".faq_contact a")).toHaveAttribute("href", /.+/);
+    const links = page.locator(".faq_contact a");
+    await expect(links).toHaveCount(2);
+    for (const link of await links.all()) await expect(link).toHaveAttribute("href", /^tel:\+63\d{10}$/);
   });
 });

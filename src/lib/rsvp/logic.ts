@@ -2,7 +2,7 @@ import type { Invite, RsvpSeat } from "./store.ts";
 import { normalizeGuestName } from "./store.ts";
 import { SLIPPER_SIZES } from "./slippers.ts";
 
-export const RSVP_DEADLINE = "2026-12-31T23:59:59+08:00";
+export const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
 export const RSVP_DEADLINE_TIME = new Date(RSVP_DEADLINE).getTime();
 
 const encoder = new TextEncoder();
