@@ -26,6 +26,8 @@ const installSpotify = async (page: import("@playwright/test").Page) => {
 
 const loadSpotify = async (page: import("@playwright/test").Page) => {
   await page.locator("#playlist").scrollIntoViewIfNeeded();
+  // The player rises 24px as it fades in (L-029); let it settle before any spec measures the record.
+  await reveal(page.locator(".playlist_player"));
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -343,7 +345,7 @@ test.describe("Playlist section", () => {
       );
     });
     expect(order).toBe(true);
-    await postcard.scrollIntoViewIfNeeded();
+    await reveal(postcard);
     const rects = await postcard.evaluate((card) => {
       const box = (selector: string) => {
         const rect = card.querySelector(selector)!.getBoundingClientRect();

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { fakeFixtures } from "../src/lib/rsvp/store.ts";
+import { reveal } from "./helpers/reveal.ts";
 
 // The fake store keeps one Garcia answer per server run, shared by every worker
 // and both projects. A directory lock, keyed by checkout, keeps one writer
@@ -45,6 +46,7 @@ test.describe("RSVP section", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await rsvp(page).scrollIntoViewIfNeeded();
+    await reveal(rsvp(page).locator("[data-rsvp-name]"));
   });
 
   test("shows the RSVP deadline label", { tag: ["@single"] }, async ({ page }) => {
@@ -83,45 +85,34 @@ test.describe("RSVP section", () => {
       const nameInput = rsvp(page).locator("[data-rsvp-name]");
       const nextBlock = nameInput.locator("xpath=following-sibling::*[1]");
       await nameInput.evaluate((input) => input.blur());
-      await nameInput.scrollIntoViewIfNeeded();
+      await reveal(nameInput);
 
-      const before = await page.evaluate(() => {
-        const input = document.querySelector<HTMLInputElement>(
-          "[data-rsvp-name]",
-        )!;
-        const nextBlock = input.nextElementSibling!;
-        const inputRect = input.getBoundingClientRect();
-        return {
-          input: {
-            height: inputRect.height,
-            width: inputRect.width,
-          },
-          nextTop: nextBlock.getBoundingClientRect().top,
-        };
-      });
+      // Positions are read in the card's own frame (L-035): a scroll or a late shift above
+      // the card moves viewport coordinates without the field changing.
+      const measure = () =>
+        page.evaluate(() => {
+          const input = document.querySelector<HTMLInputElement>("[data-rsvp-name]")!;
+          const card = input.closest<HTMLElement>(".rsvp_card-wrap")!;
+          const next = input.nextElementSibling!;
+          const inputRect = input.getBoundingClientRect();
+          const cardTop = card.getBoundingClientRect().top;
+          const styles = getComputedStyle(input);
+          return {
+            input: { height: inputRect.height, width: inputRect.width },
+            inputOffset: inputRect.top - cardTop,
+            nextOffset: next.getBoundingClientRect().top - cardTop,
+            borderTopWidth: styles.borderTopWidth,
+            boxShadow: styles.boxShadow,
+          };
+        });
 
+      const before = await measure();
       await nameInput.focus();
-
-      const after = await page.evaluate(() => {
-        const input = document.querySelector<HTMLInputElement>(
-          "[data-rsvp-name]",
-        )!;
-        const nextBlock = input.nextElementSibling!;
-        const inputRect = input.getBoundingClientRect();
-        const styles = getComputedStyle(input);
-        return {
-          input: {
-            height: inputRect.height,
-            width: inputRect.width,
-          },
-          nextTop: nextBlock.getBoundingClientRect().top,
-          borderTopWidth: styles.borderTopWidth,
-          boxShadow: styles.boxShadow,
-        };
-      });
+      const after = await measure();
 
       expect(after.input).toEqual(before.input);
-      expect(after.nextTop).toBe(before.nextTop);
+      expect(after.inputOffset).toBe(before.inputOffset);
+      expect(after.nextOffset).toBe(before.nextOffset);
       expect(after.borderTopWidth).toBe("1px");
       expect(after.boxShadow).not.toBe("none");
       await expect(nextBlock).toBeVisible();

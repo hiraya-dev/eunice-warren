@@ -9,6 +9,8 @@ export async function reveal(target: Locator) {
   await target.scrollIntoViewIfNeeded();
   const item = target.locator("xpath=ancestor-or-self::*[@data-fade-in-item][1]");
   if ((await item.count()) === 0) return;
-  await expect(item).toHaveCSS("opacity", "1");
-  await expect(item).toHaveCSS("visibility", "visible");
+  // The tween is clock-timed (0.8s), but under 8 workers a page can get a few frames a second,
+  // so allow far longer than the tween before calling it stuck.
+  await expect(item).toHaveCSS("opacity", "1", { timeout: 20_000 });
+  await expect(item).toHaveCSS("visibility", "visible", { timeout: 20_000 });
 }

@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
 
 test.describe("invitation section", () => {
   test("uses the two-column layout only at desktop width", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
+      // The title rises 24px as it fades in (L-029); measure it once it has settled.
+      await reveal(page.locator(".invitation_title"));
       const positions = await page.evaluate(() => {
         const title = document.querySelector<HTMLElement>(".invitation_title")!.getBoundingClientRect();
         const note = document.querySelector<HTMLElement>(".invitation_note")!.getBoundingClientRect();
@@ -30,6 +33,7 @@ test.describe("invitation section", () => {
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
+      await reveal(page.locator(".invitation_ticket-wrap"));
       const metrics = await page.evaluate(() => {
         // offsetTop is layout position, unaffected by the ticket's -1.5deg rotation.
         const airports = [...document.querySelectorAll<HTMLElement>(".invitation_airport")].map((element) => element.offsetTop);

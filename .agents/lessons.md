@@ -217,11 +217,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-029 — The shared fade-in hides a section's controls until it is reached
 - **Date:** 2026-11-16
-- **Trigger:** #80 Local review fix round (teaser reveal): putting `data-fade-in` on the gallery copy made "Step inside" `visibility: hidden` until the section scrolled into view, and three existing specs that clicked it straight after `goto` timed out.
+- **Trigger:** #80 Local review fix round (teaser reveal): putting `data-fade-in` on the gallery copy made "Step inside" `visibility: hidden` until the section scrolled into view, and three existing specs that clicked it straight after `goto` timed out. #89 CHANGES_REQUIRED: the reveal was added to seven sections but only the specs that failed once got the wait; faq, wedding, rsvp and rsvp-paths still focused or measured fading elements, and an attire drag failed 5 of 20 under load.
 - **Symptom:** a spec that clicks or focuses an element inside a fade-in section fails with a timeout or an unexpected re-scroll, though the element exists.
 - **Root cause:** `src/scripts/fade-in.ts` sets `autoAlpha: 0` (visibility hidden) on every `[data-fade-in-item]` until its ScrollTrigger fires, and the fade's 24px rise moves the element after Playwright scrolls to it.
-- **Rule:** when a section gains `data-fade-in`, its specs reach the section first (scroll the item into view) and wait for the item's opacity to reach 1 before clicking or sampling scroll positions. Keyboard users reach it the same way, so this is the intended behaviour, not something to work around in the component.
-- **Check:** the section's spec opens with a helper that scrolls the item into view and waits for `opacity: 1`.
+- **Rule:** when a section gains `data-fade-in`, its specs reach the section first and wait for the item's opacity to reach 1 before clicking, focusing or sampling positions, using `reveal()` from `tests/helpers/reveal.ts`. Grep every spec that touches any newly faded element, not only the ones that fail once, and read positions relative to the fade item rather than the viewport. Keyboard users reach it the same way, so this is the intended behaviour, not something to work around in the component.
+- **Check:** each spec for a section that gains `data-fade-in` calls `reveal()` before its first interaction or measurement, and the changed specs pass `--repeat-each 20 --workers 4`.
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/fade-in.ts`
 
