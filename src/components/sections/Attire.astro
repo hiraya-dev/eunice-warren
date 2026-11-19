@@ -70,17 +70,17 @@ const holes = Array.from({ length: 8 });
 
 <section id="attire" class="attire_wrap">
   <div class="attire_layout">
-    <header class="attire_header">
-      <p class="attire_eyebrow">Wedding attire guide</p>
-      <div class="attire_title-wrap">
+    <header class="attire_header" data-fade-in>
+      <p class="attire_eyebrow" data-fade-in-item>Wedding attire guide</p>
+      <div class="attire_title-wrap" data-fade-in-item>
         <h2 class="attire_title">Island <em>formal</em></h2>
         <p class="attire_accent">
           <svg class="attire_accent-arrow" viewBox="0 0 40 28" focusable="false" aria-hidden="true"><path d="M38 23 C27 23 12 18 5 5 M4 4 L6.5 15 M4 4 L15 7.5" fill="none" stroke="var(--accent-500)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
           <span class="attire_accent-text">Elegance meets<br />island charm.</span>
         </p>
       </div>
-      <p class="attire_intro">We invite you to dress in elevated, elegant attire with a relaxed island feel.</p>
-      <ul class="attire_colours" aria-label="Wedding colours">
+      <p class="attire_intro" data-fade-in-item>We invite you to dress in elevated, elegant attire with a relaxed island feel.</p>
+      <ul class="attire_colours" aria-label="Wedding colours" data-fade-in-item>
         {colours.map((colour) => (
           <li class="attire_colour">
             <span class={`attire_swatch attire_swatch-${colour.key}`} aria-hidden="true"></span>
@@ -88,18 +88,19 @@ const holes = Array.from({ length: 8 });
           </li>
         ))}
       </ul>
-      <p class="attire_suggestions">The looks below are suggestions to inspire you. Any elegant style in our colours is welcome.</p>
+      <p class="attire_suggestions" data-fade-in-item>The looks below are suggestions to inspire you. Any elegant style in our colours is welcome.</p>
     </header>
 
     {looks.map((group) => (
-      <div class="attire_looks">
-        <div class="attire_looks-header">
+      <div class="attire_looks" data-fade-in>
+        <div class="attire_looks-header" data-fade-in-item>
           <h3 class="attire_looks-title">For the <em>{group.heading}</em></h3>
           <p class="attire_looks-copy"><span>{group.lead}</span>{group.rest}</p>
         </div>
 
         <div
           class="attire_row"
+          data-fade-in-item
           data-gsap-slider-init
           role="region"
           aria-roledescription="carousel"
@@ -151,7 +152,7 @@ const holes = Array.from({ length: 8 });
       </div>
     ))}
 
-    <div class="attire_note-wrap">
+    <div class="attire_note-wrap" data-fade-in data-fade-in-item>
       <div class="attire_note">
         <span class="attire_note-tape" aria-hidden="true"></span>
         <span class="attire_note-holes" aria-hidden="true">{holes.map(() => <i></i>)}</span>

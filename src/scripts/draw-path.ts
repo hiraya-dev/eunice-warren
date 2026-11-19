@@ -68,7 +68,7 @@ export function initDrawPathOnScroll() {
           defaults: { ease: "linear" },
           scrollTrigger: {
             trigger: wrap,
-            start: "clamp(top center)",
+            start: "clamp(top 85%)",
             end: "clamp(bottom center)",
             scrub: true,
             invalidateOnRefresh: true,

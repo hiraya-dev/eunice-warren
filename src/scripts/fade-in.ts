@@ -17,7 +17,12 @@ export function initFadeIn() {
 
     sections.forEach((section) => {
       section.dataset.fadeInInitialized = "true";
-      const items = section.querySelectorAll<HTMLElement>("[data-fade-in-item]");
+      // An element carrying both attributes reveals as one piece: it is its own trigger and item.
+      // That is how widgets that drive their own children (sliders, accordion, card) reveal.
+      const items = [
+        ...(section.hasAttribute("data-fade-in-item") ? [section] : []),
+        ...section.querySelectorAll<HTMLElement>("[data-fade-in-item]"),
+      ];
       if (!items.length) return;
 
       const context = gsap.context(() => {

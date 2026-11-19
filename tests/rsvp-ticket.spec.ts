@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { reveal } from "./helpers/reveal";
 
 const accept = async (
   page: import("@playwright/test").Page,
@@ -7,6 +8,7 @@ const accept = async (
   beforeSubmit?: () => Promise<void>,
 ) => {
   const rsvp = page.locator("#rsvp");
+  await reveal(rsvp.locator("[data-rsvp-name]"));
   await rsvp.locator("[data-rsvp-name]").fill("Liza Santos");
   await rsvp.getByRole("button", { name: /Find my invite/ }).click();
   if (companion) {

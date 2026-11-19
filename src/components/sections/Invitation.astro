@@ -39,9 +39,9 @@ const welcomeParagraphs = [
 <section id="invitation" class:list={["invitation_wrap", className]} {...rest}>
   <div class="invitation_layout">
     <div class="invitation_left">
-      <h2 class="invitation_title">Pack light. Bring your dancing shoes.</h2>
+      <h2 class="invitation_title" data-fade-in data-fade-in-item>Pack light. Bring your dancing shoes.</h2>
 
-      <div class="invitation_facts">
+      <div class="invitation_facts" data-fade-in data-fade-in-item>
         <div class="invitation_fact">
           <span class="invitation_fact-label">WHEN</span>
           <div class="invitation_fact-content">
@@ -68,7 +68,7 @@ const welcomeParagraphs = [
         </div>
       </div>
 
-      <div class="invitation_calendar" data-draw-scroll-wrap>
+      <div class="invitation_calendar" data-draw-scroll-wrap data-fade-in data-fade-in-item>
         <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>13</strong><span>WED · JAN</span></div>
         <div class="invitation_date invitation_date-current" aria-hidden="true">
           <strong>14</strong><span>THU · JAN</span>
@@ -88,7 +88,7 @@ const welcomeParagraphs = [
         ))}
       </div>
 
-      <div class="invitation_ticket-wrap" data-parallax="trigger" data-parallax-start="6" data-parallax-end="-6" data-parallax-disable="mobileLandscape">
+      <div class="invitation_ticket-wrap" data-fade-in data-fade-in-item data-parallax="trigger" data-parallax-start="6" data-parallax-end="-6" data-parallax-disable="mobileLandscape">
         <div class="invitation_ticket-group" data-parallax="target">
           <PassageTicket />
           <div class="invitation_palm"><Stamp><Image src={palm} alt="" width={860} height={1110} widths={[96, 192]} sizes="(min-width: 62rem) 96px, 60px" /></Stamp></div>

@@ -37,7 +37,7 @@ export function initHighlightText() {
     if (conditions.reduceMotion) return;
 
     targets.forEach((heading) => {
-      const scrollStart = heading.getAttribute("data-highlight-scroll-start") || "top 90%";
+      const scrollStart = heading.getAttribute("data-highlight-scroll-start") || "top 85%";
       const scrollEnd = heading.getAttribute("data-highlight-scroll-end") || "center 40%";
       const fadedValue = heading.getAttribute("data-highlight-fade") || 0.2;
       const staggerValue = parseFloat(heading.getAttribute("data-highlight-stagger") || "0.1");

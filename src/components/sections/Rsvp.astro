@@ -68,7 +68,7 @@ const {
     </div>
 
     <div class="rsvp_right">
-      <ol class="rsvp_steps" aria-label="RSVP progress" data-rsvp-steps>
+      <ol class="rsvp_steps" aria-label="RSVP progress" data-rsvp-steps data-fade-in data-fade-in-item>
         <li data-step="1" aria-current="step">
           <span></span><b
             >1 · <span class="rsvp_step-full">Find invite</span><span
@@ -83,7 +83,7 @@ const {
         <span>✓ RSVP received</span><span>3 of 3 · Done</span>
       </div>
 
-      <div class="rsvp_card-wrap">
+      <div class="rsvp_card-wrap" data-fade-in data-fade-in-item>
         <div
           class="rsvp_card"
           style={`--rsvp-paper: url("${postcardPaper.src}")`}

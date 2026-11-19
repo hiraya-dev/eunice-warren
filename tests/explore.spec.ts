@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
 
 const noteCount = readdirSync("src/content/explore").filter((file) => file.endsWith(".json")).length;
 
@@ -27,9 +28,8 @@ test.describe("explore section", () => {
   test("lets advanced cards bleed into the left margin", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await page
-      .locator("#explore [data-gsap-slider-list]")
-      .scrollIntoViewIfNeeded();
+    await reveal(page.locator("#explore [data-gsap-slider-list]"));
+    await reveal(page.locator("#explore .explore_controls-header"));
     await page
       .locator(
         "#explore .explore_controls-header [data-gsap-slider-control=next]",
@@ -58,6 +58,7 @@ test.describe("explore section", () => {
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
+    await reveal(page.locator("#explore .explore_controls-header"));
     await expect(
       page.locator("#explore .explore_controls-header"),
     ).toBeVisible();
@@ -144,6 +145,7 @@ test.describe("explore section", () => {
       const controls = page.locator("#explore .explore_controls-footer");
       const next = controls.locator("[data-gsap-slider-control=next]");
       const prev = controls.locator("[data-gsap-slider-control=prev]");
+      await reveal(controls);
       const readCounter = () =>
         counter.evaluate((element) => {
           const match = element.textContent?.match(/(\d+)\s*\/\s*(\d+)/);
@@ -171,7 +173,7 @@ test.describe("explore section", () => {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto("/");
     const track = page.locator("#explore [data-gsap-slider-list]");
-    await track.scrollIntoViewIfNeeded();
+    await reveal(track);
     const card = page.locator("#explore [data-gsap-slider-item]").first();
     const box = await card.boundingBox();
     expect(box).not.toBeNull();

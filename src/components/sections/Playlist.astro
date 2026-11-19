@@ -19,7 +19,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       <header class="playlist_header" data-fade-in>
         <h2 class="playlist_title" data-fade-in-item>What gets<br />you dancing?</h2>
       </header>
-      <div class="playlist_player">
+      <div class="playlist_player" data-fade-in data-fade-in-item>
         <div class="playlist_player-row">
           <div
             class="playlist_turntable"
@@ -149,6 +149,8 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       name="song-request"
       successMessage="Song requests open soon. Hold that thought."
       class="playlist_form-wrap"
+      data-fade-in
+      data-fade-in-item
       aria-labelledby="playlist-postcard-title"
     >
       <div
