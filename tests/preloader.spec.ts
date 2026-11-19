@@ -38,6 +38,27 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).not.toContainText("Mateo Cruz");
   });
 
+  test("suggests one safe near match before revealing the invitation", { tag: ["@single"] }, async ({ page }) => {
+    await preloader(page).locator("[data-preloader-name]").fill("Matoe Cruz");
+    await preloader(page).getByRole("button", { name: "Open my letter" }).click();
+    await expect(preloader(page).getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
+    await expect(preloader(page)).toContainText("Tap yes if that's the name on your invitation.");
+    await expect(preloader(page)).not.toContainText("The Cruz Family");
+    await preloader(page).getByRole("button", { name: "Yes, that's me" }).click();
+    await expect(preloader(page).getByRole("heading", { name: "Welcome, The Cruz Family." })).toBeVisible();
+  });
+
+  test("can reject a suggested name and try again", { tag: ["@single"] }, async ({ page }) => {
+    const name = preloader(page).locator("[data-preloader-name]");
+    await name.fill("Matoe Cruz");
+    await preloader(page).getByRole("button", { name: "Open my letter" }).click();
+    await expect(preloader(page).getByRole("button", { name: "No, let me try again" })).toBeVisible();
+    await preloader(page).getByRole("button", { name: "No, let me try again" }).click();
+    await expect(name).toHaveValue("");
+    await expect(name).toBeFocused();
+    await expect(preloader(page).getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+  });
+
   test("just browsing persists dismissal", { tag: ["@single"] }, async ({ page }) => {
     await preloader(page).getByRole("button", { name: "Just browsing" }).click();
     await expect(preloader(page)).toHaveCount(0);

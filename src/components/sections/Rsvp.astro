@@ -272,6 +272,7 @@ const {
         const turnstile = createTurnstileController(fakeMode);
         let invite: Invite | null = null;
         let matchedName = "";
+        let suggestion = "";
         type Seat = { original: string | null; name: string; attending: boolean; slipperSize?: string };
         let attending = true;
         let seats: Seat[] = [];
@@ -289,6 +290,15 @@ const {
         const findButton = root.querySelector<HTMLButtonElement>(
           "[data-rsvp-find] button[type='submit']",
         )!;
+        const setFindLabel = (text: string) => {
+          findButton.querySelector(".rsvp_primary-label > span:first-child")!.textContent = text;
+          findButton.setAttribute("aria-label", text);
+        };
+        nameInput.addEventListener("input", () => {
+          if (!suggestion) return;
+          suggestion = "";
+          setFindLabel("Find my invite");
+        });
         const remembered = getGuest();
         if (remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
         const onGuest = (event: Event) => {
@@ -585,7 +595,7 @@ const {
             findButton.setAttribute("aria-busy", "true");
             try {
               const result = await actions.rsvp.find({
-                name: value,
+                name: suggestion || value,
                   turnstileToken: await turnstile.getToken(
                   root.querySelectorAll<HTMLElement>(
                     "[data-rsvp-turnstile]",
@@ -602,6 +612,15 @@ const {
                 return;
               }
               if (!result.data.invite) {
+                if (result.data.suggestion) {
+                  suggestion = result.data.suggestion;
+                  error.textContent = `Did you mean ${suggestion}?`;
+                  error.hidden = false;
+                  nameInput.removeAttribute("aria-invalid");
+                  nameInput.removeAttribute("aria-describedby");
+                  setFindLabel("Yes, that's me");
+                  return;
+                }
                 error.textContent =
                   "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
                 error.hidden = false;
@@ -610,6 +629,8 @@ const {
                 return;
               }
               error.hidden = true;
+              suggestion = "";
+              setFindLabel("Find my invite");
               nameInput.removeAttribute("aria-invalid");
               nameInput.removeAttribute("aria-describedby");
               invite = result.data.invite;

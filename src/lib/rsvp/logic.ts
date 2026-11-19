@@ -5,6 +5,66 @@ import { SLIPPER_SIZES } from "./slippers.ts";
 export const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
 export const RSVP_DEADLINE_TIME = new Date(RSVP_DEADLINE).getTime();
 
+const damerauLevenshteinDistance = (a: string, b: string) => {
+  const matrix = Array.from({ length: a.length + 1 }, (_, row) =>
+    Array.from({ length: b.length + 1 }, (_, column) =>
+      row === 0 ? column : column === 0 ? row : 0,
+    ),
+  );
+  for (let row = 1; row <= a.length; row += 1) {
+    for (let column = 1; column <= b.length; column += 1) {
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] + (a[row - 1] === b[column - 1] ? 0 : 1),
+      );
+      if (
+        row > 1 &&
+        column > 1 &&
+        a[row - 1] === b[column - 2] &&
+        a[row - 2] === b[column - 1]
+      ) {
+        matrix[row][column] = Math.min(
+          matrix[row][column],
+          matrix[row - 2][column - 2] + 1,
+        );
+      }
+    }
+  }
+  return matrix[a.length][b.length];
+};
+
+/** Returns a name only when one distinct, safe near match exists. */
+export function findNearGuestName(
+  query: string,
+  invites: Invite[],
+  duplicateIds: string[] = [],
+  duplicateNames: string[] = [],
+) {
+  const wanted = normalizeGuestName(query).split(" ");
+  if (wanted.length < 2) return null;
+  const duplicateIdSet = new Set(duplicateIds);
+  const duplicateNameSet = new Set(duplicateNames);
+  const matches = new Map<string, string>();
+  for (const invite of invites) {
+    if (duplicateIdSet.has(invite.id)) continue;
+    for (const member of invite.members) {
+      const normalized = normalizeGuestName(member);
+      if (duplicateNameSet.has(normalized)) continue;
+      const tokens = normalized.split(" ");
+      if (wanted.at(-1) !== tokens.at(-1) || wanted.length > tokens.length) continue;
+      const firstMatches = wanted[0] === tokens[0] ||
+        (tokens[0].length >= 5 && damerauLevenshteinDistance(wanted[0], tokens[0]) === 1);
+      if (!firstMatches) continue;
+      const middleCount = tokens.length - 2;
+      if (wanted.length > 2 &&
+        wanted.slice(1, -1).join(" ") !== tokens.slice(1, 1 + middleCount).join(" ")) continue;
+      matches.set(normalized, member);
+    }
+  }
+  return matches.size === 1 ? matches.values().next().value ?? null : null;
+}
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const toBase64Url = (bytes: Uint8Array) => {

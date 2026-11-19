@@ -34,7 +34,7 @@ export interface RsvpStore {
     invite: Invite;
     matchedName: string;
     previous: PreviousRsvp | null;
-  } | null>;
+  } | { invite: null; suggestion: string } | null>;
   submit(submission: RsvpSubmission): Promise<void>;
 }
 
@@ -87,6 +87,9 @@ export const createFakeRsvpStore = (): RsvpStore => {
       if (matchedName)
         return { invite, matchedName, previous: previous.get(invite.id) ?? null };
     }
+    const { findNearGuestName } = await import("./logic.ts");
+    const suggestion = findNearGuestName(name, fakeFixtures);
+    if (suggestion) return { invite: null, suggestion };
     return null;
   },
   async submit(submission) {
