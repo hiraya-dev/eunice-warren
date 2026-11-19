@@ -337,6 +337,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/global/Preloader.astro`, `src/components/sections/Rsvp.astro`
 
+### L-039 — A rename sweeps every surface and asks about every public string
+- **Date:** 2026-11-20
+- **Trigger:** #88 Local-review round (the user asked to also change the `#EuniceAndWarren` hashtag and the README and voice doc, which the first round left as open questions)
+- **Symptom:** a site-wide rename shipped its first review pack with the old name still in the footer hashtag, `README.md` and `.agents/product-marketing.md`, so the user needed a second round.
+- **Root cause:** the inventory only covered `src/` and `tests/`, and the plan defaulted a public, brand-like string (the hashtag) to "unchanged" instead of asking about it with the other open questions.
+- **Rule:** inventory a rename across the whole repo (`src/`, `tests/`, `public/`, `README.md`, `.agents/`), and put every public string that carries the name (hashtags, handles, file names guests see) in the approval question, not in a default.
+- **Check:** `grep -rnIE "<old name>" . --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git` is empty, apart from listed exceptions, before the first pack.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/consts.ts`, `README.md`, `.agents/product-marketing.md`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

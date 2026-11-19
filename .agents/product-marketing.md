@@ -1,4 +1,4 @@
-# Voice and audience — Eunice & Warren
+# Voice and audience — Warren & Eunice
 
 Context for the `copy-editing` skill and anyone editing site copy. The site is a
 wedding invitation, not a product: "conversion" here means a guest RSVPs, knows
@@ -6,7 +6,7 @@ where to be, and feels welcome.
 
 ## What the site is
 
-- The wedding of Eunice and Warren: Thursday 14 January 2027, Boracay,
+- The wedding of Warren and Eunice: Thursday 14 January 2027, Boracay,
   Philippines. All times are Philippine Time (GMT+8).
 - One page: invitation, schedule, attire, getting there and where to stay,
   things to do on the island, entourage, FAQ, RSVP, a playlist with song requests,
