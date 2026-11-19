@@ -87,6 +87,7 @@ export const createFakeRsvpStore = (): RsvpStore => {
       if (matchedName)
         return { invite, matchedName, previous: previous.get(invite.id) ?? null };
     }
+    // Dynamic import avoids the store↔logic import cycle.
     const { findNearGuestName } = await import("./logic.ts");
     const suggestion = findNearGuestName(name, fakeFixtures);
     if (suggestion) return { invite: null, suggestion };

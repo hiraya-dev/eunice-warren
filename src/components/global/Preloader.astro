@@ -188,11 +188,13 @@ const { messageHref = "#" } = Astro.props;
       if (!input.value.trim()) { input.focus(); return; }
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
+      const submittedValue = input.value;
       try {
         const result = await actions.rsvp.find({
           name: state === "suggest" ? suggestion : input.value,
           turnstileToken: await turnstile.getToken(overlay.querySelector<HTMLElement>("[data-preloader-turnstile]")!),
         });
+        if (input.value !== submittedValue) return;
         if (result.error || !result.data) throw new Error(result.error?.message || "Something went wrong. Please try again.");
         if (!result.data.invite) {
           if (result.data.suggestion) {
@@ -211,6 +213,7 @@ const { messageHref = "#" } = Astro.props;
             submit.disabled = false;
             return;
           }
+          suggestion = "";
           state = "not-found";
           title.textContent = "Hmm, we can't find that name.";
           hint.textContent = "Check the spelling, or try the name on your invitation.";
@@ -243,13 +246,17 @@ const { messageHref = "#" } = Astro.props;
         submit.disabled = false;
         document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
       } catch (error) {
+        suggestion = "";
+        state = "not-found";
         hint.textContent = error instanceof Error && error.message ? error.message : "Something went wrong. Please try again.";
         mobileHint.textContent = hint.textContent;
         hint.classList.add("is-error");
         mobileHint.classList.add("is-error");
         input.setAttribute("aria-invalid", "true");
+        submitLabel.textContent = "Try again →";
         submit.disabled = false;
       } finally {
+        submit.disabled = false;
         submit.removeAttribute("aria-busy");
         turnstile.reset();
       }

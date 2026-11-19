@@ -298,6 +298,9 @@ const {
           if (!suggestion) return;
           suggestion = "";
           setFindLabel("Find my invite");
+          const error = root.querySelector<HTMLElement>("[data-rsvp-name-error]")!;
+          error.textContent = "";
+          error.hidden = true;
         });
         const remembered = getGuest();
         if (remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
@@ -593,6 +596,7 @@ const {
             }
             findButton.disabled = true;
             findButton.setAttribute("aria-busy", "true");
+            const submittedValue = value;
             try {
               const result = await actions.rsvp.find({
                 name: suggestion || value,
@@ -602,7 +606,10 @@ const {
                   )[0],
                 ),
               });
+              if (nameInput.value !== submittedValue) return;
               if (result.error || !result.data) {
+                suggestion = "";
+                setFindLabel("Find my invite");
                 error.textContent =
                   result.error?.message ||
                   "Something went wrong. Please try again.";
@@ -623,6 +630,8 @@ const {
                 }
                 error.textContent =
                   "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
+                suggestion = "";
+                setFindLabel("Find my invite");
                 error.hidden = false;
                 nameInput.setAttribute("aria-invalid", "true");
                 nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -652,6 +661,8 @@ const {
               root.dataset.rsvpToken = token;
               setStep("2");
             } catch {
+              suggestion = "";
+              setFindLabel("Find my invite");
               error.textContent = "Something went wrong. Please try again.";
               error.hidden = false;
               nameInput.setAttribute("aria-invalid", "true");

@@ -327,6 +327,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/components/**`
 
+### L-038 — An async form state must survive the guest typing
+- **Date:** 2026-11-19
+- **Trigger:** #86 CHANGES_REQUIRED (the envelope and RSVP "Did you mean" state: a stale suggestion stayed on screen after typing, a late lookup response overwrote a newer name, a failed "Yes" kept resending the old suggestion, and an ignored stale response left the envelope's submit disabled)
+- **Symptom:** a form that adds a state between submit and result (suggest, confirm, pending) shows or submits a value the guest has already replaced.
+- **Root cause:** each branch set its own part of the state (text, label, flag, `disabled`), and the input listener, the failure paths and the early return each reset only some of them.
+- **Rule:** keep one reset function per state and call it from the input listener, every failure branch and every early return; compare the submitted value with the current input before applying an async response; re-enable the submit control in `finally`, not per branch.
+- **Check:** a spec types after the new state appears and asserts the visible text, the button's accessible name and the hidden alert all reset; the submit button's `disabled = false` lives in `finally`.
+- **Guard:** none
+- **Paths:** `src/components/global/Preloader.astro`, `src/components/sections/Rsvp.astro`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

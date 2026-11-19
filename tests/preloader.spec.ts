@@ -59,6 +59,17 @@ test.describe("guest preloader", () => {
     await expect(preloader(page).getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
   });
 
+  test("returns to the ask state when a suggestion is edited", { tag: ["@single"] }, async ({ page }) => {
+    const overlay = preloader(page);
+    const name = overlay.locator("[data-preloader-name]");
+    await name.fill("Matoe Cruz");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(overlay.getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
+    await name.fill("Nobody Example");
+    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeVisible();
+  });
+
   test("just browsing persists dismissal", { tag: ["@single"] }, async ({ page }) => {
     await preloader(page).getByRole("button", { name: "Just browsing" }).click();
     await expect(preloader(page)).toHaveCount(0);
@@ -105,6 +116,22 @@ test.describe("guest preloader", () => {
       ".preloader_message",
       ".preloader_primary",
     ];
+    const assertNoOverlap = async (overlay: import("@playwright/test").Locator, width: number) => {
+      const boxes = await overlay.evaluate((root, selectors) => selectors.flatMap((selector) => {
+        const element = root.querySelector(selector);
+        if (!element || element.getClientRects().length === 0) return [];
+        const { left, top, right, bottom } = element.getBoundingClientRect();
+        return [{ selector, left, top, right, bottom }];
+      }), parts);
+      expect(boxes.length, `${width}px`).toBeGreaterThanOrEqual(6);
+      for (const [index, a] of boxes.entries()) {
+        for (const b of boxes.slice(index + 1)) {
+          if (a.selector === ".preloader_stamp-ew" && b.selector === ".preloader_postmark") continue;
+          const apart = a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
+          expect(apart, `${width}px: ${a.selector} overlaps ${b.selector}`).toBe(true);
+        }
+      }
+    };
     for (const [width, height] of [[390, 844], [488, 1000], [600, 1000], [640, 1000], [720, 1000], [768, 1024], [1440, 900]]) {
       await page.setViewportSize({ width, height });
       await page.goto("/");
@@ -113,21 +140,12 @@ test.describe("guest preloader", () => {
       // Wait for the settle to finish and the webfonts to load, so every box is final.
       await expect(overlay.locator(".preloader_stage")).toHaveCSS("transform", "none");
       await page.evaluate(() => document.fonts.ready);
-      const boxes = await overlay.evaluate((root, selectors) => selectors.flatMap((selector) => {
-        const element = root.querySelector(selector);
-        if (!element || element.getClientRects().length === 0) return [];
-        const { left, top, right, bottom } = element.getBoundingClientRect();
-        return [{ selector, left, top, right, bottom }];
-      }), parts);
-      // The ask state always shows the photo stamp, the label, the input, the hint and the button.
-      expect(boxes.length, `${width}px`).toBeGreaterThanOrEqual(6);
-      for (const [index, a] of boxes.entries()) {
-        for (const b of boxes.slice(index + 1)) {
-          // The postmark is meant to cancel the stamp, so the desktop face overlaps that one pair on purpose.
-          if (a.selector === ".preloader_stamp-ew" && b.selector === ".preloader_postmark") continue;
-          const apart = a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
-          expect(apart, `${width}px: ${a.selector} overlaps ${b.selector}`).toBe(true);
-        }
+      await assertNoOverlap(overlay, width);
+      if (width === 390 || width === 1440) {
+        await overlay.locator("[data-preloader-name]").fill("Matoe Cruz");
+        await overlay.getByRole("button", { name: "Open my letter" }).click();
+        await expect(overlay.getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
+        await assertNoOverlap(overlay, width);
       }
     }
   });

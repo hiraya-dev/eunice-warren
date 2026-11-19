@@ -58,6 +58,18 @@ test("finds only safe, unambiguous near guest names", async () => {
     ]),
     "Maria Clara Santos",
   );
+  assert.equal(
+    findNearGuestName("Maria Jane Santos", [
+      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+    ]),
+    null,
+  );
+  assert.equal(
+    findNearGuestName("Maria Clara Santos", [
+      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+    ]),
+    "Maria Clara Santos",
+  );
   assert.equal(findNearGuestName("Mateo Wrong", fakeFixtures), null);
   assert.equal(findNearGuestName("Cruz", fakeFixtures), null);
   assert.equal(findNearGuestName("Mateo", fakeFixtures), null);
