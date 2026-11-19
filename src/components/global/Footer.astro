@@ -3,7 +3,7 @@ import { Image } from "astro:assets";
 import Stamp from "@/components/media/Stamp.astro";
 import stampIsland from "@/assets/images/footer/stamp-island.jpg";
 import stampSunset from "@/assets/images/footer/stamp-sunset.jpg";
-import stampEw from "@/assets/images/stamps/ew.jpg";
+import stampWe from "@/assets/images/stamps/we.jpg";
 import postmark from "@/assets/images/footer/postmark.png";
 
 interface Props {
@@ -36,13 +36,13 @@ const { render = true } = Astro.props;
         <p class="footer_date">01.14.27</p>
 
         <div class="footer_cluster" aria-hidden="true">
-          <div class="footer_cluster-stamp"><Stamp><Image src={stampEw} alt="" width={170} height={219} densities={[1, 2]} /></Stamp></div>
+          <div class="footer_cluster-stamp"><Stamp><Image src={stampWe} alt="" width={170} height={219} densities={[1, 2]} /></Stamp></div>
           <Image class="footer_cluster-postmark" src={postmark} alt="" width={640} height={491} />
         </div>
 
         <div class="footer_meta">
           <p class="footer_contact text-style-small">
-            Questions? Eunice <a href="tel:+639362300539">0936 230 0539</a> · Warren <a href="tel:+639362300525">0936 230 0525</a>
+            Questions? Warren <a href="tel:+639362300525">0936 230 0525</a> · Eunice <a href="tel:+639362300539">0936 230 0539</a>
           </p>
           <div class="footer_meta-links">
             <p class="footer_hashtag">#EuniceAndWarren</p>

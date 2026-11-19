@@ -44,7 +44,7 @@ test.describe("keepsakes hero", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    await expect(page.locator("h1")).toHaveText("Eunice & Warren");
+    await expect(page.locator("h1")).toHaveText("Warren & Eunice");
     await expect(page.locator("[data-hero-keepsake]")).toHaveCount(7);
     for (const keepsake of await page.locator("[data-hero-keepsake]").all()) await expect(keepsake).toBeVisible();
   });

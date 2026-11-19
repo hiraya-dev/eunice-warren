@@ -10,7 +10,7 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
     const response = await page.goto("/", { waitUntil: "load" });
     expect(response?.status()).toBe(200);
     await expect(page.locator("h1")).toBeVisible();
-    await expect(page).toHaveTitle(/Eunice & Warren/);
+    await expect(page).toHaveTitle(/Warren & Eunice/);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
     expect(errors).toEqual([]);
   });

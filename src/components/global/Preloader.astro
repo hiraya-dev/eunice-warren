@@ -9,7 +9,7 @@ import PassageTicket from "@/components/media/PassageTicket.astro";
 import couple from "@/assets/images/hero/polaroid-couple.jpg";
 import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
 import keepsake from "@/assets/images/entourage/keepsake-sampaguita.jpg";
-import stampEw from "@/assets/images/stamps/ew.jpg";
+import stampWe from "@/assets/images/stamps/we.jpg";
 import stampPalm from "@/assets/images/stamps/palm.jpg";
 import stampParaw from "@/assets/images/stamps/paraw.jpg";
 import shell from "@/assets/images/explore/sticker-shell.svg";
@@ -45,14 +45,14 @@ const { messageHref = "#" } = Astro.props;
       <div class="preloader_prop preloader_shell-small" data-depth="5"><div class="preloader_float"><div class="preloader_body"><Image src={shell} alt="" width={54} height={54} loading="eager" fetchpriority="low" /></div></div></div>
       <div class="preloader_prop preloader_pen" data-depth="5"><div class="preloader_float"><div class="preloader_body"><Image src={propPen} alt="" width={460} height={353} widths={[460, 920]} sizes="460px" format="webp" loading="eager" fetchpriority="low" /></div></div></div>
     </div>
-    <p class="preloader_eyebrow">Eunice &amp; Warren · 01 · 14 · 2027</p>
+    <p class="preloader_eyebrow">Warren &amp; Eunice · 01 · 14 · 2027</p>
     <h1 id="preloader-title" class="preloader_title">A letter is waiting for you.</h1>
     <form class="preloader_form" data-preloader-form novalidate>
       <div class="preloader_stage">
         <div class="preloader_envelope">
           <div class="preloader_face">
             <Image class="preloader_par-avion" src={parAvion} alt="" width={160} height={90} widths={[160, 320]} sizes="(max-width: 30rem) 104px, (max-width: 47rem) 190px, 160px" loading="eager" aria-hidden="true" />
-            <div class="preloader_stamp-ew" aria-hidden="true"><Stamp><Image src={stampEw} alt="" width={860} height={1110} widths={[104, 208]} sizes="(max-width: 30rem) 64px, (max-width: 47rem) 117px, 104px" loading="eager" /></Stamp></div>
+            <div class="preloader_stamp-ew" aria-hidden="true"><Stamp><Image src={stampWe} alt="" width={860} height={1110} widths={[104, 208]} sizes="(max-width: 30rem) 64px, (max-width: 47rem) 117px, 104px" loading="eager" /></Stamp></div>
             <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} widths={[176, 352]} sizes="176px" loading="eager" aria-hidden="true" />
             <div class="preloader_address">
               <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
