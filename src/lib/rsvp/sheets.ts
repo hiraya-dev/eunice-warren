@@ -1,6 +1,6 @@
 import type { Invite, PreviousRsvp, RsvpSeat, RsvpStore, RsvpSubmission } from "./store.ts";
 import { normalizeGuestName } from "./store.ts";
-import { parseGuestRows } from "./logic.ts";
+import { findNearGuestName, parseGuestRows } from "./logic.ts";
 
 type ServiceAccount = { client_email?: string; private_key?: string };
 export type SheetsConfig = { keyJson: string; sheetId: string };
@@ -229,6 +229,15 @@ export const createSheetsRsvpStore = (
       );
       const duplicateIds = new Set(cachedGuests.parsed.duplicateIds);
       const duplicateNames = new Set(cachedGuests.parsed.duplicateNames);
+      if (matches.length === 0) {
+        const suggestion = findNearGuestName(
+          name,
+          cachedGuests.parsed.invites,
+          cachedGuests.parsed.duplicateIds,
+          cachedGuests.parsed.duplicateNames,
+        );
+        return suggestion ? { invite: null, suggestion } : null;
+      }
       if (
         matches.length !== 1 ||
         duplicateIds.has(matches[0]?.id ?? "") ||

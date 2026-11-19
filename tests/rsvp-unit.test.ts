@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   isWithinRateLimit,
+  findNearGuestName,
   parseGuestRows,
   RSVP_DEADLINE_TIME,
   signRsvpToken,
@@ -9,6 +10,7 @@ import {
   verifyRsvpToken,
 } from "../src/lib/rsvp/logic.ts";
 import { normalizeGuestName } from "../src/lib/rsvp/store.ts";
+import { createFakeRsvpStore, fakeFixtures } from "../src/lib/rsvp/store.ts";
 import { SLIPPER_SIZES } from "../src/lib/rsvp/slippers.ts";
 import {
   buildResponseRow,
@@ -39,6 +41,59 @@ test("builds ticket data and an RFC 5545 calendar event", () => {
 
 test("normalizes accents, case, and spacing", () => {
   assert.equal(normalizeGuestName("  Sofía   CRUZ "), "sofia cruz");
+});
+
+test("finds only safe, unambiguous near guest names", async () => {
+  assert.equal(findNearGuestName("Mateo Cruz", fakeFixtures), "Mateo Cruz");
+  assert.equal(findNearGuestName("Meteo Cruz", fakeFixtures), "Mateo Cruz");
+  assert.equal(findNearGuestName("Matoe Cruz", fakeFixtures), "Mateo Cruz");
+  assert.equal(findNearGuestName("Mteo Cruz", fakeFixtures), "Mateo Cruz");
+  assert.equal(findNearGuestName("Mato Cruz", fakeFixtures), "Mateo Cruz");
+  assert.equal(findNearGuestName("Bae Garcia", fakeFixtures), null);
+  assert.equal(findNearGuestName("Remedio Cruz", fakeFixtures), "Remedios Cruz");
+  assert.equal(findNearGuestName("Paulo Garcia", fakeFixtures), "Paolo Garcia");
+  assert.equal(
+    findNearGuestName("Maria Santos", [
+      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+    ]),
+    "Maria Clara Santos",
+  );
+  assert.equal(
+    findNearGuestName("Maria Jane Santos", [
+      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+    ]),
+    null,
+  );
+  assert.equal(
+    findNearGuestName("Maria Clara Santos", [
+      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+    ]),
+    "Maria Clara Santos",
+  );
+  assert.equal(findNearGuestName("Mateo Wrong", fakeFixtures), null);
+  assert.equal(findNearGuestName("Cruz", fakeFixtures), null);
+  assert.equal(findNearGuestName("Mateo", fakeFixtures), null);
+  assert.equal(findNearGuestName("M Cruz", fakeFixtures), null);
+  assert.equal(findNearGuestName("Cruz Mateo", fakeFixtures), null);
+  assert.equal(
+    findNearGuestName("Mateo Cruz", [
+      ...fakeFixtures,
+      { id: "other", householdName: "Other", members: ["Meteo Cruz"], seats: 1 },
+    ]),
+    null,
+  );
+  assert.equal(
+    findNearGuestName("Liza Santos", fakeFixtures, [], ["liza santos"]),
+    null,
+  );
+  assert.equal(
+    findNearGuestName("Mateo Cruz", fakeFixtures, ["cruz"]),
+    null,
+  );
+  assert.deepEqual(await createFakeRsvpStore().findInvite("Matoe Cruz"), {
+    invite: null,
+    suggestion: "Mateo Cruz",
+  });
 });
 
 test("signs, verifies, expires, and rejects tampered tokens", async () => {

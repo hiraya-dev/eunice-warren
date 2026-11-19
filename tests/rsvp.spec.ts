@@ -157,6 +157,30 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-panel='1']")).toBeVisible();
   });
 
+  test("suggests a near match and confirms it", { tag: ["@single"] }, async ({ page }) => {
+    const name = rsvp(page).locator("[data-rsvp-name]");
+    await name.fill("Matoe Cruz");
+    await rsvp(page).getByRole("button", { name: "Find my invite" }).click();
+    await expect(rsvp(page).locator("[data-rsvp-name-error]")).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-name-error]")).toHaveText("Did you mean Mateo Cruz?");
+    const confirm = rsvp(page).getByRole("button", { name: "Yes, that's me" });
+    await expect(confirm).toBeVisible();
+    await confirm.click();
+    await expect(rsvp(page).locator("[data-rsvp-panel='2']")).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-first-name]")).toHaveText("Mateo");
+  });
+
+  test("clears a near-match suggestion when the name changes", { tag: ["@single"] }, async ({ page }) => {
+    const name = rsvp(page).locator("[data-rsvp-name]");
+    await name.fill("Matoe Cruz");
+    await rsvp(page).getByRole("button", { name: "Find my invite" }).click();
+    const error = rsvp(page).locator("[data-rsvp-name-error]");
+    await expect(error).toBeVisible();
+    await name.fill("Nobody Example");
+    await expect(error).toBeHidden();
+    await expect(rsvp(page).getByRole("button", { name: "Find my invite" })).toBeVisible();
+  });
+
   test("recovers from a fictional store rejection", { tag: ["@single"] }, async ({ page }) => {
     const button = rsvp(page).getByRole("button", { name: /Find my invite/ });
     await rsvp(page).locator("[data-rsvp-name]").fill("Error Test");

@@ -135,6 +135,7 @@ export const server = {
         try {
           const result = await getStore().findInvite(input.name);
           if (!result) return { invite: null };
+          if (!result.invite) return { invite: null, suggestion: result.suggestion };
           if (!tokenSecret) fail("Something went wrong. Please try again.");
           const token = await signRsvpToken(
             result.invite.id,
@@ -172,7 +173,7 @@ export const server = {
         try {
           const result = await getStore().findInvite(input.name);
           if (
-            !result ||
+            !result || !result.invite ||
             result.invite.id !== tokenData.inviteId ||
             !validateSubmission({
               attending: input.attending,

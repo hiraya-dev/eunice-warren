@@ -107,7 +107,8 @@ const { messageHref = "#" } = Astro.props;
     const main = document.querySelector<HTMLElement>("main");
     const previousFocus = document.activeElement as HTMLElement | null;
     const turnstile = createTurnstileController(isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV));
-    let state: "ask" | "found" | "not-found" = "ask";
+    let state: "ask" | "found" | "not-found" | "suggest" = "ask";
+    let suggestion = "";
     let closing = false;
     const stopLenis = () => lenis?.stop();
 
@@ -121,11 +122,13 @@ const { messageHref = "#" } = Astro.props;
     requestAnimationFrame(stopLenis);
     requestAnimationFrame(() => input.focus());
 
-    const setAskState = () => {
+    const resetButton = overlay.querySelector<HTMLButtonElement>("[data-preloader-reset]")!;
+    const setAskState = (clearInput = true) => {
       state = "ask";
+      suggestion = "";
       title.textContent = "A letter is waiting for you.";
       label.textContent = "To · Who's visiting?";
-      input.value = "";
+      if (clearInput) input.value = "";
       input.readOnly = false;
       input.classList.remove("is-found");
       input.removeAttribute("aria-invalid");
@@ -135,6 +138,7 @@ const { messageHref = "#" } = Astro.props;
       hint.classList.remove("is-error");
       mobileHint.classList.remove("is-error");
       notYou.hidden = true;
+      resetButton.textContent = "Write your own name";
       message.hidden = true;
       admits.hidden = true;
       submitLabel.textContent = "Open my letter →";
@@ -174,20 +178,42 @@ const { messageHref = "#" } = Astro.props;
     };
     document.addEventListener("keydown", onKeydown);
     browse.addEventListener("click", close);
-    overlay.querySelector<HTMLButtonElement>("[data-preloader-reset]")!.addEventListener("click", setAskState);
+    resetButton.addEventListener("click", () => setAskState());
+    input.addEventListener("input", () => {
+      if (state === "suggest") setAskState(false);
+    });
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (state === "found") { finishClose(); return; }
       if (!input.value.trim()) { input.focus(); return; }
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
+      const submittedValue = input.value;
       try {
         const result = await actions.rsvp.find({
-          name: input.value,
+          name: state === "suggest" ? suggestion : input.value,
           turnstileToken: await turnstile.getToken(overlay.querySelector<HTMLElement>("[data-preloader-turnstile]")!),
         });
+        if (input.value !== submittedValue) return;
         if (result.error || !result.data) throw new Error(result.error?.message || "Something went wrong. Please try again.");
         if (!result.data.invite) {
+          if (result.data.suggestion) {
+            state = "suggest";
+            suggestion = result.data.suggestion;
+            title.textContent = `Did you mean ${suggestion}?`;
+            hint.textContent = "Tap yes if that's the name on your invitation.";
+            mobileHint.textContent = hint.textContent;
+            hint.classList.remove("is-error");
+            mobileHint.classList.remove("is-error");
+            notYou.hidden = false;
+            resetButton.textContent = "No, let me try again";
+            message.hidden = true;
+            submitLabel.textContent = "Yes, that's me →";
+            input.removeAttribute("aria-invalid");
+            submit.disabled = false;
+            return;
+          }
+          suggestion = "";
           state = "not-found";
           title.textContent = "Hmm, we can't find that name.";
           hint.textContent = "Check the spelling, or try the name on your invitation.";
@@ -220,13 +246,17 @@ const { messageHref = "#" } = Astro.props;
         submit.disabled = false;
         document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
       } catch (error) {
+        suggestion = "";
+        state = "not-found";
         hint.textContent = error instanceof Error && error.message ? error.message : "Something went wrong. Please try again.";
         mobileHint.textContent = hint.textContent;
         hint.classList.add("is-error");
         mobileHint.classList.add("is-error");
         input.setAttribute("aria-invalid", "true");
+        submitLabel.textContent = "Try again →";
         submit.disabled = false;
       } finally {
+        submit.disabled = false;
         submit.removeAttribute("aria-busy");
         turnstile.reset();
       }
