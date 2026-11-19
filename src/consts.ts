@@ -1,8 +1,8 @@
 /** Site name. Appended to every page title and used as `og:site_name`. */
-export const SITE_NAME = "Eunice & Warren";
+export const SITE_NAME = "Warren & Eunice";
 /** Fallback meta description for pages that don't set their own. */
 export const SITE_DESCRIPTION =
-  "Eunice and Warren are getting married on 14 January 2027 in Boracay, Philippines.";
+  "Warren and Eunice are getting married on 14 January 2027 in Boracay, Philippines.";
 /**
  * Canonical origin. Resolves canonical URLs, social images, and the sitemap.
  * Workers.dev origin until a custom domain is added.

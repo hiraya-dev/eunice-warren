@@ -1,6 +1,6 @@
-# Eunice & Warren
+# Warren & Eunice
 
-The wedding site for Eunice and Warren — 14 January 2027, Boracay, Philippines.
+The wedding site for Warren and Eunice: 14 January 2027, Boracay, Philippines.
 It carries the invitation, schedule, travel and stay details, entourage, and the
 RSVP flow. Designs live in Paper; this repository owns everything that ships.
 

@@ -21,7 +21,7 @@ const waitForPanelTransition = async (page: import("@playwright/test").Page, ope
   }
 };
 
-test.describe("Eunice & Warren navigation", () => {
+test.describe("Warren & Eunice navigation", () => {
   for (const width of [1440, 390]) {
     // Only the first width is a smoke test.
     const tag = width === 1440 ? ["@smoke", "@single"] : ["@single"];
