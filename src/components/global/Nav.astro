@@ -224,6 +224,8 @@ const links = [
       .navigation_location-short { display: inline; }
     }
     @media (width >= 62rem) {
+      /* Holds the bar at the height the retired now-playing pill gave it, so removing it moved nothing. */
+      .nav_actions { min-height: calc(1.875rem + 2 * var(--space-2) + 2 * var(--border-width)); }
       .navigation_inner { max-width: var(--max-width-main); width: 100%; margin-inline: auto; padding-top: var(--nav-height); }
       .navigation_links { margin-top: var(--space-7); }
       .navigation_number { flex-basis: 3rem; font-size: var(--eyebrow); }

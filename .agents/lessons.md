@@ -379,11 +379,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-044 — A real feature retires its placeholder
 - **Date:** 2026-11-21
-- **Trigger:** PR #92, Local-review round (the user asked to remove the nav "NOW PLAYING · Dancing Queen" pill)
+- **Trigger:** PR #92, Local-review round (the user asked to remove the nav "NOW PLAYING · Dancing Queen" pill); PR #92 red CI (`sweeps`: removing the pill shrank the desktop nav 85→69px and moved the page)
 - **Symptom:** the site played the real background song while a static nav pill and the menu panel named a different, made-up song.
 - **Root cause:** an earlier design shipped a decorative stand-in for the feature, and the criteria for the real feature never searched for it.
-- **Rule:** when criteria add a real feature (music, a gallery, a countdown), grep `src/` for decorative stand-ins of the same feature (static copy, `aria-hidden` mock controls) and list each in the approval message with a recommendation to remove or wire it.
-- **Check:** the approval message for a new feature names any existing stand-in, or says none was found.
+- **Rule:** when criteria add a real feature (music, a gallery, a countdown), grep `src/` for decorative stand-ins of the same feature (static copy, `aria-hidden` mock controls) and list each in the approval message with a recommendation to remove or wire it. When you remove one, measure its container's size at the breakpoints before and after; if the stand-in was what set it, hold that size so nothing else moves.
+- **Check:** the approval message for a new feature names any existing stand-in, or says none was found; a removal's PR shows the container's height unchanged at 390, 991, 992 and 1440.
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/consts.ts`
 
