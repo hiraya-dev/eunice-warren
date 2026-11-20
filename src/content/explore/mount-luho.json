@@ -1,0 +1,11 @@
+{
+  "order": 6,
+  "title": "Mount Luho lookout",
+  "tag": "VIEWPOINT",
+  "body": "Go early for wide island views. Bring water.",
+  "image": "../../assets/images/explore/mount-luho.jpg",
+  "alt": "Green hills and curving turquoise shoreline seen from Mount Luho",
+  "sticker": "shell",
+  "tilt": 2.5,
+  "offset": "space-6"
+}
