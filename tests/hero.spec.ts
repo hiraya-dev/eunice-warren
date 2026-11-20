@@ -64,6 +64,56 @@ test.describe("keepsakes hero", () => {
     expect(Math.abs(angle + 6)).toBeLessThan(0.5);
   });
 
+  test("centres the compact photo pair over the title", { tag: ["@single"] }, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    for (const width of [390, 480, 600, 767]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+
+      const metrics = await page.evaluate(() => {
+        const couple = document.querySelector<HTMLElement>(".hero_couple .hero_polaroid")!.getBoundingClientRect();
+        const whiteBeach = document.querySelector<HTMLElement>(".hero_white-beach .hero_polaroid")!.getBoundingClientRect();
+        const title = document.querySelector<HTMLElement>(".hero_title")!.getBoundingClientRect();
+        const photoGroupCentre = (couple.left + whiteBeach.right) / 2;
+        const titleCentre = (title.left + title.right) / 2;
+        return { delta: Math.abs(photoGroupCentre - titleCentre) };
+      });
+
+      expect(metrics.delta, `compact photo pair centre at ${width}px`).toBeLessThanOrEqual(8);
+    }
+  });
+
+  for (const width of [320, 390, 767]) {
+    test(`points the compact hero note arrow toward the couple at ${width}px`, { tag: ["@single"] }, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto("/");
+
+      const metrics = await page.evaluate(() => {
+        const arrow = document.querySelector<SVGElement>(".hero_note-arrow")!;
+        const text = document.querySelector<HTMLElement>(".hero_note-text")!;
+        const couple = document.querySelector<HTMLElement>(".hero_couple .hero_polaroid")!;
+        const arrowBox = arrow.getBoundingClientRect();
+        const textBox = text.getBoundingClientRect();
+        const coupleBox = couple.getBoundingClientRect();
+        const transform = getComputedStyle(arrow).transform;
+        const matrix = transform.match(/^matrix\(([^)]+)\)$/)?.[1].split(",").map(Number);
+        return {
+          arrowBottom: arrowBox.bottom,
+          arrowTop: arrowBox.top,
+          textTop: textBox.top,
+          coupleBottom: coupleBox.bottom,
+          verticalScale: matrix?.[3],
+        };
+      });
+
+      expect(metrics.arrowBottom).toBeLessThanOrEqual(metrics.textTop + 2);
+      expect(metrics.arrowTop).toBeLessThanOrEqual(metrics.coupleBottom + 2);
+      expect(metrics.verticalScale).toBeCloseTo(-1, 2);
+    });
+  }
+
   test("keepsakes are immediately visible with reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");

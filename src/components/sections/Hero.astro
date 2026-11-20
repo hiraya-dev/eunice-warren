@@ -187,15 +187,15 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
 
   @media (max-width: 47.999rem) {
     .hero { display: block; min-height: 0; padding: 19rem var(--site-margin) 9.5rem; }
-    .hero_collage { top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
+    .hero_collage { --_center-shift: max(0px, 50% - 12.1875rem); top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
     .hero_polaroid { box-shadow: 0 0.75rem 1.75rem rgb(31 47 92 / 16%); }
-    .hero_couple { top: 2.5rem; left: 1.75rem; transform: rotate(-6deg); }
+    .hero_couple { top: 2.5rem; left: calc(1.75rem + var(--_center-shift)); transform: rotate(-6deg); }
     .hero_couple .hero_polaroid { width: 11rem; padding: 0.5rem 0.5rem 2rem; }
     .hero_couple .hero_polaroid img { aspect-ratio: 160 / 170; }
-    .hero_white-beach { top: 2.75rem; left: 12.875rem; transform: rotate(7deg); }
+    .hero_white-beach { top: 2.75rem; left: calc(12.875rem + var(--_center-shift)); transform: rotate(7deg); }
     .hero_white-beach .hero_polaroid { width: 9.375rem; padding: 0.5rem 0.5rem 1.5rem; }
     .hero_white-beach .hero_polaroid img { aspect-ratio: 134 / 144; }
-    .hero_note { top: 14.25rem; left: 9.375rem; width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
+    .hero_note { top: 14.25rem; left: calc(9.375rem + var(--_center-shift)); width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
     .hero_note-text { top: auto; bottom: 0.5rem; }
     .hero_note-arrow { top: -0.75rem; bottom: auto; width: 54%; transform: scaleY(-1); }
     .hero_sunset, .hero_palm { display: none; }
