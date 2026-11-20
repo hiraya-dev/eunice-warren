@@ -153,6 +153,8 @@ const { messageHref = "#" } = Astro.props;
     const finishClose = () => {
       if (closing) return;
       closing = true;
+      document.documentElement.dataset.preloaderClosing = "true";
+      document.dispatchEvent(new CustomEvent("ew:preloader-close"));
       lenis?.start();
       document.removeEventListener("ew:lenis-ready", stopLenis);
       overlay.classList.add("is-closing");
@@ -161,6 +163,7 @@ const { messageHref = "#" } = Astro.props;
         document.removeEventListener("keydown", onKeydown);
         overlay.remove();
         document.documentElement.classList.remove("ew-preloader-pending");
+        delete document.documentElement.dataset.preloaderClosing;
         document.body.classList.remove("preloader-open");
         document.querySelectorAll<HTMLElement>("body > *").forEach((element) => { element.inert = false; });
         (main ?? previousFocus)?.focus();

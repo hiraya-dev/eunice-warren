@@ -75,9 +75,17 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     const textItems = hero.querySelectorAll<HTMLElement>("[data-hero-text-item]");
     const keepsakes = hero.querySelectorAll<HTMLElement>("[data-hero-keepsake]");
     const media = gsap.matchMedia();
+    const root = document.documentElement;
+    const preloader = document.querySelector<HTMLElement>("[data-preloader]");
+    const waitingForPreloader = root.classList.contains("ew-preloader-pending") && preloader && !root.dataset.preloaderClosing;
+    let timeline: gsap.core.Timeline | null = null;
+    let revealFallback: MutationObserver | null = null;
 
-    media.add("(prefers-reduced-motion: no-preference)", () => {
-      const timeline = gsap.timeline();
+    const play = () => {
+      revealFallback?.disconnect();
+      // The close signal can arrive with reduced motion on; the hero is already visible then.
+      if (timeline || !window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+      timeline = gsap.timeline();
       timeline.from(textItems, { autoAlpha: 0, y: 16, duration: 0.8, stagger: 0.08, ease: "power3.out" });
       timeline.from(keepsakes, { autoAlpha: 0, y: -24, scale: 1.06, rotation: (_index, element) => element.matches(".hero_couple, .hero_sunset, .hero_palm, .hero_postmark, .hero_note") ? "-=4" : "+=4", duration: 0.9, stagger: 0.07, ease: "power3.out" }, "<0.25");
       // The from() tweens have already rendered their hidden start state inline, so the
@@ -86,14 +94,35 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
       timeline.eventCallback("onComplete", () => {
         gsap.set([textItems, keepsakes], { clearProps: "transform,opacity,visibility" });
       });
-      return () => timeline.kill();
+    };
+
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      if (!waitingForPreloader) play();
+      return () => {
+        timeline?.kill();
+        timeline = null;
+      };
     });
 
+    const onPreloaderClose = () => play();
+    document.addEventListener("ew:preloader-close", onPreloaderClose);
+
+    if (waitingForPreloader) {
+      revealFallback = new MutationObserver(() => {
+        if (!document.documentElement.contains(preloader) || !root.classList.contains("ew-preloader-pending")) play();
+      });
+      revealFallback.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-preloader-closing"] });
+      revealFallback.observe(document.body, { childList: true });
+    }
+
     const cleanup = () => {
+      document.removeEventListener("ew:preloader-close", onPreloaderClose);
+      revealFallback?.disconnect();
       media.revert();
       gsap.set([textItems, keepsakes], { clearProps: "transform,opacity,visibility" });
       hero.removeAttribute("data-hero-motion");
       hero.removeAttribute("data-hero-initialized");
+      delete root.dataset.preloaderClosing;
     };
     document.addEventListener("astro:before-swap", cleanup, { once: true });
   };
