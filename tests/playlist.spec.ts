@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
 
 const fakeSpotify = `
   window.__playlistController = { listeners: [], addListener(name, callback) { this.listeners.push([name, callback]); } };
@@ -25,6 +26,8 @@ const installSpotify = async (page: import("@playwright/test").Page) => {
 
 const loadSpotify = async (page: import("@playwright/test").Page) => {
   await page.locator("#playlist").scrollIntoViewIfNeeded();
+  // The player rises 24px as it fades in (L-029); let it settle before any spec measures the record.
+  await reveal(page.locator(".playlist_player"));
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -224,6 +227,7 @@ test.describe("Playlist section", () => {
     page,
   }) => {
     await page.goto("/");
+    await reveal(page.locator(".playlist_submit"));
     await page.locator(".playlist_submit").click();
     await expect(page.locator('.playlist_form-wrap input[name="name"]')).toBeFocused();
     await page.locator('.playlist_form-wrap input[name="name"]').fill("Eunice");
@@ -245,6 +249,7 @@ test.describe("Playlist section", () => {
     await page.goto("/");
     const dedication = page.locator('textarea[name="dedication"]');
 
+    await reveal(dedication);
     await expect(dedication).toHaveValue("");
     await dedication.click({ position: { x: 80, y: 24 } });
     expect(
@@ -340,7 +345,7 @@ test.describe("Playlist section", () => {
       );
     });
     expect(order).toBe(true);
-    await postcard.scrollIntoViewIfNeeded();
+    await reveal(postcard);
     const rects = await postcard.evaluate((card) => {
       const box = (selector: string) => {
         const rect = card.querySelector(selector)!.getBoundingClientRect();

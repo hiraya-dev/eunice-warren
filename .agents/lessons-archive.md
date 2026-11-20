@@ -87,3 +87,13 @@ The entry below is guarded by a hook on T3's delegation tool.
 - **Check:** the spec asserts the decoration's bounding box runs from 0 to the viewport width at 1920 and 2560, and that `scrollWidth` equals the viewport width.
 - **Guard:** test — `tests/attire.spec.ts` ("runs the clothesline string edge to edge at …px", 320–2560)
 - **Paths:** `src/components/**`, `src/styles/base.css`
+
+### L-040 — An entrance behind an overlay plays to no one
+- **Date:** 2026-11-20
+- **Trigger:** escape: runtime #89 Local-review round (the user asked to check the hero reveal after the envelope; it had already finished behind the preloader)
+- **Symptom:** the hero entrance ran on page load under the envelope preloader, so first-time guests never saw it; only returning guests, who skip the envelope, did.
+- **Root cause:** `initHero` started its timeline on module load with no knowledge of the preloader, and a motion audit of sections reviewed each reveal on its own, not what covers it.
+- **Rule:** an entrance animation for content under an overlay (preloader, modal) starts when the overlay begins closing, from a document event the overlay dispatches (`ew:preloader-close`), with a fail-safe that reveals the content if the overlay goes away without it. The handler respects reduced motion on its own; the event can arrive with reduced motion on.
+- **Check:** `tests/preloader.spec.ts` "reveals the hero when just browsing closes the preloader" asserts the hero is hidden while the envelope is open and visible after it closes.
+- **Guard:** test — the spec above
+- **Paths:** `src/components/sections/Hero.astro`, `src/components/global/Preloader.astro`

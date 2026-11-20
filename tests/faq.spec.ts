@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
 
 const questionCount = readdirSync("src/content/faq").filter((file) => file.endsWith(".json")).length;
 
@@ -10,6 +11,7 @@ test.describe("FAQ section", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await page.locator("#faq").scrollIntoViewIfNeeded();
+    await reveal(page.locator(".faq_list"));
   });
 
   test("renders every question with the first open", async ({ page }) => {

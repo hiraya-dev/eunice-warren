@@ -78,6 +78,15 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).toHaveCount(0);
   });
 
+  test("reveals the hero when just browsing closes the preloader", { tag: ["@single"] }, async ({ page }) => {
+    const heroTitle = page.locator("[data-hero-text-item]").nth(1);
+    await expect(heroTitle).toHaveCSS("visibility", "hidden");
+    await preloader(page).getByRole("button", { name: "Just browsing" }).click();
+    await expect(preloader(page)).toHaveCount(0);
+    await expect(heroTitle).toHaveCSS("visibility", "visible");
+    await expect(heroTitle).toHaveCSS("opacity", "1");
+  });
+
   test("Escape closes it", { tag: ["@single"] }, async ({ page }) => {
     await page.keyboard.press("Escape");
     await expect(preloader(page)).toHaveCount(0);

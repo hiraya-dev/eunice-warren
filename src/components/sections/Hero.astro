@@ -8,7 +8,6 @@ import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
 import paraw from "@/assets/images/stamps/paraw.jpg";
 import palm from "@/assets/images/stamps/palm.jpg";
 import postmark from "@/assets/images/hero/postmark-received.png";
-import note from "@/assets/images/hero/note-thats-us.png";
 import Button from "@/components/Button.astro";
 
 interface Props extends HTMLAttributes<"section"> {
@@ -37,7 +36,10 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     <div class="hero_keepsake hero_paraw" data-hero-keepsake><Stamp><Image src={paraw} alt="" width={860} height={1110} widths={[120, 240]} sizes="(min-width: 48rem) 8.33vw, 72px" loading="eager" fetchpriority="low" /></Stamp></div>
     <div class="hero_keepsake hero_palm" data-hero-keepsake><Stamp><Image src={palm} alt="" width={860} height={1110} widths={[96, 192]} sizes="(min-width: 48rem) 6.67vw, 96px" loading="eager" fetchpriority="low" /></Stamp></div>
     <Image class="hero_keepsake hero_postmark" data-hero-keepsake src={postmark} alt="" width={195} height={120} widths={[195, 390]} sizes="(min-width: 48rem) 13.54vw, 130px" loading="eager" fetchpriority="low" />
-    <Image class="hero_keepsake hero_note" data-hero-keepsake src={note} alt="" width={190} height={114} widths={[190, 380]} sizes="(min-width: 48rem) 13.19vw, 120px" loading="eager" fetchpriority="low" />
+    <p class="hero_keepsake hero_note" data-hero-keepsake aria-hidden="true">
+      <span class="hero_note-text">that’s us!</span>
+      <svg class="hero_note-arrow" viewBox="0 0 100 56" focusable="false" aria-hidden="true"><path d="M97 3 C74 10 58 23 45 36 C34 45 19 47 8 44 M8 44 L19 36 M8 44 L19 52" fill="none" stroke="var(--accent-500)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </p>
   </div>
 
   <div class="hero_content">
@@ -75,9 +77,17 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     const textItems = hero.querySelectorAll<HTMLElement>("[data-hero-text-item]");
     const keepsakes = hero.querySelectorAll<HTMLElement>("[data-hero-keepsake]");
     const media = gsap.matchMedia();
+    const root = document.documentElement;
+    const preloader = document.querySelector<HTMLElement>("[data-preloader]");
+    const waitingForPreloader = root.classList.contains("ew-preloader-pending") && preloader && !root.dataset.preloaderClosing;
+    let timeline: gsap.core.Timeline | null = null;
+    let revealFallback: MutationObserver | null = null;
 
-    media.add("(prefers-reduced-motion: no-preference)", () => {
-      const timeline = gsap.timeline();
+    const play = () => {
+      revealFallback?.disconnect();
+      // The close signal can arrive with reduced motion on; the hero is already visible then.
+      if (timeline || !window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+      timeline = gsap.timeline();
       timeline.from(textItems, { autoAlpha: 0, y: 16, duration: 0.8, stagger: 0.08, ease: "power3.out" });
       timeline.from(keepsakes, { autoAlpha: 0, y: -24, scale: 1.06, rotation: (_index, element) => element.matches(".hero_couple, .hero_sunset, .hero_palm, .hero_postmark, .hero_note") ? "-=4" : "+=4", duration: 0.9, stagger: 0.07, ease: "power3.out" }, "<0.25");
       // The from() tweens have already rendered their hidden start state inline, so the
@@ -86,14 +96,35 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
       timeline.eventCallback("onComplete", () => {
         gsap.set([textItems, keepsakes], { clearProps: "transform,opacity,visibility" });
       });
-      return () => timeline.kill();
+    };
+
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      if (!waitingForPreloader) play();
+      return () => {
+        timeline?.kill();
+        timeline = null;
+      };
     });
 
+    const onPreloaderClose = () => play();
+    document.addEventListener("ew:preloader-close", onPreloaderClose);
+
+    if (waitingForPreloader) {
+      revealFallback = new MutationObserver(() => {
+        if (!document.documentElement.contains(preloader) || !root.classList.contains("ew-preloader-pending")) play();
+      });
+      revealFallback.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-preloader-closing"] });
+      revealFallback.observe(document.body, { childList: true });
+    }
+
     const cleanup = () => {
+      document.removeEventListener("ew:preloader-close", onPreloaderClose);
+      revealFallback?.disconnect();
       media.revert();
       gsap.set([textItems, keepsakes], { clearProps: "transform,opacity,visibility" });
       hero.removeAttribute("data-hero-motion");
       hero.removeAttribute("data-hero-initialized");
+      delete root.dataset.preloaderClosing;
     };
     document.addEventListener("astro:before-swap", cleanup, { once: true });
   };
@@ -121,7 +152,9 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     .hero_paraw { top: 36.111cqw; left: 10.417cqw; width: 8.333cqw; height: 10.417cqw; transform: rotate(8deg); }
     .hero_palm { top: 20.833cqw; left: 90cqw; width: 6.667cqw; height: 8.333cqw; transform: rotate(-9deg); }
     .hero_postmark { top: 44.444cqw; left: 17.361cqw; width: 13.542cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-10deg); opacity: 0.9; }
-    .hero_note { top: 4.722cqw; left: 21.597cqw; width: 13.194cqw; height: 7.917cqw; object-fit: fill; transform: rotate(-8deg); }
+    .hero_note { top: 4.722cqw; left: 21.597cqw; width: 13.194cqw; height: 7.917cqw; margin: 0; color: var(--accent-500); font: 400 3.3cqw / 1 var(--hand-family); white-space: nowrap; transform: rotate(-8deg); }
+    .hero_note-text { position: absolute; top: 0; left: 0; }
+    .hero_note-arrow { position: absolute; bottom: -0.15em; left: 12%; width: 62%; height: auto; overflow: visible; }
     .hero_content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); text-align: center; }
     .hero_date { margin: 0; color: var(--dark-700); font: var(--primary-regular) var(--eyebrow) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
     .hero_date-short { display: none; }
@@ -162,7 +195,9 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
     .hero_white-beach { top: 2.75rem; left: 12.875rem; transform: rotate(7deg); }
     .hero_white-beach .hero_polaroid { width: 9.375rem; padding: 0.5rem 0.5rem 1.5rem; }
     .hero_white-beach .hero_polaroid img { aspect-ratio: 134 / 144; }
-    .hero_note { top: 14.25rem; left: 9.375rem; width: 7.5rem; height: 4.5rem; transform: rotate(-8deg); }
+    .hero_note { top: 14.25rem; left: 9.375rem; width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
+    .hero_note-text { top: 0.5rem; }
+    .hero_note-arrow { bottom: 0; width: 54%; }
     .hero_sunset, .hero_palm { display: none; }
     .hero_paraw { top: auto; bottom: 1.75rem; left: 1.125rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); }
     .hero_postmark { top: auto; right: 1rem; bottom: 2.5rem; left: auto; width: 8.125rem; height: 5rem; transform: rotate(-10deg); }

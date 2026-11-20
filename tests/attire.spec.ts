@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
 
 const attireSource = readFileSync("src/components/sections/Attire.astro", "utf8");
 const looksSource = attireSource.slice(
@@ -29,6 +30,7 @@ test.describe("attire section", () => {
     await page.goto("/");
     const attire = page.locator("#attire");
     await expect(attire).toHaveCount(1);
+    await reveal(attire.locator("h2"));
     await expect(attire.locator("h2")).toBeVisible();
 
     const swatches = attire.locator(".attire_colours .attire_swatch");
@@ -85,6 +87,7 @@ test.describe("attire section", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     const row = page.locator("#attire [data-gsap-slider-init]").first();
+    await reveal(row);
     const track = row.locator("[data-gsap-slider-list]");
     const next = row.locator('[data-gsap-slider-control="next"]');
     const prev = row.locator('[data-gsap-slider-control="prev"]');
@@ -100,6 +103,7 @@ test.describe("attire section", () => {
 
     await page.goto("/");
     const lastRow = page.locator("#attire [data-gsap-slider-init]").first();
+    await reveal(lastRow);
     const lastNext = lastRow.locator('[data-gsap-slider-control="next"]');
     const lastPrev = lastRow.locator('[data-gsap-slider-control="prev"]');
     const lastTrack = lastRow.locator("[data-gsap-slider-list]");
@@ -126,7 +130,7 @@ test.describe("attire section", () => {
     await page.goto("/");
     const row = page.locator("#attire [data-gsap-slider-init]").first();
     const track = row.locator("[data-gsap-slider-list]");
-    await track.scrollIntoViewIfNeeded();
+    await reveal(track);
     const card = row.locator("[data-gsap-slider-item]").first();
     const box = await card.boundingBox();
     expect(box).not.toBeNull();
@@ -147,6 +151,7 @@ test.describe("attire section", () => {
     const rows = page.locator("#attire [data-gsap-slider-init]");
     await expect(rows).toHaveCount(lookGroupCount);
     for (const row of await rows.all()) {
+      await reveal(row);
       await expect(row).toHaveAttribute("data-gsap-slider-status", "not-active");
       await expect(row.locator("[data-gsap-slider-controls]")).toBeHidden();
       const items = row.locator("[data-gsap-slider-item]");
@@ -163,6 +168,7 @@ test.describe("attire section", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     const row = page.locator("#attire [data-gsap-slider-init]").first();
+    await reveal(row);
     const track = row.locator("[data-gsap-slider-list]");
     await row.locator('[data-gsap-slider-control="next"]').click();
     await expect(row.locator("[data-gsap-slider-counter]")).toHaveText(new RegExp(`02\\s*/\\s*${pad2(lookItemCount)}`));
@@ -187,7 +193,7 @@ test.describe("attire section", () => {
     const row = page.locator("#attire [data-gsap-slider-init]").first();
     const track = row.locator("[data-gsap-slider-list]");
     await expect(row).toHaveAttribute("data-gsap-slider-status", "active");
-    await row.scrollIntoViewIfNeeded();
+    await reveal(row);
     await expect(row.locator('[data-gsap-slider-control="next"]')).toBeVisible();
     await row.locator('[data-gsap-slider-control="next"]').click();
     await expect.poll(() => track.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).e)).toBeLessThan(-1);
@@ -215,8 +221,9 @@ test.describe("attire section", () => {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto("/");
       for (const group of await page.locator("#attire .attire_looks").all()) {
-        await group.scrollIntoViewIfNeeded();
         const row = group.locator("[data-gsap-slider-init]");
+        await reveal(group.locator(".attire_looks-header"));
+        await reveal(row);
         const items = row.locator("[data-gsap-slider-item]");
         await expect(items).toHaveCount(lookItemCount);
         for (const item of await items.all()) {
@@ -288,7 +295,7 @@ test.describe("attire section", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       const note = page.locator("#attire .attire_note");
-      await note.scrollIntoViewIfNeeded();
+      await reveal(note);
       await page.evaluate(() => document.fonts.ready);
 
       const measured = await note.evaluate((card) => {
@@ -397,6 +404,7 @@ test.describe("attire section", () => {
       const rows = page.locator("#attire [data-gsap-slider-init]");
       await expect(rows).toHaveCount(lookGroupCount);
       for (const row of await rows.all()) {
+        await reveal(row);
         const strings = row.locator(".attire_string:visible");
         // One string in the slider, one per clothesline on desktop.
         await expect(strings).toHaveCount(width >= twoLinePx ? 2 : 1);

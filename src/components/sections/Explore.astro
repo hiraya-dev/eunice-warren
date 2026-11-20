@@ -41,9 +41,10 @@ const stickers = {
         <h2 class="explore_title" data-fade-in-item>
           Field notes<br />on Boracay
         </h2>
-        <div class="explore_stamp"><Stamp><Image src={stamp} alt="" aria-hidden="true" width={100} height={129} densities={[1, 2]} loading="lazy" /></Stamp></div>
+        <div class="explore_stamp" data-fade-in-item><Stamp><Image src={stamp} alt="" aria-hidden="true" width={100} height={129} densities={[1, 2]} loading="lazy" /></Stamp></div>
         <div
           class="explore_controls explore_controls-header"
+          data-fade-in-item
           data-gsap-slider-controls
         >
           <button
@@ -69,7 +70,7 @@ const stickers = {
         </div>
       </header>
 
-      <div class="explore_collection" data-gsap-slider-collection>
+      <div class="explore_collection" data-gsap-slider-collection data-fade-in data-fade-in-item>
         <div class="explore_list gsap-slider__list" data-gsap-slider-list>
           {
             notes.map((note) => (
@@ -110,7 +111,7 @@ const stickers = {
         </div>
       </div>
 
-      <footer class="explore_footer">
+      <footer class="explore_footer" data-fade-in data-fade-in-item>
         <span class="explore_counter" data-gsap-slider-counter aria-live="polite"
           >-- / -- <span aria-hidden="true">· SWIPE →</span></span
         >

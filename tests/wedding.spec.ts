@@ -1,4 +1,15 @@
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
+
+// The visual column, each schedule row and the footer reveal through the shared fade-in (L-029).
+// Scroll to the section, then wait for every one of them so a tab click or a measurement
+// never lands on a hidden or still-rising item.
+const revealWedding = async (page: import("@playwright/test").Page) => {
+  await page.locator("#wedding").scrollIntoViewIfNeeded();
+  await reveal(page.locator(".wedding_visual-column"));
+  for (const tab of await page.locator('#wedding [role="tab"]').all()) await reveal(tab);
+  await reveal(page.locator(".wedding_footer"));
+};
 
 test.describe("wedding schedule tabs", () => {
   test.beforeEach(async ({ page }) => {
@@ -7,7 +18,7 @@ test.describe("wedding schedule tabs", () => {
   });
 
   test("starts with panel 01 visible and advances autoplay after entering view", { tag: ["@sweep", "@single"] }, async ({ page }) => {
-    await page.locator("#wedding").scrollIntoViewIfNeeded();
+    await revealWedding(page);
     await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveText(/Ceremony/);
     await expect(page.locator("#wedding-panel-1")).toBeVisible();
     await expect(page.locator("#wedding-panel-2")).toBeHidden();
@@ -19,7 +30,7 @@ test.describe("wedding schedule tabs", () => {
   });
 
   test("supports click and roving keyboard navigation", { tag: ["@smoke", "@single"] }, async ({ page }) => {
-    await page.locator("#wedding").scrollIntoViewIfNeeded();
+    await revealWedding(page);
     await page.locator("#wedding-tab-3").click();
     await expect(page.locator("#wedding-tab-3")).toHaveAttribute("aria-selected", "true");
     await page.locator("#wedding-tab-3").press("ArrowLeft");
@@ -29,7 +40,7 @@ test.describe("wedding schedule tabs", () => {
   });
 
   test("swaps the complete polaroid at each tab's resting tilt", { tag: ["@single"] }, async ({ page }) => {
-    await page.locator("#wedding").scrollIntoViewIfNeeded();
+    await revealWedding(page);
     const expectedTilts = [-3, 2.5, -1.5, -3];
     const waitForSettledPanel = (panelNumber: number) => expect.poll(async () => page.locator('[role="tabpanel"][data-tabs="visual-item"]').evaluateAll((panels) => {
       const visiblePanels = panels.filter((panel) => !(panel as HTMLElement).hidden);
@@ -66,6 +77,7 @@ test.describe("wedding schedule tabs", () => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
+      await revealWedding(page);
       const boxes = await page.evaluate(() => {
         const visual = document.querySelector<HTMLElement>(".wedding_visual-column")!.getBoundingClientRect();
         const schedule = document.querySelector<HTMLElement>(".wedding_content")!.getBoundingClientRect();
@@ -79,7 +91,7 @@ test.describe("wedding schedule tabs", () => {
   test("disables autoplay but keeps reduced-motion switching interactive", { tag: ["@single"] }, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    await page.locator("#wedding").scrollIntoViewIfNeeded();
+    await revealWedding(page);
     // Autoplay would drive the active tab's progress bar from scaleX(0); sample it over 500ms of wall-clock time (10% of the 5s duration).
     const scales = await page.evaluate(
       () =>

@@ -72,7 +72,7 @@ const schedule = [
     </header>
 
     <div class="wedding_body" data-tabs="wrapper" data-tabs-autoplay="true" data-tabs-autoplay-duration="5000">
-      <div class="wedding_visual-column">
+      <div class="wedding_visual-column" data-fade-in data-fade-in-item>
         <div class="wedding_visual" data-tabs="visual-list">
           {schedule.map((item, index) => (
             <div class:list={["wedding_visual-item", index === 0 && "is-active"]} id={`wedding-panel-${index + 1}`} data-tabs="visual-item" data-tilt={item.tilt} style={`--_tilt: ${item.tilt}deg`} role="tabpanel" aria-labelledby={`wedding-tab-${index + 1}`} hidden={index !== 0}>
@@ -84,10 +84,10 @@ const schedule = [
       </div>
 
       <div class="wedding_content">
-        <div class="wedding_schedule">
+        <div class="wedding_schedule" data-fade-in>
           <div class="wedding_tablist" role="tablist" aria-label="Wedding schedule">
             {schedule.map((item, index) => (
-              <div class:list={["wedding_row", index === 0 && "is-active"]} data-tabs="content-item">
+              <div class:list={["wedding_row", index === 0 && "is-active"]} data-tabs="content-item" data-fade-in-item>
                 <button class="wedding_tab" id={`wedding-tab-${index + 1}`} type="button" role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`wedding-panel-${index + 1}`} tabindex={index === 0 ? 0 : -1}>
                   <span class="wedding_number">({item.number})</span>
                   <span class="wedding_tab-title"><span>{item.title}</span>{item.italic && <em>{item.italic}</em>}</span>
@@ -100,7 +100,7 @@ const schedule = [
               </div>
             ))}
           </div>
-          <div class="wedding_footer">
+          <div class="wedding_footer" data-fade-in-item>
             <span>All times Philippine Time (GMT+8)</span>
             <a href={calendarHref}>ADD THE DAY TO YOUR CALENDAR <span aria-hidden="true">↗</span></a>
           </div>

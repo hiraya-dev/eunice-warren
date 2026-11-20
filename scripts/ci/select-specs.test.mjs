@@ -47,14 +47,8 @@ test("FAQ stops at its owner before shared layout importers", () => {
     "tests/tokens.spec.ts",
   ]);
 });
-test("highlight text is owned by invitation and wildcard specs", () => {
-  assert.deepEqual(choose(["src/scripts/highlight-text.ts"]).specs, [
-    "tests/button-hover.spec.ts",
-    "tests/invitation.spec.ts",
-    "tests/smoke.spec.ts",
-    "tests/tokens.spec.ts",
-  ]);
-});
+test("the hero selects the preloader spec that guards its entrance (L-040)", () =>
+  assert.ok(choose(["src/components/sections/Hero.astro"]).specs.includes("tests/preloader.spec.ts")));
 test("a changed spec selects only itself", () =>
   assert.deepEqual(choose(["tests/faq.spec.ts"]).specs, ["tests/faq.spec.ts"]));
 test("content prefix selects its owning section", () =>

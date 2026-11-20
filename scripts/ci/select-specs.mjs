@@ -60,7 +60,6 @@ export const SPEC_SOURCES = {
   "tests/invitation.spec.ts": [
     "src/components/sections/Invitation.astro",
     "src/scripts/draw-path.ts",
-    "src/scripts/highlight-text.ts",
   ],
   "tests/nav-hover.spec.ts": [
     "src/components/global/Nav.astro",
@@ -83,6 +82,7 @@ export const SPEC_SOURCES = {
   "tests/pre-wedding.spec.ts": ["src/components/sections/PreWedding.astro"],
   "tests/preloader.spec.ts": [
     "src/components/global/Preloader.astro",
+    "src/components/sections/Hero.astro",
     "src/lib/guest.ts",
     "src/scripts/turnstile.ts",
   ],

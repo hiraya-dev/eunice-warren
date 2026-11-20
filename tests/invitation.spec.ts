@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { reveal } from "./helpers/reveal";
 
 test.describe("invitation section", () => {
   test("uses the two-column layout only at desktop width", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
+      // The title rises 24px as it fades in (L-029); measure it once it has settled.
+      await reveal(page.locator(".invitation_title"));
       const positions = await page.evaluate(() => {
         const title = document.querySelector<HTMLElement>(".invitation_title")!.getBoundingClientRect();
         const note = document.querySelector<HTMLElement>(".invitation_note")!.getBoundingClientRect();
@@ -30,6 +33,7 @@ test.describe("invitation section", () => {
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
+      await reveal(page.locator(".invitation_ticket-wrap"));
       const metrics = await page.evaluate(() => {
         // offsetTop is layout position, unaffected by the ticket's -1.5deg rotation.
         const airports = [...document.querySelectorAll<HTMLElement>(".invitation_airport")].map((element) => element.offsetTop);
@@ -54,8 +58,6 @@ test.describe("invitation section", () => {
     await expect(paragraphs).toHaveCount(2);
     for (const paragraph of await paragraphs.all()) {
       await expect(paragraph).toHaveCSS("color", "rgb(31, 47, 92)");
-      // SplitText's char wrappers: nothing is split when motion is reduced.
-      expect(await paragraph.locator("[data-highlight-text] > div > div").count()).toBe(0);
     }
     await expect(page.locator(".invitation_circle")).toBeVisible();
     const circle = await page.locator(".invitation_circle").evaluate((svg) => {
@@ -114,38 +116,5 @@ test.describe("invitation section", () => {
     }
     expect(backward[0]).toBeGreaterThan(0.8);
     expect(backward[backward.length - 1]).toBeLessThan(0.2);
-  });
-
-  test("reveals note characters progressively during scrolling", { tag: ["@sweep", "@single"] }, async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 700 });
-    await page.goto("/");
-    const sentences = [
-      "We're getting married, and the day wouldn't be complete without you there to share it.",
-      "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
-    ];
-    const chars = page.locator(".invitation_note [data-highlight-text] > div > div");
-    await expect.poll(() => chars.count()).toBeGreaterThan(100);
-    // Screen readers get each sentence once, from the sr-only copy; the split copy is hidden.
-    const snapshot = await page.locator(".invitation_note").ariaSnapshot();
-    for (const sentence of sentences) expect(snapshot).toContain(sentence);
-    await expect(page.locator(".invitation_note [data-highlight-text]").first()).toHaveAttribute("aria-hidden", "true");
-
-    await page.evaluate(() => {
-      const note = document.querySelector(".invitation_note")!;
-      window.scrollTo(0, Math.max(0, note.getBoundingClientRect().top + window.scrollY - window.innerHeight));
-    });
-    await page.waitForTimeout(300);
-
-    const samples: number[][] = [];
-    // Wheel steps move less under mobile emulation, so give the scroll room on every project.
-    for (let index = 0; index < 32; index += 1) {
-      samples.push(await chars.evaluateAll((chars) => chars.map((char) => Number(getComputedStyle(char).opacity))));
-      await page.mouse.wheel(0, 60);
-      await page.waitForTimeout(20);
-    }
-    const means = samples.map((sample) => sample.reduce((total, opacity) => total + opacity, 0) / sample.length);
-    expect(means[0]).toBeLessThan(0.5);
-    expect(means.at(-1)).toBeGreaterThan(0.85);
-    expect(samples.some((sample) => sample.some((opacity) => opacity > 0.35 && opacity < 0.95) && sample.some((opacity) => opacity >= 0.95))).toBeTruthy();
   });
 });

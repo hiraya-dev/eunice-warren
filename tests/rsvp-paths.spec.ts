@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fakeFixtures } from "../src/lib/rsvp/store";
+import { reveal } from "./helpers/reveal";
 
 const rsvp = (page: import("@playwright/test").Page) =>
   page.locator("#rsvp");
@@ -42,6 +43,7 @@ test.describe("RSVP paths", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await rsvp(page).scrollIntoViewIfNeeded();
+    await reveal(rsvp(page).locator("[data-rsvp-name]"));
   });
 
   test("unticks a seat before submitting", async ({ page }) => {
