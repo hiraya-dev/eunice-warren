@@ -1,0 +1,130 @@
+---
+import { Image } from "astro:assets";
+import { BACKGROUND_MUSIC } from "@/consts";
+
+const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
+---
+
+{BACKGROUND_MUSIC.enabled && <>
+  <audio data-music-audio data-song-name={songName} loop preload="none" src={BACKGROUND_MUSIC.src}></audio>
+  <div class="music-player_root" data-music-container>
+    <div class="music-player_tag" data-music data-music-tag data-music-surface data-state="idle" data-music-visible>
+      <span class="music-player_hole" aria-hidden="true"></span>
+      <Image class="music-player_cover" src={BACKGROUND_MUSIC.cover} alt="" width={46} height={46} widths={[46, 92]} sizes="46px" loading="lazy" />
+      <span class="music-player_info"><span class="music-player_label">our song ♪</span><span class="music-player_title">{BACKGROUND_MUSIC.title}</span></span>
+      <button type="button" data-music-toggle aria-pressed="false" aria-label={`Play ${songName}`}>
+        <svg data-music-play-icon viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 1.8v10.4L12 7z" fill="currentColor" /></svg>
+        <svg data-music-pause-icon viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="1.5" width="3" height="11" fill="currentColor" /><rect x="8.5" y="1.5" width="3" height="11" fill="currentColor" /></svg>
+      </button>
+      <span class="music-player_progress"><span data-music-fill></span></span>
+    </div>
+    <div class="music-player_string" aria-hidden="true"><svg viewBox="0 0 80 60"><path d="M70 52C58 50 44 42 30 34S6 18 4 6" /><path d="M70 52C60 44 46 30 34 22S14 10 10 2" /></svg></div>
+  </div>
+</>}
+
+{BACKGROUND_MUSIC.enabled && <script>
+  import { initMusicTeleport } from "@/scripts/music-teleport.ts";
+
+  const audio = document.querySelector<HTMLAudioElement>("[data-music-audio]");
+  const root = document.querySelector<HTMLElement>("[data-music]");
+  const container = document.querySelector<HTMLElement>("[data-music-container]");
+  const surfaces = [...document.querySelectorAll<HTMLElement>("[data-music-surface]")];
+  if (audio && root && container && surfaces.length) {
+    const toggles = [...document.querySelectorAll<HTMLButtonElement>("[data-music-toggle]")];
+    const mutes = [...document.querySelectorAll<HTMLButtonElement>("[data-music-mute]")];
+    const elapsed = [...document.querySelectorAll<HTMLElement>("[data-music-elapsed]")];
+    const durations = [...document.querySelectorAll<HTMLElement>("[data-music-duration]")];
+    const fills = [...document.querySelectorAll<HTMLElement>("[data-music-fill]")];
+    const songName = audio.dataset.songName || "the song";
+    const formatTime = (seconds: number) => {
+      if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+      return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+    };
+    const setState = (state: "idle" | "playing" | "paused" | "error") => {
+      root.dataset.state = state;
+      surfaces.forEach((surface) => { surface.dataset.state = state; });
+      const playing = state === "playing";
+      toggles.forEach((toggle) => {
+        toggle.disabled = state === "error";
+        toggle.setAttribute("aria-pressed", String(playing));
+        toggle.setAttribute("aria-label", `${playing ? "Pause" : "Play"} ${songName}`);
+        toggle.querySelector<HTMLElement>("[data-music-play-icon]")?.toggleAttribute("hidden", playing);
+        toggle.querySelector<HTMLElement>("[data-music-pause-icon]")?.toggleAttribute("hidden", !playing);
+      });
+      mutes.forEach((mute) => {
+        mute.disabled = state === "error";
+        mute.setAttribute("aria-pressed", String(audio.muted));
+        mute.setAttribute("aria-label", `${audio.muted ? "Unmute" : "Mute"} ${songName}`);
+      });
+    };
+    const updateProgress = () => {
+      const ratio = audio.duration > 0 ? Math.min(1, audio.currentTime / audio.duration) : 0;
+      const value = `${ratio}`;
+      fills.forEach((fill) => { if (fill.dataset.value !== value) { fill.dataset.value = value; fill.style.setProperty("--music-progress", value); } });
+      const current = formatTime(audio.currentTime);
+      const total = formatTime(audio.duration);
+      elapsed.forEach((element) => { if (element.textContent !== current) element.textContent = current; });
+      durations.forEach((element) => { if (element.textContent !== total) element.textContent = total; });
+    };
+    const start = () => {
+      if (audio.error) return;
+      audio.play().then(() => setState("playing")).catch(() => setState(audio.error ? "error" : "paused"));
+    };
+    const toggle = () => { if (audio.paused) start(); else { audio.pause(); setState("paused"); } };
+    toggles.forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); toggle(); }));
+    mutes.forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); audio.muted = !audio.muted; setState(root.dataset.state as "idle" | "playing" | "paused" | "error"); }));
+    document.querySelector<HTMLElement>("[data-music-tag]")?.addEventListener("click", (event) => { if (!(event.target as HTMLElement).closest("button")) toggle(); });
+    document.addEventListener("ew:music-start", start);
+    document.addEventListener("ew:playlist-play", () => { audio.pause(); setState("paused"); });
+    audio.addEventListener("play", () => setState("playing"));
+    audio.addEventListener("pause", () => { if (!audio.ended && !audio.error) setState("paused"); });
+    audio.addEventListener("timeupdate", updateProgress);
+    audio.addEventListener("loadedmetadata", updateProgress);
+    audio.addEventListener("error", () => setState("error"));
+    updateProgress();
+    setState("idle");
+
+    const pending = document.documentElement.classList.contains("ew-preloader-pending");
+    if (pending) root.removeAttribute("data-music-visible");
+    document.addEventListener("ew:preloader-close", () => root.setAttribute("data-music-visible", ""), { once: true });
+    document.addEventListener("focusin", (event) => { if ((event.target as HTMLElement).matches("input, select, textarea")) root.setAttribute("data-music-hidden-for-input", ""); });
+    document.addEventListener("focusout", (event) => { if ((event.target as HTMLElement).matches("input, select, textarea")) root.removeAttribute("data-music-hidden-for-input"); });
+    const teardown = initMusicTeleport(container);
+    document.addEventListener("astro:before-swap", () => { teardown(); document.removeEventListener("ew:music-start", start); }, { once: true });
+  }
+</script>}
+
+<style is:global>
+  @layer components {
+    .music-player_root { position: fixed; z-index: 80; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); width: 16rem; height: 4.375rem; visibility: hidden; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+    .music-player_root:has([data-music-visible]) { visibility: visible; }
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta]) { visibility: hidden; opacity: 0; transform: translateY(0.75rem); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s; }
+    .music-player_tag { position: relative; display: flex; align-items: center; gap: 0.75rem; width: 100%; height: 100%; padding: 0 0.75rem 0 0.875rem; overflow: clip; border-radius: 0.375rem 0.875rem 0.875rem 0.375rem; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 1px 0 rgb(31 47 92 / 6%), 0 0.75rem 1.75rem rgb(31 47 92 / 22%); color: var(--dark-900); transform: rotate(-2deg); transform-origin: 0 100%; cursor: pointer; pointer-events: auto; }
+    .music-player_tag[data-state="error"] { cursor: default; }
+    .music-player_hole { width: 0.75rem; height: 0.75rem; flex: 0 0 auto; border: 0.125rem solid var(--border); border-radius: 50%; background: var(--light-100); box-shadow: inset 0 1px 2px rgb(31 47 92 / 35%); }
+    .music-player_cover { width: 2.875rem; height: 2.875rem; flex: 0 0 auto; padding: 0.1875rem 0.1875rem 0.375rem; background: #fff; box-shadow: 0 2px 6px rgb(31 47 92 / 18%); object-fit: cover; transform: rotate(-5deg); }
+    .music-player_info { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.1875rem; }
+    .music-player_label { color: var(--accent-500); font: 400 1.3125rem / 1.25rem var(--hand-family); white-space: nowrap; }
+    .music-player_title { overflow: hidden; color: var(--dark-900); font: var(--primary-regular) 0.6875rem / 0.875rem var(--mono-family); letter-spacing: 0.1em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .music-player_tag button { display: grid; width: 2.5rem; height: 2.5rem; padding: 0; flex: 0 0 auto; place-items: center; border: 0.09375rem solid var(--dark-900); border-radius: 50%; background: transparent; color: var(--dark-900); cursor: pointer; transition: background-color 0.2s, color 0.2s, opacity 0.2s; }
+    .music-player_tag[data-state="playing"] button { background: var(--dark-900); color: var(--light-100); }
+    .music-player_tag button:not(:disabled):hover { background: var(--dark-900); color: var(--light-100); }
+    .music-player_tag button:disabled { cursor: default; opacity: 0.4; }
+    .music-player_tag button svg { grid-area: 1 / 1; width: 0.8125rem; height: 0.8125rem; }
+    .music-player_tag[data-state="playing"] button svg { width: 0.75rem; height: 0.75rem; }
+    .music-player_tag button:focus-visible, .music-polaroid_controls button:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 2px; }
+    [data-music-pause-icon] { display: none; }
+    [data-music-pause-icon]:not([hidden]) { display: block; }
+    [data-music-play-icon][hidden], [data-music-pause-icon][hidden] { display: none; }
+    .music-player_progress { position: absolute; right: 0; bottom: 0; left: 0; height: 0.125rem; background: #e6ddcb; }
+    .music-player_progress span { display: block; width: 100%; height: 100%; background: var(--accent-500); transform: scaleX(var(--music-progress, 0)); transform-origin: left; }
+    .music-player_string { position: absolute; top: -1rem; left: -3rem; width: 5rem; height: 3.75rem; pointer-events: none; }
+    .music-player_string svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .music-player_string path { fill: none; stroke: var(--accent-500); stroke-linecap: round; stroke-width: 2; }
+    @media (min-width: 64rem) {
+      /* The polaroid in the hero is the player until the page scrolls past it. */
+      .music-player_root:not([data-music-docked]):not([data-music-flying]) :is(.music-player_tag, .music-player_string) { visibility: hidden; }
+      :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap { visibility: hidden; pointer-events: none; }
+    }
+  }
+</style>

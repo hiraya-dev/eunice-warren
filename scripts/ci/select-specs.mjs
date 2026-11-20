@@ -89,6 +89,14 @@ export const SPEC_SOURCES = {
     "src/lib/guest.ts",
   ],
   "tests/pre-wedding.spec.ts": ["src/components/sections/PreWedding.astro"],
+  "tests/music.spec.ts": [
+    "src/components/global/BackgroundMusic.astro",
+    "src/components/global/Preloader.astro",
+    "src/components/sections/Hero.astro",
+    "src/components/sections/Playlist.astro",
+    "src/scripts/music-teleport.ts",
+    "public/audio/",
+  ],
   "tests/preloader.spec.ts": [
     "src/components/global/Preloader.astro",
     "src/components/sections/Hero.astro",
