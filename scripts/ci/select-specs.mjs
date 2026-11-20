@@ -60,7 +60,6 @@ export const SPEC_SOURCES = {
   "tests/invitation.spec.ts": [
     "src/components/sections/Invitation.astro",
     "src/scripts/draw-path.ts",
-    "src/scripts/highlight-text.ts",
   ],
   "tests/nav-hover.spec.ts": [
     "src/components/global/Nav.astro",
