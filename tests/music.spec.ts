@@ -9,8 +9,30 @@ const PHONE = { width: 390, height: 844 };
 
 const audioOf = (page: Page) => page.locator("audio[data-music-audio]");
 const tagOf = (page: Page) => page.locator("[data-music-tag]");
+const discOf = (page: Page) => page.locator("[data-music-disc]");
+const pillOf = (page: Page) => page.locator("[data-music-pill]");
 const cardOf = (page: Page) => page.locator("[data-music-polaroid] .music-polaroid_wrap");
 const containerOf = (page: Page) => page.locator("[data-music-container]");
+const PILL_OPEN = "data-music-open";
+/** Taps through the preloader and waits out the 3s intro the first tap opens, so a test starts from the closed disc. */
+const tapIntoSite = async (page: Page) => {
+  await page.getByRole("button", { name: "Just browsing" }).click();
+  await expect(page.locator("[data-preloader]")).toHaveCount(0);
+  // The intro opens as the preloader starts to close, so it is decided by the time the node is gone.
+  await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "", { timeout: 10_000 });
+  await expect(discOf(page)).toBeVisible();
+  // The intro's own close (a wipe, or a 150ms fade) has to finish, or the next tap reverses it midway.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter((animation) => !(animation instanceof CSSAnimation) && (animation.effect as KeyframeEffect).target?.closest("[data-music-container]") && Number(animation.effect!.getComputedTiming().endTime) > 1).length,
+      ),
+    )
+    .toBe(0);
+};
 /** The hero keepsakes tween in on load; a click on a moving polaroid is retried with a scroll that docks it. */
 const heroSettled = (page: Page) => expect(page.locator("#hero")).not.toHaveAttribute("data-hero-entering", "", { timeout: 20_000 });
 
@@ -102,9 +124,10 @@ test.describe("background music returning guest", () => {
 
     // Desktop shows the polaroid in the hero (the tag is hidden there); a phone shows the tag.
     const wide = (page.viewportSize()?.width ?? 0) >= 1024;
-    const toggle = page.locator(wide ? "[data-music-polaroid] [data-music-toggle]" : "[data-music-tag] [data-music-toggle]");
+    const toggle = page.locator(wide ? "[data-music-polaroid] [data-music-toggle]" : "[data-music-disc]");
     await expect(toggle).toBeVisible();
     await toggle.click();
+    if (!wide) await pillOf(page).locator("[data-music-toggle]").click();
     await expect.poll(() => requests.length).toBeGreaterThan(0);
     await expect.poll(() => isPaused(audioOf(page))).toBe(false);
   });
@@ -130,8 +153,8 @@ test.describe("background music teleport, desktop", { tag: ["@single"] }, () => 
 
     const heroHeight = await page.locator("#hero").evaluate((hero) => hero.getBoundingClientRect().height);
     await page.evaluate((y) => window.scrollTo(0, y), heroHeight + 120);
-    await expect(tagOf(page)).toBeVisible({ timeout: 5000 });
-    await expect(cardOf(page)).toBeHidden();
+    await expect(tagOf(page)).toBeVisible(SLOW);
+    await expect(cardOf(page)).toBeHidden(SLOW);
     await expect(containerOf(page)).toHaveAttribute("data-music-docked", "");
     await expect(containerOf(page)).not.toHaveAttribute("data-music-flying", "");
     // The tag rests clear of the flight's transforms, in the bottom-right corner.
@@ -172,7 +195,7 @@ test.describe("background music teleport, desktop", { tag: ["@single"] }, () => 
     for (const width of [1024, 1100, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 800 });
       await page.goto("/");
-      await expect(cardOf(page)).toBeVisible();
+      await expect(cardOf(page)).toBeVisible(SLOW);
       // Layout sizes, not bounding boxes: the card is rotated, and a rotated box measures taller.
       const fit = await page.locator("[data-music-polaroid]").evaluate((surface) => {
         const part = (selector: string) => surface.querySelector<HTMLElement>(selector)!;
@@ -211,8 +234,8 @@ test.describe("background music teleport, reduced motion", { tag: ["@single"] },
     await expect(cardOf(page)).toBeVisible();
     await expect(tagOf(page)).toBeHidden();
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
-    await expect(tagOf(page)).toBeVisible({ timeout: 5000 });
-    await expect(cardOf(page)).toBeHidden();
+    await expect(tagOf(page)).toBeVisible(SLOW);
+    await expect(cardOf(page)).toBeHidden(SLOW);
     await expect(containerOf(page)).not.toHaveAttribute("data-music-flying", "");
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(cardOf(page)).toBeVisible({ timeout: 5000 });
@@ -220,26 +243,27 @@ test.describe("background music teleport, reduced motion", { tag: ["@single"] },
   });
 });
 
-test.describe("background music tag, phone", { tag: ["@single"] }, () => {
+test.describe("background music disc, phone", { tag: ["@single"] }, () => {
   test.use({ storageState: { cookies: [], origins: [] }, viewport: PHONE, hasTouch: true, isMobile: true });
 
-  test("docks bottom-right after the tap, clear of the hero and nav actions", async ({ page }) => {
+  test("shows one disc bottom-right after the tap, clear of the hero and nav actions", async ({ page }) => {
     await page.goto("/");
     await expect(tagOf(page)).toBeHidden();
     await page.getByRole("button", { name: "Just browsing" }).click();
-    await expect(tagOf(page)).toBeVisible();
+    await expect(discOf(page)).toBeVisible();
+    await expect(tagOf(page)).toBeHidden();
     await expect(cardOf(page)).toBeHidden();
     await expect(page.locator("[data-music-polaroid]")).toBeHidden();
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
 
-    const box = (await tagOf(page).boundingBox())!;
+    const box = (await discOf(page).boundingBox())!;
     expect(Math.abs(PHONE.width - (box.x + box.width) - 16)).toBeLessThanOrEqual(6);
     expect(Math.abs(PHONE.height - (box.y + box.height) - 16)).toBeLessThanOrEqual(6);
     for (const selector of [".hero_rsvp", ".hero_weekend", ".nav_rsvp"]) {
       const other = await page.locator(selector).first().boundingBox();
       if (!other) continue;
       const overlaps = box.x < other.x + other.width && box.x + box.width > other.x && box.y < other.y + other.height && box.y + box.height > other.y;
-      expect(overlaps, `tag overlaps ${selector}`).toBe(false);
+      expect(overlaps, `disc overlaps ${selector}`).toBe(false);
     }
     // Playing from the tap: the gesture that closed the preloader also started the song.
     await expect.poll(() => isPaused(audioOf(page))).toBe(false);
@@ -248,23 +272,239 @@ test.describe("background music tag, phone", { tag: ["@single"] }, () => {
   test("steps aside while a form field has focus", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Just browsing" }).click();
-    await expect(tagOf(page)).toBeVisible();
+    await expect(discOf(page)).toBeVisible();
     const name = page.locator("[data-rsvp-name]");
     await reveal(name);
     await name.focus();
     await expect(name).toBeFocused();
-    await expect(tagOf(page)).toBeHidden();
+    await expect(discOf(page)).toBeHidden();
     await name.blur();
-    await expect(tagOf(page)).toBeVisible();
+    await expect(discOf(page)).toBeVisible();
+  });
+
+  test("opens and closes the pill from the disc", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    await expect(discOf(page)).toBeVisible();
+    await expect(pillOf(page).locator("[data-music-controls]")).toBeHidden();
+    await discOf(page).click();
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    await expect(discOf(page)).toHaveAttribute("aria-expanded", "true");
+    await expect(pillOf(page).locator("[data-music-controls]")).toBeVisible();
+    await discOf(page).click();
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "");
+    await expect(discOf(page)).toHaveAttribute("aria-expanded", "false");
+    await expect(pillOf(page).locator("[data-music-controls]")).toBeHidden();
+  });
+
+  test("keeps the closed pill's controls out of the tab order and out of reach", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    const inReach = () =>
+      page.evaluate(() => {
+        const controls = document.querySelector<HTMLElement>("[data-music-controls]")!;
+        const reachable = [...controls.querySelectorAll<HTMLElement>("button")].filter((button) => {
+          const box = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          return getComputedStyle(button).visibility !== "hidden" && (hit === button || button.contains(hit));
+        });
+        return { inert: controls.inert, reachable: reachable.length };
+      });
+    expect(await inReach()).toEqual({ inert: true, reachable: 0 });
+    // Tab from the disc: focus leaves the player instead of stopping on a hidden control.
+    await discOf(page).focus();
+    await page.keyboard.press("Shift+Tab");
+    expect(await page.evaluate(() => Boolean(document.activeElement?.closest("[data-music-controls]")))).toBe(false);
+    await discOf(page).click();
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    expect((await inReach()).inert).toBe(false);
+    await expect.poll(async () => (await inReach()).reachable).toBe(2);
+  });
+
+  test("supports keyboard focus, Escape, outside tap, and scroll closing", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    await discOf(page).press("Enter");
+    await expect(pillOf(page).locator("[data-music-toggle]")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(discOf(page)).toBeFocused();
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "");
+    await discOf(page).click();
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    await page.mouse.click(20, 20);
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "");
+    await discOf(page).click();
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    await page.evaluate(() => window.scrollBy(0, 60));
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "");
+  });
+
+  test("opens for the preloader intro, then stays closed for returning guests", async ({ page }) => {
+    test.setTimeout(60_000);
+    // Opening and closing again takes 3s; a slow page can miss the open in between, so record it.
+    const watchOpen = () =>
+      page.addInitScript(() => {
+        const seen = window as unknown as { musicOpened?: boolean };
+        new MutationObserver((records) => {
+          if (records.some((record) => (record.target as Element).hasAttribute("data-music-open"))) seen.musicOpened = true;
+        }).observe(document, { attributes: true, attributeFilter: ["data-music-open"], subtree: true });
+      });
+    await watchOpen();
+    await page.goto("/");
+    await page.getByRole("button", { name: "Just browsing" }).click();
+    await expect.poll(() => page.evaluate(() => Boolean((window as unknown as { musicOpened?: boolean }).musicOpened)), { timeout: 15_000 }).toBe(true);
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "", { timeout: 15_000 });
+
+    await page.addInitScript(() => localStorage.setItem("ew-guest-v1", JSON.stringify({ skipped: true, at: new Date().toISOString() })));
+    await page.reload();
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    await expect(discOf(page)).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => Boolean((window as unknown as { musicOpened?: boolean }).musicOpened))).toBe(false);
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "");
+  });
+
+  test("plays and pauses from the pill without replacing the audio", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    await discOf(page).click();
+    const audio = audioOf(page);
+    await expect.poll(() => isPaused(audio)).toBe(false);
+    await pillOf(page).locator("[data-music-toggle]").click();
+    await expect.poll(() => isPaused(audio)).toBe(true);
+    await expect(pillOf(page)).toHaveAttribute("data-state", "paused");
+    await pillOf(page).locator("[data-music-toggle]").click();
+    await expect.poll(() => isPaused(audio)).toBe(false);
+    await expect(audio).toHaveCount(1);
+  });
+
+  test("the record turns only while the song plays, and the ring follows it", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    const record = discOf(page).locator("img");
+    const state = () => record.evaluate((img) => { const style = getComputedStyle(img); return { name: style.animationName, playState: style.animationPlayState, duration: style.animationDuration }; });
+    await expect.poll(async () => (await state()).playState).toBe("running");
+    expect(await state()).toMatchObject({ name: "music-spin", duration: "6s" });
+    await audioOf(page).evaluate((element) => (element as HTMLAudioElement).pause());
+    await expect.poll(async () => (await state()).playState).toBe("paused");
+    await expect.poll(() => discOf(page).locator("[data-music-ring]").evaluate((ring) => ring.style.getPropertyValue("--music-progress")), { timeout: 15_000 }).not.toBe("");
   });
 });
 
-/** True while the tag is shown and overlaps a hero or nav action. */
-const tagCoversAction = (page: Page) =>
+test.describe("background music disc motion, phone", { tag: ["@single"] }, () => {
+  test.use({ storageState: { cookies: [], origins: [] }, viewport: PHONE, hasTouch: true, isMobile: true });
+
+  // Seeks the transition on the clock (L-009): a paused animation, read at set times, not frames.
+  test("wipes open and closed on the pill's own clip, with its shadow following", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    const wipe = page.locator(".music-player_wipe");
+    const timing = () =>
+      wipe.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { property: style.transitionProperty, duration: style.transitionDuration, delay: style.transitionDelay, width: element.getBoundingClientRect().width };
+      });
+    const closed = await timing();
+    expect(closed.property).toBe("clip-path");
+    expect(closed.duration).toBe("0.14s");
+    expect(closed.delay).toBe("0.06s");
+    // Read in the task that taps, before a slow page lets the 280ms run out.
+    const runs = await wipe.evaluate((element) => {
+      document.querySelector<HTMLElement>("[data-music-disc]")!.click();
+      return element.getAnimations().map((animation) => ({ property: (animation as CSSTransition).transitionProperty, keyframes: (animation.effect as KeyframeEffect).getKeyframes().map((frame) => frame.clipPath) }));
+    });
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    const open = await timing();
+    expect(open.duration).toBe("0.28s");
+    expect(open.delay).toBe("0s");
+    // The width never animates: the box is the same wide pill throughout; only the clip moves.
+    expect(open.width).toBe(closed.width);
+    // The tap started a clip-path transition from the disc's footprint to the whole pill, and nothing else moved.
+    expect(runs).toHaveLength(1);
+    expect(runs[0].property).toBe("clip-path");
+    expect(runs[0].keyframes[0]).toContain("calc(100% - 56px)");
+    expect(runs[0].keyframes[1]).toBe("inset(0px round 28px)");
+    const shell = await page.locator(".music-player_shell").evaluate((element) => getComputedStyle(element).filter);
+    expect(shell).toContain("drop-shadow");
+  });
+
+  test("the open pill stays inside the viewport and shares the disc's corner", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    const before = (await discOf(page).boundingBox())!;
+    await discOf(page).click();
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    await expect(pillOf(page).locator("[data-music-controls]")).toBeVisible();
+    await expect.poll(async () => (await page.locator(".music-player_wipe").evaluate((element) => element.getAnimations().length))).toBe(0);
+    const after = (await discOf(page).boundingBox())!;
+    expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+    const pill = (await pillOf(page).boundingBox())!;
+    expect(pill.x).toBeGreaterThanOrEqual(0);
+    expect(pill.x + pill.width).toBeLessThanOrEqual(PHONE.width);
+    expect(Math.abs(pill.width - 358)).toBeLessThanOrEqual(1);
+    expect(Math.abs(pill.height - 56)).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe("background music disc motion, reduced", { tag: ["@single"] }, () => {
+  test.use({ storageState: { cookies: [], origins: [] }, viewport: PHONE, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+
+  test("crossfades in 150ms with no wipe, slide or spin", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    // The page's own rule makes CSS transitions instant under reduced motion (L-026), so the
+    // crossfade is a Web Animation: read it in the same task as the tap that starts it.
+    const fades = await page.evaluate(() => {
+      const timings = () =>
+        [".music-player_wipe", "[data-music-controls]"].flatMap((selector) =>
+          document.querySelector(selector)!.getAnimations().map((animation) => ({
+            selector,
+            property: Object.keys((animation.effect as KeyframeEffect).getKeyframes()[0]).filter((key) => !["offset", "easing", "composite", "computedOffset"].includes(key)).join(),
+            duration: animation.effect!.getComputedTiming().duration,
+          })),
+        );
+      document.querySelector<HTMLElement>("[data-music-disc]")!.click();
+      const opening = timings();
+      document.querySelector<HTMLElement>("[data-music-disc]")!.click();
+      return { opening, closing: timings() };
+    });
+    // Opening starts two (the paper and the controls); closing starts two more beside them.
+    for (const [list, count] of [[fades.opening, 2], [fades.closing, 4]] as const) {
+      const perceptible = list.filter((fade) => Number(fade.duration) > 1);
+      expect(perceptible.map((fade) => [fade.property, fade.duration])).toEqual(Array.from({ length: count }, () => ["opacity", 150]));
+    }
+    const resting = await page.evaluate(() => {
+      const wipe = getComputedStyle(document.querySelector(".music-player_wipe")!);
+      const controls = getComputedStyle(document.querySelector("[data-music-controls]")!);
+      const record = getComputedStyle(document.querySelector("[data-music-disc] img")!);
+      return { wipe: wipe.transitionProperty, controlsTransform: controls.transform, spin: record.animationName };
+    });
+    expect(resting).toEqual({ wipe: "opacity", controlsTransform: "none", spin: "none" });
+  });
+});
+
+/** The hero or nav action the phone disc overlaps while it is shown, with both boxes; empty when it covers none. */
+const actionUnderDisc = (page: Page) =>
   page.evaluate(() => {
-    const tag = document.querySelector<HTMLElement>("[data-music-tag]")!;
-    if (getComputedStyle(tag).visibility === "hidden") return false;
-    const box = tag.getBoundingClientRect();
+    const disc = document.querySelector<HTMLElement>("[data-music-disc]")!;
+    if (getComputedStyle(disc).visibility === "hidden") return "";
+    const box = disc.getBoundingClientRect();
+    const round = (rect: DOMRect) => [rect.left, rect.top, rect.right, rect.bottom].map(Math.round).join(",");
+    for (const selector of [".hero_rsvp", ".hero_weekend", ".nav_rsvp"]) {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element || element.getClientRects().length === 0 || getComputedStyle(element).visibility === "hidden") continue;
+      const other = element.getBoundingClientRect();
+      if (box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top) return `${selector} [${round(other)}] under the disc [${round(box)}] at scroll ${Math.round(scrollY)}`;
+    }
+    return "";
+  });
+const tagCoversAction = async (page: Page) => (await actionUnderDisc(page)) !== "";
+
+/** True when the pill, at its open size, overlaps a hero or nav action that is on screen. */
+const openPillCoversAction = (page: Page) =>
+  page.evaluate(() => {
+    const box = document.querySelector<HTMLElement>("[data-music-pill]")!.getBoundingClientRect();
     return [".hero_rsvp", ".hero_weekend", ".nav_rsvp"].some((selector) => {
       const element = document.querySelector<HTMLElement>(selector);
       if (!element || element.getClientRects().length === 0 || getComputedStyle(element).visibility === "hidden") return false;
@@ -273,31 +513,43 @@ const tagCoversAction = (page: Page) =>
     });
   });
 
-test.describe("background music tag, short phone", { tag: ["@single"] }, () => {
+test.describe("background music disc, short phone", { tag: ["@single"] }, () => {
   test.use({ storageState: { cookies: [], origins: [] }, viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
 
-  test("waits for the hero buttons to clear its corner, and keeps playing meanwhile", async ({ page }) => {
+  test("sits in its corner clear of the hero buttons, and opens only once they have scrolled clear", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Just browsing" }).click();
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
-    await expect(tagOf(page)).toBeHidden();
+    // The hero buttons are centred and the disc is in the corner: it is there at rest.
+    await expect(discOf(page)).toBeVisible();
+    const box = (await discOf(page).boundingBox())!;
+    expect(Math.abs(375 - (box.x + box.width) - 16)).toBeLessThanOrEqual(6);
+    expect(Math.abs(667 - (box.y + box.height) - 16)).toBeLessThanOrEqual(6);
+    expect(await tagCoversAction(page)).toBe(false);
     await expect.poll(() => isPaused(audioOf(page))).toBe(false);
 
-    // Scroll the CTA group to just above the tag's band.
+    // The wide pill would cover them, so a tap leaves it a disc.
+    await discOf(page).click();
+    await page.waitForTimeout(300);
+    await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "");
+    await expect(discOf(page)).toBeVisible();
+    expect(await tagCoversAction(page)).toBe(false);
+
+    // Scroll the CTA group to just above the pill's band, and it opens clear of them.
     await page.evaluate(() => {
       const bottom = document.querySelector(".hero_actions")!.getBoundingClientRect().bottom;
       window.scrollBy(0, bottom - (window.innerHeight - 102) + 40);
     });
-    await expect(tagOf(page)).toBeVisible();
-    expect(await tagCoversAction(page)).toBe(false);
+    await expect(discOf(page)).toBeVisible();
+    await discOf(page).click();
+    await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
+    await expect(pillOf(page).locator("[data-music-controls]")).toBeVisible();
+    expect(await openPillCoversAction(page)).toBe(false);
     expect(await isPaused(audioOf(page))).toBe(false);
-
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(tagOf(page)).toBeHidden();
   });
 });
 
-test.describe("background music tag, phone sizes", { tag: ["@single"] }, () => {
+test.describe("background music disc, phone sizes", { tag: ["@single"] }, () => {
   test.use({ reducedMotion: "reduce", hasTouch: true, isMobile: true });
 
   test("never covers the hero or nav actions while it is shown", async ({ page }) => {
@@ -309,13 +561,14 @@ test.describe("background music tag, phone sizes", { tag: ["@single"] }, () => {
       await expect(page.locator("[data-preloader]")).toHaveCount(0);
       for (const y of [0, 150, 300, 450]) {
         await page.evaluate((top) => window.scrollTo(0, top), y);
-        await expect.poll(() => tagCoversAction(page), { message: `tag over an action at ${width}x${height}, scroll ${y}` }).toBe(false);
+        // A busy runner can leave the page unanswering for seconds at a time (L-023): wait long, assert what is found.
+        await expect.poll(async () => `${width}x${height} y${y}: ${await actionUnderDisc(page)}`, SLOW).toBe(`${width}x${height} y${y}: `);
       }
     }
     // A comfortable phone shows it straight away.
     await page.setViewportSize(PHONE);
     await page.goto("/");
-    await expect(tagOf(page)).toBeVisible();
+    await expect(discOf(page)).toBeVisible();
   });
 });
 
@@ -374,14 +627,16 @@ test.describe("background music tag and the RSVP card", () => {
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
     const name = page.locator("#rsvp [data-rsvp-name]");
     const find = page.locator("#rsvp [data-rsvp-find] button[type='submit']");
+    const phone = (page.viewportSize()?.width ?? 0) < 768;
+    const surface = phone ? pillOf(page) : tagOf(page);
     await reveal(find);
 
     // No field has focus yet, so only the card in the tag's band can be hiding it.
     await toViewportBottom(find);
-    await expect(tagOf(page)).toHaveAttribute("data-music-hidden-for-form", "", SLOW);
-    await expect(tagOf(page)).not.toHaveAttribute("data-music-hidden-for-input", "");
-    await expect(tagOf(page)).toBeHidden(SLOW);
-    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    await expect(surface).toHaveAttribute("data-music-hidden-for-form", "", SLOW);
+    await expect(surface).not.toHaveAttribute("data-music-hidden-for-input", "");
+    await expect(surface).toBeHidden(SLOW);
+    expect(await pointerEventsOf(phone ? discOf(page) : tagOf(page))).toBe("none");
     expect(await underTheTag(find), "the button sits where the tag rests").toBe(true);
     expect(await hitAtCentre(find)).toBe("control");
 
@@ -392,7 +647,7 @@ test.describe("background music tag and the RSVP card", () => {
     await pressAndHold(page, find);
     await expect(name).not.toBeFocused();
     expect(await hitAtCentre(find)).toBe("control");
-    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    expect(await pointerEventsOf(phone ? discOf(page) : tagOf(page))).toBe("none");
     await page.mouse.up();
     await expect(page.locator("#rsvp [data-rsvp-panel='2']")).toBeVisible(SLOW);
   });
@@ -462,18 +717,18 @@ test.describe("background music tag and a press that blurs a field", { tag: ["@s
       button.addEventListener("click", (event) => { event.preventDefault(); button.dataset.musicSpecClicks = String(Number(button.dataset.musicSpecClicks) + 1); });
     });
     await field.focus();
-    await expect(tagOf(page)).toBeHidden();
+    await expect(discOf(page)).toBeHidden();
     await toViewportBottom(submit);
-    await expect(tagOf(page)).not.toHaveAttribute("data-music-hidden-for-form", "");
+    await expect(discOf(page)).not.toHaveAttribute("data-music-hidden-for-form", "");
     expect(await underTheTag(submit), "the button sits where the tag rests").toBe(true);
 
     await pressAndHold(page, submit);
     await expect(field).not.toBeFocused();
     expect(await hitAtCentre(submit)).toBe("control");
-    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    expect(await pointerEventsOf(discOf(page))).toBe("none");
     await page.mouse.up();
     await expect(submit).toHaveAttribute("data-music-spec-clicks", "1");
-    await expect(tagOf(page)).toBeVisible();
-    expect(await pointerEventsOf(tagOf(page))).toBe("auto");
+    await expect(discOf(page)).toBeVisible();
+    expect(await pointerEventsOf(discOf(page))).toBe("auto");
   });
 });

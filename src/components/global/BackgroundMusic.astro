@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
 import { BACKGROUND_MUSIC } from "@/consts";
+import discImage from "@/assets/images/now-playing-disc.png";
 
 const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
 ---
@@ -17,6 +18,26 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
         <svg data-music-pause-icon viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="1.5" width="3" height="11" fill="currentColor" /><rect x="8.5" y="1.5" width="3" height="11" fill="currentColor" /></svg>
       </button>
       <span class="music-player_progress"><span data-music-fill></span></span>
+    </div>
+    <div class="music-player_pill" data-music-pill data-music-surface data-state="idle">
+      <span class="music-player_shell" aria-hidden="true"><span class="music-player_paper"></span><span class="music-player_wipe"></span></span>
+      <div class="music-player_controls" data-music-controls id="music-player-controls">
+        <span class="music-player_info"><span class="music-player_label">our song ♪</span><span class="music-player_title">{BACKGROUND_MUSIC.title}</span></span>
+        <button type="button" data-music-mute aria-pressed="false" aria-label={`Mute ${songName}`}>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6v4h3l4 3.2V2.8L5 6z" fill="currentColor" /><path data-music-waves d="M11.2 5.4a3.8 3.8 0 0 1 0 5.2M12.9 3.7a6.2 6.2 0 0 1 0 8.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.4" /><path data-music-slash d="M11.4 5.8l3.2 4.4M14.6 5.8l-3.2 4.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.4" /></svg>
+        </button>
+        <button type="button" data-music-toggle aria-pressed="false" aria-label={`Play ${songName}`}>
+          <svg data-music-play-icon viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 1.8v10.4L12 7z" fill="currentColor" /></svg>
+          <svg data-music-pause-icon viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="1.5" width="3" height="11" fill="currentColor" /><rect x="8.5" y="1.5" width="3" height="11" fill="currentColor" /></svg>
+        </button>
+      </div>
+      <button type="button" class="music-player_disc" data-music-disc data-song-name={songName} aria-expanded="false" aria-controls="music-player-controls" aria-label={`Show player for ${songName}`}>
+        <Image src={discImage} alt="" width={44} height={44} loading="lazy" />
+        <svg class="music-player_ring" viewBox="0 0 56 56" aria-hidden="true">
+          <circle class="music-player_ring-track" cx="28" cy="28" r="27" />
+          <circle class="music-player_ring-fill" data-music-ring cx="28" cy="28" r="27" pathLength="1" />
+        </svg>
+      </button>
     </div>
     <div class="music-player_string" aria-hidden="true"><svg viewBox="0 0 80 60"><path d="M70 52C58 50 44 42 30 34S6 18 4 6" /><path d="M70 52C60 44 46 30 34 22S14 10 10 2" /></svg></div>
   </div>
@@ -35,6 +56,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     const elapsed = [...document.querySelectorAll<HTMLElement>("[data-music-elapsed]")];
     const durations = [...document.querySelectorAll<HTMLElement>("[data-music-duration]")];
     const fills = [...document.querySelectorAll<HTMLElement>("[data-music-fill]")];
+    const rings = [...document.querySelectorAll<HTMLElement>("[data-music-ring]")];
     const songName = audio.dataset.songName || "the song";
     const formatTime = (seconds: number) => {
       if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -61,6 +83,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
       const ratio = audio.duration > 0 ? Math.min(1, audio.currentTime / audio.duration) : 0;
       const value = `${ratio}`;
       fills.forEach((fill) => { if (fill.dataset.value !== value) { fill.dataset.value = value; fill.style.setProperty("--music-progress", value); } });
+      rings.forEach((ring) => { if (ring.dataset.value !== value) { ring.dataset.value = value; ring.style.setProperty("--music-progress", value); } });
       const current = formatTime(audio.currentTime);
       const total = formatTime(audio.duration);
       elapsed.forEach((element) => { if (element.textContent !== current) element.textContent = current; });
@@ -85,15 +108,15 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     setState("idle");
 
     const pending = document.documentElement.classList.contains("ew-preloader-pending");
-    if (pending) root.removeAttribute("data-music-visible");
-    document.addEventListener("ew:preloader-close", () => root.setAttribute("data-music-visible", ""), { once: true });
+    if (pending) surfaces.forEach((surface) => surface.removeAttribute("data-music-visible"));
+    document.addEventListener("ew:preloader-close", () => surfaces.forEach((surface) => surface.setAttribute("data-music-visible", "")), { once: true });
     // The tag hides as soon as a form field takes focus, but returns only once no pointer is down.
     // Pressing a button blurs the field before the release: a tag that came back in between would
     // sit under the pointer, take the release, and the button would never get its click.
     let fieldFocused = false;
     let held = false;
     const isField = (target: EventTarget | null) => target instanceof HTMLElement && target.matches("input, select, textarea");
-    const syncFieldHide = () => { if (fieldFocused || !held) root.toggleAttribute("data-music-hidden-for-input", fieldFocused); };
+    const syncFieldHide = () => { if (fieldFocused || !held) surfaces.forEach((surface) => surface.toggleAttribute("data-music-hidden-for-input", fieldFocused)); };
     const press = () => { held = true; };
     // In a new task, so the click this release dispatches has gone to its target first.
     const release = () => { held = false; setTimeout(syncFieldHide); };
@@ -134,9 +157,63 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     [data-music-play-icon][hidden], [data-music-pause-icon][hidden] { display: none; }
     .music-player_progress { position: absolute; right: 0; bottom: 0; left: 0; height: 0.125rem; background: #e6ddcb; }
     .music-player_progress span { display: block; width: 100%; height: 100%; background: var(--accent-500); transform: scaleX(var(--music-progress, 0)); transform-origin: left; }
+    .music-player_pill { display: none; }
+    .music-player_ring { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; transform: rotate(-90deg); }
+    .music-player_ring circle { fill: none; stroke-width: 2; }
+    .music-player_ring-track { stroke: #e6ddcb; }
+    .music-player_ring-fill { stroke: var(--accent-500); stroke-dasharray: 1 2; stroke-dashoffset: calc(1 - var(--music-progress, 0)); stroke-linecap: round; }
+    @keyframes music-spin { to { transform: rotate(1turn); } }
     .music-player_string { position: absolute; top: -1rem; left: -3rem; width: 5rem; height: 3.75rem; pointer-events: none; }
     .music-player_string svg { display: block; width: 100%; height: 100%; overflow: visible; }
     .music-player_string path { fill: none; stroke: var(--accent-500); stroke-linecap: round; stroke-width: 2; }
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) { pointer-events: none; }
+    @media (max-width: 47.999rem) {
+      /* The root is the closed disc. The pill is as wide as it gets and always there; the wipe uncovers it. */
+      .music-player_root { width: 3.5rem; height: 3.5rem; }
+      .music-player_tag, .music-player_string { display: none; }
+      .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) :is(.music-player_disc, .music-player_controls) { pointer-events: none; }
+      .music-player_pill { position: absolute; right: 0; bottom: 0; display: flex; width: min(22.375rem, calc(100vw - 2rem)); height: 3.5rem; align-items: center; gap: 0.5rem; padding-left: 1.375rem; color: var(--dark-900); pointer-events: none; }
+      /* clip-path would cut a box-shadow off, so the shadow is a filter on a shell that holds the paper:
+         it follows whatever the wipe has uncovered. Only transform, opacity and clip-path animate. */
+      .music-player_shell { position: absolute; inset: 0; filter: drop-shadow(0 1px 0 rgb(31 47 92 / 6%)) drop-shadow(0 0.75rem 1.75rem rgb(31 47 92 / 22%)); pointer-events: none; }
+      .music-player_paper, .music-player_wipe { position: absolute; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; }
+      .music-player_paper { right: 0; bottom: 0; width: 3.5rem; height: 3.5rem; border-radius: 50%; }
+      .music-player_wipe { inset: 0; clip-path: inset(0 0 0 calc(100% - 3.5rem) round 1.75rem); transition: clip-path 140ms cubic-bezier(0.32, 0.72, 0, 1) 60ms; }
+      .music-player_root[data-music-open] .music-player_wipe { clip-path: inset(0 round 1.75rem); transition-duration: 280ms; transition-delay: 0s; }
+      .music-player_controls { position: relative; display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; opacity: 0; transform: translateX(0.5rem); visibility: hidden; pointer-events: none; transition: opacity 120ms ease-out, transform 120ms ease-out, visibility 0s linear 120ms; }
+      .music-player_root[data-music-open] .music-player_controls { opacity: 1; transform: none; visibility: inherit; pointer-events: auto; transition: opacity 200ms ease-out 60ms, transform 200ms ease-out 60ms, visibility 0s; }
+      .music-player_pill :is([data-music-mute], [data-music-toggle]) { position: relative; display: grid; width: 2.5rem; height: 2.5rem; padding: 0; flex: 0 0 auto; place-items: center; border-radius: 50%; background: transparent; color: var(--dark-900); cursor: pointer; transition: background-color 0.2s, color 0.2s, opacity 0.2s; }
+      .music-player_pill :is([data-music-mute], [data-music-toggle])::before { content: ""; position: absolute; inset: -0.125rem; border-radius: 50%; }
+      .music-player_pill [data-music-mute] { border: 1px solid #d6cdbb; }
+      .music-player_pill [data-music-toggle] { border: 0.09375rem solid var(--dark-900); }
+      .music-player_pill [data-music-toggle] svg { grid-area: 1 / 1; width: 0.8125rem; height: 0.8125rem; }
+      .music-player_pill[data-state="playing"] [data-music-toggle] { background: var(--dark-900); color: var(--light-100); }
+      .music-player_pill[data-state="playing"] [data-music-toggle] svg { width: 0.75rem; height: 0.75rem; }
+      .music-player_pill [data-music-mute] svg { width: 1rem; height: 1rem; }
+      .music-player_pill [data-music-mute] [data-music-slash], .music-player_pill [data-music-mute][aria-pressed="true"] [data-music-waves] { display: none; }
+      .music-player_pill [data-music-mute][aria-pressed="true"] [data-music-slash] { display: block; }
+      .music-player_pill :is([data-music-mute], [data-music-toggle]):disabled { cursor: default; opacity: 0.4; }
+      .music-player_pill [data-music-disc] { position: relative; display: grid; width: 3.5rem; height: 3.5rem; padding: 0; flex: 0 0 auto; place-items: center; border: 0; border-radius: 50%; background: transparent; cursor: pointer; pointer-events: auto; transition: transform 150ms ease-out; -webkit-tap-highlight-color: transparent; }
+      .music-player_pill [data-music-disc]:active { transform: scale(0.97); }
+      .music-player_disc img { display: block; width: 2.75rem; height: 2.75rem; border-radius: 50%; object-fit: cover; animation: music-spin 6s linear infinite paused; }
+      .music-player_pill[data-state="playing"] .music-player_disc img { animation-play-state: running; }
+      .music-player_pill :is([data-music-disc], [data-music-mute], [data-music-toggle]):focus-visible { outline: 2px solid var(--accent-500); outline-offset: 2px; }
+      @media (hover: hover) {
+        .music-player_pill [data-music-toggle]:not(:disabled):hover { background: var(--dark-900); color: var(--light-100); }
+        .music-player_pill [data-music-mute]:not(:disabled):hover { background: rgb(31 47 92 / 6%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        /* Shorter, not absent: the pill crossfades in; nothing wipes, slides, presses or spins. */
+        .music-player_wipe, .music-player_root[data-music-open] .music-player_wipe { clip-path: inset(0 round 1.75rem); }
+        .music-player_wipe { opacity: 0; transition: opacity 150ms linear; }
+        .music-player_root[data-music-open] .music-player_wipe { opacity: 1; transition: opacity 150ms linear; }
+        .music-player_controls, .music-player_root[data-music-open] .music-player_controls { transform: none; }
+        .music-player_controls { transition: opacity 150ms linear, visibility 0s linear 150ms; }
+        .music-player_root[data-music-open] .music-player_controls { transition: opacity 150ms linear, visibility 0s; }
+        .music-player_pill [data-music-disc], .music-player_pill [data-music-disc]:active { transform: none; transition: none; }
+        .music-player_disc img { animation: none; }
+      }
+    }
     @media (min-width: 64rem) {
       /* The polaroid in the hero is the player until the page scrolls past it. */
       .music-player_root:not([data-music-docked]):not([data-music-flying]) :is(.music-player_tag, .music-player_string) { visibility: hidden; }

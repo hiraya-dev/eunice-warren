@@ -377,6 +377,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/global/**`, `src/scripts/**`, `tests/**`
 
+### L-044 — A real feature retires its placeholder
+- **Date:** 2026-11-21
+- **Trigger:** PR #92, Local-review round (the user asked to remove the nav "NOW PLAYING · Dancing Queen" pill)
+- **Symptom:** the site played the real background song while a static nav pill and the menu panel named a different, made-up song.
+- **Root cause:** an earlier design shipped a decorative stand-in for the feature, and the criteria for the real feature never searched for it.
+- **Rule:** when criteria add a real feature (music, a gallery, a countdown), grep `src/` for decorative stand-ins of the same feature (static copy, `aria-hidden` mock controls) and list each in the approval message with a recommendation to remove or wire it.
+- **Check:** the approval message for a new feature names any existing stand-in, or says none was found.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/consts.ts`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
