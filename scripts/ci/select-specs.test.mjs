@@ -47,6 +47,8 @@ test("FAQ stops at its owner before shared layout importers", () => {
     "tests/tokens.spec.ts",
   ]);
 });
+test("the hero selects the preloader spec that guards its entrance (L-040)", () =>
+  assert.ok(choose(["src/components/sections/Hero.astro"]).specs.includes("tests/preloader.spec.ts")));
 test("a changed spec selects only itself", () =>
   assert.deepEqual(choose(["tests/faq.spec.ts"]).specs, ["tests/faq.spec.ts"]));
 test("content prefix selects its owning section", () =>

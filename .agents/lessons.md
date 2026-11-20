@@ -361,7 +361,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-020 — A selector's "no match" means run more, not nothing
 - **Date:** 2026-11-13
-- **Trigger:** carried over from adc-website (its L-037: `select-specs.mjs` printed `none` for a page no spec mapped); on this branch, Codex's first `select-specs` narrowed the shared `fade-in.ts` to one spec; repeat, #75: a new spec's `SPEC_SOURCES` entry copied its sibling's sources and missed `RsvpTicketPrinter.astro`, whose modal it asserts
+- **Trigger:** carried over from adc-website (its L-037: `select-specs.mjs` printed `none` for a page no spec mapped); on this branch, Codex's first `select-specs` narrowed the shared `fade-in.ts` to one spec; repeat, #75: a new spec's `SPEC_SOURCES` entry copied its sibling's sources and missed `RsvpTicketPrinter.astro`, whose modal it asserts; repeat, #89 CHANGES_REQUIRED: the new preloader spec asserts the hero's entrance but its entry listed only preloader sources
 - **Symptom:** a changed file went untested locally while the selector looked green.
 - **Root cause:** each fail-closed rule covered the inputs it named, and the leftover case (an unmapped file, an import form the parser skips) fell to the narrow default.
 - **Rule:** in any script that narrows what runs (spec selection, CI routing, `already-tested`), make the default for an unmapped or unparsed input the widest option, and add a test for the leftover case.

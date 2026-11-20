@@ -82,6 +82,7 @@ export const SPEC_SOURCES = {
   "tests/pre-wedding.spec.ts": ["src/components/sections/PreWedding.astro"],
   "tests/preloader.spec.ts": [
     "src/components/global/Preloader.astro",
+    "src/components/sections/Hero.astro",
     "src/lib/guest.ts",
     "src/scripts/turnstile.ts",
   ],
