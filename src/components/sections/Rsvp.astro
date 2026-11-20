@@ -3,7 +3,7 @@ import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import stamp from "@/assets/images/rsvp/stamp-received.png";
 import postcardPaper from "@/assets/textures/postcard-paper.jpg";
-import { RSVP_DEADLINE_LABEL } from "@/consts";
+import { CHURCH_MAP_URL, MESSAGE_US_HREF, RSVP_DEADLINE_LABEL, WEDDING_CALENDAR_PATH } from "@/consts";
 import RsvpTicketPrinter from "@/components/sections/RsvpTicketPrinter.astro";
 
 interface Props extends HTMLAttributes<"section"> {
@@ -16,9 +16,9 @@ interface Props extends HTMLAttributes<"section"> {
 }
 
 const {
-  messageHref = "#",
-  calendarHref = "#",
-  mapsHref = "#",
+  messageHref = MESSAGE_US_HREF,
+  calendarHref = WEDDING_CALENDAR_PATH,
+  mapsHref = CHURCH_MAP_URL,
   class: className,
   ...rest
 } = Astro.props;
@@ -59,7 +59,7 @@ const {
               Our Lady of the Most Holy Rosary Parish, Boracay
             </li><li>Island formal</li>
           </ul><div class="rsvp_invitation-links">
-            <a href={calendarHref}>Add to calendar ↗</a><a href={mapsHref}
+            <a href={calendarHref}>Add to calendar ↗</a><a href={mapsHref} target="_blank" rel="noopener"
               >Open in maps ↗</a
             >
           </div>

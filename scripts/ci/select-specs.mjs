@@ -61,6 +61,15 @@ export const SPEC_SOURCES = {
     "src/components/sections/Invitation.astro",
     "src/scripts/draw-path.ts",
   ],
+  "tests/links.spec.ts": [
+    "src/components/sections/Hero.astro",
+    "src/components/sections/Invitation.astro",
+    "src/components/sections/Wedding.astro",
+    "src/components/sections/Rsvp.astro",
+    "src/components/global/Preloader.astro",
+    "src/components/global/Footer.astro",
+    "src/pages/eunice-warren-wedding.ics.ts",
+  ],
   "tests/nav-hover.spec.ts": [
     "src/components/global/Nav.astro",
     "src/components/global/NavLink.astro",

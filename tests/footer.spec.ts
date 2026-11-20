@@ -20,7 +20,7 @@ test.describe("Paper footer", () => {
     const images = await page.locator(".footer_stamp img, .footer_cluster img").all();
     expect(images).toHaveLength(4);
     for (const image of images) await expect(image).toHaveAttribute("alt", "");
-    await expect(page.getByRole("link", { name: "Back to top" })).toHaveAttribute("href", "#");
+    await expect(page.getByRole("link", { name: "Back to top" })).toHaveAttribute("href", "#hero");
   });
 
   test("keeps the date inside the viewport at mobile widths", { tag: ["@single"] }, async ({ page }) => {
