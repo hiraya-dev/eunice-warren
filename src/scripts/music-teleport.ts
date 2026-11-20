@@ -8,6 +8,38 @@ const FLIGHT_EASE = "power3.inOut";
 const FADE_DURATION = 0.2;
 
 /**
+ * Keeps the docked tag off a control. Watches `target` against the tag's band at the bottom of the
+ * viewport (tag height + bottom offset + 16) and sets `attribute`, a hide reason, on the tag while
+ * the target is in it. One reason per attribute, so reasons never fight. One observer, rebuilt on
+ * resize; nothing reads layout on scroll. `below` also counts a target still below the fold.
+ */
+function watchBand(container: HTMLElement, tag: HTMLElement, target: HTMLElement | null | undefined, attribute: string, below = false) {
+  if (!target) return () => {};
+  const set = (value: boolean) => tag.toggleAttribute(attribute, value);
+  let observer: IntersectionObserver | null = null;
+  let frame = 0;
+  const observe = () => {
+    observer?.disconnect();
+    const band = container.offsetHeight + parseFloat(getComputedStyle(container).bottom) + 16;
+    // The root becomes the band: its top edge is the band's, and `below` drops its bottom edge far
+    // past the fold. "Intersecting" then means some part of the target is in the band.
+    observer = new IntersectionObserver(([entry]) => set(entry.isIntersecting), {
+      rootMargin: `-${Math.max(0, window.innerHeight - band)}px 0px ${below ? window.innerHeight * 10 : 0}px 0px`,
+    });
+    observer.observe(target);
+  };
+  const onResize = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(observe); };
+  window.addEventListener("resize", onResize, { passive: true });
+  observe();
+  return () => {
+    window.removeEventListener("resize", onResize);
+    cancelAnimationFrame(frame);
+    observer?.disconnect();
+    set(false);
+  };
+}
+
+/**
  * Moves the song between its two homes: the polaroid in the hero (desktop) and the luggage tag
  * docked bottom-right. `data-music-docked` on the container is the state signal; while a flight
  * runs, `data-music-flying` keeps both homes visible. The two cards never share an element, and
@@ -25,9 +57,16 @@ export function initMusicTeleport(container: HTMLElement) {
   const hero = document.querySelector<HTMLElement>("#hero");
   const collage = hero?.querySelector<HTMLElement>(".hero_collage");
   const setDocked = (docked: boolean) => container.toggleAttribute("data-music-docked", docked);
-  if (!tag || !polaroid || !card || !hero) {
+  if (!tag) {
     setDocked(true);
     return () => {};
+  }
+  // At every width, docked or flown in: the tag stays hidden while any part of the RSVP card (its
+  // fields, seat checkboxes, links and each step's buttons) is in the tag's band.
+  const formGuard = watchBand(container, tag, document.querySelector<HTMLElement>("#rsvp .rsvp_card"), "data-music-hidden-for-form");
+  if (!polaroid || !card || !hero) {
+    setDocked(true);
+    return formGuard;
   }
 
   const root = document.documentElement;
@@ -128,38 +167,14 @@ export function initMusicTeleport(container: HTMLElement) {
   });
 
   // Below 48rem the tag is docked from the start and could sit on the hero's RSVP buttons on a short
-  // phone. Step aside while the CTA group overlaps the tag's band at the bottom of the viewport (or
-  // is still below it), and return once it has scrolled above. One observer, rebuilt on resize.
-  const cta = hero.querySelector<HTMLElement>(".hero_actions");
+  // phone. Step aside while the CTA group is in the tag's band (or still below it), and return once
+  // it has scrolled above.
   const ctaGuard = gsap.matchMedia();
-  ctaGuard.add("(max-width: 47.999rem)", () => {
-    if (!cta) return;
-    const hidden = (value: boolean) => tag.toggleAttribute("data-music-hidden-for-cta", value);
-    let observer: IntersectionObserver | null = null;
-    let frame = 0;
-    const observe = () => {
-      observer?.disconnect();
-      const band = container.offsetHeight + parseFloat(getComputedStyle(container).bottom) + 16;
-      // The root becomes everything from the band's top edge down, so "intersecting" means the CTA's
-      // bottom is below that line.
-      observer = new IntersectionObserver(([entry]) => hidden(entry.isIntersecting), {
-        rootMargin: `-${Math.max(0, window.innerHeight - band)}px 0px ${window.innerHeight * 10}px 0px`,
-      });
-      observer.observe(cta);
-    };
-    const onResize = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(observe); };
-    window.addEventListener("resize", onResize, { passive: true });
-    observe();
-    return () => {
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(frame);
-      observer?.disconnect();
-      hidden(false);
-    };
-  });
+  ctaGuard.add("(max-width: 47.999rem)", () => watchBand(container, tag, hero.querySelector<HTMLElement>(".hero_actions"), "data-music-hidden-for-cta", true));
 
   const teardown = () => {
     ctaGuard.revert();
+    formGuard();
     mm.revert();
     settle(true);
   };

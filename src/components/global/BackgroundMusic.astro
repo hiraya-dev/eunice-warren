@@ -75,7 +75,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     mutes.forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); audio.muted = !audio.muted; setState(root.dataset.state as "idle" | "playing" | "paused" | "error"); }));
     document.querySelector<HTMLElement>("[data-music-tag]")?.addEventListener("click", (event) => { if (!(event.target as HTMLElement).closest("button")) toggle(); });
     document.addEventListener("ew:music-start", start);
-    document.addEventListener("ew:playlist-play", () => { audio.pause(); setState("paused"); });
+    document.addEventListener("ew:playlist-play", () => { if (audio.error) return; audio.pause(); setState("paused"); });
     audio.addEventListener("play", () => setState("playing"));
     audio.addEventListener("pause", () => { if (!audio.ended && !audio.error) setState("paused"); });
     audio.addEventListener("timeupdate", updateProgress);
@@ -87,10 +87,24 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     const pending = document.documentElement.classList.contains("ew-preloader-pending");
     if (pending) root.removeAttribute("data-music-visible");
     document.addEventListener("ew:preloader-close", () => root.setAttribute("data-music-visible", ""), { once: true });
-    document.addEventListener("focusin", (event) => { if ((event.target as HTMLElement).matches("input, select, textarea")) root.setAttribute("data-music-hidden-for-input", ""); });
-    document.addEventListener("focusout", (event) => { if ((event.target as HTMLElement).matches("input, select, textarea")) root.removeAttribute("data-music-hidden-for-input"); });
+    // The tag hides as soon as a form field takes focus, but returns only once no pointer is down.
+    // Pressing a button blurs the field before the release: a tag that came back in between would
+    // sit under the pointer, take the release, and the button would never get its click.
+    let fieldFocused = false;
+    let held = false;
+    const isField = (target: EventTarget | null) => target instanceof HTMLElement && target.matches("input, select, textarea");
+    const syncFieldHide = () => { if (fieldFocused || !held) root.toggleAttribute("data-music-hidden-for-input", fieldFocused); };
+    const press = () => { held = true; };
+    // In a new task, so the click this release dispatches has gone to its target first.
+    const release = () => { held = false; setTimeout(syncFieldHide); };
+    const listeners = new AbortController();
+    const whilePressing = { capture: true, passive: true, signal: listeners.signal };
+    for (const type of ["pointerdown", "mousedown"]) window.addEventListener(type, press, whilePressing);
+    for (const type of ["pointerup", "pointercancel", "mouseup"]) window.addEventListener(type, release, whilePressing);
+    document.addEventListener("focusin", (event) => { if (isField(event.target)) { fieldFocused = true; syncFieldHide(); } }, { signal: listeners.signal });
+    document.addEventListener("focusout", (event) => { if (isField(event.target)) { fieldFocused = false; syncFieldHide(); } }, { signal: listeners.signal });
     const teardown = initMusicTeleport(container);
-    document.addEventListener("astro:before-swap", () => { teardown(); document.removeEventListener("ew:music-start", start); }, { once: true });
+    document.addEventListener("astro:before-swap", () => { teardown(); listeners.abort(); document.removeEventListener("ew:music-start", start); }, { once: true });
   }
 </script>}
 
@@ -98,7 +112,9 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
   @layer components {
     .music-player_root { position: fixed; z-index: 80; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); width: 16rem; height: 4.375rem; visibility: hidden; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
     .music-player_root:has([data-music-visible]) { visibility: visible; }
-    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta]) { visibility: hidden; opacity: 0; transform: translateY(0.75rem); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s; }
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) { visibility: hidden; opacity: 0; transform: translateY(0.75rem); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s; }
+    /* Visibility waits for the fade; clicks must not. */
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) .music-player_tag { pointer-events: none; }
     .music-player_tag { position: relative; display: flex; align-items: center; gap: 0.75rem; width: 100%; height: 100%; padding: 0 0.75rem 0 0.875rem; overflow: clip; border-radius: 0.375rem 0.875rem 0.875rem 0.375rem; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 1px 0 rgb(31 47 92 / 6%), 0 0.75rem 1.75rem rgb(31 47 92 / 22%); color: var(--dark-900); transform: rotate(-2deg); transform-origin: 0 100%; cursor: pointer; pointer-events: auto; }
     .music-player_tag[data-state="error"] { cursor: default; }
     .music-player_hole { width: 0.75rem; height: 0.75rem; flex: 0 0 auto; border: 0.125rem solid var(--border); border-radius: 50%; background: var(--light-100); box-shadow: inset 0 1px 2px rgb(31 47 92 / 35%); }

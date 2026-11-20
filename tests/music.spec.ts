@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { fakeFixtures } from "../src/lib/rsvp/store";
 import { reveal } from "./helpers/reveal";
 
 // Tall enough that the polaroid's buttons sit above the fold: Playwright centres a button it has to
@@ -315,5 +316,164 @@ test.describe("background music tag, phone sizes", { tag: ["@single"] }, () => {
     await page.setViewportSize(PHONE);
     await page.goto("/");
     await expect(tagOf(page)).toBeVisible();
+  });
+});
+
+/**
+ * Puts a control's bottom edge on the viewport's bottom edge. That is where a scroll-into-view lands
+ * a control reached from above, and it is the tag's band: CI's WebKit lands "Find my invite" there,
+ * the Mac does not. A step that is still laying out moves the control after the scroll, so this
+ * scrolls again until a later look finds it resting there.
+ */
+const toViewportBottom = (control: Locator) =>
+  expect
+    .poll(
+      () =>
+        control.evaluate((element) => {
+          const off = Math.abs(window.innerHeight - element.getBoundingClientRect().bottom);
+          if (off > 2) element.scrollIntoView({ block: "end", behavior: "instant" });
+          return off;
+        }),
+      { timeout: 15_000 },
+    )
+    .toBeLessThanOrEqual(2);
+/** What a press at the control's centre would land on. */
+const hitAtCentre = (control: Locator) =>
+  control.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    if (hit === element || element.contains(hit)) return "control";
+    return hit?.closest("[data-music-container]") ? "tag" : "other";
+  });
+/** True when the control's box and the tag's resting box share any area, so the tag would cover it if shown. */
+const underTheTag = (control: Locator) =>
+  control.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const tag = document.querySelector<HTMLElement>("[data-music-container]")!.getBoundingClientRect();
+    return box.left < tag.right && box.right > tag.left && box.top < tag.bottom && box.bottom > tag.top;
+  });
+const pointerEventsOf = (tag: Locator) => tag.evaluate((element) => getComputedStyle(element).pointerEvents);
+/** Presses at the control's centre and holds; the caller releases with `page.mouse.up()`. */
+const pressAndHold = async (page: Page, control: Locator) => {
+  const box = (await control.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+};
+// WebKit on the CI runner paints seconds apart (L-023), and the guards answer on a frame.
+const SLOW = { timeout: 15_000 };
+/** A new RSVP step focuses its heading a frame after it shows, and that focus scrolls the page: wait for it before scrolling. */
+const stepFocused = (page: Page, step: string) => expect(page.locator(`#rsvp [data-rsvp-panel='${step}'] :focus`)).toHaveCount(1, SLOW);
+
+test.describe("background music tag and the RSVP card", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  // Runs at each project's own size: webkit and mobile are the phones, chromium the docked desktop tag.
+  test("stays off Find my invite at the bottom of the screen, through the whole press", { tag: ["@smoke"] }, async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Just browsing" }).click();
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    const name = page.locator("#rsvp [data-rsvp-name]");
+    const find = page.locator("#rsvp [data-rsvp-find] button[type='submit']");
+    await reveal(find);
+
+    // No field has focus yet, so only the card in the tag's band can be hiding it.
+    await toViewportBottom(find);
+    await expect(tagOf(page)).toHaveAttribute("data-music-hidden-for-form", "", SLOW);
+    await expect(tagOf(page)).not.toHaveAttribute("data-music-hidden-for-input", "");
+    await expect(tagOf(page)).toBeHidden(SLOW);
+    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    expect(await underTheTag(find), "the button sits where the tag rests").toBe(true);
+    expect(await hitAtCentre(find)).toBe("control");
+
+    // The run that failed in CI: typing the name, then pressing the button. The press blurs the
+    // field before the release; a tag that came back in between took the release and the click.
+    await name.fill(fakeFixtures[0].members[0]);
+    await toViewportBottom(find);
+    await pressAndHold(page, find);
+    await expect(name).not.toBeFocused();
+    expect(await hitAtCentre(find)).toBe("control");
+    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    await page.mouse.up();
+    await expect(page.locator("#rsvp [data-rsvp-panel='2']")).toBeVisible(SLOW);
+  });
+});
+
+test.describe("background music tag and the RSVP card, desktop", { tag: ["@single"] }, () => {
+  test.use({ storageState: { cookies: [], origins: [] }, viewport: DESKTOP });
+
+  test("the docked tag hides while Continue is in its corner, and the song plays on", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Just browsing" }).click();
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    const audio = audioOf(page);
+    await expect.poll(() => isPaused(audio)).toBe(false);
+
+    // Past the hero the tag is docked and shown.
+    const heroHeight = await page.locator("#hero").evaluate((hero) => hero.getBoundingClientRect().height);
+    await page.evaluate((y) => window.scrollTo(0, y), heroHeight + 120);
+    await expect(containerOf(page)).toHaveAttribute("data-music-docked", "");
+    await expect(tagOf(page)).toBeVisible({ timeout: 5000 });
+
+    const name = page.locator("#rsvp [data-rsvp-name]");
+    await reveal(name);
+    await name.fill(fakeFixtures[0].members[0]);
+    await page.locator("#rsvp [data-rsvp-find] button[type='submit']").click();
+    const proceed = page.locator("#rsvp [data-rsvp-attending] button[type='submit']");
+    await expect(proceed).toBeVisible(SLOW);
+    await stepFocused(page, "2");
+
+    await toViewportBottom(proceed);
+    await expect(containerOf(page)).toHaveAttribute("data-music-docked", "");
+    await expect(tagOf(page)).toHaveAttribute("data-music-hidden-for-form", "");
+    await expect(tagOf(page)).not.toHaveAttribute("data-music-hidden-for-input", "");
+    await expect(tagOf(page)).toBeHidden();
+    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    expect(await underTheTag(proceed), "Continue sits where the tag rests").toBe(true);
+    expect(await hitAtCentre(proceed)).toBe("control");
+    await pressAndHold(page, proceed);
+    await page.mouse.up();
+    await expect(page.locator("#rsvp [data-rsvp-panel='3']")).toBeVisible(SLOW);
+    await stepFocused(page, "3");
+
+    // Hiding the tag is not pausing the song, and the tag is back once the card has left its band.
+    expect(await isPaused(audio)).toBe(false);
+    await page.evaluate((y) => window.scrollTo(0, y), heroHeight + 120);
+    await expect(tagOf(page)).toBeVisible({ timeout: 5000 });
+    await expect(tagOf(page)).not.toHaveAttribute("data-music-hidden-for-form", "");
+    expect(await pointerEventsOf(tagOf(page))).toBe("auto");
+    expect(await isPaused(audio)).toBe(false);
+  });
+});
+
+test.describe("background music tag and a press that blurs a field", { tag: ["@single"] }, () => {
+  test.use({ storageState: { cookies: [], origins: [] }, viewport: PHONE, hasTouch: true, isMobile: true });
+
+  // Outside the RSVP card nothing keeps the tag out of its band, so only the held pointer does.
+  test("comes back after the release, never under the pointer", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Just browsing" }).click();
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    const field = page.locator("#playlist form input[name='song']");
+    const submit = page.locator("#playlist form button[type='submit']");
+    await reveal(submit);
+    // Count the click and stop it there: this is about where it lands, not about sending a song.
+    await submit.evaluate((button) => {
+      button.dataset.musicSpecClicks = "0";
+      button.addEventListener("click", (event) => { event.preventDefault(); button.dataset.musicSpecClicks = String(Number(button.dataset.musicSpecClicks) + 1); });
+    });
+    await field.focus();
+    await expect(tagOf(page)).toBeHidden();
+    await toViewportBottom(submit);
+    await expect(tagOf(page)).not.toHaveAttribute("data-music-hidden-for-form", "");
+    expect(await underTheTag(submit), "the button sits where the tag rests").toBe(true);
+
+    await pressAndHold(page, submit);
+    await expect(field).not.toBeFocused();
+    expect(await hitAtCentre(submit)).toBe("control");
+    expect(await pointerEventsOf(tagOf(page))).toBe("none");
+    await page.mouse.up();
+    await expect(submit).toHaveAttribute("data-music-spec-clicks", "1");
+    await expect(tagOf(page)).toBeVisible();
+    expect(await pointerEventsOf(tagOf(page))).toBe("auto");
   });
 });
