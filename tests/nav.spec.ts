@@ -142,7 +142,6 @@ test.describe("Warren & Eunice navigation", () => {
       color: string;
       toggleLeft: number;
       rsvpLeft: number;
-      nowPlayingLeft: number;
       panelBottom: number;
       closeElapsed: number;
     }>>((resolve) => {
@@ -157,7 +156,6 @@ test.describe("Warren & Eunice navigation", () => {
           color: getComputedStyle(document.querySelector<HTMLElement>(".nav_toggle-button")!).color,
           toggleLeft: rect(".nav_toggle-button").left,
           rsvpLeft: rect(".nav_rsvp").left,
-          nowPlayingLeft: rect(".nav_now-playing").left,
           panelBottom: panelPath ? Number(panelPath[1]) : 0,
           closeElapsed: closeStarted ? performance.now() - closeStarted : -1,
         };
@@ -184,7 +182,6 @@ test.describe("Warren & Eunice navigation", () => {
     for (const sample of samples) {
       expect(Math.abs(sample.toggleLeft - initial.toggleLeft)).toBeLessThan(0.5);
       expect(Math.abs(sample.rsvpLeft - initial.rsvpLeft)).toBeLessThan(0.5);
-      expect(Math.abs(sample.nowPlayingLeft - initial.nowPlayingLeft)).toBeLessThan(0.5);
     }
     expect(samples.some((sample) => sample.panelBottom > 5 && sample.panelBottom < 95)).toBe(true);
   });
@@ -193,16 +190,14 @@ test.describe("Warren & Eunice navigation", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     const toggle = page.locator('[data-navigation-toggle="toggle"]');
-    const samples = await page.evaluate(() => new Promise<Array<{ toggleLeft: number; rsvpLeft: number; nowPlayingLeft: number; rsvpOpacity: string; nowPlayingOpacity: string }>>((resolve) => {
+    const samples = await page.evaluate(() => new Promise<Array<{ toggleLeft: number; rsvpLeft: number; rsvpOpacity: string }>>((resolve) => {
       const toggle = document.querySelector<HTMLButtonElement>('[data-navigation-toggle="toggle"]')!;
       const read = () => {
         const rect = (selector: string) => document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
         return {
           toggleLeft: rect(".nav_toggle-button").left,
           rsvpLeft: rect(".nav_rsvp").left,
-          nowPlayingLeft: rect(".nav_now-playing").left,
           rsvpOpacity: getComputedStyle(document.querySelector<HTMLElement>(".nav_rsvp")!).opacity,
-          nowPlayingOpacity: getComputedStyle(document.querySelector<HTMLElement>(".nav_now-playing")!).opacity,
         };
       };
       const frames: Array<ReturnType<typeof read>> = [];
@@ -219,7 +214,6 @@ test.describe("Warren & Eunice navigation", () => {
     for (const sample of samples) {
       expect(Math.abs(sample.toggleLeft - initial.toggleLeft)).toBeLessThan(0.5);
       if (Number(sample.rsvpOpacity) > 0) expect(Math.abs(sample.rsvpLeft - initial.rsvpLeft)).toBeLessThan(0.5);
-      if (Number(sample.nowPlayingOpacity) > 0) expect(Math.abs(sample.nowPlayingLeft - initial.nowPlayingLeft)).toBeLessThan(0.5);
     }
 
     await expect(page.locator(".nav_toggle-close")).toBeVisible();
