@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+
+// consts.ts imports an image asset, which node cannot load, so read the kill switch from its text.
+const MUSIC = /BACKGROUND_MUSIC\s*=\s*\{\s*enabled:\s*true/.test(readFileSync("src/consts.ts", "utf8"));
 
 test.describe("keepsakes hero", () => {
   for (const viewport of [{ width: 768, height: 1024 }, { width: 991, height: 760 }]) {
@@ -14,7 +18,8 @@ test.describe("keepsakes hero", () => {
         };
         const hero = document.querySelector<HTMLElement>("#hero")!.getBoundingClientRect();
         const text = [...document.querySelectorAll<HTMLElement>(".hero_date, .hero_title, .hero_subtitle, .hero_actions")].map(box);
-        const keepsakes = [...document.querySelectorAll<HTMLElement>("[data-hero-keepsake]")].map(box);
+        // Only the keepsakes shown at this width: .hero_music joins from 64rem, and replaces the sunset there.
+        const keepsakes = [...document.querySelectorAll<HTMLElement>("[data-hero-keepsake]")].filter((element) => element.getClientRects().length > 0).map(box);
         const rsvp = box(document.querySelector<HTMLElement>(".hero_rsvp")!);
         const weekend = box(document.querySelector<HTMLElement>(".hero_weekend")!);
         const intersects = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -29,7 +34,10 @@ test.describe("keepsakes hero", () => {
         };
       });
 
-      for (const keepsake of await page.locator("[data-hero-keepsake]").all()) await expect(keepsake).toBeVisible();
+      // 48rem to 63.99rem keeps the sunset polaroid; the song polaroid is a wide-screen keepsake.
+      for (const keepsake of await page.locator("[data-hero-keepsake]:not(.hero_music)").all()) await expect(keepsake).toBeVisible();
+      if (MUSIC) await expect(page.locator(".hero_music")).toBeHidden();
+      expect(metrics.keepsakes).toHaveLength(7);
       await expect(page.locator(".hero_date-full")).toBeVisible();
       await expect(page.locator(".hero_date-short")).toBeHidden();
       expect(metrics.actionsCentreDelta).toBeLessThanOrEqual(4);
@@ -45,8 +53,15 @@ test.describe("keepsakes hero", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await expect(page.locator("h1")).toHaveText("Warren & Eunice");
-    await expect(page.locator("[data-hero-keepsake]")).toHaveCount(7);
-    for (const keepsake of await page.locator("[data-hero-keepsake]").all()) await expect(keepsake).toBeVisible();
+    // With the song on, its polaroid replaces the sunset from 64rem: one more keepsake in the DOM, the same number shown.
+    await expect(page.locator("[data-hero-keepsake]")).toHaveCount(MUSIC ? 8 : 7);
+    if (MUSIC) {
+      await expect(page.locator(".hero_sunset")).toBeHidden();
+      await expect(page.locator(".hero_music")).toBeVisible();
+    }
+    const shown = page.locator(MUSIC ? "[data-hero-keepsake]:not(.hero_sunset)" : "[data-hero-keepsake]");
+    await expect(shown).toHaveCount(7);
+    for (const keepsake of await shown.all()) await expect(keepsake).toBeVisible();
   });
 
   test("uses the compact composition on mobile", { tag: ["@single"] }, async ({ page }) => {

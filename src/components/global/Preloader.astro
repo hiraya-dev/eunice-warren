@@ -181,15 +181,16 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     };
     document.addEventListener("keydown", onKeydown);
-    browse.addEventListener("click", close);
+    browse.addEventListener("click", () => { document.dispatchEvent(new CustomEvent("ew:music-start")); close(); });
     resetButton.addEventListener("click", () => setAskState());
     input.addEventListener("input", () => {
       if (state === "suggest") setAskState(false);
     });
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (state === "found") { finishClose(); return; }
+      if (state === "found") { document.dispatchEvent(new CustomEvent("ew:music-start")); finishClose(); return; }
       if (!input.value.trim()) { input.focus(); return; }
+      document.dispatchEvent(new CustomEvent("ew:music-start"));
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
       const submittedValue = input.value;

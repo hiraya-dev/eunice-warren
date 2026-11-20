@@ -362,7 +362,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
           if (timeout) window.clearTimeout(timeout);
           controller.addListener("playback_update", (event) => {
             if (event.data.isPaused) pause();
-            else play();
+            else { document.dispatchEvent(new CustomEvent("ew:playlist-play")); play(); }
           });
         },
       );

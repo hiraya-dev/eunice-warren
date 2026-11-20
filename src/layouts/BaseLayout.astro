@@ -5,6 +5,7 @@ import BaseHead from "@/components/utility/BaseHead.astro";
 import SkipLink from "@/components/global/SkipLink.astro";
 import Nav from "@/components/global/Nav.astro";
 import Footer from "@/components/global/Footer.astro";
+import BackgroundMusic from "@/components/global/BackgroundMusic.astro";
 import type { SeoProps } from "@/types.ts";
 
 type Props = SeoProps & {
@@ -35,6 +36,7 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
       <slot />
     </main>
     <Footer />
+    <BackgroundMusic />
   </body>
 </html>
 

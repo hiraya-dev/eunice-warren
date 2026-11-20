@@ -367,6 +367,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`
 
+### L-043 — A fixed overlay must never return under a pressed pointer
+- **Date:** 2026-11-20
+- **Trigger:** PR #92, red CI (`webkit` and `e2e (full)`: RSVP specs that pass on main)
+- **Symptom:** after `fill()` then a click on Find my invite or Send RSVP, the next step never appeared; Playwright reported a timeout, not "intercepts pointer events".
+- **Root cause:** the docked music tag hid while a field had focus. Pressing a button blurs the field on mousedown, the tag came back at once under the pointer, and the release (and click) went to the tag instead of the button. Playwright checks the hit target only on the first event of a click, so it stayed silent.
+- **Rule:** a fixed or sticky element that hides for a reason (focus, a form or CTA in its zone) sets `pointer-events: none` the moment it hides and shows again only once no pointer is down. Any fixed element in a corner also hides while a form or CTA occupies its band, at every width.
+- **Check:** a spec scrolls the control to the fixed element's corner (`scrollIntoView({block: "end"})`), fills a field, presses and holds the control, asserts `document.elementFromPoint` at its centre is the control, releases, and expects the next state (`tests/music.spec.ts`).
+- **Guard:** none
+- **Paths:** `src/components/global/**`, `src/scripts/**`, `tests/**`
+
+### L-044 — A real feature retires its placeholder
+- **Date:** 2026-11-21
+- **Trigger:** PR #92, Local-review round (the user asked to remove the nav "NOW PLAYING · Dancing Queen" pill); PR #92 red CI (`sweeps`: removing the pill shrank the desktop nav 85→69px and moved the page)
+- **Symptom:** the site played the real background song while a static nav pill and the menu panel named a different, made-up song.
+- **Root cause:** an earlier design shipped a decorative stand-in for the feature, and the criteria for the real feature never searched for it.
+- **Rule:** when criteria add a real feature (music, a gallery, a countdown), grep `src/` for decorative stand-ins of the same feature (static copy, `aria-hidden` mock controls) and list each in the approval message with a recommendation to remove or wire it. When you remove one, measure its container's size at the breakpoints before and after; if the stand-in was what set it, hold that size so nothing else moves.
+- **Check:** the approval message for a new feature names any existing stand-in, or says none was found; a removal's PR shows the container's height unchanged at 390, 991, 992 and 1440.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/consts.ts`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
