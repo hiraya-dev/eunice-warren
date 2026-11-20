@@ -5,13 +5,14 @@ import arch from "@/assets/images/wedding/polaroid-arch.jpg";
 import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
 import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
 import couple from "@/assets/images/hero/polaroid-couple.jpg";
+import { BELMONT_MAP_URL, CHURCH_MAP_URL, SAVOY_MAP_URL, WEDDING_CALENDAR_PATH } from "@/consts";
 
 interface Props extends HTMLAttributes<"section"> {
   /** Calendar event destination. */
   calendarHref?: string;
 }
 
-const { calendarHref = "#", class: className, ...rest } = Astro.props;
+const { calendarHref = WEDDING_CALENDAR_PATH, class: className, ...rest } = Astro.props;
 
 const schedule = [
   {
@@ -20,6 +21,7 @@ const schedule = [
     time: "3:00 PM",
     location: "Holy Rosary Parish",
     mapLabel: "Map for Ceremony",
+    mapHref: CHURCH_MAP_URL,
     image: arch,
     alt: "A white wedding arch draped in fabric and flowers on the sand by the water",
     caption: "Where we'll say yes · Holy Rosary Parish, 3 PM",
@@ -32,6 +34,7 @@ const schedule = [
     time: "5:00 PM",
     location: "Belmont Hotel",
     mapLabel: "Map for Sunset cocktails",
+    mapHref: BELMONT_MAP_URL,
     image: sunsetSail,
     alt: "A sailboat on the water at sunset",
     caption: "Where we'll toast · Belmont Hotel, 5 PM",
@@ -44,6 +47,7 @@ const schedule = [
     time: "6:30 PM",
     location: "Belmont Hotel",
     mapLabel: "Map for Reception and dancing",
+    mapHref: BELMONT_MAP_URL,
     image: whiteBeach,
     alt: "White Beach, Boracay",
     caption: "Where we'll dance · Belmont Hotel, 6:30 PM",
@@ -56,6 +60,7 @@ const schedule = [
     time: "10:00 PM",
     location: "Savoy Hotel",
     mapLabel: "Map for After party",
+    mapHref: SAVOY_MAP_URL,
     // Placeholder photo until the couple sends one for the after party.
     image: couple,
     alt: "Warren and Eunice walking hand in hand on the beach at sunset",
@@ -94,7 +99,7 @@ const schedule = [
                 </button>
                 <div class="wedding_meta">
                   <span class="wedding_time">{item.time}</span>
-                  <span class="wedding_location">{item.location} · <a href="#" aria-label={item.mapLabel}>Map <span aria-hidden="true">↗</span></a></span>
+                  <span class="wedding_location">{item.location} · <a href={item.mapHref} target="_blank" rel="noopener" aria-label={item.mapLabel}>Map <span aria-hidden="true">↗</span></a></span>
                 </div>
                 <span class="wedding_progress" data-tabs="item-progress" aria-hidden="true"></span>
               </div>

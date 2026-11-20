@@ -13,13 +13,14 @@ import stampWe from "@/assets/images/stamps/we.jpg";
 import stampPalm from "@/assets/images/stamps/palm.jpg";
 import stampParaw from "@/assets/images/stamps/paraw.jpg";
 import shell from "@/assets/images/explore/sticker-shell.svg";
+import { MESSAGE_US_HREF } from "@/consts";
 
 interface Props {
   /** Message destination for guests who cannot find an invite. */
   messageHref?: string;
 }
 
-const { messageHref = "#" } = Astro.props;
+const { messageHref = MESSAGE_US_HREF } = Astro.props;
 ---
 
 <div

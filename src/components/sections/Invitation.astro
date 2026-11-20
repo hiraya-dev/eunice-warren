@@ -5,6 +5,7 @@ import PassageTicket from "@/components/media/PassageTicket.astro";
 import Stamp from "@/components/media/Stamp.astro";
 import inkArrived from "@/assets/images/invitation/ink-arrived.png";
 import palm from "@/assets/images/stamps/palm.jpg";
+import { CHURCH_MAP_URL, WEDDING_CALENDAR_PATH } from "@/consts";
 
 interface Props extends HTMLAttributes<"section"> {
   /** Venue shown in the invitation facts. */
@@ -22,9 +23,9 @@ interface Props extends HTMLAttributes<"section"> {
 const {
   venue = "Our Lady of the Most Holy Rosary Parish",
   deadline = "Dec 12, 2026",
-  calendarHref = "#",
-  mapsHref = "#",
-  rsvpHref = "#",
+  calendarHref = WEDDING_CALENDAR_PATH,
+  mapsHref = CHURCH_MAP_URL,
+  rsvpHref = "#rsvp",
   class: className,
   ...rest
 } = Astro.props;
@@ -55,7 +56,7 @@ const welcomeParagraphs = [
           <div class="invitation_fact-content">
             <span class="invitation_fact-value">{venue}</span>
             <span class="invitation_fact-detail">Boracay Island, Malay, Aklan</span>
-            <a class="invitation_fact-link" href={mapsHref}>OPEN IN MAPS <span aria-hidden="true">↗</span></a>
+            <a class="invitation_fact-link" href={mapsHref} target="_blank" rel="noopener">OPEN IN MAPS <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="invitation_fact">
