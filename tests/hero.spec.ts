@@ -108,7 +108,8 @@ test.describe("keepsakes hero", () => {
         };
       });
 
-      expect(metrics.arrowBottom).toBeLessThanOrEqual(metrics.textTop + 2);
+      // The hand font's line box differs a few px across platforms; 6px still fails the old down-pointing arrow by far.
+      expect(metrics.arrowBottom).toBeLessThanOrEqual(metrics.textTop + 6);
       expect(metrics.arrowTop).toBeLessThanOrEqual(metrics.coupleBottom + 2);
       expect(metrics.verticalScale).toBeCloseTo(-1, 2);
     });

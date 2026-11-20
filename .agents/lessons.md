@@ -357,6 +357,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/sections/Hero.astro`
 
+### L-042 — Geometry tolerances leave room for the runner's fonts
+- **Date:** 2026-11-20
+- **Trigger:** #90 red `e2e (full)` (the hero note-arrow spec allowed 2px between the arrow and the text's line box; it passed on the Mac and failed on the Linux runner by 0.012px at 320, 390 and 767)
+- **Symptom:** a new layout spec passed locally and in the draft's `@smoke` tier, then failed in the full tier on "ship it", which cost another CI run before the merge.
+- **Root cause:** the tolerance was set at the measured local gap. Text line boxes, especially Delicious Handrawn's, differ by a few px between macOS and the Linux runner.
+- **Rule:** a geometry assertion that involves a text box gets a tolerance well inside the regression it guards (the old bug is tens of px off, so allow ~6px), never the local measurement plus a hair. Record the old-CSS value next to the tolerance so the margin is visible.
+- **Check:** the spec's comment or the PR body states the tolerance and the old-CSS failure value; the old value exceeds the tolerance by at least 5×.
+- **Guard:** none
+- **Paths:** `tests/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
