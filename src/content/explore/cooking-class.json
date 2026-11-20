@@ -1,0 +1,11 @@
+{
+  "order": 8,
+  "title": "Boracay cooking class",
+  "tag": "COOKING",
+  "body": "Cook adobo and turon in a small group. Book ahead.",
+  "image": "../../assets/images/explore/cooking-class.jpg",
+  "alt": "Hands rolling turon beside a pot of adobo at a cooking class",
+  "sticker": "fish",
+  "tilt": 3,
+  "offset": "space-5"
+}
