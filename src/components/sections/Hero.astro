@@ -2,9 +2,9 @@
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import Stamp from "@/components/media/Stamp.astro";
-import couple from "@/assets/images/hero/polaroid-couple.jpg";
-import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
-import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
+import couple from "@/assets/images/gallery/img-4477.jpg";
+import whiteBeach from "@/assets/images/gallery/img-4464.jpg";
+import sunsetSail from "@/assets/images/gallery/img-2509.jpg";
 import paraw from "@/assets/images/stamps/paraw.jpg";
 import palm from "@/assets/images/stamps/palm.jpg";
 import postmark from "@/assets/images/hero/postmark-received.png";
@@ -24,7 +24,7 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
   <div class="hero_collage">
     <div class="hero_keepsake hero_couple" data-hero-keepsake>
       <div class="hero_polaroid">
-        <Image src={couple} alt="Warren and Eunice walking hand in hand on the beach at sunset" width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
+        <Image src={couple} alt="Warren and Eunice holding hands under the palms, looking out to sea" width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
       </div>
     </div>
     <div class="hero_keepsake hero_white-beach" data-hero-keepsake>
@@ -187,17 +187,17 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
 
   @media (max-width: 47.999rem) {
     .hero { display: block; min-height: 0; padding: 19rem var(--site-margin) 9.5rem; }
-    .hero_collage { top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
+    .hero_collage { --_center-shift: max(0px, 50% - 12.1875rem); top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
     .hero_polaroid { box-shadow: 0 0.75rem 1.75rem rgb(31 47 92 / 16%); }
-    .hero_couple { top: 2.5rem; left: 1.75rem; transform: rotate(-6deg); }
+    .hero_couple { top: 2.5rem; left: calc(1.75rem + var(--_center-shift)); transform: rotate(-6deg); }
     .hero_couple .hero_polaroid { width: 11rem; padding: 0.5rem 0.5rem 2rem; }
     .hero_couple .hero_polaroid img { aspect-ratio: 160 / 170; }
-    .hero_white-beach { top: 2.75rem; left: 12.875rem; transform: rotate(7deg); }
+    .hero_white-beach { top: 2.75rem; left: calc(12.875rem + var(--_center-shift)); transform: rotate(7deg); }
     .hero_white-beach .hero_polaroid { width: 9.375rem; padding: 0.5rem 0.5rem 1.5rem; }
     .hero_white-beach .hero_polaroid img { aspect-ratio: 134 / 144; }
-    .hero_note { top: 14.25rem; left: 9.375rem; width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
-    .hero_note-text { top: 0.5rem; }
-    .hero_note-arrow { bottom: 0; width: 54%; }
+    .hero_note { top: 14.25rem; left: calc(9.375rem + var(--_center-shift)); width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
+    .hero_note-text { top: auto; bottom: 0.5rem; }
+    .hero_note-arrow { top: -0.75rem; bottom: auto; width: 54%; transform: scaleY(-1); }
     .hero_sunset, .hero_palm { display: none; }
     .hero_paraw { top: auto; bottom: 1.75rem; left: 1.125rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); }
     .hero_postmark { top: auto; right: 1rem; bottom: 2.5rem; left: auto; width: 8.125rem; height: 5rem; transform: rotate(-10deg); }

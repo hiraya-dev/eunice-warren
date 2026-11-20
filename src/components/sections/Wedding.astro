@@ -1,10 +1,10 @@
 ---
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
-import arch from "@/assets/images/wedding/polaroid-arch.jpg";
-import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
-import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
-import couple from "@/assets/images/hero/polaroid-couple.jpg";
+import ceremony from "@/assets/images/wedding/schedule-ceremony.jpg";
+import cocktails from "@/assets/images/wedding/schedule-cocktails.jpg";
+import reception from "@/assets/images/wedding/schedule-reception.jpg";
+import afterParty from "@/assets/images/wedding/schedule-afterparty.jpg";
 
 interface Props extends HTMLAttributes<"section"> {
   /** Calendar event destination. */
@@ -20,8 +20,8 @@ const schedule = [
     time: "3:00 PM",
     location: "Holy Rosary Parish",
     mapLabel: "Map for Ceremony",
-    image: arch,
-    alt: "A white wedding arch draped in fabric and flowers on the sand by the water",
+    image: ceremony,
+    alt: "A small white parish church among palm trees and bougainvillea",
     caption: "Where we'll say yes · Holy Rosary Parish, 3 PM",
     tilt: -3,
   },
@@ -32,8 +32,8 @@ const schedule = [
     time: "5:00 PM",
     location: "Belmont Hotel",
     mapLabel: "Map for Sunset cocktails",
-    image: sunsetSail,
-    alt: "A sailboat on the water at sunset",
+    image: cocktails,
+    alt: "Two cocktails on a terrace railing above the sea at sunset",
     caption: "Where we'll toast · Belmont Hotel, 5 PM",
     tilt: 2.5,
   },
@@ -44,8 +44,8 @@ const schedule = [
     time: "6:30 PM",
     location: "Belmont Hotel",
     mapLabel: "Map for Reception and dancing",
-    image: whiteBeach,
-    alt: "White Beach, Boracay",
+    image: reception,
+    alt: "Candlelit reception tables and a dance floor under string lights by the sea at dusk",
     caption: "Where we'll dance · Belmont Hotel, 6:30 PM",
     tilt: -1.5,
   },
@@ -56,9 +56,8 @@ const schedule = [
     time: "10:00 PM",
     location: "Savoy Hotel",
     mapLabel: "Map for After party",
-    // Placeholder photo until the couple sends one for the after party.
-    image: couple,
-    alt: "Warren and Eunice walking hand in hand on the beach at sunset",
+    image: afterParty,
+    alt: "A glowing hotel pool under string lights at night",
     caption: "Where we'll keep going · Savoy Hotel, around 10 PM",
     tilt: 2,
   },
@@ -124,7 +123,7 @@ const schedule = [
     .wedding_visual-item.is-active { opacity: 1; transform: translateX(0); }
     .wedding_visual-item[hidden] { display: none; }
     .wedding_visual-item img { display: block; width: 100%; height: 15.625rem; object-fit: cover; }
-    .wedding_caption { display: block; font: italic var(--secondary-regular) 1rem / 1.25 var(--secondary-family); }
+    .wedding_caption { display: block; font: 400 1.375rem / 1.1 var(--hand-family); }
     .wedding_schedule { width: 100%; }
     .wedding_tablist { border-top: 0.09375rem solid var(--dark-900); }
     .wedding_row { display: grid; grid-template-columns: minmax(0, 1fr) 6rem; align-items: start; column-gap: var(--space-3); position: relative; padding-block: var(--space-4); border-bottom: var(--border-width) solid var(--_muted); color: var(--_muted); transition: color 0.25s ease; }

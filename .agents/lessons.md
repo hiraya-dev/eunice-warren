@@ -347,6 +347,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/consts.ts`, `README.md`, `.agents/product-marketing.md`
 
+### L-041 — An image swap re-checks every pointer at it
+- **Date:** 2026-11-20
+- **Trigger:** #90 Local-review round (the user found the mobile "that's us!" arrow pointing down at the date line, away from the hero photos it labels, after the hero postcards were swapped to the couple's own photos)
+- **Symptom:** the round 2 review pack showed the 390 hero with the note below the photos and its arrow aimed at the text underneath.
+- **Root cause:** the swap was treated as image-only, and the 390 screenshot was checked for the photo crops, not for the annotation that refers to them. The mobile note had sat below the photos with a down-pointing arrow since the hero layout shipped.
+- **Rule:** when hero or section photos change, check every annotation that points at them (notes, arrows, stickers, captions) at 320, 390 and 767 as well as 1440, and say in the pack what each one points to.
+- **Check:** the review pack names each pointing element and its target at every width it lists.
+- **Guard:** none
+- **Paths:** `src/components/sections/Hero.astro`
+
+### L-042 — Geometry tolerances leave room for the runner's fonts
+- **Date:** 2026-11-20
+- **Trigger:** #90 red `e2e (full)` (the hero note-arrow spec allowed 2px between the arrow and the text's line box; it passed on the Mac and failed on the Linux runner by 0.012px at 320, 390 and 767)
+- **Symptom:** a new layout spec passed locally and in the draft's `@smoke` tier, then failed in the full tier on "ship it", which cost another CI run before the merge.
+- **Root cause:** the tolerance was set at the measured local gap. Text line boxes, especially Delicious Handrawn's, differ by a few px between macOS and the Linux runner.
+- **Rule:** a geometry assertion that involves a text box gets a tolerance well inside the regression it guards (the old bug is tens of px off, so allow ~6px), never the local measurement plus a hair. Record the old-CSS value next to the tolerance so the margin is visible.
+- **Check:** the spec's comment or the PR body states the tolerance and the old-CSS failure value; the old value exceeds the tolerance by at least 5×.
+- **Guard:** none
+- **Paths:** `tests/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
@@ -371,10 +391,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-024 — A compact layout scales to the space it gets
 - **Date:** 2026-11-15
-- **Trigger:** #77 Local-review round 2 (the user's correction: the preloader's compact envelope stayed at the 350px phone width on 481–748px windows and looked small); #80 round 6 CHANGES_REQUIRED (polaroid photo window used `top: 6%`, which resolves against the polaroid's height, so the top border differed from the 6%-of-width sides)
+- **Trigger:** #77 Local-review round 2 (the user's correction: the preloader's compact envelope stayed at the 350px phone width on 481–748px windows and looked small); #80 round 6 CHANGES_REQUIRED (polaroid photo window used `top: 6%`, which resolves against the polaroid's height, so the top border differed from the 6%-of-width sides); escape: runtime #90 (the hero's compact photo pair and note kept fixed `left` rems tuned to 390, so at 600px they sat left of the centred title)
 - **Symptom:** a layout that switches to its compact form by container width keeps phone-sized parts on tablet and narrow-desktop widths, leaving the component small with empty space around it.
 - **Root cause:** the compact rules were the old phone rules moved under a wider container query, with fixed widths and px sizes tuned to 350px.
-- **Rule:** when a compact layout serves more than phone widths, size it to its container (`min(100%, <cap>)`) and scale its internals with container units, clamped so the phone values hold at the phone width. Re-check prop and decoration gates, since the component grows taller. A border or inset that must scale with the element's width uses percentage `margin`/`padding` (both resolve against width) or container units, never a percentage `top`/`bottom`.
-- **Check:** the review pack measures the component at the narrowest and widest widths of its compact band, and the overlap sweep covers that band.
+- **Rule:** when a compact layout serves more than phone widths, size it to its container (`min(100%, <cap>)`) and scale its internals with container units, clamped so the phone values hold at the phone width. Re-check prop and decoration gates, since the component grows taller. A border or inset that must scale with the element's width uses percentage `margin`/`padding` (both resolve against width) or container units, never a percentage `top`/`bottom`. Parts placed with a fixed `left` that should line up with centred content get a centring offset (`max(0px, 50% - <half the group's width>)`) so they track the centre across the band.
+- **Check:** the review pack measures the component at the narrowest and widest widths of its compact band, and the overlap sweep covers that band. `tests/hero.spec.ts` "centres the compact photo pair over the title" pins the hero case.
 - **Guard:** taste — the user's call on how large the compact envelope reads; no test measures "too small"
 - **Paths:** `src/components/**`
