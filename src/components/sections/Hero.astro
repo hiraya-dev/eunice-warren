@@ -2,9 +2,9 @@
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import Stamp from "@/components/media/Stamp.astro";
-import couple from "@/assets/images/hero/polaroid-couple.jpg";
-import whiteBeach from "@/assets/images/hero/polaroid-white-beach.jpg";
-import sunsetSail from "@/assets/images/hero/polaroid-sunset-sail.jpg";
+import couple from "@/assets/images/gallery/img-4477.jpg";
+import whiteBeach from "@/assets/images/gallery/img-4464.jpg";
+import sunsetSail from "@/assets/images/gallery/img-2509.jpg";
 import paraw from "@/assets/images/stamps/paraw.jpg";
 import palm from "@/assets/images/stamps/palm.jpg";
 import postmark from "@/assets/images/hero/postmark-received.png";
@@ -24,7 +24,7 @@ const { rsvpHref = "#", weekendHref = "#", class: className, ...rest } = Astro.p
   <div class="hero_collage">
     <div class="hero_keepsake hero_couple" data-hero-keepsake>
       <div class="hero_polaroid">
-        <Image src={couple} alt="Warren and Eunice walking hand in hand on the beach at sunset" width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
+        <Image src={couple} alt="Warren and Eunice holding hands under the palms, looking out to sea" width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
       </div>
     </div>
     <div class="hero_keepsake hero_white-beach" data-hero-keepsake>
