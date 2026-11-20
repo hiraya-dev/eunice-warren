@@ -347,6 +347,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/consts.ts`, `README.md`, `.agents/product-marketing.md`
 
+### L-041 — An image swap re-checks every pointer at it
+- **Date:** 2026-11-20
+- **Trigger:** #90 Local-review round (the user found the mobile "that's us!" arrow pointing down at the date line, away from the hero photos it labels, after the hero postcards were swapped to the couple's own photos)
+- **Symptom:** the round 2 review pack showed the 390 hero with the note below the photos and its arrow aimed at the text underneath.
+- **Root cause:** the swap was treated as image-only, and the 390 screenshot was checked for the photo crops, not for the annotation that refers to them. The mobile note had sat below the photos with a down-pointing arrow since the hero layout shipped.
+- **Rule:** when hero or section photos change, check every annotation that points at them (notes, arrows, stickers, captions) at 320, 390 and 767 as well as 1440, and say in the pack what each one points to.
+- **Check:** the review pack names each pointing element and its target at every width it lists.
+- **Guard:** none
+- **Paths:** `src/components/sections/Hero.astro`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output
