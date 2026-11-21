@@ -413,4 +413,34 @@ test.describe("RSVP section", () => {
       expect(cardRight.right).toBeLessThanOrEqual(cardRight.limit);
     }
   });
+
+  test("keeps real long-name and twelve-seat fixtures inside the card without leaking labels", { tag: ["@single"] }, async ({ page }) => {
+    const fixtures = fakeFixtures.filter((fixture) => fixture.id === "teachaburanatapaporn" || fixture.id === "long-display");
+    expect(fixtures.find(({ id }) => id === "long-display")?.householdName.length).toBe(40);
+    for (const fixture of fixtures) for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+      await rsvp(page).scrollIntoViewIfNeeded();
+      await reveal(rsvp(page).locator("[data-rsvp-name]"));
+      await rsvp(page).locator("[data-rsvp-name]").fill(fixture.members[0]);
+      await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+      await expect(rsvp(page).locator("[data-rsvp-invitation]")).toBeVisible();
+      await expect(rsvp(page).locator("[data-rsvp-household]")).toHaveText(fixture.householdName);
+      await expect(rsvp(page).locator("[data-rsvp-seats]")).toHaveText(String(fixture.seats));
+      await expect(rsvp(page)).not.toContainText(fixture.label);
+      await expect(rsvp(page)).not.toContainText(fixture.id);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const bounds = await rsvp(page).evaluate((section) => {
+        // The household name sits on the invitation stub, not inside the form card.
+        const card = section.querySelector<HTMLElement>("[data-rsvp-invitation]")!.getBoundingClientRect();
+        const name = section.querySelector<HTMLElement>("[data-rsvp-household]")!.getBoundingClientRect();
+        const admits = section.querySelector<HTMLElement>(".rsvp_admits")!.getBoundingClientRect();
+        return { cardLeft: card.left, cardRight: card.right, nameLeft: name.left, nameRight: name.right, admitsLeft: admits.left, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(bounds.overflow).toBe(false);
+      expect(bounds.nameLeft).toBeGreaterThanOrEqual(bounds.cardLeft - 1);
+      expect(bounds.nameRight).toBeLessThanOrEqual(bounds.cardRight + 1);
+      expect(bounds.nameRight).toBeLessThanOrEqual(bounds.admitsLeft + 1);
+    }
+  });
 });

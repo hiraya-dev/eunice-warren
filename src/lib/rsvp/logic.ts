@@ -1,6 +1,7 @@
 import type { Invite, RsvpSeat } from "./store.ts";
 import { normalizeGuestName } from "./store.ts";
 import { SLIPPER_SIZES } from "./slippers.ts";
+import { MAX_SEATS } from "./limits.ts";
 
 export const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
 export const RSVP_DEADLINE_TIME = new Date(RSVP_DEADLINE).getTime();
@@ -47,7 +48,7 @@ export function findNearGuestName(
   const duplicateNameSet = new Set(duplicateNames);
   const matches = new Map<string, string>();
   for (const invite of invites) {
-    if (duplicateIdSet.has(invite.id)) continue;
+    if (invite.id && duplicateIdSet.has(invite.id)) continue;
     for (const member of invite.members) {
       const normalized = normalizeGuestName(member);
       if (duplicateNameSet.has(normalized)) continue;
@@ -171,6 +172,7 @@ export function parseGuestRows(rows: unknown[][]): {
     const invite = {
       id,
       householdName: household,
+      ticketCode: id,
       members,
       seats: Number.parseInt(seatsValue, 10) || 2,
     };
@@ -195,21 +197,28 @@ export function validateSubmission(input: {
   seats: RsvpSeat[];
   invite: Invite;
 }) {
-  if (input.seats.length !== input.invite.seats) return false;
+  if (input.seats.length !== input.invite.seats || input.seats.length < 1 || input.seats.length > MAX_SEATS) return false;
+  const expectedSeats = input.invite.seatList ?? input.invite.members.map((member, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: member, name: member }));
+  const expectedById = new Map(expectedSeats.map((seat) => [seat.seatId, seat]));
+  const seatIds = input.seats.map((seat, index) => seat.seatId ?? index + 1);
+  if (new Set(seatIds).size !== input.seats.length) return false;
   let attendingCount = 0;
-  for (let index = 0; index < input.seats.length; index += 1) {
-    const seat = input.seats[index];
-    const expectedOriginal = input.invite.members[index] ?? null;
-    if (seat.original !== expectedOriginal || seat.name !== seat.name.trim())
+  const attendingNames = new Set<string>();
+  for (const [index, seat] of input.seats.entries()) {
+    const expected = expectedById.get(seatIds[index]);
+    if (!expected) return false;
+    if (seat.name !== seat.name.trim())
       return false;
     if (seat.name.length > 120) return false;
     if (seat.attending) {
       if (!input.attending || !seat.name) return false;
+      const normalizedName = normalizeGuestName(seat.name);
+      if (attendingNames.has(normalizedName)) return false;
+      attendingNames.add(normalizedName);
       if (!seat.slipperSize || !SLIPPER_SIZES.includes(seat.slipperSize as (typeof SLIPPER_SIZES)[number])) return false;
       attendingCount += 1;
     } else {
       if (seat.slipperSize) return false;
-      if (!seat.name && expectedOriginal !== null) return false;
     }
   }
   return input.attending ? attendingCount > 0 : attendingCount === 0;

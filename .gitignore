@@ -13,3 +13,5 @@ test-results/
 .idea/
 .claude/settings.local.json
 npm-debug.log*
+import-guests/
+seed.sql

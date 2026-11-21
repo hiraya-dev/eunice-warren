@@ -28,7 +28,7 @@ const socialImage = new URL(image, Astro.site);
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 {Astro.url.pathname === "/" && <script is:inline>
   try {
-    const raw = localStorage.getItem("ew-guest-v1");
+    const raw = localStorage.getItem("ew-guest-v2");
     const state = raw ? JSON.parse(raw) : null;
     if (!state || (state.skipped !== true && (typeof state.name !== "string" || !state.name.trim()))) document.documentElement.classList.add("ew-preloader-pending");
   } catch {

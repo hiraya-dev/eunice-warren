@@ -5,11 +5,18 @@
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "RSVP_STORE": "sheets",
+    "RSVP_STORE": "d1",
   },
 
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "eunice-warren",
+    "database_id": "e61094a2-492b-41df-9b58-804de5e834da",
+    "migrations_dir": "migrations",
+  }],
+
   // The adapter entrypoint serves static assets and runs Astro actions on demand.
-  // Production uses Sheets; the test environment selects fake fixtures.
+  // Production uses D1; the test environment selects fake fixtures.
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "404-page",
@@ -24,6 +31,8 @@
       "namespace_id": "1001",
       "simple": { "limit": 10, "period": 60 },
     },
+    { "name": "RSVP_SUBMIT_LIMITER", "namespace_id": "1003", "simple": { "limit": 5, "period": 60 } },
+    { "name": "SONG_LIMITER", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } },
     {
       "name": "WITH_LOVE_LIMITER",
       "namespace_id": "1002",
@@ -41,7 +50,7 @@
     },
   },
 
-  // Previews share the Worker's production secrets, so explicitly use the fake
+  // Previews share the Worker's production bindings, so explicitly use the fake
   // stores and client mode when `npx wrangler preview` publishes a branch.
   "previews": {
     "vars": {

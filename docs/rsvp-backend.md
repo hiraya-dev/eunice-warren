@@ -1,56 +1,26 @@
 # RSVP backend
 
-The RSVP UI remains a prerendered static Astro page. Its browser script calls two
-Astro actions running in the Cloudflare Worker. The actions validate input, enforce
-the Manila deadline, verify Turnstile, rate-limit invite lookups, sign short-lived
-invite tokens, and use either the server-side fake store or Google Sheets store.
-RSVP_STORE=fake is for local development, Playwright, and Cloudflare Worker
-previews; production is configured with RSVP_STORE=sheets, and missing Sheets
-credentials fail rather than falling back to fixtures. The committed
-`previews.vars` block sets both `RSVP_STORE=fake` and
-`PUBLIC_RSVP_STORE=fake` because previews share the Worker's production
-secrets. Workers Builds also sets the public value at build time for every
-non-`main` branch, so preview bundles skip Turnstile and use the local test
-token. An explicitly configured `PUBLIC_RSVP_STORE` still wins.
+Production uses the D1 store in `src/lib/rsvp/d1.ts`, with Drizzle queries over
+the normalized `invite_seats` lookup indexes. Every submission appends a response
+and its seat rows; it never updates or deletes response history. Guest name
+changes update only the current invite seat name and retain the invited name and
+lookup keys.
 
-## Sheet layout
+The token signs the six-character `ticket_code`, not the host-only household ID.
+Find returns only the display name, active seat count, ticket code and seat list;
+email, notes, labels and IDs stay server-side. Submissions include stable
+`seatId` values and are rejected if the active invite changed. The response,
+response seats and any nonblank guest name write-back are sent in one D1 batch.
+Blank names never clear a stored seat name.
 
-Keep these header rows on the existing tabs:
+The RSVP and song actions verify Turnstile before applying their five-per-minute
+IP limiters. Songs use an atomic total cap of 500 and a per-name cap of 20.
+D1 free-tier row-limit errors are deliberately converted to a short retry message
+instead of leaking the platform error.
 
-- Guests: id | household | members | seats | notes. Members are comma-separated;
-  blank seats means 2. Notes are never read.
-- Responses: submitted_at | invite_id | name | attending | guests | email |
-  companion_name | note | attendees | seat_changes | slippers. Responses append
-  with RAW values. `slippers` (K) is `Name: size; …` for each attending guest
-  (US sizes, `W 5`–`W 11`, `M 6`–`M 13`), blank on a decline.
-- Songs, Latest RSVPs, Summary, and How to use are not modified.
+Tests and previews set `RSVP_STORE=fake`, which uses the in-memory fixtures. The
+old Google Sheets implementation is dormant under `src/lib/rsvp/legacy-sheets/`
+and is not selected by runtime configuration.
 
-## Production setup
-
-1. Create a Google Cloud project, enable the Google Sheets API, create a service
-   account, and create/download a JSON key.
-2. Share the spreadsheet with the service account's client_email as an Editor.
-3. Create a Cloudflare Turnstile widget for the production hostname and note its
-   public site key.
-4. Add the secrets with Wrangler: wrangler secret put
-   GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_SHEET_ID, RSVP_TOKEN_SECRET, and
-   TURNSTILE_SECRET_KEY.
-5. No Workers Builds variables are needed. The committed Wrangler config
-   defaults to RSVP_STORE=sheets, and the production Turnstile site key
-   (0x4AAAAAAGLQ97oeYHLG-p4Y, public) is the fallback in src/scripts/turnstile.ts. Set
-   PUBLIC_TURNSTILE_SITE_KEY at build time only to use a different widget.
-   Preview/local runs override the store with fake.
-6. Build and deploy with npm run build followed by npx wrangler deploy. With the
-   adapter, this command still works unchanged: Wrangler uses
-   @astrojs/cloudflare/entrypoints/server from main and the adapter's generated
-   asset configuration. If Workers Builds currently runs only npx wrangler deploy,
-   no dashboard deploy-command change is needed; it must still run npm run build
-   first.
-
-## Local development
-
-Copy .dev.vars.example to .dev.vars (the example values are non-secret test
-values), then run npm run dev. The fake fixtures include Liza Santos, Ana Reyes,
-Mateo Cruz, Sofía Cruz, and the intentional Error Test failure path. The fake
-store skips Turnstile network verification and the Turnstile script. Playwright
-sets the same fake-store values for its production-build preview.
+The D1 binding is `DB`. Apply migrations with `wrangler d1 migrations apply
+eunice-warren --local` or `--remote`.

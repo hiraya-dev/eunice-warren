@@ -38,7 +38,7 @@ export default defineConfig({
       cookies: [],
       origins: [{
         origin: ORIGIN,
-        localStorage: [{ name: "ew-guest-v1", value: JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" }) }],
+        localStorage: [{ name: "ew-guest-v2", value: JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" }) }],
       }],
     },
     trace: "retain-on-failure",

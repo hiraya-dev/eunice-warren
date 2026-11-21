@@ -16,7 +16,7 @@ import {
   buildResponseRow,
   createSheetsRsvpStore,
   parsePreviousResponseRow,
-} from "../src/lib/rsvp/sheets.ts";
+} from "../src/lib/rsvp/legacy-sheets/sheets.ts";
 import {
   RSVP_EVENT,
   calendarIcs,
@@ -54,19 +54,19 @@ test("finds only safe, unambiguous near guest names", async () => {
   assert.equal(findNearGuestName("Paulo Garcia", fakeFixtures), "Paolo Garcia");
   assert.equal(
     findNearGuestName("Maria Santos", [
-      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+      { id: "middle", householdName: "Middle", ticketCode: "MIDDLE", members: ["Maria Clara Santos"], seats: 1 },
     ]),
     "Maria Clara Santos",
   );
   assert.equal(
     findNearGuestName("Maria Jane Santos", [
-      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+      { id: "middle", householdName: "Middle", ticketCode: "MIDDLE", members: ["Maria Clara Santos"], seats: 1 },
     ]),
     null,
   );
   assert.equal(
     findNearGuestName("Maria Clara Santos", [
-      { id: "middle", householdName: "Middle", members: ["Maria Clara Santos"], seats: 1 },
+      { id: "middle", householdName: "Middle", ticketCode: "MIDDLE", members: ["Maria Clara Santos"], seats: 1 },
     ]),
     "Maria Clara Santos",
   );
@@ -78,7 +78,7 @@ test("finds only safe, unambiguous near guest names", async () => {
   assert.equal(
     findNearGuestName("Mateo Cruz", [
       ...fakeFixtures,
-      { id: "other", householdName: "Other", members: ["Meteo Cruz"], seats: 1 },
+      { id: "other", householdName: "Other", ticketCode: "OTHER", members: ["Meteo Cruz"], seats: 1 },
     ]),
     null,
   );
@@ -110,7 +110,7 @@ test("signs, verifies, expires, and rejects tampered tokens", async () => {
 });
 
 test("validates seat checklist rules", () => {
-  const invite = { id: "x", householdName: "X", members: ["A", "B"], seats: 2 };
+  const invite = { id: "x", householdName: "X", ticketCode: "XXXXXX", members: ["A", "B"], seats: 2 };
   const seats = (a = true, b = false) => [
     { original: "A", name: "A", attending: a, slipperSize: a ? "W 7.5" : undefined },
     { original: "B", name: "B", attending: b, slipperSize: b ? "M 10" : undefined },
@@ -206,7 +206,7 @@ test("builds attendee, companion, and seat-change columns", () => {
 });
 
 test("parses current and legacy previous response rows", () => {
-  const invite = { id: "cruz", householdName: "Cruz", members: ["Mateo Cruz", "Sofía Cruz", "Remedios Cruz"], seats: 4 };
+  const invite = { id: "cruz", householdName: "Cruz", ticketCode: "CRUZAA", members: ["Mateo Cruz", "Sofía Cruz", "Remedios Cruz"], seats: 4 };
   const current = parsePreviousResponseRow([
     "2026-01-02T00:00:00.000Z", "cruz", "Mateo Cruz", "yes", "2", "a@example.com", "Sofia Cruz", "note", "Mateo Cruz; Sofia Cruz", "", "Mateo Cruz: M 9; Sofia Cruz: W 7",
   ], invite);

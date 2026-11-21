@@ -142,6 +142,35 @@ test.describe("RSVP paths", () => {
     await expect(summary).not.toContainText(oldName);
   });
 
+  test("opens a blank plus-one name and blocks Next until it is named", async ({ page }) => {
+    const section = rsvp(page);
+    await findInvite(page, santos.members[0], santos);
+    await section.locator("#rsvp-seat-1").check();
+    const name = section.locator("[aria-label='Name for seat 2']");
+    await expect(name).toBeVisible();
+    await section.getByRole("button", { name: "Continue" }).click();
+    const error = section.locator("[data-rsvp-guest-error]");
+    await expect(error).toBeVisible();
+    await expect(error).toHaveText("Add a name or untick this seat.");
+    await name.fill("Fictional Companion");
+    await section.getByRole("button", { name: "Done editing seat 2" }).click();
+    await expect(error).toBeHidden();
+  });
+
+  test("reloads a changed seat set and keeps typed values for surviving seat ids", { tag: ["@single"] }, async ({ page }) => {
+    const fixture = fakeFixtures.find((invite) => invite.id === "seat-change-test")!;
+    const section = rsvp(page);
+    await findInvite(page, fixture.members[0], fixture);
+    await section.getByRole("button", { name: `Edit ${fixture.members[0]}` }).click();
+    await section.locator("[aria-label='Name for seat 1']").fill("Kept Typed Value");
+    await section.getByRole("button", { name: `Done editing ${fixture.members[0]}` }).click();
+    await submitRsvp(page, "fixture-conflict@example.com");
+    await expect(section.locator("[data-rsvp-submit-error]")).toHaveText("Your invite changed. Check the seats before sending.");
+    await expect(section.locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(2);
+    await expect(section.locator("[data-rsvp-seat-list]")).toContainText("Kept Typed Value");
+    await expect(section.locator("[data-rsvp-seat-list]")).not.toContainText("Pia Fixture");
+  });
+
   test("edits an accepted RSVP and resubmits a decline", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, santos.members[0], santos);

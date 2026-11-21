@@ -1,6 +1,6 @@
-import type { Invite, PreviousRsvp, RsvpSeat, RsvpStore, RsvpSubmission } from "./store.ts";
-import { normalizeGuestName } from "./store.ts";
-import { findNearGuestName, parseGuestRows } from "./logic.ts";
+import type { Invite, PreviousRsvp, RsvpSeat, RsvpStore, RsvpSubmission } from "../store.ts";
+import { normalizeGuestName } from "../store.ts";
+import { findNearGuestName, parseGuestRows } from "../logic.ts";
 
 type ServiceAccount = { client_email?: string; private_key?: string };
 export type SheetsConfig = { keyJson: string; sheetId: string };
@@ -263,7 +263,7 @@ export const createSheetsRsvpStore = (
         .map((row) => parsePreviousResponseRow(row, invite))
         .filter((value): value is NonNullable<typeof value> => Boolean(value))
         .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))[0]?.previous ?? null;
-      return { invite, matchedName, previous };
+      return { invite, householdId: invite.id ?? invite.ticketCode, matchedName, previous };
     },
     async submit(submission: RsvpSubmission) {
       const values = [buildResponseRow(submission)];

@@ -1,4 +1,4 @@
-import { configFromEnv, sheetsFetch } from "../rsvp/sheets.ts";
+import { configFromEnv, sheetsFetch } from "../rsvp/legacy-sheets/sheets.ts";
 
 export interface LoveNote {
   id: string;

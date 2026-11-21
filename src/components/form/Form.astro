@@ -66,6 +66,7 @@ const content = await slotContent(Astro.slots);
     );
 
     fields.addEventListener("submit", async (event) => {
+      if (fields.dataset.actionForm === "true") return;
       const endpoint = form.dataset.endpoint;
 
       if (!fields.checkValidity()) return;

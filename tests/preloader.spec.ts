@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { fakeFixtures } from "../src/lib/rsvp/store.ts";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -21,12 +22,53 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).toContainText("Your invitation admits 4");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page)).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ew-guest-v1") || "null"))).toMatchObject({
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ew-guest-v2") || "null"))).toMatchObject({
       name: "Mateo Cruz",
       householdName: "The Cruz Family",
       seats: 4,
     });
     await expect(page.locator("[data-rsvp-name]")).toHaveValue("Mateo Cruz");
+  });
+
+  test("uses the display name and removes the legacy guest key", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("ew-guest-v1", JSON.stringify({ name: "Private Label" })));
+    await page.reload();
+    await preloader(page).locator("[data-preloader-name]").fill("Liza Santos");
+    await preloader(page).getByRole("button", { name: "Open my letter" }).click();
+    await expect(preloader(page).getByRole("heading", { name: "Welcome, The Santos Family." })).toBeVisible();
+    await expect(preloader(page).locator("[data-preloader-name]")).toHaveValue("The Santos Family");
+    await expect(preloader(page)).not.toContainText("Santos_Manila");
+    await expect(preloader(page)).not.toContainText("Manila");
+    await expect(preloader(page)).not.toContainText("santos");
+    await expect.poll(() => page.evaluate(() => ({ guest: JSON.parse(localStorage.getItem("ew-guest-v2") || "null"), raw: localStorage.getItem("ew-guest-v2"), legacy: localStorage.getItem("ew-guest-v1") }))).toMatchObject({ guest: { householdName: "The Santos Family", seats: 2 }, legacy: null });
+    const raw = await page.evaluate(() => localStorage.getItem("ew-guest-v2") ?? "");
+    expect(raw).not.toContain("Santos_Manila");
+    expect(raw).not.toContain("Manila");
+    expect(raw).not.toContain('"santos"');
+  });
+
+  test("fits real long-name and twelve-seat welcomes at 390 and 320", { tag: ["@single"] }, async ({ page }) => {
+    const fixtures = fakeFixtures.filter((fixture) => fixture.id === "teachaburanatapaporn" || fixture.id === "long-display");
+    for (const fixture of fixtures) for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+      const overlay = preloader(page);
+      await overlay.locator("[data-preloader-name]").fill(fixture.members[0]);
+      await overlay.getByRole("button", { name: "Open my letter" }).click();
+      await expect(overlay.getByRole("heading", { name: `Welcome, ${fixture.householdName}.` })).toBeVisible();
+      await expect(overlay.locator("[data-preloader-name]")).toHaveValue(fixture.householdName);
+      await expect(overlay.locator("[data-preloader-admits]")).toContainText(String(fixture.seats));
+      await expect(overlay).not.toContainText(fixture.label);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const bounds = await overlay.evaluate((root) => {
+        const stage = root.querySelector<HTMLElement>(".preloader_stage")!.getBoundingClientRect();
+        const input = root.querySelector<HTMLElement>("[data-preloader-name]")!.getBoundingClientRect();
+        return { stageLeft: stage.left, stageRight: stage.right, inputLeft: input.left, inputRight: input.right };
+      });
+      expect(bounds.inputLeft).toBeGreaterThanOrEqual(bounds.stageLeft - 1);
+      expect(bounds.inputRight).toBeLessThanOrEqual(bounds.stageRight + 1);
+    }
   });
 
   test("shows safe not-found copy without other guest names", { tag: ["@single"] }, async ({ page }) => {
