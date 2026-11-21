@@ -8,10 +8,165 @@ import {
   renameNote,
 } from "@/lib/admin/presentation";
 import { selectAdminStore } from "@/lib/admin/store";
-import type { AdminGuestList } from "@/lib/admin/store";
+import { StaleHouseholdError } from "@/lib/admin/store";
+import type { AdminGuestList, AdminHousehold } from "@/lib/admin/store";
+import { MAX_SEATS } from "@/lib/rsvp/limits";
+import GuestHouseholdForm from "@/components/admin/GuestHouseholdForm.astro";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
-const store = selectAdminStore((env as Record<string, unknown>).RSVP_STORE, (env as Record<string, unknown>).DB as never);
+const store = selectAdminStore(
+  (env as Record<string, unknown>).RSVP_STORE,
+  (env as Record<string, unknown>).DB as never,
+);
+let writeError = "";
+type DraftSeat = {
+  id?: number;
+  slot: number;
+  kind: "member" | "plus_one";
+  name: string;
+  invitedName: string | null;
+  retire?: boolean;
+};
+let editDraft: {
+  id: string;
+  updatedAt: string;
+  displayName: string;
+  notes: string;
+  seatCount: number;
+  seats: DraftSeat[];
+} | null = null;
+let newDraft = {
+  displayName: "",
+  label: "",
+  notes: "",
+  memberNames: [""],
+  seatCount: 1,
+};
+if (Astro.request.method === "POST") {
+  const origin = Astro.request.headers.get("origin");
+  if (origin && origin !== Astro.url.origin) {
+    Astro.response.status = 403;
+    writeError = "Forbidden";
+  } else {
+    const form = await Astro.request.formData();
+    const action = String(form.get("action") ?? "");
+    try {
+      if (action === "archive")
+        await store.archiveHousehold(
+          String(form.get("id") ?? ""),
+          host.email,
+          String(form.get("updated_at") ?? "") || undefined,
+        );
+      else if (action === "add" && form.get("member_action") === "add") {
+        const memberNames = form.getAll("member_name").map(String);
+        const seatCount = Number(form.get("seat_count") ?? memberNames.length);
+        newDraft = {
+          displayName: String(form.get("display_name") ?? ""),
+          label: String(form.get("label") ?? ""),
+          notes: String(form.get("notes") ?? ""),
+          memberNames: [...memberNames, ""],
+          seatCount: Math.max(seatCount, memberNames.length + 1),
+        };
+      } else if (action === "add" && form.get("seat_action")) {
+        const memberNames = form.getAll("member_name").map(String);
+        const currentCount = Number(
+          form.get("seat_count") ?? memberNames.length,
+        );
+        const next =
+          form.get("seat_action") === "add"
+            ? currentCount + 1
+            : currentCount - 1;
+        newDraft = {
+          displayName: String(form.get("display_name") ?? ""),
+          label: String(form.get("label") ?? ""),
+          notes: String(form.get("notes") ?? ""),
+          memberNames,
+          seatCount: Math.max(memberNames.length, Math.min(MAX_SEATS, next)),
+        };
+      } else if (action === "add") {
+        const names = form.getAll("member_name").map(String);
+        const seatCount = Number(form.get("seat_count") ?? names.length);
+        await store.addHousehold(
+          {
+            label: String(form.get("label")),
+            displayName: String(form.get("display_name")),
+            notes: String(form.get("notes") ?? "") || null,
+            seats: names.map((name) => ({ name })),
+            seatCount,
+          },
+          host.email,
+        );
+      } else if (action === "save") {
+        const ids = form
+          .getAll("seat_id")
+          .map((value) => Number(value) || undefined);
+        const names = form.getAll("seat_name").map(String);
+        const invited = form.getAll("invited_name").map(String);
+        const currentCount = Number(form.get("seat_count") ?? names.length);
+        const delta =
+          form.get("seat_action") === "add"
+            ? 1
+            : form.get("seat_action") === "remove"
+              ? -1
+              : 0;
+        const seats = names.map((name, index) => ({
+          id: ids[index],
+          name,
+          invitedName: invited[index] || undefined,
+          retire: ids[index]
+            ? Boolean(form.get(`retire_seat_${ids[index]}`))
+            : false,
+        }));
+        const finalCount =
+          currentCount + delta - seats.filter((seat) => seat.retire).length;
+        const householdId = String(form.get("id"));
+        const storedRow = (await store.getGuestList()).rows.find(
+          (row) => row.id === householdId,
+        );
+        const kindsById = new Map(
+          storedRow?.seats.map((seat) => [seat.id, seat.kind]) ?? [],
+        );
+        editDraft = {
+          id: householdId,
+          updatedAt: String(form.get("updated_at") ?? ""),
+          displayName: String(form.get("display_name") ?? ""),
+          notes: String(form.get("notes") ?? ""),
+          seatCount: Math.max(1, currentCount + delta),
+          seats: seats.map((seat, index) => ({
+            ...seat,
+            slot: index + 1,
+            kind: seat.id ? (kindsById.get(seat.id) ?? "plus_one") : "plus_one",
+            invitedName: seat.invitedName ?? null,
+          })),
+        };
+        if (!form.get("seat_action")) {
+          const result = await store.saveHousehold(
+            {
+              id: String(form.get("id")),
+              updatedAt: String(form.get("updated_at") ?? "") || undefined,
+              displayName: String(form.get("display_name") ?? ""),
+              notes: String(form.get("notes") ?? "") || null,
+              seatCount: finalCount,
+              seats,
+            },
+            host.email,
+          );
+          if (!result.ok) writeError = result.message;
+          else return Astro.redirect("/admin/guests", 303);
+        }
+      }
+      if (!writeError && action === "archive")
+        return Astro.redirect("/admin/guests", 303);
+    } catch (error) {
+      writeError =
+        error instanceof StaleHouseholdError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Could not save household.";
+    }
+  }
+}
 const hostNames = parseAdminHosts(
   String((env as Record<string, unknown>).ADMIN_HOSTS ?? ""),
 ) ?? { [host.email]: host.firstName };
@@ -19,7 +174,10 @@ let data: AdminGuestList | null = null;
 let failed = false;
 let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
 try {
-  [data, counts] = await Promise.all([store.getGuestList(), store.getNavCounts()]);
+  [data, counts] = await Promise.all([
+    store.getGuestList(),
+    store.getNavCounts(),
+  ]);
 } catch {
   failed = true;
   Astro.response.status = 503;
@@ -36,22 +194,60 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
     : rsvp.state === "declined"
       ? "Declined"
       : "Waiting";
+const editId = Astro.url.searchParams.get("edit");
+if (!newDraft.memberNames.length) newDraft.memberNames = [""];
+const archiveId = Astro.url.searchParams.get("archive");
+const newOpen = Astro.url.searchParams.get("new") === "1";
+const archiveRow = view.rows.find((row) => row.id === archiveId);
+// A refusal shows inside the open edit or new row, above its bottom line; any
+// other failure (an archive, a failed load) keeps the page-level notice.
+const errorInRow =
+  Boolean(writeError) &&
+  (newOpen || view.rows.some((row) => row.id === editId));
+const reloadHref = writeError.startsWith("This household")
+  ? `/admin/guests?edit=${editId}`
+  : undefined;
+const editSeats = (row: AdminHousehold) => {
+  const draft = editDraft?.id === row.id ? editDraft : null;
+  const source: DraftSeat[] = draft
+    ? draft.seats.map((seat) => ({ ...seat }))
+    : row.seats.map((seat) => ({
+        id: seat.id,
+        slot: seat.slot,
+        kind: seat.kind,
+        name: seat.name ?? "",
+        invitedName: seat.invitedName,
+      }));
+  const target = draft?.seatCount ?? row.seatCount;
+  while (source.length < target)
+    source.push({
+      id: undefined,
+      slot: source.length + 1,
+      kind: "plus_one",
+      name: "",
+      invitedName: null,
+    });
+  return source.slice(0, target);
+};
 ---
 
-<AdminLayout
-  active="guests"
-  host={host}
-  counts={counts}
->
+<AdminLayout active="guests" host={host} counts={counts}>
   <section id="guests" class="admin-guests_wrap" data-admin-guests-page>
-    {host.sample && <p class="admin_sample" data-admin-sample>Sample data</p>}
+    {
+      host.sample && (
+        <p class="admin_sample" data-admin-sample>
+          Sample data
+        </p>
+      )
+    }
     {
       failed ? (
         <div class="admin_notice error" data-admin-error>
           <h1>Couldn't load the guest data</h1>
           <a href={Astro.url.pathname}>Try again</a>
         </div>
-      ) : view.totals.households === 0 ? (
+      ) : view.totals.households === 0 &&
+        Astro.url.searchParams.get("new") !== "1" ? (
         <div class="admin_notice empty" data-admin-empty>
           <h1>No guests yet</h1>
           <p>The guest list hasn't been loaded.</p>
@@ -62,8 +258,19 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
             <p class="admin_label">
               Who's invited · Seats first, names when you know them
             </p>
-            <h1>Guest list</h1>
+            <div class="admin-guests_title">
+              <h1>Guest list</h1>
+              <a class="admin_guests_add" href="/admin/guests?new=1">
+                + Add household
+              </a>
+            </div>
           </header>
+          {writeError && !errorInRow && (
+            <p class="admin_guests_error page" data-admin-write-error>
+              {writeError}{" "}
+              {reloadHref && <a href={reloadHref}>Reload</a>}
+            </p>
+          )}
           <div class="admin-guests_toolbar">
             <dl class="admin-guests_stats">
               <div>
@@ -89,6 +296,7 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
                 type="search"
                 placeholder="Search households or members"
                 autocomplete="off"
+                value={Astro.url.searchParams.get("q") ?? ""}
               />
             </div>
           </div>
@@ -107,13 +315,78 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
                 </tr>
               </thead>
               <tbody>
+                {newOpen && (
+                  <GuestHouseholdForm
+                    variant="new"
+                    draft={newDraft}
+                    error={errorInRow ? writeError : undefined}
+                    reloadHref={reloadHref}
+                  />
+                )}
                 {view.rows.map((row) => {
                   const plusOnes = row.seats.filter(
                     (seat) => seat.kind === "plus_one",
                   );
-                  return (
+                  if (archiveRow?.id === row.id)
+                    return (
+                      <tr
+                        class="admin-guests_archive-row"
+                        data-admin-archive-confirm
+                      >
+                        <td colspan={5}>
+                          <div class="admin_guests_confirm">
+                            <p>Archive {archiveRow.displayName}?</p>
+                            <form method="post">
+                              <input type="hidden" name="action" value="archive" />
+                              <input type="hidden" name="id" value={archiveRow.id} />
+                              <input
+                                type="hidden"
+                                name="updated_at"
+                                value={archiveRow.updatedAt ?? ""}
+                              />
+                              <div class="admin_guests_form-actions">
+                                <button
+                                  class="admin_guests_btn accent"
+                                  type="submit"
+                                >
+                                  Archive
+                                </button>
+                                <a class="admin_guests_btn" href="/admin/guests">
+                                  Cancel
+                                </a>
+                              </div>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  return editId === row.id ? (
+                    <GuestHouseholdForm
+                      variant="edit"
+                      row={row}
+                      seats={editSeats(row)}
+                      updatedAt={
+                        editDraft?.id === row.id
+                          ? editDraft.updatedAt
+                          : (row.updatedAt ?? "")
+                      }
+                      displayName={
+                        editDraft?.id === row.id
+                          ? editDraft.displayName
+                          : row.displayName
+                      }
+                      notes={
+                        editDraft?.id === row.id
+                          ? editDraft.notes
+                          : (row.notes ?? "")
+                      }
+                      error={errorInRow ? writeError : undefined}
+                      reloadHref={reloadHref}
+                    />
+                  ) : (
                     <tr
                       data-admin-household
+                      data-household-id={row.id}
                       data-search={[
                         row.displayName,
                         row.label,
@@ -189,6 +462,24 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
                         >
                           {rsvpText(row.rsvp)}
                         </span>
+                        <details class="admin_guests_menu">
+                          <summary
+                            aria-label={`Actions for ${row.displayName}`}
+                          >
+                            ⋯
+                          </summary>
+                          <div class="admin_guests_popover">
+                            <a
+                              data-admin-edit
+                              href={`/admin/guests?edit=${row.id}`}
+                            >
+                              Edit
+                            </a>
+                            <a href={`/admin/guests?archive=${row.id}`}>
+                              Archive household
+                            </a>
+                          </div>
+                        </details>
                       </td>
                     </tr>
                   );
@@ -213,7 +504,8 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
       .replace(/[\u0300-\u036f]/g, "")
       .toLocaleLowerCase()
       .trim();
-  input?.addEventListener("input", () => {
+  const filterRows = () => {
+    if (!input) return;
     const query = normalize(input.value);
     let visible = 0;
     for (const row of rows) {
@@ -222,5 +514,143 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
       if (match) visible++;
     }
     if (empty) empty.hidden = visible !== 0;
-  });
+    const params = new URLSearchParams(window.location.search);
+    if (input.value) params.set("q", input.value);
+    else params.delete("q");
+    history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
+    );
+    for (const link of document.querySelectorAll<HTMLAnchorElement>(
+      "[data-admin-edit]",
+    )) {
+      const href = new URL(link.href);
+      if (input.value) href.searchParams.set("q", input.value);
+      else href.searchParams.delete("q");
+      link.href = href.toString();
+    }
+  };
+  input?.addEventListener("input", filterRows);
+  if (input?.value) filterRows();
+
+  const editForm = document.querySelector<HTMLFormElement>(
+    "[data-edit-household]",
+  );
+  if (editForm) {
+    const list = editForm.querySelector<HTMLElement>("[data-seat-list]");
+    const count = editForm.querySelector<HTMLInputElement>(
+      "[data-seat-count-input]",
+    );
+    const output =
+      editForm.querySelector<HTMLOutputElement>("[data-seat-output]");
+    const max = 12;
+    const sync = () => {
+      if (!list || !count || !output) return;
+      const seats = [
+        ...list.querySelectorAll<HTMLElement>(".admin_guests_chip"),
+      ];
+      count.value = String(seats.length);
+      output.value = String(seats.length);
+      const remove = editForm.querySelector<HTMLButtonElement>(
+        'button[name="seat_action"][value="remove"]',
+      );
+      const add = editForm.querySelector<HTMLButtonElement>(
+        'button[name="seat_action"][value="add"]',
+      );
+      if (remove)
+        remove.disabled =
+          seats.length <=
+          [
+            ...list.querySelectorAll<HTMLInputElement>(
+              'input[name="seat_name"][required]',
+            ),
+          ].length;
+      if (add) add.disabled = seats.length >= max;
+    };
+    for (const button of editForm.querySelectorAll<HTMLButtonElement>(
+      'button[name="seat_action"]',
+    )) {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        const seats = list
+          ? [...list.querySelectorAll<HTMLElement>(".admin_guests_chip")]
+          : [];
+        if (button.value === "remove" && seats.length > 0) {
+          const last = seats.at(-1)!;
+          const name = last.querySelector<HTMLInputElement>(
+            'input[name="seat_name"]',
+          );
+          const response = last.dataset.response;
+          if (name?.value || response) return;
+          last.remove();
+        } else if (button.value === "add" && seats.length < max && list) {
+          const wrapper = document.createElement("label");
+          wrapper.className = "admin_guests_chip";
+          const slot = seats.length + 1;
+          wrapper.innerHTML = `<span>Open seat · add a name</span><input type="hidden" name="seat_id" value=""><input name="seat_name" placeholder="Open seat · add a name"><input type="hidden" name="invited_name" value="">`;
+          list.append(wrapper);
+          const hidden = wrapper.querySelector<HTMLInputElement>(
+            'input[name="seat_id"]',
+          );
+          if (hidden) hidden.value = "";
+          void slot;
+        }
+        sync();
+      });
+    }
+    sync();
+    for (const checkbox of editForm.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"][name^="retire_seat_"]',
+    ))
+      checkbox.addEventListener("change", () => {
+        const chip = checkbox.closest(".admin_guests_chip");
+        chip?.classList.toggle("is-retired", checkbox.checked);
+        const label = chip?.querySelector<HTMLElement>("[data-retire-label]");
+        if (label) label.textContent = checkbox.checked ? "Undo" : "× Retire";
+      });
+  }
+
+  const newForm = document.querySelector<HTMLFormElement>(
+    "[data-new-household]",
+  );
+  if (newForm) {
+    const members = newForm.querySelector<HTMLElement>("[data-new-members]");
+    const addMember = newForm.querySelector<HTMLButtonElement>(
+      'button[name="member_action"]',
+    );
+    addMember?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!members) return;
+      const label = document.createElement("label");
+      label.textContent = `Member name ${members.children.length + 1}`;
+      const field = document.createElement("input");
+      field.name = "member_name";
+      label.append(field);
+      members.append(label);
+      field.focus();
+    });
+    for (const button of newForm.querySelectorAll<HTMLButtonElement>(
+      'button[name="seat_action"]',
+    ))
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        const count = newForm.querySelector<HTMLInputElement>(
+          "[data-new-seat-count]",
+        );
+        const output = newForm.querySelector<HTMLOutputElement>(
+          "[data-new-seat-output]",
+        );
+        const membersCount = newForm.querySelectorAll(
+          'input[name="member_name"]',
+        ).length;
+        if (!count || !output) return;
+        const next =
+          button.value === "add"
+            ? Math.min(12, Number(count.value) + 1)
+            : Math.max(membersCount, Number(count.value) - 1);
+        count.value = String(next);
+        output.value = String(next);
+      });
+  }
 </script>

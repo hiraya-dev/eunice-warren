@@ -3,6 +3,8 @@ import { createD1AdminStore } from "./d1.ts";
 import { createFakeAdminStore } from "./fake.ts";
 
 export interface AdminSeat {
+  id?: number;
+  updatedAt?: string;
   slot: number;
   kind: "member" | "plus_one";
   invitedName: string | null;
@@ -13,6 +15,11 @@ export interface AdminSeat {
   state?: "open" | "named" | "freed";
   slipperSize?: string | null;
   attending?: boolean;
+  status?: "active" | "retired";
+  retiredAt?: string | null;
+  retiredBy?: string | null;
+  nameKey?: string | null;
+  surnameKey?: string | null;
 }
 export interface AdminHousehold {
   id: string;
@@ -25,6 +32,32 @@ export interface AdminHousehold {
     | { state: "coming"; coming: number }
     | { state: "declined" }
     | { state: "waiting" };
+  updatedAt?: string;
+  ticketCode?: string;
+  archivedAt?: string | null;
+  archivedBy?: string | null;
+  assignedSeatIds?: number[];
+}
+export class StaleHouseholdError extends Error {
+  constructor() {
+    super("This household changed since you opened it. Reload to see the latest.");
+    this.name = "StaleHouseholdError";
+  }
+}
+export interface SaveHouseholdInput {
+  id: string;
+  updatedAt?: string;
+  displayName: string;
+  notes: string | null;
+  seatCount: number;
+  seats: Array<{ id?: number; name: string; invitedName?: string; retire?: boolean }>;
+}
+export interface NewHouseholdInput {
+  label: string;
+  displayName: string;
+  notes: string | null;
+  seats: Array<{ name: string }>;
+  seatCount?: number;
 }
 export interface AdminOverview {
   seatsOffered: number;
@@ -165,6 +198,9 @@ export interface AdminStore {
   getSlipperOrder(): Promise<AdminSlipperOrder>;
   getSongRequests(): Promise<AdminSongRequests>;
   getNavCounts(): Promise<AdminNavCounts>;
+  saveHousehold(input: SaveHouseholdInput, actor: string): Promise<{ ok: true } | { ok: false; message: string }>;
+  addHousehold(input: NewHouseholdInput, actor: string): Promise<{ id: string }>;
+  archiveHousehold(id: string, actor: string, updatedAt?: string): Promise<void>;
 }
 export function selectAdminStore(
   storeName: unknown,

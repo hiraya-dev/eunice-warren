@@ -117,7 +117,8 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
         if (!seat.name.trim() || seat.name === shownName) return [];
         return [db.update(inviteSeats).set({ name: seat.name, namedByKind: "guest", namedBy: submission.name, namedAt: now, namedInResponseId: responseId, updatedAt: now, updatedBy: null }).where(eq(inviteSeats.id, current.id))];
       });
-      await db.batch([response, seatRows, ...updates] as [typeof response, typeof seatRows, ...typeof updates]);
+      const householdTouch = db.update(households).set({ updatedAt: now }).where(eq(households.id, submission.inviteId));
+      await db.batch([response, seatRows, householdTouch, ...updates] as [typeof response, typeof seatRows, typeof householdTouch, ...typeof updates]);
     },
   };
 };

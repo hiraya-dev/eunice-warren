@@ -1,0 +1,323 @@
+---
+import type { AdminHousehold } from "@/lib/admin/store";
+
+interface DraftSeat {
+  id?: number;
+  slot: number;
+  kind: "member" | "plus_one";
+  name: string;
+  invitedName: string | null;
+  retire?: boolean;
+}
+
+interface NewDraft {
+  displayName: string;
+  label: string;
+  notes: string;
+  memberNames: string[];
+  seatCount: number;
+}
+
+type Props = {
+  render?: boolean;
+  /** A refusal to show above the bottom line, inside the open row. */
+  error?: string;
+  reloadHref?: string;
+} & (
+  | {
+      variant: "new";
+      draft: NewDraft;
+    }
+  | {
+      variant: "edit";
+      row: AdminHousehold;
+      seats: DraftSeat[];
+      updatedAt: string;
+      displayName: string;
+      notes: string;
+    }
+);
+
+const props = Astro.props;
+const render = props.render ?? true;
+const firstMember =
+  props.variant === "edit"
+    ? (props.row.seats
+        .find((seat) => seat.kind === "member")
+        ?.name?.trim()
+        .split(/\s+/)[0] ?? "the first member")
+    : "";
+const openSeats =
+  props.variant === "new"
+    ? Math.max(
+        0,
+        props.draft.seatCount - props.draft.memberNames.filter(Boolean).length,
+      )
+    : 0;
+---
+
+{
+  render && props.variant === "new" && (
+    <tr class="admin-guests_edit-row admin-guests_new-row">
+      <td colspan={5}>
+        <form
+          class="admin_guests_form"
+          method="post"
+          data-new-household
+          style="--idcol: 8.75rem"
+        >
+          <input type="hidden" name="action" value="add" />
+          <input
+            type="hidden"
+            name="seat_count"
+            value={props.draft.seatCount}
+            data-new-seat-count
+          />
+          <div class="admin_guests_top">
+            <label class="admin_guests_field admin_guests_host">
+              <span class="sr-only">Host label / ID</span>
+              <input
+                class="admin_guests_input"
+                name="label"
+                required
+                maxlength={80}
+                placeholder="Host label / ID"
+                value={props.draft.label}
+              />
+            </label>
+            <label class="admin_guests_field admin_guests_name">
+              <span class="sr-only">Household name</span>
+              <input
+                class="admin_guests_input"
+                name="display_name"
+                required
+                maxlength={40}
+                placeholder="Household name"
+                value={props.draft.displayName}
+              />
+            </label>
+            <div class="admin_guests_edit-seats admin_guests_new-names">
+              <div class="admin_guests_new-members" data-new-members>
+                {props.draft.memberNames.map((name, index) => (
+                  <label class="admin_guests_member">
+                    <span class="sr-only">Member name {index + 1}</span>
+                    <input
+                      name="member_name"
+                      value={name}
+                      placeholder="Member name"
+                    />
+                  </label>
+                ))}
+              </div>
+              <button
+                class="admin_guests_btn compact"
+                type="submit"
+                name="member_action"
+                value="add"
+              >
+                + Add member
+              </button>
+            </div>
+            <div class="admin_guests_stepper" role="group" aria-label="Seats">
+              <button
+                name="seat_action"
+                value="remove"
+                type="submit"
+                aria-label="Remove a seat"
+              >
+                −
+              </button>
+              <output data-new-seat-output>{props.draft.seatCount}</output>
+              <button
+                name="seat_action"
+                value="add"
+                type="submit"
+                aria-label="Add a seat"
+              >
+                +
+              </button>
+            </div>
+            <label class="admin_guests_field admin_guests_notes">
+              <span class="sr-only">Notes</span>
+              <input
+                class="admin_guests_input quiet"
+                name="notes"
+                placeholder="Notes"
+                value={props.draft.notes}
+              />
+            </label>
+          </div>
+          {props.error && (
+            <p class="admin_guests_error" data-admin-write-error>
+              {props.error}{" "}
+              {props.reloadHref && <a href={props.reloadHref}>Reload</a>}
+            </p>
+          )}
+          <div class="admin_guests_bottom">
+            <p class="admin_guests_helper">
+              {openSeats} open {openSeats === 1 ? "seat" : "seats"}
+            </p>
+            <div class="admin_guests_form-actions">
+              <a class="admin_guests_btn" href="/admin/guests">
+                Cancel
+              </a>
+              <button class="admin_guests_btn primary" type="submit">
+                Save household
+              </button>
+            </div>
+          </div>
+        </form>
+      </td>
+    </tr>
+  )
+}
+
+{
+  render && props.variant === "edit" && (
+    <tr class="admin-guests_edit-row" data-household-id={props.row.id}>
+      <td colspan={5}>
+        <form
+          class="admin_guests_form"
+          method="post"
+          data-edit-household
+          data-seat-count={props.seats.length}
+        >
+          <input type="hidden" name="action" value="save" />
+          <input type="hidden" name="id" value={props.row.id} />
+          <input type="hidden" name="updated_at" value={props.updatedAt} />
+          <div class="admin_guests_top">
+            <p class="admin_guests_host">
+              <span class="sr-only">Host label / ID: </span>
+              {props.row.label}
+            </p>
+            <label class="admin_guests_field admin_guests_name">
+              <span class="sr-only">Household name</span>
+              <input
+                class="admin_guests_input"
+                name="display_name"
+                required
+                maxlength={40}
+                value={props.displayName}
+              />
+            </label>
+            <div class="admin_guests_edit-seats" data-seat-list>
+              {props.seats.map((seat) => (
+                <label
+                  class:list={[
+                    "admin_guests_chip",
+                    { "is-retired": seat.retire },
+                  ]}
+                  data-seat-kind={seat.kind}
+                >
+                  <span class="sr-only">
+                    {seat.kind === "member"
+                      ? (seat.invitedName ?? "Member")
+                      : seat.name
+                        ? "Plus-one"
+                        : "Open seat · add a name"}
+                  </span>
+                  <input type="hidden" name="seat_id" value={seat.id ?? ""} />
+                  {seat.kind === "member" ? (
+                    <span class="admin_guests_chip-main">
+                      <input
+                        name="seat_name"
+                        required={!seat.retire}
+                        value={seat.name}
+                        placeholder="Member name"
+                      />
+                      {seat.id && (
+                        <span class="admin_guests_retire">
+                          <span data-retire-label>
+                            {seat.retire ? "Undo" : "× Retire"}
+                          </span>
+                          <input
+                            type="checkbox"
+                            name={`retire_seat_${seat.id}`}
+                            value="1"
+                            aria-label={`Retire seat ${seat.slot}`}
+                            checked={seat.retire}
+                          />
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <input
+                      name="seat_name"
+                      value={seat.name}
+                      placeholder="Open seat · add a name"
+                    />
+                  )}
+                  {seat.kind === "member" ? (
+                    <input
+                      name="invited_name"
+                      value={seat.invitedName ?? ""}
+                      aria-label="Fix invited name"
+                      placeholder="Fix invited name"
+                    />
+                  ) : (
+                    <input type="hidden" name="invited_name" value="" />
+                  )}
+                </label>
+              ))}
+            </div>
+            <div class="admin_guests_stepper" role="group" aria-label="Seats">
+              <button
+                name="seat_action"
+                value="remove"
+                type="submit"
+                aria-label="Remove a seat"
+              >
+                −
+              </button>
+              <output data-seat-output>{props.seats.length}</output>
+              <button
+                name="seat_action"
+                value="add"
+                type="submit"
+                aria-label="Add a seat"
+              >
+                +
+              </button>
+            </div>
+            <input
+              type="hidden"
+              name="seat_count"
+              value={props.seats.length}
+              data-seat-count-input
+            />
+            <label class="admin_guests_field admin_guests_notes">
+              <span class="sr-only">Notes</span>
+              <input
+                class="admin_guests_input quiet"
+                name="notes"
+                placeholder="Notes"
+                value={props.notes}
+              />
+            </label>
+          </div>
+          {props.error && (
+            <p class="admin_guests_error" data-admin-write-error>
+              {props.error}{" "}
+              {props.reloadHref && <a href={props.reloadHref}>Reload</a>}
+            </p>
+          )}
+          <div class="admin_guests_bottom">
+            <p class="admin_guests_helper">
+              Set the seats first, then name who you know. + adds an open seat;
+              − only removes an open seat nobody has answered for. Names you
+              type are pre-filled in {firstMember}'s RSVP.
+            </p>
+            <div class="admin_guests_form-actions">
+              <a class="admin_guests_btn" href="/admin/guests">
+                Cancel
+              </a>
+              <button class="admin_guests_btn primary" type="submit">
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </td>
+    </tr>
+  )
+}
