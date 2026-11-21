@@ -68,6 +68,7 @@ export interface AdminRsvpSeat {
 export interface AdminRsvpVersion {
   id: number;
   submittedAt: string;
+  respondentName?: string;
   attending: boolean;
   coming: number;
   source: "guest" | "host";

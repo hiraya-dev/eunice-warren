@@ -1,7 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { fakeAdminFixtures } from "../src/lib/admin/fake";
+import { fakeAdminFixtures, fakeAdminResponses } from "../src/lib/admin/fake";
 
-const replied = fakeAdminFixtures.filter((row) => row.rsvp.state !== "waiting");
+const latest = new Map<string, (typeof fakeAdminResponses)[number]>();
+for (const response of fakeAdminResponses) {
+  const saved = latest.get(response.householdId);
+  if (
+    !saved ||
+    response.submittedAt > saved.submittedAt ||
+    (response.submittedAt === saved.submittedAt && response.id > saved.id)
+  )
+    latest.set(response.householdId, response);
+}
+const replied = fakeAdminFixtures.filter((row) => latest.has(row.id));
 
 test.describe("admin RSVPs", () => {
   test(
@@ -22,10 +32,21 @@ test.describe("admin RSVPs", () => {
     { tag: "@smoke" },
     async ({ page }) => {
       await page.goto("/admin/rsvps");
+      await expect(
+        page.locator(
+          '[data-admin-nav] a[href="/admin/guests"] [data-admin-count]',
+        ),
+      ).toHaveText(String(fakeAdminFixtures.length));
       for (const [filter, count] of [
         ["all", replied.length],
-        ["attending", replied.filter((r) => r.rsvp.state === "coming").length],
-        ["declined", replied.filter((r) => r.rsvp.state === "declined").length],
+        [
+          "attending",
+          replied.filter((r) => latest.get(r.id)?.attending).length,
+        ],
+        [
+          "declined",
+          replied.filter((r) => !latest.get(r.id)?.attending).length,
+        ],
         [
           "seat-changes",
           replied.filter((r) =>
@@ -36,10 +57,7 @@ test.describe("admin RSVPs", () => {
             ),
           ).length,
         ],
-        [
-          "waiting",
-          fakeAdminFixtures.filter((r) => r.rsvp.state === "waiting").length,
-        ],
+        ["waiting", fakeAdminFixtures.filter((r) => !latest.has(r.id)).length],
       ] as const) {
         await page.locator(`[data-admin-filter="${filter}"]`).click();
         await expect(page.locator("[data-admin-rsvp-row]")).toHaveCount(count);

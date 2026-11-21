@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fakeAdminFixtures } from "../src/lib/admin/fake";
+import { fakeAdminFixtures, fakeAdminReplies } from "../src/lib/admin/fake";
 
 test.describe("admin dashboard", () => {
   test("renders the fixture overview and protected headers @smoke", async ({
@@ -11,7 +11,9 @@ test.describe("admin dashboard", () => {
     await expect(page.locator("[data-admin-sample]")).toBeVisible();
     await expect(page.locator("[data-admin-greeting]")).toContainText("Eunice");
     await expect(page.locator("[data-admin-coming]")).toBeVisible();
-    await expect(page.locator("[data-admin-reply]")).toHaveCount(4);
+    await expect(page.locator("[data-admin-reply]")).toHaveCount(
+      fakeAdminReplies.length,
+    );
     await expect(page.locator("[data-admin-waiting-row]")).toHaveCount(
       Math.min(
         3,

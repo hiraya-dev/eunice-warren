@@ -184,6 +184,10 @@ export function adminHistoryHeading(version: {
 export function rsvpChangeSummary(
   current: {
     attending: boolean;
+    source?: "guest" | "host";
+    editedBy?: string | null;
+    respondentName?: string;
+    note?: string | null;
     seats: Array<{
       seatId: number;
       name: string;
@@ -222,11 +226,16 @@ export function rsvpChangeSummary(
     if (!before) return;
     if (seat.name !== before.name && seat.name) {
       const by =
-        seat.namedByKind === "host" && seat.namedBy
-          ? (hosts[seat.namedBy.toLowerCase()] ?? seat.namedBy.split("@")[0])
-          : seat.namedByKind === "guest"
-            ? (seat.namedBy ?? "guest")
-            : null;
+        current.source === "host" && current.editedBy
+          ? (hosts[current.editedBy.toLowerCase()] ?? current.editedBy)
+          : current.source === "guest" && current.respondentName
+            ? current.respondentName
+            : seat.namedByKind === "host" && seat.namedBy
+              ? (hosts[seat.namedBy.toLowerCase()] ??
+                seat.namedBy.split("@")[0])
+              : seat.namedByKind === "guest"
+                ? (seat.namedBy ?? "guest")
+                : null;
       changes.push(
         `${before.name || "(plus-one)"} → ${seat.name}${by ? `, renamed by ${by}` : ""}`,
       );
@@ -241,4 +250,16 @@ export function rsvpChangeSummary(
       );
   });
   return changes;
+}
+
+export function rsvpHistoryBody(
+  current: Parameters<typeof rsvpChangeSummary>[0],
+  previous?: Parameters<typeof rsvpChangeSummary>[1],
+  hosts: Record<string, string> = {},
+) {
+  const summary = rsvpChangeSummary(current, previous, hosts);
+  if (summary.length) return summary.join(previous ? ". " : ", ");
+  if (!previous && !current.attending) return "Not coming";
+  if (current.note) return `“${current.note}”`;
+  return current.attending ? "No changes" : "Not coming";
 }

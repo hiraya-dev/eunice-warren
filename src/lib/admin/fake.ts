@@ -5,6 +5,7 @@ import type {
   AdminRsvpDetail,
   AdminRsvpList,
   AdminRsvpRow,
+  AdminRsvpSeat,
   AdminRsvpVersion,
   AdminStore,
 } from "./store";
@@ -35,9 +36,9 @@ export const fakeAdminFixtures: AdminHousehold[] = [
       seat(1, "Maria Dela Cruz", "Maria Dela Cruz"),
       seat(2, "Jose Dela Cruz", "Jose Dela Cruz"),
       seat(3, "Anna Dela Cruz", "Ana Dela Cruz", "member", {
-        namedBy: "Maria",
+        namedBy: "Maria Dela Cruz",
         namedByKind: "guest",
-        namedAt: "2026-11-12T09:00:00+08:00",
+        namedAt: "2026-11-15T13:00:00+08:00",
       }),
       seat(4, "Miguel Dela Cruz", "Miguel Dela Cruz"),
     ],
@@ -49,9 +50,13 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     label: "SA-02",
     displayName: "The Santos Family",
     notes: null,
-    seats: [1, 2, 3, 4, 5].map((slot) =>
-      seat(slot, `Santos Guest ${slot}`, `Santos Guest ${slot}`),
-    ),
+    seats: [
+      seat(1, "Antonio Santos", "Antonio Santos"),
+      seat(2, "Grace Santos", "Grace Santos"),
+      seat(3, "Nico Santos", "Nico Santos"),
+      seat(4, "Mara Santos", "Mara Santos"),
+      seat(5, "Luis Santos", "Luis Santos"),
+    ],
     seatCount: 5,
     rsvp: { state: "waiting" },
   },
@@ -65,7 +70,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
       seat(2, null, null, "plus_one", { state: "open" }),
     ],
     seatCount: 2,
-    rsvp: { state: "waiting" },
+    rsvp: { state: "coming", coming: 1 },
   },
   {
     id: "hh-pena",
@@ -81,20 +86,24 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     label: "VF-05",
     displayName: "The Villanueva Family",
     notes: "Three seats confirmed",
-    seats: [1, 2, 3, 4, 5].map((slot) =>
-      seat(slot, `Villanueva Guest ${slot}`, `Villanueva Guest ${slot}`),
-    ),
+    seats: [
+      seat(1, "Rico Villanueva", "Rico Villanueva"),
+      seat(2, "Joy Villanueva", "Joy Villanueva"),
+      seat(3, "Pia Villanueva", "Pia Villanueva"),
+      seat(4, "Lolo Ben Villanueva", "Lolo Ben Villanueva"),
+      seat(5, "Lola Cora Villanueva", "Lola Cora Villanueva"),
+    ],
     seatCount: 5,
     rsvp: { state: "coming", coming: 3 },
   },
   {
-    id: "hh-reyes",
-    label: "PR-06",
-    displayName: "Paolo Reyes",
+    id: "hh-merly-ben",
+    label: "MB-06",
+    displayName: "Tita Merly & Tito Ben",
     notes: null,
     seats: [
-      seat(1, "Paolo Reyes", "Paolo Reyes"),
-      seat(2, null, null, "plus_one", { state: "open" }),
+      seat(1, "Merly Reyes", "Merly Reyes"),
+      seat(2, "Ben Reyes", "Ben Reyes"),
     ],
     seatCount: 2,
     rsvp: { state: "waiting" },
@@ -117,162 +126,262 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     rsvp: { state: "coming", coming: 2 },
   },
   {
-    id: "hh-tan",
-    label: "MT-08",
+    id: "hh-ramos",
+    label: "LR-08",
     displayName: "The Ramos Family",
     notes: null,
     seats: [
-      seat(1, "Bea Ramos", "Paolo Ramos", "member", {
-        namedBy: "Liza",
-        namedByKind: "guest",
-        namedAt: "2026-11-14T13:00:00+08:00",
+      seat(1, "Liza Ramos", "Liza Ramos"),
+      seat(2, "Beatriz Ramos", "Paolo Ramos", "member", {
+        namedBy: "eunice@example.com",
+        namedByKind: "host",
+        namedAt: "2026-11-21T10:30:00+08:00",
       }),
-      seat(2, null, null, "plus_one", { state: "freed" }),
     ],
     seatCount: 2,
-    rsvp: { state: "coming", coming: 1 },
+    rsvp: { state: "coming", coming: 2 },
   },
 ];
 export const fakeAdminSongs = [
   { song: "Bloom", submittedAt: "2026-11-18T09:00:00+08:00" },
   { song: "Beyond", submittedAt: "2026-11-17T09:00:00+08:00" },
 ];
-export const fakeAdminReplies = [
+export interface FakeAdminResponse {
+  id: number;
+  householdId: string;
+  submittedAt: string;
+  respondentName: string;
+  attending: boolean;
+  email: string;
+  note: string | null;
+  source: "guest" | "host";
+  editedBy: string | null;
+  seats: Array<{
+    seatId: number;
+    name: string;
+    attending: boolean;
+    slipperSize: string | null;
+  }>;
+}
+
+export const fakeAdminResponses: FakeAdminResponse[] = [
   {
-    displayName: "Kat Lim",
+    id: 1,
+    householdId: "hh-ramos",
+    submittedAt: "2026-11-02T15:00:00+08:00",
+    respondentName: "Liza Ramos",
     attending: true,
-    coming: 2,
-    seatCount: 2,
-    submittedAt: "2026-11-18T13:00:00+08:00",
-    namedPlusOnes: [{ name: "Jonas Ong", namedBy: "Kat" }],
+    email: "liza@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [
+      { seatId: 1, name: "Liza Ramos", attending: true, slipperSize: "W 8" },
+      { seatId: 2, name: "Paolo Ramos", attending: true, slipperSize: "M 10" },
+    ],
   },
   {
-    displayName: "The Villanueva Family",
+    id: 2,
+    householdId: "hh-lim",
+    submittedAt: "2026-11-10T13:00:00+08:00",
+    respondentName: "Kat Lim",
     attending: true,
-    coming: 3,
-    seatCount: 5,
-    submittedAt: "2026-11-17T13:00:00+08:00",
-    namedPlusOnes: [],
+    email: "kat@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [
+      { seatId: 1, name: "Kat Lim", attending: true, slipperSize: "W 6" },
+      { seatId: 2, name: "", attending: false, slipperSize: null },
+    ],
   },
   {
-    displayName: "Sofía Peña",
-    attending: false,
-    coming: 0,
-    seatCount: 1,
-    submittedAt: "2026-11-16T13:00:00+08:00",
-    namedPlusOnes: [],
-  },
-  {
-    displayName: "The Dela Cruz Family",
-    attending: true,
-    coming: 4,
-    seatCount: 4,
+    id: 3,
+    householdId: "hh-dela-cruz",
     submittedAt: "2026-11-15T13:00:00+08:00",
-    namedPlusOnes: [],
+    respondentName: "Maria Dela Cruz",
+    attending: true,
+    email: "maria@example.com",
+    note: "Can't wait! Ana is bringing her ukulele.",
+    source: "guest",
+    editedBy: null,
+    seats: [
+      {
+        seatId: 1,
+        name: "Maria Dela Cruz",
+        attending: true,
+        slipperSize: "W 7",
+      },
+      {
+        seatId: 2,
+        name: "Jose Dela Cruz",
+        attending: true,
+        slipperSize: "M 9",
+      },
+      {
+        seatId: 3,
+        name: "Anna Dela Cruz",
+        attending: true,
+        slipperSize: "W 6",
+      },
+      {
+        seatId: 4,
+        name: "Miguel Dela Cruz",
+        attending: true,
+        slipperSize: "M 5",
+      },
+    ],
+  },
+  {
+    id: 4,
+    householdId: "hh-pena",
+    submittedAt: "2026-11-16T13:00:00+08:00",
+    respondentName: "Sofía Peña",
+    attending: false,
+    email: "sofia@example.com",
+    note: "So sorry, I'm in Madrid that week. Sending all my love.",
+    source: "guest",
+    editedBy: null,
+    seats: [
+      { seatId: 1, name: "Sofía Peña", attending: false, slipperSize: null },
+    ],
+  },
+  {
+    id: 5,
+    householdId: "hh-villanueva",
+    submittedAt: "2026-11-17T13:00:00+08:00",
+    respondentName: "Rico Villanueva",
+    attending: true,
+    email: "rico@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [
+      {
+        seatId: 1,
+        name: "Rico Villanueva",
+        attending: true,
+        slipperSize: "M 10",
+      },
+      {
+        seatId: 2,
+        name: "Joy Villanueva",
+        attending: true,
+        slipperSize: "W 7",
+      },
+      {
+        seatId: 3,
+        name: "Pia Villanueva",
+        attending: true,
+        slipperSize: "W 5",
+      },
+      {
+        seatId: 4,
+        name: "Lolo Ben Villanueva",
+        attending: false,
+        slipperSize: null,
+      },
+      {
+        seatId: 5,
+        name: "Lola Cora Villanueva",
+        attending: false,
+        slipperSize: null,
+      },
+    ],
+  },
+  {
+    id: 6,
+    householdId: "hh-lim",
+    submittedAt: "2026-11-18T13:00:00+08:00",
+    respondentName: "Kat Lim",
+    attending: true,
+    email: "kat@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [
+      { seatId: 1, name: "Kat Lim", attending: true, slipperSize: "W 6" },
+      { seatId: 2, name: "Jonas Ong", attending: true, slipperSize: "M 11" },
+    ],
+  },
+  {
+    id: 7,
+    householdId: "hh-mendoza",
+    submittedAt: "2026-11-19T12:00:00+08:00",
+    respondentName: "Carlo Mendoza",
+    attending: true,
+    email: "carlo@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [],
+  },
+  {
+    id: 8,
+    householdId: "hh-ramos",
+    submittedAt: "2026-11-20T18:00:00+08:00",
+    respondentName: "Liza Ramos",
+    attending: true,
+    email: "liza@example.com",
+    note: "Paolo has a work trip that week, so my sister Bea is coming in his place.",
+    source: "guest",
+    editedBy: null,
+    seats: [
+      { seatId: 1, name: "Liza Ramos", attending: true, slipperSize: "W 8" },
+      { seatId: 2, name: "Bea Ramos", attending: true, slipperSize: "W 7" },
+    ],
+  },
+  {
+    id: 9,
+    householdId: "hh-ramos",
+    submittedAt: "2026-11-21T10:30:00+08:00",
+    respondentName: "Liza Ramos",
+    attending: true,
+    email: "liza@example.com",
+    note: "Paolo has a work trip that week, so my sister Bea is coming in his place.",
+    source: "host",
+    editedBy: "eunice@example.com",
+    seats: [
+      { seatId: 1, name: "Liza Ramos", attending: true, slipperSize: "W 8" },
+      { seatId: 2, name: "Beatriz Ramos", attending: true, slipperSize: "W 7" },
+    ],
   },
 ];
-const fakeReplyMeta: Record<
-  string,
-  {
-    email: string;
-    respondentName: string;
-    submittedAt: string;
-    note: string | null;
-    versions?: number;
-    hostEdit?: boolean;
-  }
-> = {
-  "hh-dela-cruz": {
-    email: "maria@example.com",
-    respondentName: "Maria Dela Cruz",
-    submittedAt: "2026-11-15T13:00:00+08:00",
-    note: "Beach transfer",
-  },
-  "hh-villanueva": {
-    email: "ana@example.com",
-    respondentName: "Ana Villanueva",
-    submittedAt: "2026-11-17T13:00:00+08:00",
-    note: "Three seats confirmed",
-  },
-  "hh-lim": {
-    email: "kat@example.com",
-    respondentName: "Kat Lim",
-    submittedAt: "2026-11-18T13:00:00+08:00",
-    note: null,
-    versions: 2,
-    hostEdit: true,
-  },
-  "hh-pena": {
-    email: "sofia@example.com",
-    respondentName: "Sofía Peña",
-    submittedAt: "2026-11-16T13:00:00+08:00",
-    note: "Sadly we cannot make it",
-  },
-  "hh-tan": {
-    email: "liza@example.com",
-    respondentName: "Liza Ramos",
-    submittedAt: "2026-11-14T13:00:00+08:00",
-    note: null,
-    versions: 2,
-  },
-};
-const fakeHistory = (row: AdminHousehold): AdminRsvpVersion[] => {
-  const meta = fakeReplyMeta[row.id];
-  if (!meta) return [];
-  const attending = row.rsvp.state === "coming";
-  const coming = row.rsvp.state === "coming" ? row.rsvp.coming : 0;
-  const sizes: Record<string, string | null> = {
-    "hh-dela-cruz": "W 7",
-    "hh-villanueva": null,
-    "hh-lim": "W 8",
-    "hh-pena": null,
-    "hh-tan": null,
-  };
-  const seats = row.seats.map((s, i) => ({
-    seatId: s.slot,
-    name: s.name ?? "",
-    attending:
-      attending &&
-      (row.id === "hh-villanueva"
-        ? i < 3
-        : row.id === "hh-tan"
-          ? i === 0
-          : true),
-    slipperSize: s.kind === "member" ? (sizes[row.id] ?? null) : null,
-  }));
-  const latest: AdminRsvpVersion = {
-    id: meta.versions ? 20 : 10,
-    submittedAt: meta.submittedAt,
-    attending,
+
+const responseVersions = (householdId: string) =>
+  fakeAdminResponses
+    .filter((response) => response.householdId === householdId)
+    .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt) || b.id - a.id);
+
+const makeFakeSeat = (
+  seat: AdminHousehold["seats"][number],
+  response: FakeAdminResponse | null,
+): AdminRsvpSeat => {
+  const saved = response?.seats.find((item) => item.seatId === seat.slot);
+  const coming = Boolean(
+    response?.attending && (saved?.attending ?? seat.kind === "member"),
+  );
+  const name = saved ? saved.name : seat.name;
+  return {
+    ...seat,
+    seatId: seat.slot,
+    name,
     coming,
-    source: meta.hostEdit ? "host" : "guest",
-    editedBy: meta.hostEdit ? "host@example.com" : null,
-    note: meta.note,
-    seats,
+    slipperSize: coming ? (saved?.slipperSize ?? null) : null,
+    plusOneState:
+      seat.kind === "plus_one"
+        ? !name
+          ? "open"
+          : coming
+            ? "named"
+            : "freed"
+        : undefined,
   };
-  if (!meta.versions) return [latest];
-  return [
-    latest,
-    {
-      ...latest,
-      id: 19,
-      submittedAt: "2026-11-13T13:00:00+08:00",
-      source: "guest",
-      editedBy: null,
-      seats: seats.map((s, i) =>
-        row.id === "hh-tan" && i === 0
-          ? { ...s, name: "Paolo Ramos" }
-          : row.id === "hh-lim" && i === 1
-            ? { ...s, name: row.seats[i]?.invitedName ?? s.name }
-            : s,
-      ),
-    },
-  ];
 };
+
 const makeFakeRsvpRow = (row: AdminHousehold): AdminRsvpRow => {
-  const meta = fakeReplyMeta[row.id];
-  const history = fakeHistory(row);
-  const current = history[0];
+  const versions = responseVersions(row.id);
+  const current = versions[0] ?? null;
   const seatChanges = row.seats
     .filter(
       (s) =>
@@ -280,35 +389,23 @@ const makeFakeRsvpRow = (row: AdminHousehold): AdminRsvpRow => {
         (s.kind === "plus_one" && s.name && !s.invitedName),
     )
     .map((s) => ({ from: s.invitedName, to: s.name! }));
-  const seats = row.seats.map((s, i) => ({
-    ...s,
-    coming: Boolean(
-      current?.attending &&
-      (current.seats[i]?.attending ?? s.kind === "member"),
-    ),
-    slipperSize: current?.seats[i]?.slipperSize ?? null,
-  }));
+  const seats = row.seats.map((s) => makeFakeSeat(s, current));
   return {
     id: row.id,
     label: row.label,
     displayName: row.displayName,
-    state:
-      row.rsvp.state === "coming"
-        ? "attending"
-        : row.rsvp.state === "declined"
-          ? "declined"
-          : "waiting",
-    email: meta?.email ?? null,
-    respondentName: meta?.respondentName ?? null,
-    submittedAt: meta?.submittedAt ?? null,
-    note: meta?.note ?? null,
-    versionCount: meta ? history.length : null,
+    state: current ? (current.attending ? "attending" : "declined") : "waiting",
+    email: current?.email ?? null,
+    respondentName: current?.respondentName ?? null,
+    submittedAt: current?.submittedAt ?? null,
+    note: current?.note ?? null,
+    versionCount: current ? versions.length : null,
+    editedBy: current?.editedBy ?? null,
     seatCount: row.seatCount,
     comingNames: seats.filter((s) => s.coming && s.name).map((s) => s.name!),
-    notComingNames:
-      row.rsvp.state === "coming"
-        ? seats.filter((s) => !s.coming && s.name).map((s) => s.name!)
-        : [],
+    notComingNames: current?.attending
+      ? seats.filter((s) => !s.coming && s.name).map((s) => s.name!)
+      : [],
     seatChanges,
     slippers: seats
       .filter((s) => s.coming && s.name)
@@ -320,6 +417,59 @@ const makeFakeRsvpRow = (row: AdminHousehold): AdminRsvpRow => {
     seats,
   };
 };
+
+const fakeHistory = (row: AdminHousehold): AdminRsvpVersion[] =>
+  responseVersions(row.id).map((response) => {
+    const seats = row.seats.map((seat) => makeFakeSeat(seat, response));
+    return {
+      id: response.id,
+      submittedAt: response.submittedAt,
+      respondentName: response.respondentName,
+      attending: response.attending,
+      coming: seats.filter((seat) => seat.coming).length,
+      source: response.source,
+      editedBy: response.editedBy,
+      note: response.note,
+      seats: seats.map((seat) => ({
+        seatId: seat.slot,
+        name: seat.name ?? "",
+        attending: seat.coming,
+        slipperSize: seat.coming ? seat.slipperSize : null,
+      })),
+    };
+  });
+
+export const fakeAdminReplies = fakeAdminFixtures
+  .map((household) => ({
+    household,
+    response: responseVersions(household.id)[0],
+  }))
+  .filter(
+    (
+      item,
+    ): item is {
+      household: AdminHousehold;
+      response: FakeAdminResponse;
+    } => Boolean(item.response),
+  )
+  .sort(
+    (a, b) =>
+      b.response.submittedAt.localeCompare(a.response.submittedAt) ||
+      b.response.id - a.response.id,
+  )
+  .slice(0, 4)
+  .map(({ household, response }) => ({
+    displayName: household.displayName,
+    attending: response.attending,
+    coming: household.seats.filter(
+      (seat) => makeFakeSeat(seat, response).coming,
+    ).length,
+    seatCount: household.seatCount,
+    submittedAt: response.submittedAt,
+    namedPlusOnes: household.seats
+      .filter((seat) => seat.kind === "plus_one" && seat.namedBy)
+      .map((seat) => ({ name: seat.name!, namedBy: seat.namedBy })),
+  }));
 export function createFakeAdminStore(): AdminStore {
   return {
     async getGuestList(): Promise<AdminGuestList> {

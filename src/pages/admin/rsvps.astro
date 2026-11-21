@@ -7,9 +7,9 @@ import {
   adminTimestamp,
   relativeTime,
   replyCountText,
+  rsvpHistoryBody,
   rowSlippersText,
   seatSubline,
-  rsvpChangeSummary,
 } from "@/lib/admin/presentation";
 import { selectAdminStore } from "@/lib/admin/store";
 import type {
@@ -97,7 +97,12 @@ const titleParts = (name: string) => {
 };
 ---
 
-<AdminLayout active="rsvps" host={host} rsvpCount={view.totals.all}>
+<AdminLayout
+  active="rsvps"
+  host={host}
+  householdCount={view.rows.length}
+  rsvpCount={view.totals.all}
+>
   <section id="rsvps" class="admin-rsvps_wrap" data-admin-rsvps-page>
     {
       host.sample && (
@@ -448,21 +453,11 @@ const titleParts = (name: string) => {
                             )}
                           </h4>
                           <p>
-                            {(() => {
-                              const summary = rsvpChangeSummary(
-                                version,
-                                detail.history[index + 1],
-                                hosts,
-                              ).join(". ");
-                              return (
-                                summary ||
-                                (version.note
-                                  ? `“${version.note}”`
-                                  : version.attending
-                                    ? "No changes"
-                                    : "Not coming")
-                              );
-                            })()}
+                            {rsvpHistoryBody(
+                              version,
+                              detail.history[index + 1],
+                              hosts,
+                            )}
                           </p>
                         </li>
                       ))}

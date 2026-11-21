@@ -17,6 +17,8 @@ import {
   relativeTime,
   renameNote,
   replyCountText,
+  rsvpChangeSummary,
+  rsvpHistoryBody,
   rowSlippersText,
   seatSubline,
 } from "../src/lib/admin/presentation.ts";
@@ -27,6 +29,7 @@ import { SqliteD1 } from "./helpers/d1-sqlite.ts";
 import {
   createFakeAdminStore,
   fakeAdminFixtures,
+  fakeAdminResponses,
 } from "../src/lib/admin/fake.ts";
 
 const config = {
@@ -524,8 +527,30 @@ test("fake unnamed plus-ones count open seats, not households", async () => {
 
 test("RSVP list separates waiting from replies and detects renamed seats", async () => {
   const list = await createFakeAdminStore().getRsvpList();
-  assert.equal(list.totals.all, list.totals.attending + list.totals.declined);
-  assert.equal(list.totals.waiting > 0, true);
+  const latest = new Map<string, (typeof fakeAdminResponses)[number]>();
+  for (const response of fakeAdminResponses) {
+    const saved = latest.get(response.householdId);
+    if (
+      !saved ||
+      response.submittedAt > saved.submittedAt ||
+      (response.submittedAt === saved.submittedAt && response.id > saved.id)
+    )
+      latest.set(response.householdId, response);
+  }
+  const replied = fakeAdminFixtures.filter((row) => latest.has(row.id));
+  assert.deepEqual(list.totals, {
+    all: replied.length,
+    attending: replied.filter((row) => latest.get(row.id)?.attending).length,
+    declined: replied.filter((row) => !latest.get(row.id)?.attending).length,
+    seatChanges: replied.filter((row) =>
+      row.seats.some(
+        (seat) =>
+          (seat.name && seat.invitedName && seat.name !== seat.invitedName) ||
+          (seat.kind === "plus_one" && seat.name && !seat.invitedName),
+      ),
+    ).length,
+    waiting: fakeAdminFixtures.length - replied.length,
+  });
   assert.equal(
     list.rows.find((row) => row.id === "hh-dela-cruz")?.seatChange,
     true,
@@ -538,12 +563,56 @@ test("RSVP list separates waiting from replies and detects renamed seats", async
 
 test("RSVP detail returns history and waiting households, rejecting only unknown ids", async () => {
   const store = createFakeAdminStore();
-  const detail = await store.getRsvpDetail("hh-lim");
+  const detail = await store.getRsvpDetail("hh-ramos");
   assert(detail);
-  assert.equal(detail.history.at(0)?.source, "host");
-  assert.equal(detail.history.length, 2);
+  assert.deepEqual(
+    detail.history.map((version) => version.source),
+    ["host", "guest", "guest"],
+  );
+  assert.equal(detail.history.length, 3);
+  assert.deepEqual(
+    rsvpChangeSummary(detail.history[0], detail.history[1], {
+      "eunice@example.com": "Eunice",
+    }),
+    ["Bea Ramos → Beatriz Ramos, renamed by Eunice"],
+  );
+  assert.deepEqual(rsvpChangeSummary(detail.history[0], detail.history[1]), [
+    "Bea Ramos → Beatriz Ramos, renamed by eunice@example.com",
+  ]);
+  assert.deepEqual(rsvpChangeSummary(detail.history[1], detail.history[2]), [
+    "Paolo Ramos → Bea Ramos, renamed by Liza Ramos",
+    "Bea Ramos M 10 → W 7",
+  ]);
   assert.equal(await store.getRsvpDetail("missing"), null);
   assert.equal((await store.getRsvpDetail("hh-santos"))?.versionCount, 0);
+});
+
+test("fake RSVP details preserve explicit attendance, sizes, and first-version formatting", async () => {
+  const store = createFakeAdminStore();
+  const villanueva = await store.getRsvpDetail("hh-villanueva");
+  assert.deepEqual(
+    villanueva?.seats.filter((seat) => !seat.coming).map((seat) => seat.name),
+    ["Lolo Ben Villanueva", "Lola Cora Villanueva"],
+  );
+  const delaCruz = await store.getRsvpDetail("hh-dela-cruz");
+  assert.deepEqual(
+    delaCruz?.seats.map((seat) => seat.slipperSize),
+    ["W 7", "M 9", "W 6", "M 5"],
+  );
+  assert.equal(
+    rsvpHistoryBody(delaCruz!.history[0]),
+    "Maria Dela Cruz, Jose Dela Cruz, Anna Dela Cruz, Miguel Dela Cruz",
+  );
+  const declined = await store.getRsvpDetail("hh-pena");
+  assert.equal(rsvpHistoryBody(declined!.history[0]), "Not coming");
+  const missingSeats = await store.getRsvpDetail("hh-mendoza");
+  assert.deepEqual(
+    missingSeats?.seats.map((seat) => [seat.coming, seat.slipperSize]),
+    [
+      [true, null],
+      [false, null],
+    ],
+  );
 });
 
 test("admin RSVP timestamps use Manila and history headings read yes or no", () => {

@@ -367,6 +367,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       history: versions.map((r) => ({
         id: r.id,
         submittedAt: r.submitted_at,
+        respondentName: r.respondent_name,
         attending: Boolean(r.attending),
         coming: seats.filter((s) => {
           const rs = byResponse.get(`${r.id}:${s.id}`);
