@@ -175,6 +175,10 @@ test("D1 admin stores count slipper branches and return all sizes", async () => 
   assert.equal(order.mostCommonWomen, "W 5");
   assert.equal(order.mostCommonMen, null);
   assert.equal((await store.getNavCounts()).slipperPairs, order.pairs);
+  assert.equal(
+    (await store.getNavCounts()).rsvpReplies,
+    (await store.getRsvpList()).totals.all,
+  );
   database.close();
 });
 
@@ -341,6 +345,7 @@ test("fake admin store provides full slipper sizes, counts, songs, and nav count
   );
   assert.deepEqual(await store.getNavCounts(), {
     households: 8,
+    rsvpReplies: (await store.getRsvpList()).totals.all,
     slipperPairs: slippers.pairs,
     songRequests: 8,
   });

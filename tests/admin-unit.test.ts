@@ -9,16 +9,29 @@ import {
 } from "../src/lib/admin/auth.ts";
 import {
   deadlineStamp,
+  adminHistoryHeading,
+  adminTimestamp,
   greeting,
   memberLine,
   plusOneChipText,
   relativeTime,
   renameNote,
+  replyCountText,
+  rsvpChangeSummary,
+  rsvpHistoryBody,
+  rowSlippersText,
+  seatSubline,
 } from "../src/lib/admin/presentation.ts";
+import { csvCell, rsvpCsv, rsvpCsvResponse } from "../src/lib/admin/csv.ts";
+import { loadAdminRsvps } from "../src/lib/admin/rsvps.ts";
 import { createD1AdminStore } from "../src/lib/admin/d1.ts";
 import { selectAdminStore } from "../src/lib/admin/store.ts";
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
-import { createFakeAdminStore, fakeAdminFixtures } from "../src/lib/admin/fake.ts";
+import {
+  createFakeAdminStore,
+  fakeAdminFixtures,
+  fakeAdminResponses,
+} from "../src/lib/admin/fake.ts";
 
 const config = {
   ACCESS_TEAM_DOMAIN: "warren.cloudflareaccess.com",
@@ -445,6 +458,38 @@ test("D1 admin guest list exposes plus-one states, rename metadata, RSVP states,
   database.close();
 });
 
+test("D1 RSVP list/detail uses newest host edit, seat ids, waiting, and archived rules", async () => {
+  const database = adminDatabase();
+  database.db.exec(
+    "INSERT INTO responses (id,household_id,submitted_at,respondent_name,attending,guest_count,email,source,edited_by,note) VALUES (14,'c','2026-11-22T00:00:00Z','Eunice',1,1,'c@example.com','host','host@example.com','host note'); INSERT INTO response_seats (response_id,seat_id,kind,name,attending,slipper_size) VALUES (14,6,'member','Cara Cruz',1,'W 8')",
+  );
+  const store = createD1AdminStore(database);
+  const list = await store.getRsvpList();
+  assert.equal(
+    list.rows.find((row) => row.id === "c")?.submittedAt,
+    "2026-11-22T00:00:00Z",
+  );
+  assert.equal(list.rows.find((row) => row.id === "b")?.state, "waiting");
+  const detail = await store.getRsvpDetail("c");
+  assert(detail);
+  assert.equal(detail.history[0]?.source, "host");
+  assert.equal(
+    detail.history[0]?.seats.find((seat) => seat.seatId === 6)?.slipperSize,
+    "W 8",
+  );
+  assert.equal(await store.getRsvpDetail("archived"), null);
+  assert.equal(await store.getRsvpDetail("missing"), null);
+  const waiting = await store.getRsvpDetail("b");
+  assert.equal(waiting?.versionCount, 0);
+  const declined = await store.getRsvpDetail("a");
+  assert(declined);
+  assert.equal(
+    declined.seats.every((seat) => !seat.coming && seat.slipperSize === null),
+    true,
+  );
+  database.close();
+});
+
 for (const [name, raw] of [
   ["invalid JSON", "{"],
   ["an array", "[]"],
@@ -479,4 +524,212 @@ test("fake unnamed plus-ones count open seats, not households", async () => {
     .filter((s) => s.kind === "plus_one" && s.state === "open").length;
   const list = await createFakeAdminStore().getGuestList();
   assert.equal(list.totals.unnamedPlusOnes, expected);
+});
+
+test("RSVP list separates waiting from replies and detects renamed seats", async () => {
+  const list = await createFakeAdminStore().getRsvpList();
+  const latest = new Map<string, (typeof fakeAdminResponses)[number]>();
+  for (const response of fakeAdminResponses) {
+    const saved = latest.get(response.householdId);
+    if (
+      !saved ||
+      response.submittedAt > saved.submittedAt ||
+      (response.submittedAt === saved.submittedAt && response.id > saved.id)
+    )
+      latest.set(response.householdId, response);
+  }
+  const replied = fakeAdminFixtures.filter((row) => latest.has(row.id));
+  assert.deepEqual(list.totals, {
+    all: replied.length,
+    attending: replied.filter((row) => latest.get(row.id)?.attending).length,
+    declined: replied.filter((row) => !latest.get(row.id)?.attending).length,
+    seatChanges: replied.filter((row) =>
+      row.seats.some(
+        (seat) =>
+          (seat.name && seat.invitedName && seat.name !== seat.invitedName) ||
+          (seat.kind === "plus_one" && seat.name && !seat.invitedName),
+      ),
+    ).length,
+    waiting: fakeAdminFixtures.length - replied.length,
+  });
+  assert.equal(
+    list.rows.find((row) => row.id === "hh-dela-cruz")?.seatChange,
+    true,
+  );
+  assert.equal(
+    list.rows.find((row) => row.id === "hh-santos")?.state,
+    "waiting",
+  );
+});
+
+test("RSVP detail returns history and waiting households, rejecting only unknown ids", async () => {
+  const store = createFakeAdminStore();
+  const detail = await store.getRsvpDetail("hh-ramos");
+  assert(detail);
+  assert.deepEqual(
+    detail.history.map((version) => version.source),
+    ["host", "guest", "guest"],
+  );
+  assert.equal(detail.history.length, 3);
+  assert.deepEqual(
+    rsvpChangeSummary(detail.history[0], detail.history[1], {
+      "eunice@example.com": "Eunice",
+    }),
+    ["Bea Ramos → Beatriz Ramos, renamed by Eunice"],
+  );
+  assert.deepEqual(rsvpChangeSummary(detail.history[0], detail.history[1]), [
+    "Bea Ramos → Beatriz Ramos, renamed by eunice@example.com",
+  ]);
+  assert.deepEqual(rsvpChangeSummary(detail.history[1], detail.history[2]), [
+    "Paolo Ramos → Bea Ramos, renamed by Liza Ramos",
+    "Bea Ramos M 10 → W 7",
+  ]);
+  assert.equal(await store.getRsvpDetail("missing"), null);
+  assert.equal((await store.getRsvpDetail("hh-santos"))?.versionCount, 0);
+});
+
+test("fake RSVP details preserve explicit attendance, sizes, and first-version formatting", async () => {
+  const store = createFakeAdminStore();
+  const villanueva = await store.getRsvpDetail("hh-villanueva");
+  assert.deepEqual(
+    villanueva?.seats.filter((seat) => !seat.coming).map((seat) => seat.name),
+    ["Lolo Ben Villanueva", "Lola Cora Villanueva"],
+  );
+  const delaCruz = await store.getRsvpDetail("hh-dela-cruz");
+  assert.deepEqual(
+    delaCruz?.seats.map((seat) => seat.slipperSize),
+    ["W 7", "M 9", "W 6", "M 5"],
+  );
+  assert.equal(
+    rsvpHistoryBody(delaCruz!.history[0]),
+    "Maria Dela Cruz, Jose Dela Cruz, Anna Dela Cruz, Miguel Dela Cruz",
+  );
+  const declined = await store.getRsvpDetail("hh-pena");
+  assert.equal(rsvpHistoryBody(declined!.history[0]), "Not coming");
+  const missingSeats = await store.getRsvpDetail("hh-mendoza");
+  assert.deepEqual(
+    missingSeats?.seats.map((seat) => [seat.coming, seat.slipperSize]),
+    [
+      [true, null],
+      [false, null],
+    ],
+  );
+});
+
+test("admin RSVP timestamps use Manila and history headings read yes or no", () => {
+  assert.equal(adminTimestamp("2026-11-20T13:14:00.000Z"), "Nov 20, 9:14 PM");
+  assert.equal(
+    adminHistoryHeading({
+      submittedAt: "2026-11-20T13:14:00.000Z",
+      attending: true,
+      coming: 2,
+    }),
+    "Nov 20, 9:14 PM · Yes, 2 coming",
+  );
+  assert.equal(
+    adminHistoryHeading({
+      submittedAt: "2026-11-20T13:14:00.000Z",
+      attending: false,
+      coming: 0,
+    }),
+    "Nov 20, 9:14 PM · No",
+  );
+});
+
+test("admin presentation helpers cover reply, slipper, and seat variants", () => {
+  assert.equal(replyCountText(1), "once");
+  assert.equal(replyCountText(2), "twice");
+  assert.equal(replyCountText(4), "4 times");
+  assert.equal(rowSlippersText({ state: "declined", slippers: [] }), "None");
+  assert.equal(
+    rowSlippersText({
+      state: "attending",
+      slippers: [
+        { firstName: "Bea", size: "W 7" },
+        { firstName: "First", size: null },
+      ],
+    }),
+    "Bea W 7 · First —",
+  );
+  assert.equal(
+    seatSubline({
+      kind: "member",
+      invitedName: "Paolo",
+      name: "Bea",
+      namedBy: "Liza",
+      namedByKind: "guest",
+    }),
+    "Invited as Paolo · renamed",
+  );
+  assert.equal(
+    seatSubline({
+      kind: "plus_one",
+      invitedName: null,
+      name: null,
+      namedBy: null,
+      namedByKind: null,
+      state: "open",
+    }),
+    "+1 · no name yet",
+  );
+  assert.equal(
+    seatSubline(
+      {
+        kind: "plus_one",
+        invitedName: null,
+        name: "Bea",
+        namedBy: "host@example.com",
+        namedByKind: "host",
+        state: "named",
+      },
+      { "host@example.com": "Eunice" },
+    ),
+    "+1, named by Eunice",
+  );
+});
+
+test("RSVP CSV guards formulas and formats Manila timestamps", async () => {
+  assert.equal(csvCell('a"b,c\r\nd'), '"a""b,c\r\nd"');
+  for (const value of ["=x", "+x", "-x", "@x", "\tx"])
+    assert.equal(csvCell(value), `'${value}`);
+  assert.equal(csvCell("\rx"), `"'\rx"`);
+  const list = await createFakeAdminStore().getRsvpList();
+  const { body, date } = rsvpCsv(list, new Date("2026-11-30T18:00:00.000Z"));
+  assert.equal(date, "2026-12-01");
+  assert.match(body, /2026-11-15 13:00/);
+  assert.match(body, /,waiting,,,,,1,/);
+});
+
+test("RSVP CSV returns a private 503 response when the store fails", async () => {
+  const response = await rsvpCsvResponse(() => {
+    throw new Error("store unavailable");
+  });
+  assert.equal(response.status, 503);
+  const body = await response.text();
+  assert.doesNotMatch(body, /text\/csv|household|email|Maria|@/i);
+  assert.equal(
+    response.headers.get("content-type"),
+    "text/plain; charset=utf-8",
+  );
+});
+
+test("RSVP page loader renders failure state when the store fails", async () => {
+  const loaded = await loadAdminRsvps(() => {
+    throw new Error("store unavailable");
+  }, null);
+  assert.deepEqual(loaded, {
+    data: null,
+    detail: null,
+    counts: undefined,
+    failed: true,
+    notFound: false,
+  });
+});
+
+test("empty RSVP household query is treated like no household", async () => {
+  const store = createFakeAdminStore();
+  const loaded = await loadAdminRsvps(() => store, "");
+  assert.equal(loaded.failed, false);
+  assert.equal(loaded.detail, null);
+  assert.equal(loaded.notFound, false);
 });

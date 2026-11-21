@@ -1,0 +1,613 @@
+---
+import { env } from "cloudflare:workers";
+import { parseAdminHosts } from "@/lib/admin/auth";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import {
+  adminHistoryHeading,
+  adminTimestamp,
+  relativeTime,
+  replyCountText,
+  rsvpHistoryBody,
+  rowSlippersText,
+  seatSubline,
+} from "@/lib/admin/presentation";
+import { selectAdminStore } from "@/lib/admin/store";
+import { loadAdminRsvps } from "@/lib/admin/rsvps";
+import type {
+  AdminRsvpDetail,
+  AdminRsvpList,
+  AdminRsvpRow,
+} from "@/lib/admin/store";
+export const prerender = false;
+const host = Astro.locals.adminHost!;
+const hosts = parseAdminHosts(
+  String((env as Record<string, unknown>).ADMIN_HOSTS ?? ""),
+) ?? { [host.email]: host.firstName };
+let data: AdminRsvpList | null = null;
+let detail: AdminRsvpDetail | null = null;
+let failed = false;
+const requested = Astro.url.searchParams.get("household");
+const loaded = await loadAdminRsvps(
+  () =>
+    selectAdminStore(
+      (env as Record<string, unknown>).RSVP_STORE,
+      (env as Record<string, unknown>).DB as never,
+    ),
+  requested,
+);
+data = loaded.data;
+detail = loaded.detail;
+failed = loaded.failed;
+if (loaded.failed) Astro.response.status = 503;
+if (loaded.notFound) Astro.response.status = 404;
+const view =
+  data ??
+  ({
+    totals: { all: 0, attending: 0, declined: 0, seatChanges: 0, waiting: 0 },
+    rows: [],
+  } satisfies AdminRsvpList);
+const filter = [
+  "all",
+  "attending",
+  "declined",
+  "seat-changes",
+  "waiting",
+].includes(Astro.url.searchParams.get("filter") ?? "")
+  ? Astro.url.searchParams.get("filter")!
+  : "all";
+const q = Astro.url.searchParams.get("q") ?? "";
+const normalize = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+const matches = (row: AdminRsvpRow) =>
+  normalize(
+    [
+      row.displayName,
+      row.label,
+      row.email ?? "",
+      row.respondentName ?? "",
+      ...row.seats.map((s) => `${s.invitedName ?? ""} ${s.name ?? ""}`),
+    ].join(" "),
+  ).includes(normalize(q));
+const filtered = view.rows
+  .filter((row) =>
+    filter === "all"
+      ? row.state !== "waiting"
+      : filter === "seat-changes"
+        ? row.state !== "waiting" && row.seatChange
+        : filter === row.state,
+  )
+  .filter(matches);
+const href = (next: Record<string, string | null>) => {
+  const params = new URLSearchParams();
+  const values = {
+    filter,
+    q,
+    household: Astro.url.searchParams.get("household"),
+    ...next,
+  };
+  for (const [key, value] of Object.entries(values))
+    if (value) params.set(key, value);
+  return `${Astro.url.pathname}?${params}`;
+};
+const titleParts = (name: string) => {
+  const parts = name.split(/\s+/);
+  return { first: parts.slice(0, -1).join(" "), last: parts.at(-1) ?? name };
+};
+---
+
+<AdminLayout
+  active="rsvps"
+  host={host}
+  counts={loaded.counts}
+>
+  <section id="rsvps" class="admin-rsvps_wrap" data-admin-rsvps-page>
+    {
+      host.sample && (
+        <p class="admin_sample" data-admin-sample>
+          Sample data
+        </p>
+      )
+    }
+    {
+      failed ? (
+        <div class="admin_notice error" data-admin-error>
+          <>
+            <h1>Couldn't load the RSVP data</h1>
+            <a href={Astro.url.pathname}>Try again</a>
+          </>
+        </div>
+      ) : view.rows.length === 0 ? (
+        <div class="admin_notice empty" data-admin-empty>
+          <>
+            <h1>No RSVPs yet</h1>
+            <p>The RSVP list hasn't been loaded.</p>
+          </>
+        </div>
+      ) : (
+        <>
+          {requested && !detail && (
+            <div class="admin_notice error" data-admin-not-found>
+              <h1>Household not found</h1>
+            </div>
+          )}
+          <header class="admin-rsvps_header">
+            <>
+              <div>
+                <>
+                  <p class="admin_label">Newest reply per household</p>
+                  <h1>RSVPs</h1>
+                </>
+              </div>
+              <div class="admin-rsvps_actions">
+                <a href="/admin/rsvps.csv" data-admin-download>
+                  Download CSV
+                </a>
+              </div>
+            </>
+          </header>
+          <div class="admin-rsvps_toolbar">
+            <>
+              <nav aria-label="RSVP filters" data-admin-filters>
+                {(
+                  [
+                    ["all", "All replies"],
+                    ["attending", "Attending"],
+                    ["declined", "Declined"],
+                    ["seat-changes", "Seat changes"],
+                    ["waiting", "Waiting"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <a
+                    href={href({ filter: key, household: null })}
+                    aria-current={filter === key ? "page" : undefined}
+                    data-admin-filter={key}
+                  >
+                    <span>{label}</span>{" "}
+                    <span class="admin-rsvps_count">
+                      {
+                        view.totals[
+                          key === "seat-changes" ? "seatChanges" : key
+                        ]
+                      }
+                    </span>
+                  </a>
+                ))}
+              </nav>
+              <form method="get" data-admin-search-form>
+                <>
+                  <input type="hidden" name="filter" value={filter} />
+                  <label class="sr-only" for="admin-rsvp-search">
+                    Search a name or email
+                  </label>
+                  <svg
+                    viewBox="0 0 16 16"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="7"
+                      cy="7"
+                      r="5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <path
+                      d="M11 11l3.5 3.5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  <input
+                    id="admin-rsvp-search"
+                    type="search"
+                    name="q"
+                    value={q}
+                    placeholder="Search a name or email"
+                    data-admin-search
+                    autocomplete="off"
+                  />
+                </>
+              </form>
+            </>
+          </div>
+          <p class="admin-rsvps_no-match" data-admin-no-match hidden>
+            No RSVPs match
+          </p>
+          <div class="admin-rsvps_card">
+            <table class="admin-rsvps_table" data-admin-rsvps>
+              <>
+                <thead>
+                  <tr>
+                    <>
+                      <th data-col="reply">Reply</th>
+                      <th data-col="household">Household · email</th>
+                      <th data-col="who">Who's coming · note</th>
+                      <th data-col="slippers">Slippers</th>
+                      <th data-col="sent">Sent ↓</th>
+                    </>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((row) => (
+                    <tr
+                      data-admin-rsvp-row
+                      data-state={row.state}
+                      data-search={normalize(
+                        [
+                          row.displayName,
+                          row.label,
+                          row.email ?? "",
+                          row.respondentName ?? "",
+                          ...row.seats.flatMap((s) => [
+                            s.invitedName ?? "",
+                            s.name ?? "",
+                          ]),
+                        ].join(" "),
+                      )}
+                    >
+                      <td data-col="reply">
+                        <span
+                          class="admin_pill"
+                          data-state={
+                            row.state === "attending"
+                              ? "yes"
+                              : row.state === "declined"
+                                ? "no"
+                                : "waiting"
+                          }
+                        >
+                          {row.state === "attending"
+                            ? "YES"
+                            : row.state === "declined"
+                              ? "NO"
+                              : "WAITING"}
+                        </span>
+                      </td>
+                      <th scope="row" data-col="household">
+                        <a
+                          href={href({ household: row.id })}
+                          data-admin-rsvp-link
+                          aria-label={row.displayName}
+                        >
+                          <strong>{row.displayName}</strong>
+                          <small>
+                            {row.email ??
+                              `${row.seatCount} ${row.seatCount === 1 ? "seat" : "seats"}`}
+                          </small>
+                        </a>
+                      </th>
+                      <td data-col="who">
+                        <div class="admin-rsvps_who">
+                          {row.state === "declined" ? (
+                            <>
+                              Not coming <span>· 0 of {row.seatCount}</span>
+                            </>
+                          ) : row.state === "waiting" ? (
+                            <>
+                              Waiting <span>· 0 of {row.seatCount}</span>
+                            </>
+                          ) : (
+                            <>
+                              {row.comingNames.join(", ")}{" "}
+                              <span>
+                                · {row.comingNames.length} of {row.seatCount}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {row.seatChanges.map((change) => (
+                          <small class="admin-rsvps_change">
+                            Seat change · {change.from ?? "(plus-one)"} →{" "}
+                            {change.to}
+                          </small>
+                        ))}
+                        {row.notComingNames.length > 0 && (
+                          <small class="admin-rsvps_out">
+                            Not coming: {row.notComingNames.join(", ")}
+                          </small>
+                        )}
+                        {row.note && (
+                          <small class="admin-rsvps_note">“{row.note}”</small>
+                        )}
+                      </td>
+                      <td
+                        data-col="slippers"
+                        data-none={row.state === "declined" ? "" : undefined}
+                      >
+                        {rowSlippersText(row)}
+                      </td>
+                      <td data-col="sent">
+                        {row.submittedAt ? relativeTime(row.submittedAt) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </>
+            </table>
+          </div>
+          {detail && (
+            <aside
+              class="admin-drawer_wrap"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-drawer-title"
+              data-admin-drawer
+            >
+              <a
+                class="admin-drawer_scrim"
+                href={href({ household: null })}
+                aria-label="Close"
+              />
+              <div class="admin-drawer_panel">
+                <div class="admin-drawer_top">
+                  <p class="admin_label">
+                    Household {detail.label} ·{" "}
+                    {detail.versionCount
+                      ? `replied ${replyCountText(detail.versionCount)}`
+                      : "no reply yet"}
+                  </p>
+                  <a
+                    href={href({ household: null })}
+                    data-admin-drawer-close
+                    aria-label="Close"
+                  >
+                    <svg
+                      viewBox="0 0 14 14"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M2 2l10 10M12 2L2 12"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                    <span class="sr-only">Close</span>
+                  </a>
+                </div>
+                <header>
+                  {(() => {
+                    const parts = titleParts(detail.displayName);
+                    return (
+                      <h2 id="admin-drawer-title" tabindex="-1">
+                        {parts.first} <em>{parts.last}</em>
+                      </h2>
+                    );
+                  })()}
+                  <p>
+                    {detail.email
+                      ? `${detail.email} · ${detail.seatCount} seats · sent ${adminTimestamp(detail.submittedAt)}`
+                      : `No reply yet · ${detail.seatCount} seats`}
+                  </p>
+                </header>
+                <section class="admin-drawer_seats">
+                  <div class="admin-drawer_seat-head">
+                    <span>Seats</span>
+                    <span>Slippers</span>
+                  </div>
+                  {detail.seats.map((seat) => (
+                    <div class="admin-drawer_seat" data-admin-seat>
+                      <span data-coming={seat.coming} aria-hidden="true">
+                        {seat.coming && (
+                          <svg
+                            viewBox="0 0 12 10"
+                            width="12"
+                            height="10"
+                            fill="none"
+                          >
+                            <path
+                              d="M1 5l3.5 3.5L11 1.5"
+                              stroke="currentColor"
+                              stroke-width="1.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                      <div>
+                        <strong>{seat.name ?? seat.invitedName ?? "+1"}</strong>
+                        <small
+                          data-renamed={
+                            seat.kind === "member" &&
+                            seat.name !== seat.invitedName
+                          }
+                        >
+                          {seatSubline(seat, hosts)}
+                        </small>
+                      </div>
+                      <b>{seat.coming ? (seat.slipperSize ?? "—") : "—"}</b>
+                    </div>
+                  ))}
+                </section>
+                {detail.note && (
+                  <section class="admin-drawer_note">
+                    <h3>Their note</h3>
+                    <p>“{detail.note}”</p>
+                  </section>
+                )}
+                {detail.history.length > 0 && (
+                  <section class="admin-drawer_history">
+                    <h3>Reply history · every version they sent</h3>
+                    <ol>
+                      {detail.history.map((version, index) => (
+                        <li
+                          data-current={index === 0 ? true : undefined}
+                          data-source={version.source}
+                        >
+                          <h4>
+                            {adminHistoryHeading(version)}
+                            {version.source === "host" && (
+                              <span data-admin-host-edit>
+                                by host · {version.editedBy}
+                              </span>
+                            )}
+                          </h4>
+                          <p>
+                            {rsvpHistoryBody(
+                              version,
+                              detail.history[index + 1],
+                              hosts,
+                            )}
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
+              </div>
+            </aside>
+          )}
+        </>
+      )
+    }
+  </section>
+</AdminLayout>
+<script>
+  const normalize = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase();
+  const input = document.querySelector<HTMLInputElement>("[data-admin-search]");
+  const rows = [
+    ...document.querySelectorAll<HTMLElement>("[data-admin-rsvp-row]"),
+  ];
+  const empty = document.querySelector<HTMLElement>("[data-admin-no-match]");
+  const syncLinks = () => {
+    const query = input?.value ?? "";
+    for (const link of document.querySelectorAll<HTMLAnchorElement>(
+      "[data-admin-filter], [data-admin-rsvp-link], [data-admin-drawer-close], .admin-drawer_scrim",
+    )) {
+      const url = new URL(link.href);
+      if (query) url.searchParams.set("q", query);
+      else url.searchParams.delete("q");
+      link.href = url.href;
+    }
+  };
+  input?.addEventListener("input", () => {
+    const query = normalize(input.value);
+    let count = 0;
+    for (const row of rows) {
+      row.hidden = !normalize(row.dataset.search ?? "").includes(query);
+      if (!row.hidden) count++;
+    }
+    if (empty) empty.hidden = count !== 0;
+    const url = new URL(location.href);
+    query
+      ? url.searchParams.set("q", input.value)
+      : url.searchParams.delete("q");
+    history.replaceState(null, "", url);
+    syncLinks();
+  });
+  let opener: HTMLAnchorElement | null = null;
+  const setOpen = (open: boolean) => {
+    document.documentElement.toggleAttribute("data-admin-drawer-open", open);
+  };
+  const closeDrawer = () => {
+    const url = new URL(location.href);
+    url.searchParams.delete("household");
+    history.pushState(null, "", url);
+    document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+    setOpen(false);
+    (
+      opener ??
+      document.querySelector<HTMLAnchorElement>("[data-admin-rsvp-link]")
+    )?.focus();
+  };
+  const loadDrawer = async (url: string, push = true) => {
+    try {
+      const response = await fetch(url, { headers: { Accept: "text/html" } });
+      if (!response.ok) throw new Error("drawer request failed");
+      const next = new DOMParser()
+        .parseFromString(await response.text(), "text/html")
+        .querySelector<HTMLElement>("[data-admin-drawer]");
+      if (!next) throw new Error("drawer missing");
+      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+      document
+        .querySelector<HTMLElement>("[data-admin-rsvps-page]")
+        ?.append(next);
+      syncLinks();
+      if (push) history.pushState(null, "", url);
+      setOpen(true);
+      next.querySelector<HTMLElement>("h2")?.focus();
+    } catch {
+      location.href = url;
+    }
+  };
+  document.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    const mouse = event as MouseEvent;
+    if (
+      mouse.button !== 0 ||
+      mouse.metaKey ||
+      mouse.ctrlKey ||
+      mouse.shiftKey ||
+      mouse.altKey
+    )
+      return;
+    const rowLink = target.closest<HTMLAnchorElement>("[data-admin-rsvp-link]");
+    if (rowLink) {
+      event.preventDefault();
+      opener = rowLink;
+      void loadDrawer(rowLink.href);
+      return;
+    }
+    if (target.closest("[data-admin-drawer-close], .admin-drawer_scrim")) {
+      event.preventDefault();
+      closeDrawer();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    if (!drawer) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDrawer();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [
+      ...drawer.querySelectorAll<HTMLElement>(
+        "a,button,input,select,textarea,[tabindex]:not([tabindex='-1'])",
+      ),
+    ];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    const active = document.activeElement;
+    const activeIndex = focusable.indexOf(active as HTMLElement);
+    if (!drawer.contains(active) || activeIndex === -1) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+  window.addEventListener("popstate", () => {
+    const url = new URL(location.href);
+    if (url.searchParams.has("household")) void loadDrawer(url.href, false);
+    else {
+      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+      setOpen(false);
+    }
+  });
+  if (document.querySelector("[data-admin-drawer]")) {
+    setOpen(true);
+    syncLinks();
+    document.querySelector<HTMLElement>("[data-admin-drawer] h2")?.focus();
+  }
+</script>

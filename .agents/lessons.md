@@ -387,6 +387,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/consts.ts`
 
+### L-051 — A divided list drops the divider under its last visible row
+- **Date:** 2026-11-21
+- **Trigger:** PR #98, Local-review rounds 1 and 2 (the user saw a rule under the last RSVP card, above the card's bottom edge; then asked for the same on every screen, since the Guest list and Song cards had it too)
+- **Symptom:** every RSVP row drew `border-bottom`, so the last card ended with a hairline floating just above the white card's rounded bottom.
+- **Root cause:** the brief copied the Paper table's per-row border and nobody checked the list's end, at 390 or with search hiding rows.
+- **Rule:** a list that separates rows with borders removes the one under its last visible row (`:not([hidden]):not(:has(~ tr:not([hidden])))`, or the gap/`+` sibling pattern), and the screenshot review looks at the end of every list, not only the top. A fix to one list card applies to every list card on the same surface (the dashboard's RSVPs, Guest list and Songs share the pattern); open lists on the page ground keep their closing rule as Paper draws it.
+- **Check:** a spec reads the last visible row's `border-bottom-width` at rest and after a search hides rows (`tests/admin-rsvps.spec.ts` "drops the divider under the last visible row", `tests/admin.spec.ts` "admin list cards").
+- **Guard:** none
+- **Paths:** `src/styles/admin.css`, `src/pages/admin/**`, `src/components/**`
+
 ## Data and backend
 
 ### L-045 — External data the user owns is read-only
@@ -418,6 +428,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the brief for a store rewrite names the old file and its branches; each has a test in the new store's unit file (`tests/d1-unit.test.ts` "resets member ticks after a decline").
 - **Guard:** none
 - **Paths:** `src/lib/**`, `src/components/sections/Rsvp.astro`
+
+### L-050 — State a script keeps in the URL must reach every link and the focus trap
+- **Date:** 2026-11-21
+- **Trigger:** PR #98, CHANGES_REQUIRED (typed search lost on a filter or row click; Tab escaped the open drawer)
+- **Symptom:** the RSVPs page filtered rows in place and `replaceState`d `q`, but every pill, row and close link still carried the server's `q`, so a click dropped the search and `pushState` overwrote it; the drawer focused a `tabindex="-1"` heading the trap's list skipped, so Tab left the dialog.
+- **Root cause:** progressive enhancement updated the address bar but not the server-built hrefs that also encode the state, and the focus trap only wrapped at its first and last element, assuming focus starts inside that list.
+- **Rule:** when a client script changes URL state, rebuild it into every link that carries it (or build the href at click time), and skip modified clicks (cmd, ctrl, shift, middle). A focus trap handles focus on any element inside the dialog, including the programmatic focus target, and its spec presses Tab and Shift+Tab from the opened state.
+- **Check:** the spec types a query, clicks a filter and a row, and expects `q` in the URL and the input; the drawer spec tabs forward and back from the opened state and expects focus inside the dialog.
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`, `src/scripts/**`
 
 ## CI scripts
 

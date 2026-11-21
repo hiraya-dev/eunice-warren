@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { createFakeAdminStore, fakeAdminFixtures } from "../src/lib/admin/fake";
+import {
+  createFakeAdminStore,
+  fakeAdminFixtures,
+  fakeAdminReplies,
+} from "../src/lib/admin/fake";
 import { djText, duplicateLabel } from "../src/lib/admin/presentation";
 
 test.describe("admin dashboard", () => {
@@ -12,7 +16,9 @@ test.describe("admin dashboard", () => {
     await expect(page.locator("[data-admin-sample]")).toBeVisible();
     await expect(page.locator("[data-admin-greeting]")).toContainText("Eunice");
     await expect(page.locator("[data-admin-coming]")).toBeVisible();
-    await expect(page.locator("[data-admin-reply]")).toHaveCount(4);
+    await expect(page.locator("[data-admin-reply]")).toHaveCount(
+      fakeAdminReplies.length,
+    );
     await expect(page.locator("[data-admin-waiting-row]")).toHaveCount(
       Math.min(
         3,
@@ -36,12 +42,18 @@ test.describe("admin dashboard", () => {
 
   // Overflow is judged against the page itself: the stamp is rotated and the
   // guest table swaps layout at 84rem (1344px), so odd widths are in the list (L-018).
-  for (const path of ["/admin", "/admin/guests"]) {
+  for (const path of [
+    "/admin",
+    "/admin/guests",
+    "/admin/rsvps",
+    "/admin/rsvps?household=hh-lim",
+  ]) {
     test(`has no horizontal overflow at 320 to 1920 on ${path} @sweep @single`, async ({
       page,
     }) => {
       for (const width of [
-        320, 390, 768, 1023, 1024, 1150, 1279, 1280, 1343, 1344, 1440, 1920,
+        320, 375, 390, 481, 768, 1023, 1024, 1150, 1279, 1280, 1343, 1344, 1440,
+        1920,
       ]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(path);
@@ -316,5 +328,33 @@ test.describe("admin slippers and songs", () => {
         ).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+test.describe("admin list cards", () => {
+  const borders = (page: import("@playwright/test").Page, rows: string) =>
+    page
+      .locator(`${rows}:not([hidden])`)
+      .evaluateAll((items) =>
+        items.map((item) => getComputedStyle(item).borderBottomWidth),
+      );
+
+  test("end without a divider under the last visible row", async ({ page }) => {
+    for (const [path, rows] of [
+      ["/admin/guests", "[data-admin-household]"],
+      ["/admin/songs", "[data-song-row]"],
+    ] as const) {
+      await page.goto(path);
+      const widths = await borders(page, rows);
+      expect(widths.length).toBeGreaterThan(1);
+      expect(widths.at(-1)).toBe("0px");
+      expect(widths.slice(0, -1).every((width) => width !== "0px")).toBe(true);
+    }
+    // Searching hides the households after a match; the match ends the card.
+    await page.goto("/admin/guests");
+    await page
+      .locator("[data-admin-search]")
+      .fill(fakeAdminFixtures[0].displayName);
+    expect((await borders(page, "[data-admin-household]")).at(-1)).toBe("0px");
   });
 });
