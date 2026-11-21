@@ -73,6 +73,61 @@ test.describe("admin RSVPs", () => {
     ).toHaveCount(1);
   });
 
+  test("keeps typed search in filter, row, and close URLs", async ({
+    page,
+  }) => {
+    await page.goto("/admin/rsvps");
+    await page.locator("[data-admin-search]").fill("maria");
+    await page.locator('[data-admin-filter="attending"]').click();
+    await expect(page).toHaveURL(
+      /filter=attending&?q=maria|q=maria&?filter=attending/,
+    );
+    await expect(page.locator("[data-admin-search]")).toHaveValue("maria");
+    await expect(
+      page.locator("[data-admin-rsvp-row]:not([hidden])"),
+    ).toHaveCount(1);
+
+    await page.locator("[data-admin-rsvp-link]").first().click();
+    await expect(page).toHaveURL(/q=maria.*household=/);
+    await page.locator("[data-admin-drawer-close]").click();
+    await expect(page).toHaveURL(/q=maria/);
+  });
+
+  test("keeps focus inside the drawer while tabbing both directions", async ({
+    page,
+  }) => {
+    await page.goto("/admin/rsvps");
+    await page.locator("[data-admin-rsvp-link]").first().click();
+    const drawer = page.locator("[data-admin-drawer]");
+    for (const modifiers of [[], ["Shift"]]) {
+      if (modifiers.length) await page.keyboard.down("Shift");
+      for (let index = 0; index < 10; index++) {
+        await page.keyboard.press("Tab");
+        expect(
+          await page.evaluate(
+            () =>
+              document.activeElement?.closest("[data-admin-drawer]") !== null,
+          ),
+        ).toBe(true);
+      }
+      if (modifiers.length) await page.keyboard.up("Shift");
+    }
+    await expect(drawer).toBeVisible();
+  });
+
+  test("leaves modified row clicks to the browser", async ({ page }) => {
+    await page.goto("/admin/rsvps");
+    const url = page.url();
+    await page
+      .locator("[data-admin-rsvp-link]")
+      .first()
+      .click({
+        modifiers: ["Control"],
+      });
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+    expect(page.url()).toBe(url);
+  });
+
   test(
     "opens and closes a waiting drawer and returns focus",
     { tag: "@smoke" },
@@ -94,6 +149,17 @@ test.describe("admin RSVPs", () => {
     expect(response?.status()).toBe(404);
     await expect(page.locator("[data-admin-not-found]")).toBeVisible();
   });
+
+  test(
+    "empty household query renders the list",
+    { tag: "@single" },
+    async ({ page }) => {
+      const response = await page.goto("/admin/rsvps?household=");
+      expect(response?.status()).toBe(200);
+      await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+      await expect(page.locator("[data-admin-rsvps]")).toBeVisible();
+    },
+  );
 
   test(
     "CSV has the host-only export headers",

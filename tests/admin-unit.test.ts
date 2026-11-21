@@ -22,7 +22,8 @@ import {
   rowSlippersText,
   seatSubline,
 } from "../src/lib/admin/presentation.ts";
-import { csvCell, rsvpCsv } from "../src/lib/admin/csv.ts";
+import { csvCell, rsvpCsv, rsvpCsvResponse } from "../src/lib/admin/csv.ts";
+import { loadAdminRsvps } from "../src/lib/admin/rsvps.ts";
 import { createD1AdminStore } from "../src/lib/admin/d1.ts";
 import { selectAdminStore } from "../src/lib/admin/store.ts";
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
@@ -697,4 +698,37 @@ test("RSVP CSV guards formulas and formats Manila timestamps", async () => {
   assert.equal(date, "2026-12-01");
   assert.match(body, /2026-11-15 13:00/);
   assert.match(body, /,waiting,,,,,1,/);
+});
+
+test("RSVP CSV returns a private 503 response when the store fails", async () => {
+  const response = await rsvpCsvResponse(() => {
+    throw new Error("store unavailable");
+  });
+  assert.equal(response.status, 503);
+  const body = await response.text();
+  assert.doesNotMatch(body, /text\/csv|household|email|Maria|@/i);
+  assert.equal(
+    response.headers.get("content-type"),
+    "text/plain; charset=utf-8",
+  );
+});
+
+test("RSVP page loader renders failure state when the store fails", async () => {
+  const loaded = await loadAdminRsvps(() => {
+    throw new Error("store unavailable");
+  }, null);
+  assert.deepEqual(loaded, {
+    data: null,
+    detail: null,
+    failed: true,
+    notFound: false,
+  });
+});
+
+test("empty RSVP household query is treated like no household", async () => {
+  const store = createFakeAdminStore();
+  const loaded = await loadAdminRsvps(() => store, "");
+  assert.equal(loaded.failed, false);
+  assert.equal(loaded.detail, null);
+  assert.equal(loaded.notFound, false);
 });

@@ -1,4 +1,4 @@
-import type { AdminRsvpList } from "./store";
+import type { AdminRsvpList, AdminStore } from "./store";
 
 const formula = /^[=+\-@\t\r]/;
 export function csvCell(value: unknown) {
@@ -58,4 +58,28 @@ export function rsvpCsv(list: AdminRsvpList, now = new Date()) {
           .join(","),
       );
   return { body: `${lines.join("\r\n")}\r\n`, date };
+}
+
+export async function rsvpCsvResponse(
+  storeLoader: () => AdminStore,
+  now = new Date(),
+) {
+  try {
+    const { body, date } = rsvpCsv(await storeLoader().getRsvpList(), now);
+    return new Response(body, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="rsvps-${date}.csv"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch {
+    return new Response("Couldn’t load RSVP data", {
+      status: 503,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
 }

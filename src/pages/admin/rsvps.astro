@@ -12,6 +12,7 @@ import {
   seatSubline,
 } from "@/lib/admin/presentation";
 import { selectAdminStore } from "@/lib/admin/store";
+import { loadAdminRsvps } from "@/lib/admin/rsvps";
 import type {
   AdminRsvpDetail,
   AdminRsvpList,
@@ -25,20 +26,20 @@ const hosts = parseAdminHosts(
 let data: AdminRsvpList | null = null;
 let detail: AdminRsvpDetail | null = null;
 let failed = false;
-try {
-  const store = selectAdminStore(
-    (env as Record<string, unknown>).RSVP_STORE,
-    (env as Record<string, unknown>).DB as never,
-  );
-  data = await store.getRsvpList();
-  const requested = Astro.url.searchParams.get("household");
-  if (requested) detail = await store.getRsvpDetail(requested);
-} catch {
-  failed = true;
-  Astro.response.status = 503;
-}
-if (Astro.url.searchParams.has("household") && !detail && !failed)
-  Astro.response.status = 404;
+const requested = Astro.url.searchParams.get("household");
+const loaded = await loadAdminRsvps(
+  () =>
+    selectAdminStore(
+      (env as Record<string, unknown>).RSVP_STORE,
+      (env as Record<string, unknown>).DB as never,
+    ),
+  requested,
+);
+data = loaded.data;
+detail = loaded.detail;
+failed = loaded.failed;
+if (loaded.failed) Astro.response.status = 503;
+if (loaded.notFound) Astro.response.status = 404;
 const view =
   data ??
   ({
@@ -128,7 +129,7 @@ const titleParts = (name: string) => {
         </div>
       ) : (
         <>
-          {Astro.url.searchParams.get("household") && !detail && (
+          {requested && !detail && (
             <div class="admin_notice error" data-admin-not-found>
               <h1>Household not found</h1>
             </div>
@@ -483,6 +484,17 @@ const titleParts = (name: string) => {
     ...document.querySelectorAll<HTMLElement>("[data-admin-rsvp-row]"),
   ];
   const empty = document.querySelector<HTMLElement>("[data-admin-no-match]");
+  const syncLinks = () => {
+    const query = input?.value ?? "";
+    for (const link of document.querySelectorAll<HTMLAnchorElement>(
+      "[data-admin-filter], [data-admin-rsvp-link], [data-admin-drawer-close], .admin-drawer_scrim",
+    )) {
+      const url = new URL(link.href);
+      if (query) url.searchParams.set("q", query);
+      else url.searchParams.delete("q");
+      link.href = url.href;
+    }
+  };
   input?.addEventListener("input", () => {
     const query = normalize(input.value);
     let count = 0;
@@ -496,6 +508,7 @@ const titleParts = (name: string) => {
       ? url.searchParams.set("q", input.value)
       : url.searchParams.delete("q");
     history.replaceState(null, "", url);
+    syncLinks();
   });
   let opener: HTMLAnchorElement | null = null;
   const setOpen = (open: boolean) => {
@@ -524,6 +537,7 @@ const titleParts = (name: string) => {
       document
         .querySelector<HTMLElement>("[data-admin-rsvps-page]")
         ?.append(next);
+      syncLinks();
       if (push) history.pushState(null, "", url);
       setOpen(true);
       next.querySelector<HTMLElement>("h2")?.focus();
@@ -533,6 +547,15 @@ const titleParts = (name: string) => {
   };
   document.addEventListener("click", (event) => {
     const target = event.target as Element;
+    const mouse = event as MouseEvent;
+    if (
+      mouse.button !== 0 ||
+      mouse.metaKey ||
+      mouse.ctrlKey ||
+      mouse.shiftKey ||
+      mouse.altKey
+    )
+      return;
     const rowLink = target.closest<HTMLAnchorElement>("[data-admin-rsvp-link]");
     if (rowLink) {
       event.preventDefault();
@@ -562,7 +585,12 @@ const titleParts = (name: string) => {
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable.at(-1)!;
-    if (event.shiftKey && document.activeElement === first) {
+    const active = document.activeElement;
+    const activeIndex = focusable.indexOf(active as HTMLElement);
+    if (!drawer.contains(active) || activeIndex === -1) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && active === first) {
       event.preventDefault();
       last.focus();
     } else if (!event.shiftKey && document.activeElement === last) {
@@ -580,6 +608,7 @@ const titleParts = (name: string) => {
   });
   if (document.querySelector("[data-admin-drawer]")) {
     setOpen(true);
+    syncLinks();
     document.querySelector<HTMLElement>("[data-admin-drawer] h2")?.focus();
   }
 </script>
