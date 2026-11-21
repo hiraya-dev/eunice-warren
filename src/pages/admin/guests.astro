@@ -11,16 +11,15 @@ import { selectAdminStore } from "@/lib/admin/store";
 import type { AdminGuestList } from "@/lib/admin/store";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
+const store = selectAdminStore((env as Record<string, unknown>).RSVP_STORE, (env as Record<string, unknown>).DB as never);
 const hostNames = parseAdminHosts(
   String((env as Record<string, unknown>).ADMIN_HOSTS ?? ""),
 ) ?? { [host.email]: host.firstName };
 let data: AdminGuestList | null = null;
 let failed = false;
+let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
 try {
-  data = await selectAdminStore(
-    (env as Record<string, unknown>).RSVP_STORE,
-    (env as Record<string, unknown>).DB as never,
-  ).getGuestList();
+  [data, counts] = await Promise.all([store.getGuestList(), store.getNavCounts()]);
 } catch {
   failed = true;
   Astro.response.status = 503;
@@ -42,7 +41,7 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
 <AdminLayout
   active="guests"
   host={host}
-  householdCount={view.totals.households}
+  counts={counts}
 >
   <section id="guests" class="admin-guests_wrap" data-admin-guests-page>
     {host.sample && <p class="admin_sample" data-admin-sample>Sample data</p>}

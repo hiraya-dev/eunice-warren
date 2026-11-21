@@ -8,7 +8,9 @@ export function manilaParts(now = new Date()) {
     month: "numeric",
     day: "numeric",
     hour: "numeric",
+    minute: "numeric",
     hour12: false,
+    hourCycle: "h23",
   }).formatToParts(now);
   return Object.fromEntries(
     parts
@@ -55,6 +57,78 @@ export function relativeTime(value: string, now = new Date()) {
     month: "short",
     day: "numeric",
   }).format(new Date(value));
+}
+export function songKey(song: string, artist: string | null | undefined) {
+  const normalize = (value: string) =>
+    value
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  return `${normalize(song)}\u0000${artist?.trim() ? normalize(artist) : ""}`;
+}
+export function mostCommonCaption(size: string | null, count: number) {
+  return size
+    ? `Most common · ${size} (${count} ${count === 1 ? "pair" : "pairs"})`
+    : "No sizes yet";
+}
+export function pairsCaption(missing: number) {
+  return `One per attending guest · grows as RSVPs come in${missing > 0 ? ` · ${missing} coming without a size yet` : ""}`;
+}
+export function songsEyebrow(requests: number, songs: number) {
+  return `For the DJ · ${requests} ${requests === 1 ? "request" : "requests"}, ${songs} ${songs === 1 ? "song" : "songs"}`;
+}
+export function copiedLabel(songs: number) {
+  return `Copied ${songs} song${songs === 1 ? "" : "s"}`;
+}
+export function duplicateLabel(requestCount: number) {
+  return requestCount > 1 ? `× ${requestCount} requests` : "";
+}
+export function djText(
+  rows: Array<{
+    song: string;
+    artist: string | null;
+    requestCount: number;
+    createdAt: string;
+  }>,
+) {
+  const groups = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    const key = songKey(row.song, row.artist);
+    const current = groups.get(key);
+    if (
+      !current ||
+      new Date(row.createdAt).getTime() < new Date(current.createdAt).getTime()
+    )
+      groups.set(key, row);
+  }
+  const ordered = [...groups.values()].sort(
+    (a, b) =>
+      b.requestCount - a.requestCount ||
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+  return [
+    `Warren & Eunice · song requests (${ordered.length} ${ordered.length === 1 ? "song" : "songs"}, ${rows.length} ${rows.length === 1 ? "request" : "requests"})`,
+    "",
+    ...ordered.map(
+      (row, index) =>
+        `${index + 1}. ${row.song}${row.artist?.trim() ? ` · ${row.artist}` : ""}${row.requestCount > 1 ? ` (× ${row.requestCount})` : ""}`,
+    ),
+  ].join("\n");
+}
+export function csvCell(value: unknown) {
+  let text = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+export function csv(rows: unknown[][]) {
+  return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
+}
+export function manilaDateTime(value: string) {
+  const parts = manilaParts(new Date(value));
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")} ${String(parts.hour).padStart(2, "0")}:${String(parts.minute ?? 0).padStart(2, "0")}`;
 }
 export function memberLine(names: string[]) {
   if (!names.length) return "";

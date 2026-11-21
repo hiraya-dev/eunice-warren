@@ -11,6 +11,8 @@ export interface AdminSeat {
   namedByKind: "guest" | "host" | null;
   namedAt: string | null;
   state?: "open" | "named" | "freed";
+  slipperSize?: string | null;
+  attending?: boolean;
 }
 export interface AdminHousehold {
   id: string;
@@ -52,9 +54,42 @@ export interface AdminGuestList {
   totals: { households: number; seatsOffered: number; unnamedPlusOnes: number };
   rows: AdminHousehold[];
 }
+export interface AdminSlipperOrder {
+  women: Array<{ size: string; count: number }>;
+  men: Array<{ size: string; count: number }>;
+  womenTotal: number;
+  menTotal: number;
+  pairs: number;
+  missing: number;
+  mostCommonWomen: string | null;
+  mostCommonMen: string | null;
+}
+export interface AdminSongRequest {
+  id: number;
+  no: number;
+  song: string;
+  artist: string | null;
+  name: string;
+  dedication: string | null;
+  createdAt: string;
+  requestCount: number;
+}
+export interface AdminSongRequests {
+  rows: AdminSongRequest[];
+  requests: number;
+  songs: number;
+}
+export interface AdminNavCounts {
+  households: number;
+  slipperPairs: number;
+  songRequests: number;
+}
 export interface AdminStore {
   getOverview(): Promise<AdminOverview>;
   getGuestList(): Promise<AdminGuestList>;
+  getSlipperOrder(): Promise<AdminSlipperOrder>;
+  getSongRequests(): Promise<AdminSongRequests>;
+  getNavCounts(): Promise<AdminNavCounts>;
 }
 export function selectAdminStore(
   storeName: unknown,
