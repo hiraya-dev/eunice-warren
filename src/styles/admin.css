@@ -371,12 +371,15 @@
 .admin-overview_header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "date stamp" "greeting stamp";
+  /* Phones give the greeting the full width under the date and stamp, so
+     "Good afternoon, Eunice" stays on two lines down to 320px. */
+  grid-template-areas: "date stamp" "greeting greeting";
   align-items: start;
   column-gap: 1rem;
   row-gap: 0.75rem;
 
   @media (min-width: 64rem) {
+    grid-template-areas: "date stamp" "greeting stamp";
     column-gap: 2rem;
   }
   > .admin_label {
@@ -395,6 +398,9 @@
   color: var(--dark-900);
   overflow-wrap: anywhere;
 
+  @media (max-width: 63.99rem) {
+    font-size: min(var(--admin-hero), 11vw);
+  }
   @media (min-width: 64rem) {
     --admin-hero: clamp(3rem, 5.6vw, 5rem);
     letter-spacing: var(--letter-spacing-tight);

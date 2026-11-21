@@ -97,3 +97,13 @@ The entry below is guarded by a hook on T3's delegation tool.
 - **Check:** `tests/preloader.spec.ts` "reveals the hero when just browsing closes the preloader" asserts the hero is hidden while the envelope is open and visible after it closes.
 - **Guard:** test — the spec above
 - **Paths:** `src/components/sections/Hero.astro`, `src/components/global/Preloader.astro`
+
+### L-048 — Size a heading by its longest real text at the narrowest width
+- **Date:** 2026-11-21
+- **Trigger:** #96 Local review round 1 (the user's correction: the phone Overview greeting "Good evening, Eunice" wrapped to 3 lines beside the deadline stamp; 2 lines is the limit)
+- **Symptom:** a display heading that shares a row with a side element (stamp, button) fits the artboard copy but wraps to three or more lines with real text at phone widths.
+- **Root cause:** the layout matched Paper's short "Hi, Eunice" and kept the side element in the heading's row, leaving the heading about 235px at 390.
+- **Rule:** when a heading's text comes from data or a helper (greetings, names, counts), size and place it for the longest text it can produce at 320px, not the artboard sample. Give it the full width on phones if a side element would squeeze it, and cap the font with a `vw` term.
+- **Check:** a spec sets the heading to its longest variant and asserts the line count at 320–1023 (`tests/admin.spec.ts` "keeps the greeting to two lines on phones").
+- **Guard:** test — `tests/admin.spec.ts`
+- **Paths:** `src/pages/**`, `src/styles/**`, `src/components/**`

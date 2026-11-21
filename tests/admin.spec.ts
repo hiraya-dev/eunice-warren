@@ -56,6 +56,26 @@ test.describe("admin dashboard", () => {
     });
   }
 
+  // User feedback on #96: the phone greeting wrapped to 3 lines beside the
+  // stamp (old CSS: 3 lines at 390). Use the longest greeting the helper makes.
+  test("keeps the greeting to two lines on phones @sweep @single", async ({
+    page,
+  }) => {
+    for (const width of [320, 360, 390, 480, 768, 1023]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/admin");
+      const lines = await page
+        .locator("[data-admin-greeting]")
+        .evaluate((el) => {
+          const name = el.querySelector("em")?.textContent ?? "Eunice";
+          el.innerHTML = `Good afternoon, <em>${name}</em>`;
+          const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+          return Math.round(el.getBoundingClientRect().height / lineHeight);
+        });
+      expect(lines, `greeting lines at ${width}`).toBeLessThanOrEqual(2);
+    }
+  });
+
   test("swaps the sidebar for the tab bar below 1024 @sweep @single", async ({
     page,
   }) => {
