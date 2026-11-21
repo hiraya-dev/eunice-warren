@@ -191,6 +191,9 @@ export function initGalleryOverlay() {
       let lockActive = false;
       let openingToken = 0;
       let overlayListenersBound = false;
+      let galleryPrefetchStarted = false;
+      let galleryPrefetchObserver: IntersectionObserver | null = null;
+      const PREFETCH_BATCH_SIZE = 5;
 
       const reducedMotion = () =>
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -675,6 +678,24 @@ export function initGalleryOverlay() {
         }
       };
 
+      const prefetchGallery = () => {
+        if (galleryPrefetchStarted) return;
+        galleryPrefetchStarted = true;
+        galleryPrefetchObserver?.disconnect();
+        galleryPrefetchObserver = null;
+        openButton.removeEventListener("pointerenter", prefetchGallery);
+        openButton.removeEventListener("pointerdown", prefetchGallery);
+        openButton.removeEventListener("focus", prefetchGallery);
+        const coarse = coarsePointer();
+        const firstBatch = photos.slice(0, PREFETCH_BATCH_SIZE);
+        void Promise.all([
+          import("./canvas.ts"),
+          ...firstBatch.map((photo) =>
+            loadGalleryPhoto(coarse ? photo.coarse : photo.fine).catch(() => null),
+          ),
+        ]);
+      };
+
       const openOverlay = () => {
         if (overlay.dataset.galleryState !== "closed") return;
         openingToken += 1;
@@ -692,6 +713,18 @@ export function initGalleryOverlay() {
 
       fillList();
       openButton.addEventListener("click", openOverlay);
+      openButton.addEventListener("pointerenter", prefetchGallery);
+      openButton.addEventListener("pointerdown", prefetchGallery);
+      openButton.addEventListener("focus", prefetchGallery);
+      if ("IntersectionObserver" in window) {
+        galleryPrefetchObserver = new IntersectionObserver(
+          (entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) prefetchGallery();
+          },
+          { rootMargin: "800px 0px" },
+        );
+        galleryPrefetchObserver.observe(root ?? openButton);
+      }
       closeButton.addEventListener("click", closeOverlay);
       lightboxClose.addEventListener("click", () => {
         void closePhoto();
