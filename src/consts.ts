@@ -9,7 +9,7 @@ export const SITE_DESCRIPTION =
  * Canonical origin. Resolves canonical URLs, social images, and the sitemap.
  * Workers.dev origin until a custom domain is added.
  */
-export const SITE_URL = "https://eunice-warren.neil-e89.workers.dev";
+export const SITE_URL = "https://eunice-warren.warren-and-eunice.workers.dev";
 /** Single switch to flip when the site should appear in search. */
 export const SITE_INDEXABLE = false;
 /** BCP 47 locale tag used to format dates and numbers. */

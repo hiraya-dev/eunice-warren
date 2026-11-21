@@ -31,7 +31,7 @@ export function createTurnstileController(fakeMode: boolean) {
     container.replaceChildren();
     return new Promise<string>((resolve, reject) => {
       widget = window.turnstile!.render(container, {
-        sitekey: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAFYIhA_8zh_lLnm8",
+        sitekey: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAGLQ97oeYHLG-p4Y",
         appearance: "interaction-only",
         execution: "execute",
         callback: (token: string) => resolve(token),

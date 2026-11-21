@@ -15,9 +15,8 @@
     "not_found_handling": "404-page",
   },
 
-  "kv_namespaces": [
-    { "binding": "WITH_LOVE_PHOTOS", "id": "c00b4621542449ddb7828b30e08a38f9" },
-  ],
+  // With Love is off the page, so no photo KV namespace is bound. Restoring the
+  // section needs a WITH_LOVE_PHOTOS namespace created in this account first.
 
   "ratelimits": [
     {
