@@ -409,6 +409,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/lib/**`, `src/actions/**`, `src/components/sections/Rsvp.astro`, `src/components/global/Preloader.astro`
 
+### L-047 — A store rewrite keeps every branch of the old restore logic
+- **Date:** 2026-11-21
+- **Trigger:** PR #95, CHANGES_REQUIRED (a guest who declined came back with no seat ticked)
+- **Symptom:** the D1 store restored each seat's stored `attending`, so after a decline every seat came back unticked; the Sheets parser had ticked the members in that case.
+- **Root cause:** the rewrite ported the data shape and the main path but not a small conditional (`previous.attending ? seat.attending : index < members.length`) in the old parser, and the criteria said "behaves as before" without listing that branch.
+- **Rule:** before replacing a store or parser, list every branch of the old read and restore logic (decline, plus-one, renamed seat, missing row) in the brief, and require one test per branch against the new store.
+- **Check:** the brief for a store rewrite names the old file and its branches; each has a test in the new store's unit file (`tests/d1-unit.test.ts` "resets member ticks after a decline").
+- **Guard:** none
+- **Paths:** `src/lib/**`, `src/components/sections/Rsvp.astro`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

@@ -14,6 +14,7 @@ import { GuestActionFailure, runFindAction, runSongAction, runSubmitAction, sele
 import type { D1Database } from "@/lib/db/types";
 import { getLoveStore } from "@/lib/with-love/store";
 import { isJpeg, isTodayInManila, isWithinLength, stripControls } from "@/lib/with-love/validation";
+import { rsvpSubmitInput } from "@/lib/rsvp/input";
 
 const TEST_SECRET = "local-rsvp-token-secret";
 const envRecord = env as unknown as Record<string, unknown>;
@@ -100,21 +101,6 @@ const findInput = z.object({
   name: z.string().trim().min(1).max(120),
   turnstileToken: z.string().max(4096),
 });
-const submitInput = z.object({
-  token: z.string().min(1),
-  name: z.string().trim().min(1).max(120),
-  attending: z.boolean(),
-  seats: z.array(z.object({
-    seatId: z.number().int(),
-    shownName: z.string().nullable().optional(),
-    name: z.string().max(120),
-    attending: z.boolean(),
-    slipperSize: z.string().optional(),
-  })),
-  email: z.string().email().max(254),
-  note: z.string().max(1000).optional(),
-  turnstileToken: z.string().max(4096),
-});
 const songInput = z.object({
   name: z.string().trim().min(1).max(120), song: z.string().trim().min(1).max(120), artist: z.string().trim().max(120).optional(), dedication: z.string().trim().max(500).optional(), turnstileToken: z.string().max(4096),
 });
@@ -148,7 +134,7 @@ export const server = {
       },
     }),
     submit: defineAction({
-      input: submitInput,
+      input: rsvpSubmitInput,
       handler: async (input, context) => {
         closed();
         await guard(input.turnstileToken, context, true, "RSVP_SUBMIT_LIMITER");

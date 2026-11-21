@@ -18,6 +18,8 @@ export const fakeFixtures: FakeInvite[] = [
   makeInvite("reyes", "Reyes_Lipa", "Ana Reyes", "REYESA", ["Ana Reyes"], 1),
   makeInvite("cruz", "Cruz_Batangas", "The Cruz Family", "CRUZAA", ["Mateo Cruz", "Sofía Cruz", "Remedios Cruz"], 4),
   makeInvite("garcia", "Garcia_Manila", "The Garcia Family", "GARCAA", ["Paolo Garcia", "Bea Garcia"], 3),
+  // Second persisted fixture, owned by the declined-guest spec in rsvp-paths (L-022).
+  makeInvite("lim", "Lim_Quezon", "The Lim Family", "LIMDEC", ["Nora Lim", "Theo Lim"], 3),
   makeInvite("toledo", "Toledo_Sabang", "The Toledo Family", "T2EDOS", ["Luna Toledo"], 2),
   makeInvite("teachaburanatapaporn", "Teachaburanatapaporn_Test", "The Teachaburanatapaporn Family", "TEACH1", ["Lea Teachaburanatapaporn"], 12),
   makeInvite("long-display", "Longdisplay_Test", "The Verylongteachaburanatapaporn Family!", "LONG40", ["Nia Longsample"], 1),
@@ -43,12 +45,12 @@ const currentInvite = (fixture: FakeInvite): FakeInvite => ({
   })),
 });
 
-export const createFakeRsvpStore = (): RsvpStore => {
+export const createFakeRsvpStore = (fixtureSource: FakeInvite[] = fakeFixtures): RsvpStore => {
   return {
     async findInvite(name) {
       await pause();
       if (normalizeGuestName(name) === "error test") throw new Error("fictional RSVP lookup failure");
-      const fixtures = fakeFixtures.map(fixtureInvite);
+      const fixtures = fixtureSource.map(fixtureInvite);
       const result = lookupInvite(name, fixtures);
       if (!result || !result.invite) return result;
       const householdId = result.invite.id!;
@@ -56,7 +58,7 @@ export const createFakeRsvpStore = (): RsvpStore => {
       return { ...result, householdId, previous: previousByInvite.get(householdId) ?? null };
     },
     async findInviteByTicketCode(ticketCode, name) {
-      const fixture = fakeFixtures.find((item) => item.ticketCode === ticketCode);
+      const fixture = fixtureSource.find((item) => item.ticketCode === ticketCode);
       if (!fixture) return null;
       if (fixture.id === "seat-change-test") seatChangePending = true;
       const result = lookupInvite(name, [fixtureInvite(fixture)]);
@@ -65,7 +67,7 @@ export const createFakeRsvpStore = (): RsvpStore => {
     },
     async submit(submission) {
       await pause();
-      const fixture = fakeFixtures.find((item) => item.id === submission.inviteId);
+      const fixture = fixtureSource.find((item) => item.id === submission.inviteId);
       if (!fixture) throw new Error("invite changed");
       const active = currentInvite(fixture).seatList ?? [];
       if (submission.seats.length !== active.length || submission.seats.some((seat) => !active.some((candidate) => candidate.seatId === seat.seatId))) throw new Error("invite changed");
@@ -77,9 +79,10 @@ export const createFakeRsvpStore = (): RsvpStore => {
         const shown = seat.shownName ?? current.name ?? "";
         if (seat.name.trim() && seat.name !== shown) names.set(seat.seatId!, seat.name);
       }
-      // Garcia is the one dedicated returning-guest fixture. Keeping every
-      // fixture's writes would leak state across parallel Playwright workers.
-      if (fixture.id === "garcia") {
+      // Garcia (rsvp.spec) and Lim (rsvp-paths.spec) are the dedicated
+      // returning-guest fixtures, one per spec. Keeping every fixture's writes
+      // would leak state across parallel Playwright workers (L-022).
+      if (fixture.id === "garcia" || fixture.id === "lim") {
         seatNames.set(fixture.id, names);
         previousByInvite.set(fixture.id, { attending: submission.attending, seats: submission.seats.map((item) => ({ ...item })) });
       }

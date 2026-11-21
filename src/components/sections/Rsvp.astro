@@ -260,7 +260,7 @@ const {
   import { normalizeGuestName } from "@/lib/rsvp/store";
   import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
-  import { getGuest } from "@/lib/guest";
+  import { getGuest, setGuest } from "@/lib/guest";
 
   const initRsvp = () => {
     document
@@ -647,13 +647,19 @@ const {
               nameInput.removeAttribute("aria-describedby");
               invite = result.data.invite as unknown as Invite;
               matchedName = result.data.matchedName;
+              setGuest({
+                name: matchedName,
+                householdName: invite.householdName,
+                seats: invite.seats,
+                at: new Date().toISOString(),
+              });
               const token = result.data.token;
               const previous = result.data.previous;
               const savedBySeat = new Map((previous?.seats ?? []).map((seat) => [seat.seatId, seat]));
               seats = (invite.seatList ?? invite.members.map((member, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: member, name: member }))).map((seat): Seat => {
                 const saved = savedBySeat.get(seat.seatId);
                 return saved
-                  ? { seatId: seat.seatId, original: seat.invitedName, shownName: saved.shownName ?? seat.name, name: saved.name, attending: saved.attending, slipperSize: saved.slipperSize }
+                  ? { seatId: seat.seatId, original: seat.invitedName, shownName: saved.shownName ?? seat.name, name: saved.name, attending: previous?.attending ? saved.attending : seat.kind === "member", slipperSize: saved.slipperSize }
                   : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: seat.kind === "member" };
               });
               attending = previous?.attending ?? true;

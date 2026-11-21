@@ -106,6 +106,7 @@ export function importRows(rows) {
     usedIds.set(id, true);
     if (!requestedId) generatedIds.push({ row: index + 1, id });
     const label = normalizeImportName(rawHousehold) || (seats === 1 ? members[0] : `${members[0]} +${seats - 1}`);
+    if (label.length > 80) errors.push({ row: index + 1, message: `label exceeds 80 characters: ${label}` });
     const familyPlace = label.match(/^([^_]+)_[^_]+$/);
     const lead = members[0];
     const displayName = seats === 1 ? lead : familyPlace ? `The ${normalizeImportName(familyPlace[1])} Family` : `The ${displaySurname(lead)} Family`;
@@ -121,7 +122,7 @@ export function importRows(rows) {
 export function seedSql(report, replace = false) {
   const quote = (value) => value === null ? "NULL" : `'${String(value).replaceAll("'", "''")}'`;
   const now = "strftime('%Y-%m-%dT%H:%M:%fZ')";
-  const statements = ["PRAGMA foreign_keys = ON;", "BEGIN;"];
+  const statements = [];
   if (replace) statements.push("DELETE FROM invite_seats;", "DELETE FROM households;");
   for (const household of report.households) {
     statements.push(`INSERT INTO households (id,label,display_name,ticket_code,created_at,updated_at) VALUES (${quote(household.id)},${quote(household.label)},${quote(household.displayName)},${quote(household.ticketCode)},${now},${now});`);
@@ -132,7 +133,6 @@ export function seedSql(report, replace = false) {
       statements.push(`INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES (${quote(household.id)},${quote(member ? "member" : "plus_one")},${slot},'active',${quote(member)},${quote(member ? key : null)},${quote(member ? surname : null)},${quote(member)},${now},${now});`);
     }
   }
-  statements.push("COMMIT;");
   return `${statements.join("\n")}\n`;
 }
 

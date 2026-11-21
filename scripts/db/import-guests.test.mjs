@@ -58,7 +58,13 @@ test("marks risky surname particles and emits replace-safe seed SQL", () => {
   const sql = seedSql(report, true);
   assert.match(sql, /DELETE FROM invite_seats;/);
   assert.match(sql, /INSERT INTO households/);
-  assert.match(sql, /BEGIN;/);
+  assert.doesNotMatch(sql, /PRAGMA|BEGIN;|COMMIT;/);
+});
+
+test("reports a label over 80 characters before seed execution", () => {
+  const label = "F".repeat(81);
+  const report = importRows([["id", "household", "members", "seats", "notes"], ["long", label, "Nia Fictional", "1", ""]]);
+  assert.match(report.errors.find((error) => error.row === 2)?.message ?? "", /label exceeds 80 characters/);
 });
 
 test("reports only meaningful normalization and never accepts zero seats", () => {

@@ -41,7 +41,9 @@ const previousFor = async (db: ReturnType<typeof getDb>, householdId: string, se
         original: seat.invitedName,
         shownName: seat.name,
         name: seat.name ?? "",
-        attending: savedSeat ? Boolean(savedSeat.attending) : seat.kind === "member" && Boolean(latest.attending),
+        attending: latest.attending
+          ? (savedSeat ? Boolean(savedSeat.attending) : seat.kind === "member")
+          : seat.kind === "member",
         slipperSize: savedSeat?.slipperSize ?? undefined,
       };
     }),
@@ -105,6 +107,7 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
       const byId = new Map(active.map((seat) => [seat.id, seat]));
       if (submission.seats.some((seat) => typeof seat.seatId !== "number" || !byId.has(seat.seatId))) throw new InviteChangedError();
       const now = new Date().toISOString();
+      // A collision needs two submissions in the same millisecond with the same 1-of-1000 suffix; the primary key rejects it rather than overwriting history.
       const responseId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
       const response = db.insert(responses).values({ id: responseId, householdId: submission.inviteId, submittedAt: now, respondentName: submission.name, attending: submission.attending, guestCount: submission.guests, email: submission.email, note: submission.note ?? null, source: "guest", editedBy: null });
       const seatRows = db.insert(responseSeats).values(submission.seats.map((seat) => ({ responseId, seatId: seat.seatId!, kind: byId.get(seat.seatId!)!.kind, name: seat.name, attending: seat.attending, slipperSize: seat.slipperSize ?? null })));
@@ -171,15 +174,22 @@ export async function setInvitedName(database: D1Database, seatId: number, invit
   const db = getDb(database);
   const current = (await db.select().from(inviteSeats).where(eq(inviteSeats.id, seatId)).limit(1))[0];
   if (!current) throw new Error("seat not found");
+  if (current.kind !== "member") return { blocked: "Only member seats have an invited name." };
   const old = current.invitedName;
   const clean = invitedName.trim();
   const key = normalizeGuestName(clean);
   const now = new Date().toISOString();
   await db.update(inviteSeats).set({ invitedName: clean, nameKey: key, surnameKey: key.split(" ").at(-1), name: current.name === old ? clean : current.name, ...actorValues(actor, now) }).where(eq(inviteSeats.id, seatId));
+  return { updated: true as const };
 }
 
 export async function setSeatName(database: D1Database, seatId: number, name: string, actor: string) {
   const db = getDb(database);
+  const current = (await db.select({ kind: inviteSeats.kind }).from(inviteSeats).where(eq(inviteSeats.id, seatId)).limit(1))[0];
+  if (!current) throw new Error("seat not found");
+  const clean = name.trim();
+  if (current.kind === "member" && !clean) return { blocked: "Member seat names cannot be blank." };
   const now = new Date().toISOString();
-  await db.update(inviteSeats).set({ name: name.trim() || null, namedByKind: "host", namedBy: actor, namedAt: now, ...actorValues(actor, now) }).where(eq(inviteSeats.id, seatId));
+  await db.update(inviteSeats).set({ name: clean || null, namedByKind: "host", namedBy: actor, namedAt: now, ...actorValues(actor, now) }).where(eq(inviteSeats.id, seatId));
+  return { updated: true as const };
 }

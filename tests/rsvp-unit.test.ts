@@ -12,6 +12,8 @@ import {
 import { normalizeGuestName } from "../src/lib/rsvp/store.ts";
 import { createFakeRsvpStore, fakeFixtures } from "../src/lib/rsvp/store.ts";
 import { SLIPPER_SIZES } from "../src/lib/rsvp/slippers.ts";
+import { rsvpSubmitInput } from "../src/lib/rsvp/input.ts";
+import { MAX_SEATS } from "../src/lib/rsvp/limits.ts";
 import {
   buildResponseRow,
   createSheetsRsvpStore,
@@ -94,6 +96,11 @@ test("finds only safe, unambiguous near guest names", async () => {
     invite: null,
     suggestion: "Mateo Cruz",
   });
+  const duplicateFixtures = [
+    { id: "santos-one", label: "One_Test", householdName: "One", ticketCode: "ONE111", members: ["Maria Santos"], seats: 1, seatList: [{ seatId: 1, kind: "member" as const, invitedName: "Maria Santos", name: "Maria Santos" }] },
+    { id: "santos-two", label: "Two_Test", householdName: "Two", ticketCode: "TWO222", members: ["Maria Santos"], seats: 1, seatList: [{ seatId: 2, kind: "member" as const, invitedName: "Maria Santos", name: "Maria Santos" }] },
+  ];
+  assert.equal(await createFakeRsvpStore(duplicateFixtures).findInvite("Maira Santos"), null);
 });
 
 test("signs, verifies, expires, and rejects tampered tokens", async () => {
@@ -153,6 +160,28 @@ test("validates seat checklist rules", () => {
     validateSubmission({ attending: false, seats: [{ ...seats(false, false)[0], slipperSize: "W 7" }, seats(false, false)[1]], invite }),
     false,
   );
+});
+
+test("rejects invalid seat counts, duplicate seat ids, and unknown seat ids directly", () => {
+  const member = (seatId: number) => ({ seatId, kind: "member" as const, invitedName: `Guest ${seatId}`, name: `Guest ${seatId}` });
+  const submitted = (seatId: number) => ({ seatId, name: `Guest ${seatId}`, attending: false });
+  assert.equal(validateSubmission({ attending: false, invite: { householdName: "Empty", ticketCode: "EMPTY1", members: [], seats: 0, seatList: [] }, seats: [] }), false);
+  assert.equal(validateSubmission({ attending: false, invite: { householdName: "Large", ticketCode: "LARGE1", members: Array.from({ length: MAX_SEATS + 1 }, (_, index) => `Guest ${index + 1}`), seats: MAX_SEATS + 1, seatList: Array.from({ length: MAX_SEATS + 1 }, (_, index) => member(index + 1)) }, seats: Array.from({ length: MAX_SEATS + 1 }, (_, index) => submitted(index + 1)) }), false);
+  const invite = { householdName: "Pair", ticketCode: "PAIR11", members: ["Guest 1", "Guest 2"], seats: 2, seatList: [member(1), member(2)] };
+  assert.equal(validateSubmission({ attending: false, invite, seats: [submitted(1), submitted(1)] }), false);
+  assert.equal(validateSubmission({ attending: false, invite, seats: [submitted(1), submitted(999)] }), false);
+});
+
+test("RSVP submit input rejects seat arrays outside one through MAX_SEATS", () => {
+  const payload = {
+    token: "token",
+    name: "Fictional Guest",
+    attending: false,
+    email: "fictional@example.com",
+    turnstileToken: "",
+  };
+  assert.equal(rsvpSubmitInput.safeParse({ ...payload, seats: [] }).success, false);
+  assert.equal(rsvpSubmitInput.safeParse({ ...payload, seats: Array.from({ length: MAX_SEATS + 1 }, (_, index) => ({ seatId: index + 1, name: "", attending: false })) }).success, false);
 });
 
 test("keeps the deadline boundary exact", () => {

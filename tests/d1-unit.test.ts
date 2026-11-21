@@ -51,6 +51,33 @@ test("D1 lookup returns only the public invite shape and restores previous value
   database.close();
 });
 
+test("D1 lookup resets member ticks after a decline and leaves plus-ones unticked", async () => {
+  const database = setup();
+  database.db.exec(`INSERT INTO responses (id,household_id,submitted_at,respondent_name,attending,guest_count,email) VALUES (1,'toledo','2026-11-20T00:00:00.000Z','Luna Toledo',0,0,'luna@example.com');
+    INSERT INTO response_seats (response_id,seat_id,kind,name,attending) VALUES (1,1,'member','Luna Toledo',0),(1,2,'member','Mara Toledo',0),(1,3,'plus_one','Fictional Companion',0);`);
+  const result = await createD1RsvpStore(database).findInvite("Luna Toledo");
+  assert(result && result.invite && result.previous);
+  assert.equal(result.previous.attending, false);
+  assert.deepEqual(result.previous.seats.map(({ name, attending }) => ({ name, attending })), [
+    { name: "Luna Toledo", attending: true },
+    { name: "Mara Toledo", attending: true },
+    { name: "", attending: false },
+  ]);
+  database.close();
+});
+
+test("D1 lookup does not suggest a duplicated active member name", async () => {
+  const database = setup();
+  database.db.exec(`INSERT INTO households (id,label,display_name,ticket_code,created_at,updated_at) VALUES
+    ('santos-one','One_Test','One','ONE111','${now}','${now}'),
+    ('santos-two','Two_Test','Two','TWO222','${now}','${now}');
+    INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES
+    ('santos-one','member',1,'active','Maria Santos','maria santos','santos','Maria Santos','${now}','${now}'),
+    ('santos-two','member',1,'active','Maria Santos','maria santos','santos','Maria Santos','${now}','${now}');`);
+  assert.equal(await createD1RsvpStore(database).findInvite("Maira Santos"), null);
+  database.close();
+});
+
 test("guest action responses, signed token, ticket reference, and filename never expose labels or ids", async () => {
   const store = createFakeRsvpStore();
   for (const fixture of fakeFixtures.filter(({ id }) => id === "toledo" || id === "santos")) {
@@ -277,6 +304,15 @@ test("host seat functions refuse a thirteenth seat, refuse retiring a seated sea
   database.db.exec("DELETE FROM seat_assignments; UPDATE invite_seats SET status='retired', slot=NULL WHERE kind='member' AND id <> 1");
   assert.equal((await retireSeat(database, 1, "host@example.com")).archived, true);
   assert.equal(database.db.prepare("SELECT status FROM households WHERE id='toledo'").get()?.status, "archived");
+  database.close();
+});
+
+test("host naming functions clearly refuse invalid seat-kind and blank-member updates", async () => {
+  const database = setup();
+  assert.deepEqual(await setInvitedName(database, 3, "Fictional Guest", "host@example.com"), { blocked: "Only member seats have an invited name." });
+  assert.deepEqual(await setSeatName(database, 1, "   ", "host@example.com"), { blocked: "Member seat names cannot be blank." });
+  assert.deepEqual({ ...database.db.prepare("SELECT invited_name, name FROM invite_seats WHERE id=3").get() }, { invited_name: null, name: null });
+  assert.equal(database.db.prepare("SELECT name FROM invite_seats WHERE id=1").get()?.name, "Luna Toledo");
   database.close();
 });
 

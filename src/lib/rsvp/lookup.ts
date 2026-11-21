@@ -9,6 +9,16 @@ import type { Invite, InviteLookup } from "./store.ts";
  */
 export function lookupInvite(name: string, invites: Invite[]): InviteLookup {
   const wanted = normalizeGuestName(name);
+  const nameCounts = new Map<string, number>();
+  for (const invite of invites) {
+    for (const member of invite.members) {
+      const normalized = normalizeGuestName(member);
+      nameCounts.set(normalized, (nameCounts.get(normalized) ?? 0) + 1);
+    }
+  }
+  const duplicateNames = [...nameCounts]
+    .filter(([, count]) => count > 1)
+    .map(([normalized]) => normalized);
   const exact = invites.flatMap((invite) =>
     invite.seatList
       ?.filter((seat) => seat.kind === "member" && seat.invitedName && normalizeGuestName(seat.invitedName) === wanted)
@@ -23,7 +33,7 @@ export function lookupInvite(name: string, invites: Invite[]): InviteLookup {
       previous: null,
     };
   }
-  const suggestion = findNearGuestName(name, invites);
+  const suggestion = findNearGuestName(name, invites, [], duplicateNames);
   return suggestion ? { invite: null, suggestion } : null;
 }
 
