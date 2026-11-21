@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createFakeAdminStore } from "../src/lib/admin/fake.ts";
+import { createFakeAdminStore, fakeAdminFixtures } from "../src/lib/admin/fake.ts";
 import { createD1AdminStore } from "../src/lib/admin/d1.ts";
 import { buildSlipperCsv, buildSongCsv } from "../src/lib/admin/csv.ts";
 import {
@@ -344,7 +344,7 @@ test("fake admin store provides full slipper sizes, counts, songs, and nav count
     [8, 7, 6, 5, 4, 3, 2, 1],
   );
   assert.deepEqual(await store.getNavCounts(), {
-    households: 8,
+    households: fakeAdminFixtures.length,
     rsvpReplies: (await store.getRsvpList()).totals.all,
     slipperPairs: slippers.pairs,
     songRequests: 8,

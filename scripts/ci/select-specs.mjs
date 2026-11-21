@@ -30,6 +30,16 @@ export const SPEC_SOURCES = {
     "src/assets/fonts/admin/",
     "wrangler.jsonc",
   ],
+  "tests/admin-guests.spec.ts": [
+    "src/layouts/AdminLayout.astro",
+    "src/styles/admin.css",
+    "src/pages/admin/",
+    "src/components/admin/",
+    "src/lib/admin/",
+    "src/lib/rsvp/d1.ts",
+    "src/middleware.ts",
+    "wrangler.jsonc",
+  ],
   "tests/admin-rsvps.spec.ts": [
     "src/layouts/AdminLayout.astro",
     "src/styles/admin.css",
