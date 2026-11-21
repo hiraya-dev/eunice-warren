@@ -37,7 +37,7 @@ Keep these header rows on the existing tabs:
    TURNSTILE_SECRET_KEY.
 5. No Workers Builds variables are needed. The committed Wrangler config
    defaults to RSVP_STORE=sheets, and the production Turnstile site key
-   (0x4AAAAAAFYIhA_8zh_lLnm8, public) is the fallback in Rsvp.astro. Set
+   (0x4AAAAAAGLQ97oeYHLG-p4Y, public) is the fallback in src/scripts/turnstile.ts. Set
    PUBLIC_TURNSTILE_SITE_KEY at build time only to use a different widget.
    Preview/local runs override the store with fake.
 6. Build and deploy with npm run build followed by npx wrangler deploy. With the

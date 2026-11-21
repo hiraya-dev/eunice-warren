@@ -103,7 +103,7 @@ runs without asking.
 ## Local review
 
 A `runtime` change waits for the user on its draft PR's Cloudflare preview
-(`https://<branch, / as ->-eunice-warren.neil-e89.workers.dev`). CI and the
+(`https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`). CI and the
 `pr-reviewer` verdict run on the draft first; then Claude posts the review pack and
 **stops**. Feedback → a fix round and a new pack. "Ship it" (or "push", "merge",
 "go") authorizes ready + merge. A fix after "ship it" comes back only if it changes

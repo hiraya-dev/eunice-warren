@@ -329,7 +329,7 @@ and With Love store, so nothing a reviewer submits reaches the guest sheet.
    before the first verdict**). After "ship it", commit only a needed fix.
 2. **Confirm the preview.** Wait for the Workers Builds check on the head commit (red:
    read the build log and fix). The URL is
-   `https://<branch, / as ->-eunice-warren.neil-e89.workers.dev`; the Workers Builds
+   `https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`; the Workers Builds
    comment on the PR also lists it. Load it once with `curl -sI` and expect `200`;
    never in a loop (L-012).
 3. **Review the draft.** As soon as it is open, run this skill: `pr-reviewer`, and
@@ -414,7 +414,7 @@ merged or not, so the thread returns to the user's inbox.
 ## Merging deploys production
 
 Cloudflare Workers Builds deploys `main` to the `eunice-warren` Worker
-(`https://eunice-warren.neil-e89.workers.dev`) on every push. PR branches get only a
+(`https://eunice-warren.warren-and-eunice.workers.dev`) on every push. PR branches get only a
 preview, for **Local review**.
 
 After every merge, Claude confirms the Workers Build for the merge commit's SHA
