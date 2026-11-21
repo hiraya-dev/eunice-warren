@@ -21,6 +21,15 @@ export const BROAD_PREFIXES = [
 ];
 
 export const SPEC_SOURCES = {
+  "tests/admin.spec.ts": [
+    "src/layouts/AdminLayout.astro",
+    "src/styles/admin.css",
+    "src/pages/admin/",
+    "src/lib/admin/",
+    "src/middleware.ts",
+    "src/assets/fonts/admin/",
+    "wrangler.jsonc",
+  ],
   "tests/attire.spec.ts": [
     "src/components/sections/Attire.astro",
     "src/components/sections/Wedding.astro",

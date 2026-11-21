@@ -1,0 +1,95 @@
+---
+import { Font } from "astro:assets";
+import "@/styles/global.css";
+import "@/styles/admin.css";
+import type { AdminHost } from "@/lib/admin/auth";
+const {
+  title = "Guest ledger",
+  active,
+  householdCount = 0,
+  host,
+} = Astro.props as {
+  title?: string;
+  active: "overview" | "guests";
+  householdCount?: number;
+  host: AdminHost;
+};
+const links = [
+  { href: "/admin", label: "Overview", key: "overview" },
+  { href: "/admin/guests", label: "Guest list", key: "guests" },
+];
+const tabs = [
+  { href: "/admin", label: "Home", key: "overview" },
+  { href: "/admin/guests", label: "Guests", key: "guests" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title}</title>
+    <style is:global>
+      :where([hidden]) {
+        display: none !important;
+      }
+    </style>
+    <Font
+      cssVariable="--font-admin-newsreader"
+      preload={[{ weight: 200, style: "normal" }]}
+    />
+    <Font
+      cssVariable="--font-admin-geist"
+      preload={[{ weight: 400, style: "normal" }]}
+    />
+    <Font cssVariable="--font-admin-geist-mono" />
+  </head>
+  <body class="admin_wrap">
+    <aside class="admin_sidebar" data-admin-sidebar>
+      <a class="admin_brand" href="/admin" aria-label="Guest ledger">
+        <span class="admin_brand-mark">W <em>&amp;</em> E</span>
+        <span class="admin_label">Guest ledger</span>
+      </a>
+      <nav class="admin_nav" data-admin-nav aria-label="Dashboard">
+        {
+          links.map((link) => (
+            <a
+              href={link.href}
+              aria-current={active === link.key ? "page" : undefined}
+            >
+              {link.label}
+              {link.key === "guests" && (
+                <span class="admin_count" data-admin-count>
+                  {householdCount}
+                </span>
+              )}
+            </a>
+          ))
+        }
+      </nav>
+      <footer class="admin_account">
+        <span class="admin_email">{host.email}</span>
+        <a class="admin_label" href="/cdn-cgi/access/logout">Sign out</a>
+      </footer>
+    </aside>
+    <header class="admin_topbar" data-admin-mobile-topbar>
+      <a class="admin_brand-mark" href="/admin">W <em>&amp;</em> E</a>
+      <span class="admin_label">Guest ledger</span>
+    </header>
+    <main class="admin_main"><slot /></main>
+    <nav class="admin_tabbar" data-admin-tabbar aria-label="Dashboard tabs">
+      {
+        tabs.map((link) => (
+          <a
+            href={link.href}
+            aria-current={active === link.key ? "page" : undefined}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+  </body>
+</html>
