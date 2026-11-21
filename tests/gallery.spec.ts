@@ -2,6 +2,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
+declare global {
+  interface Window {
+    __galleryTextureRequests?: number[];
+    __galleryTexturePriorities?: Record<string, number>;
+  }
+}
+
 const galleryDirectory = resolve(process.cwd(), "src/assets/images/gallery");
 const photoCount = readdirSync(galleryDirectory).filter((file) =>
   file.endsWith(".jpg"),
@@ -125,6 +132,56 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       );
     },
   );
+
+  test("loads gallery photos concurrently and prioritizes the camera centre", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.__galleryTextureRequests = [];
+      window.__galleryTexturePriorities = {};
+    });
+    // Gallery photos are webp variants under /_astro/. Count only requests that start
+    // after the overlay opens: the old queue fetched them strictly one at a time.
+    let opened = false;
+    let active = 0;
+    let peak = 0;
+    let started = 0;
+    await page.route("**/_astro/*.webp", async (route) => {
+      if (!opened) return route.continue();
+      started += 1;
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await route.continue();
+      active -= 1;
+    });
+
+    await page.goto("/");
+    const open = page.locator("[data-gallery-open]");
+    await open.scrollIntoViewIfNeeded();
+    await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
+    // Let the section's own images and the intent prefetch settle before counting.
+    await page.waitForLoadState("networkidle");
+    opened = true;
+    await open.click();
+    await expect.poll(() => started, { timeout: 10_000 }).toBeGreaterThan(3);
+    expect(peak).toBeGreaterThan(1);
+    await expect
+      .poll(() => page.evaluate(() => window.__galleryTextureRequests?.length ?? 0), {
+        timeout: 5_000,
+      })
+      .toBeGreaterThan(1);
+
+    const priority = await page.evaluate(() => {
+      const requests = window.__galleryTextureRequests ?? [];
+      const priorities = window.__galleryTexturePriorities ?? {};
+      return requests
+        .map((index: number) => priorities[index])
+        .filter(Number.isFinite);
+    });
+    expect(priority.length).toBeGreaterThan(1);
+    expect(priority[0]).toBe(Math.min(...priority));
+  });
 
   test("pans the canvas from the keyboard while a control has focus", async ({
     page,

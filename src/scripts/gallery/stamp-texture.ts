@@ -210,8 +210,9 @@ export async function createPolaroidCanvas(
   photo: GalleryTexturePhoto,
   longEdge: number,
   far = false,
+  loadedImage?: HTMLImageElement,
 ): Promise<HTMLCanvasElement> {
-  const image = await loadGalleryPhoto(photo.fine || photo.coarse);
+  const image = loadedImage ?? (await loadGalleryPhoto(photo.fine || photo.coarse));
   const landscape = photo.orientation === "landscape";
   const width = landscape ? Math.round(longEdge) : Math.round(longEdge * 0.8);
   const height = landscape ? Math.round(longEdge * 0.8) : Math.round(longEdge);

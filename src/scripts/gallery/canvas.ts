@@ -39,6 +39,7 @@ import {
 } from "three";
 import {
   createPolaroidCanvas,
+  loadGalleryPhoto,
   polaroidPadding,
 } from "./stamp-texture.ts";
 
@@ -137,6 +138,7 @@ const INTRO_DURATION = 1200;
 const INTRO_SPREAD = 900;
 const SETTLED_EPSILON = 0.001;
 const LIGHT_COLOR = 0xf5efe3;
+const MAX_TEXTURE_CONCURRENCY = 5;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -314,6 +316,7 @@ export function createGalleryCanvas(
   const textureCache = new Map<number, CanvasTexture>();
   const textureQueue: number[] = [];
   const textureQueued = new Set<number>();
+  const textureInFlight = new Set<number>();
   const failedTextures = new Set<number>();
   const pointers = new Map<number, PointerPosition>();
   const heldKeys = new Set<string>();
@@ -326,7 +329,15 @@ export function createGalleryCanvas(
   let windowListenersBound = false;
   let frame = 0;
   let textureSchedule = 0;
-  let textureQueueRunning = false;
+  let textureActiveCount = 0;
+  const textureDrawQueue: Array<{
+    index: number;
+    image: HTMLImageElement;
+  }> = [];
+  const galleryTestWindow = window as Window & {
+    __galleryTextureRequests?: number[];
+    __galleryTexturePriorities?: Record<string, number>;
+  };
   let chunkEpoch = 0;
   let observedChunkX = Number.NaN;
   let observedChunkY = Number.NaN;
@@ -385,14 +396,8 @@ export function createGalleryCanvas(
     camera.updateProjectionMatrix();
   };
 
-  const scheduleTextureQueue = () => {
-    if (
-      destroyed ||
-      textureQueueRunning ||
-      textureSchedule ||
-      !textureQueue.length
-    )
-      return;
+  const scheduleTextureDraw = () => {
+    if (destroyed || textureSchedule || !textureDrawQueue.length) return;
     const idleWindow = window as unknown as {
       requestIdleCallback?: (
         callback: IdleRequestCallback,
@@ -403,15 +408,52 @@ export function createGalleryCanvas(
       textureSchedule = idleWindow.requestIdleCallback(
         () => {
           textureSchedule = 0;
-          void processTextureQueue();
+          const item = textureDrawQueue.shift();
+          if (item) void drawTexture(item.index, item.image);
+          scheduleTextureDraw();
         },
         { timeout: 100 },
       );
     } else {
       textureSchedule = window.setTimeout(() => {
         textureSchedule = 0;
-        void processTextureQueue();
+        const item = textureDrawQueue.shift();
+        if (item) void drawTexture(item.index, item.image);
+        scheduleTextureDraw();
       }, 0);
+    }
+  };
+
+  const texturePriority = (index: number) => {
+    let priority = Number.POSITIVE_INFINITY;
+    for (const mesh of meshesByPhoto.get(index) ?? []) {
+      const data = mesh.userData;
+      projected.set(data.targetX, data.targetY, data.targetZ).project(camera);
+      const screenDistance = Math.hypot(projected.x, projected.y);
+      const depthDistance = Math.abs(camera.position.z - data.targetZ) / DEPTH_HIDE;
+      priority = Math.min(priority, screenDistance + depthDistance * 0.35);
+    }
+    return priority;
+  };
+
+  const reprioritizeTextureQueue = () => {
+    if (galleryTestWindow.__galleryTexturePriorities) {
+      for (const index of textureQueue)
+        galleryTestWindow.__galleryTexturePriorities[index] = texturePriority(index);
+    }
+    textureQueue.sort((left, right) => texturePriority(left) - texturePriority(right));
+  };
+
+  const pumpTextureQueue = () => {
+    if (destroyed) return;
+    reprioritizeTextureQueue();
+    while (textureActiveCount < MAX_TEXTURE_CONCURRENCY && textureQueue.length) {
+      const index = textureQueue.shift();
+      if (index === undefined) break;
+      textureQueued.delete(index);
+      textureInFlight.add(index);
+      textureActiveCount += 1;
+      void loadTexture(index);
     }
   };
 
@@ -419,12 +461,12 @@ export function createGalleryCanvas(
     if (
       textureCache.has(index) ||
       textureQueued.has(index) ||
+      textureInFlight.has(index) ||
       failedTextures.has(index)
     )
       return;
     textureQueued.add(index);
     textureQueue.push(index);
-    scheduleTextureQueue();
   };
 
   const wake = () => {
@@ -445,12 +487,7 @@ export function createGalleryCanvas(
     wake();
   };
 
-  async function processTextureQueue() {
-    if (textureQueueRunning || destroyed) return;
-    const index = textureQueue.shift();
-    if (index === undefined) return;
-    textureQueueRunning = true;
-    textureQueued.delete(index);
+  async function drawTexture(index: number, image: HTMLImageElement) {
     const photo = photos[index];
     try {
       const canvas = await createPolaroidCanvas(
@@ -459,6 +496,8 @@ export function createGalleryCanvas(
           fine: coarsePointer ? photo.coarse : photo.fine,
         },
         coarsePointer ? 360 : 512,
+        false,
+        image,
       );
       if (destroyed) return;
       const texture = new CanvasTexture(canvas);
@@ -471,8 +510,27 @@ export function createGalleryCanvas(
     } catch {
       failedTextures.add(index);
     } finally {
-      textureQueueRunning = false;
-      scheduleTextureQueue();
+      textureInFlight.delete(index);
+      textureActiveCount -= 1;
+      pumpTextureQueue();
+    }
+  }
+
+  async function loadTexture(index: number) {
+    const photo = photos[index];
+    galleryTestWindow.__galleryTextureRequests?.push(index);
+    try {
+      const image = await loadGalleryPhoto(
+        coarsePointer ? photo.coarse : photo.fine,
+      );
+      if (destroyed) return;
+      textureDrawQueue.push({ index, image });
+      scheduleTextureDraw();
+    } catch {
+      failedTextures.add(index);
+      textureInFlight.delete(index);
+      textureActiveCount -= 1;
+      pumpTextureQueue();
     }
   }
 
@@ -604,6 +662,8 @@ export function createGalleryCanvas(
     }
     meshes.length = 0;
     for (const entry of chunks.values()) meshes.push(...entry.meshes);
+    reprioritizeTextureQueue();
+    pumpTextureQueue();
     onHoverEnd();
   };
 
@@ -1335,6 +1395,11 @@ export function createGalleryCanvas(
           idleWindow.cancelIdleCallback(textureSchedule);
         else globalThis.clearTimeout(textureSchedule);
       }
+      textureDrawQueue.length = 0;
+      textureQueue.length = 0;
+      textureQueued.clear();
+      textureInFlight.clear();
+      textureActiveCount = 0;
       stage.removeEventListener("pointerdown", onPointerDown);
       stage.removeEventListener("pointermove", onPointerMove);
       stage.removeEventListener("pointerup", onPointerUp);
