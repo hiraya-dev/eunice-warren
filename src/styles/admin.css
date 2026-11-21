@@ -1023,6 +1023,10 @@
       border-bottom-color: var(--dark-900);
     }
   }
+  /* The last visible row has no divider; search can hide the rows after it. */
+  tbody tr:not([hidden]):not(:has(~ tr:not([hidden]))) {
+    border-bottom: 0;
+  }
   th,
   td {
     padding: 0;
@@ -1493,6 +1497,11 @@
   row-gap: 0.25rem;
   padding-block: 1rem;
   border-bottom: var(--border-width) solid var(--light-300);
+
+  /* The last request has no divider above the card's bottom edge. */
+  &[data-song-row]:not(:has(~ [data-song-row])) {
+    border-bottom: 0;
+  }
 
   @media (min-width: 84rem) {
     grid-template-columns: var(--_cols);

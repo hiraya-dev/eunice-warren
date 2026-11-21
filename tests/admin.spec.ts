@@ -330,3 +330,31 @@ test.describe("admin slippers and songs", () => {
     }
   });
 });
+
+test.describe("admin list cards", () => {
+  const borders = (page: import("@playwright/test").Page, rows: string) =>
+    page
+      .locator(`${rows}:not([hidden])`)
+      .evaluateAll((items) =>
+        items.map((item) => getComputedStyle(item).borderBottomWidth),
+      );
+
+  test("end without a divider under the last visible row", async ({ page }) => {
+    for (const [path, rows] of [
+      ["/admin/guests", "[data-admin-household]"],
+      ["/admin/songs", "[data-song-row]"],
+    ] as const) {
+      await page.goto(path);
+      const widths = await borders(page, rows);
+      expect(widths.length).toBeGreaterThan(1);
+      expect(widths.at(-1)).toBe("0px");
+      expect(widths.slice(0, -1).every((width) => width !== "0px")).toBe(true);
+    }
+    // Searching hides the households after a match; the match ends the card.
+    await page.goto("/admin/guests");
+    await page
+      .locator("[data-admin-search]")
+      .fill(fakeAdminFixtures[0].displayName);
+    expect((await borders(page, "[data-admin-household]")).at(-1)).toBe("0px");
+  });
+});
