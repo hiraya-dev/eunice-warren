@@ -228,6 +228,20 @@ test("admin CSV builders set deterministic Manila headers and error responses", 
   );
   assert.match(slipperText, /No size yet,/);
   assert.equal(slipperText.split("\r\n").length, 34);
+  const withoutMissing = {
+    ...store,
+    getSlipperOrder: async () => ({
+      ...(await store.getSlipperOrder()),
+      missing: 0,
+    }),
+  } as AdminStore;
+  const completeSlipper = await buildSlipperCsv(withoutMissing, now);
+  const completeSlipperText = await completeSlipper.text();
+  assert.doesNotMatch(completeSlipperText, /No size yet,/);
+  assert.match(
+    completeSlipperText.trimEnd().split("\r\n").at(-1) ?? "",
+    /^Total pairs,/,
+  );
   const songs = await buildSongCsv(store, now);
   const songText = await songs.text();
   assert.equal(songs.status, 200);

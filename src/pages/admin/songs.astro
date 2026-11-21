@@ -149,11 +149,13 @@ const text = djText(view.rows);
         .querySelector<HTMLTemplateElement>("[data-dj-text]")
         ?.content.textContent?.trim() ?? "";
     const songs = Number(root.dataset.djSongs ?? 0);
+    let statusTimer: number | undefined;
     button?.addEventListener("click", async () => {
+      if (statusTimer !== undefined) window.clearTimeout(statusTimer);
       try {
         await navigator.clipboard.writeText(text);
         if (status) status.textContent = copiedLabel(songs);
-        window.setTimeout(() => {
+        statusTimer = window.setTimeout(() => {
           if (status) status.textContent = "";
         }, 2000);
       } catch {

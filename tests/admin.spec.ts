@@ -223,6 +223,10 @@ test.describe("admin slippers and songs", () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       djText(songs.rows),
     );
+    await page.waitForTimeout(1200);
+    await page.locator("[data-dj-copy]").click();
+    await page.waitForTimeout(1200);
+    await expect(status).toBeVisible();
     await expect(status).toBeHidden({ timeout: 5000 });
   });
 
