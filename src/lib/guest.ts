@@ -1,4 +1,5 @@
-export const GUEST_STORAGE_KEY = "ew-guest-v1";
+export const GUEST_STORAGE_KEY = "ew-guest-v2";
+const LEGACY_GUEST_STORAGE_KEY = "ew-guest-v1";
 
 export interface RememberedGuest {
   name: string;
@@ -30,6 +31,7 @@ const isGuestState = (value: unknown): value is GuestState => {
 
 export const getGuest = (): GuestState | null => {
   try {
+    window.localStorage.removeItem(LEGACY_GUEST_STORAGE_KEY);
     const raw = window.localStorage.getItem(GUEST_STORAGE_KEY);
     if (!raw) return null;
     const value: unknown = JSON.parse(raw);

@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { createHash } from "node:crypto";
+import { mkdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fakeFixtures } from "../src/lib/rsvp/store";
 import { reveal } from "./helpers/reveal";
 
@@ -8,6 +12,28 @@ const visiblePanels = (page: import("@playwright/test").Page) =>
   rsvp(page).locator("[data-rsvp-panel]:not([hidden])");
 const santos = fakeFixtures.find((invite) => invite.id === "santos")!;
 const cruz = fakeFixtures.find((invite) => invite.id === "cruz")!;
+const lim = fakeFixtures.find((invite) => invite.id === "lim")!;
+const limLock = join(tmpdir(), `eunice-warren-lim-${createHash("sha1").update(process.cwd()).digest("hex").slice(0, 12)}`);
+const withLimLock = async (run: () => Promise<void>) => {
+  for (;;) {
+    try {
+      mkdirSync(limLock);
+      break;
+    } catch {
+      try {
+        if (Date.now() - statSync(limLock).mtimeMs > 60_000) rmSync(limLock, { recursive: true, force: true });
+      } catch {
+        // Released between calls; retry.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  try {
+    await run();
+  } finally {
+    rmSync(limLock, { recursive: true, force: true });
+  }
+};
 // The ticket prints first names only (RsvpTicketPrinter.astro).
 const firstName = (name: string) => name.split(" ")[0];
 
@@ -142,6 +168,35 @@ test.describe("RSVP paths", () => {
     await expect(summary).not.toContainText(oldName);
   });
 
+  test("opens a blank plus-one name and blocks Next until it is named", async ({ page }) => {
+    const section = rsvp(page);
+    await findInvite(page, santos.members[0], santos);
+    await section.locator("#rsvp-seat-1").check();
+    const name = section.locator("[aria-label='Name for seat 2']");
+    await expect(name).toBeVisible();
+    await section.getByRole("button", { name: "Continue" }).click();
+    const error = section.locator("[data-rsvp-guest-error]");
+    await expect(error).toBeVisible();
+    await expect(error).toHaveText("Add a name or untick this seat.");
+    await name.fill("Fictional Companion");
+    await section.getByRole("button", { name: "Done editing seat 2" }).click();
+    await expect(error).toBeHidden();
+  });
+
+  test("reloads a changed seat set and keeps typed values for surviving seat ids", { tag: ["@single"] }, async ({ page }) => {
+    const fixture = fakeFixtures.find((invite) => invite.id === "seat-change-test")!;
+    const section = rsvp(page);
+    await findInvite(page, fixture.members[0], fixture);
+    await section.getByRole("button", { name: `Edit ${fixture.members[0]}` }).click();
+    await section.locator("[aria-label='Name for seat 1']").fill("Kept Typed Value");
+    await section.getByRole("button", { name: `Done editing ${fixture.members[0]}` }).click();
+    await submitRsvp(page, "fixture-conflict@example.com");
+    await expect(section.locator("[data-rsvp-submit-error]")).toHaveText("Your invite changed. Check the seats before sending.");
+    await expect(section.locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(2);
+    await expect(section.locator("[data-rsvp-seat-list]")).toContainText("Kept Typed Value");
+    await expect(section.locator("[data-rsvp-seat-list]")).not.toContainText("Pia Fixture");
+  });
+
   test("edits an accepted RSVP and resubmits a decline", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, santos.members[0], santos);
@@ -164,5 +219,31 @@ test.describe("RSVP paths", () => {
       "Regretfully declines",
     );
     await expect(section.locator("[data-rsvp-guests-summary]")).toBeHidden();
+  });
+
+  test("starts members ticked when a declined guest returns and refreshes remembered invite details", async ({ page }) => {
+    test.slow();
+    await withLimLock(async () => {
+      const section = rsvp(page);
+      await findInvite(page, lim.members[0], lim);
+      await section.locator("input[name='attending'][value='no']").check();
+      await submitRsvp(page, "paolo-decline@example.com");
+      await expect(section.locator("[data-rsvp-panel='sent']")).toBeVisible();
+
+      await page.reload();
+      await section.scrollIntoViewIfNeeded();
+      await reveal(section.locator("[data-rsvp-name]"));
+      await findInvite(page, lim.members[0], lim);
+      await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ew-guest-v2") || "null"))).toMatchObject({
+        name: lim.members[0],
+        householdName: lim.householdName,
+        seats: lim.seats,
+      });
+      await section.locator("input[name='attending'][value='yes']").check();
+      for (let index = 0; index < lim.members.length; index += 1) {
+        await expect(section.locator(`#rsvp-seat-${index}`)).toBeChecked();
+      }
+      await expect(section.locator(`#rsvp-seat-${lim.seats - 1}`)).not.toBeChecked();
+    });
   });
 });

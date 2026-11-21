@@ -54,7 +54,7 @@ test.describe("RSVP ticket popup", () => {
     await dialog.locator("[data-ticket-save]").click();
     const download = await png;
     expect(download.suggestedFilename()).toBe(
-      "eunice-warren-ticket-santos.png",
+      "eunice-warren-ticket-SANTOS.png",
     );
     const pngBytes = await readFile((await download.path())!);
     expect([...pngBytes.subarray(0, 8)]).toEqual([

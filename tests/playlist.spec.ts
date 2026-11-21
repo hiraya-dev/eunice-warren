@@ -237,10 +237,28 @@ test.describe("Playlist section", () => {
     );
     await page.locator('input[name="song"]').fill("Dancing Queen");
     await page.locator('input[name="artist"]').fill("ABBA");
+    await expect(page.locator("[data-playlist-turnstile]")).toHaveCount(1);
     await page.locator(".playlist_submit").click();
     await expect(
       page.locator('.playlist_form-wrap .form_note-sent[role="status"]'),
-    ).toHaveText("Song requests open soon. Hold that thought.");
+    ).toHaveText("It's on Side A. See you on the dance floor!");
+  });
+
+  test("shows both song caps and the fake rate-limit message", { tag: ["@single"] }, async ({ page }) => {
+    const cases = [
+      ["TEST TOTAL CAP", "Side A is full. Thank you for all the requests!"],
+      ["TEST NAME CAP", "That's plenty from you. We'll make room on the dance floor!"],
+      ["TEST RATE LIMIT", "Easy on the requests. Try again in a minute."],
+    ] as const;
+    for (const [song, message] of cases) {
+      await page.goto("/");
+      await reveal(page.locator(".playlist_submit"));
+      await page.locator('.playlist_form-wrap input[name="name"]').fill("Playlist Fixture");
+      await page.locator('.playlist_form-wrap input[name="song"]').fill(song);
+      await page.locator(".playlist_submit").click();
+      await expect(page.locator('.playlist_form-wrap .form_note-failed[role="alert"]')).toBeVisible();
+      await expect(page.locator('.playlist_form-wrap .form_note-failed[role="alert"]')).toHaveText(message);
+    }
   });
 
   test("keeps postcard fields empty, lined, and stable on focus", async ({

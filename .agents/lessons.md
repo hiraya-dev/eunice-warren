@@ -387,6 +387,38 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/consts.ts`
 
+## Data and backend
+
+### L-045 — External data the user owns is read-only
+- **Date:** 2026-11-21
+- **Trigger:** D1 PR (branch `t3/d1-database`), the user's correction: the design said the Google Sheet and its service-account secret would be "removed", and the user said never to delete anything on the Sheet
+- **Symptom:** the criteria planned to retire the guest Sheet and its credentials as part of a code migration.
+- **Root cause:** "replace the Sheet" was read as "delete the Sheet"; a code migration was allowed to reach into a store the hosts own and use.
+- **Rule:** a migration removes or parks code paths only. Spreadsheets, documents, KV namespaces, databases and secrets that the user or hosts own are read-only unless the user names the exact deletion. Removing a code path that writes to them is itself the user's call (remove, export-only or dormant), asked in the approval message.
+- **Check:** the PR's criteria and diff contain no delete, clear or overwrite of an external store or secret; any parked code is listed in `docs/prelaunch.md`.
+- **Guard:** none
+- **Paths:** `src/lib/**`, `src/actions/**`, `scripts/**`, `wrangler.jsonc`
+
+### L-046 — Trace each field to the screens that render it before naming it guest-facing or host-only
+- **Date:** 2026-11-21
+- **Trigger:** D1 PR (branch `t3/d1-database`), the user's correction: the design said guests never see the household name, but the RSVP stub and the preloader welcome render it
+- **Symptom:** the schema dropped the guest-facing household name and would have shown nothing, or the couple's internal label ("Toledo_Sabang"), on the invitation stub.
+- **Root cause:** the decision was made from the data model and a relayed summary, not from the components that render the field.
+- **Rule:** before a schema or criteria call a field guest-facing or host-only, grep `src/components` and `src/lib` for every place it is read and list them with file:line in the proposal. A host-only field gets a test that it never appears in action responses or rendered pages.
+- **Check:** the proposal lists each render site of a renamed or split field; `tests/d1-unit.test.ts` and the RSVP/preloader specs assert the label never reaches guest output.
+- **Guard:** none
+- **Paths:** `src/lib/**`, `src/actions/**`, `src/components/sections/Rsvp.astro`, `src/components/global/Preloader.astro`
+
+### L-047 — A store rewrite keeps every branch of the old restore logic
+- **Date:** 2026-11-21
+- **Trigger:** PR #95, CHANGES_REQUIRED (a guest who declined came back with no seat ticked)
+- **Symptom:** the D1 store restored each seat's stored `attending`, so after a decline every seat came back unticked; the Sheets parser had ticked the members in that case.
+- **Root cause:** the rewrite ported the data shape and the main path but not a small conditional (`previous.attending ? seat.attending : index < members.length`) in the old parser, and the criteria said "behaves as before" without listing that branch.
+- **Rule:** before replacing a store or parser, list every branch of the old read and restore logic (decline, plus-one, renamed seat, missing row) in the brief, and require one test per branch against the new store.
+- **Check:** the brief for a store rewrite names the old file and its branches; each has a test in the new store's unit file (`tests/d1-unit.test.ts` "resets member ticks after a decline").
+- **Guard:** none
+- **Paths:** `src/lib/**`, `src/components/sections/Rsvp.astro`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

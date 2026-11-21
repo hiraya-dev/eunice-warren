@@ -260,7 +260,7 @@ const {
   import { normalizeGuestName } from "@/lib/rsvp/store";
   import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
-  import { getGuest } from "@/lib/guest";
+  import { getGuest, setGuest } from "@/lib/guest";
 
   const initRsvp = () => {
     document
@@ -273,7 +273,7 @@ const {
         let invite: Invite | null = null;
         let matchedName = "";
         let suggestion = "";
-        type Seat = { original: string | null; name: string; attending: boolean; slipperSize?: string };
+        type Seat = { seatId: number; original: string | null; shownName?: string | null; name: string; attending: boolean; slipperSize?: string };
         let attending = true;
         let seats: Seat[] = [];
         let editingSeat = -1;
@@ -360,6 +360,10 @@ const {
           const attendingCount = seats.filter((seat) => seat.attending).length;
           count.value = `${attendingCount} of ${invite?.seats ?? 0} seats`;
           count.textContent = `${attendingCount} of ${invite?.seats ?? 0} seats`;
+        };
+        const clearGuestError = () => {
+          root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!.hidden = true;
+          root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.remove("has-error");
         };
         const renderAfterParty = () => {
           const block = root.querySelector<HTMLElement>("[data-rsvp-after-party]")!;
@@ -488,6 +492,7 @@ const {
                 if (!value) { message.hidden = false; input.focus(); return; }
                 seat.name = value;
                 if (seat.original === null) seat.attending = true;
+                clearGuestError();
                 editingSeat = -1;
                 renderSeats(index, "action");
               };
@@ -552,10 +557,8 @@ const {
             }
             checkbox.addEventListener("change", () => {
               seat.attending = checkbox.checked;
-              if (checkbox.checked) {
-                root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!.hidden = true;
-                root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.remove("has-error");
-              }
+              clearGuestError();
+              if (checkbox.checked && seat.original === null && !seat.name) editingSeat = index;
               renderSeats(index, "checkbox");
             });
             list.append(row);
@@ -642,16 +645,23 @@ const {
               setFindLabel("Find my invite");
               nameInput.removeAttribute("aria-invalid");
               nameInput.removeAttribute("aria-describedby");
-              invite = result.data.invite;
+              invite = result.data.invite as unknown as Invite;
               matchedName = result.data.matchedName;
+              setGuest({
+                name: matchedName,
+                householdName: invite.householdName,
+                seats: invite.seats,
+                at: new Date().toISOString(),
+              });
               const token = result.data.token;
               const previous = result.data.previous;
-              seats = previous?.seats?.length === invite.seats
-                ? previous.seats.map((seat, index) => ({ ...seat, attending: previous.attending ? seat.attending : index < invite!.members.length }))
-                : [
-                    ...invite.members.map((member): Seat => ({ original: member, name: member, attending: true })),
-                    ...Array.from({ length: Math.max(0, invite.seats - invite.members.length) }, (): Seat => ({ original: null, name: "", attending: false })),
-                  ];
+              const savedBySeat = new Map((previous?.seats ?? []).map((seat) => [seat.seatId, seat]));
+              seats = (invite.seatList ?? invite.members.map((member, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: member, name: member }))).map((seat): Seat => {
+                const saved = savedBySeat.get(seat.seatId);
+                return saved
+                  ? { seatId: seat.seatId, original: seat.invitedName, shownName: saved.shownName ?? seat.name, name: saved.name, attending: previous?.attending ? saved.attending : seat.kind === "member", slipperSize: saved.slipperSize }
+                  : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: seat.kind === "member" };
+              });
               attending = previous?.attending ?? true;
               root.querySelector("[data-rsvp-first-name]")!.textContent =
                 matchedName.split(" ")[0];
@@ -680,8 +690,7 @@ const {
               attending = (event.target as HTMLInputElement).value === "yes";
               root.querySelector<HTMLElement>("[data-rsvp-guests]")!.hidden =
                 !attending;
-              root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!.hidden = true;
-              root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.remove("has-error");
+              clearGuestError();
               if (attending) renderSeats();
             }
           });
@@ -691,9 +700,18 @@ const {
             event.preventDefault();
             if (attending && !seats.some((seat) => seat.attending)) {
               const error = root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!;
+              error.textContent = "Tick at least one guest. If no one can make it, choose “Regretfully declines” above.";
               error.hidden = false;
               root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.add("has-error");
               root.querySelector<HTMLInputElement>("[data-rsvp-seat-toggle]")?.focus();
+              return;
+            }
+            const blankAttending = attending && seats.find((seat) => seat.attending && !seat.name.trim());
+            if (blankAttending) {
+              const error = root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!;
+              error.textContent = "Add a name or untick this seat.";
+              error.hidden = false;
+              root.querySelector<HTMLElement>(`[data-seat-index="${seats.indexOf(blankAttending)}"] [data-rsvp-seat-action]`)?.focus();
               return;
             }
             setStep("3");
@@ -750,7 +768,7 @@ const {
                 token: root.dataset.rsvpToken ?? "",
                 name: matchedName,
                 attending,
-                seats: seats.map((seat) => ({ ...seat, attending: attending && seat.attending, slipperSize: attending && seat.attending ? seat.slipperSize : undefined })),
+                seats: seats.map((seat) => ({ ...seat, shownName: seat.shownName ?? seat.original, attending: attending && seat.attending, slipperSize: attending && seat.attending ? seat.slipperSize : undefined })),
                 email: email.value,
                 note:
                   (form.elements.namedItem("note") as HTMLTextAreaElement)
@@ -762,6 +780,25 @@ const {
                 ),
               });
               if (result.error) {
+                if (result.error.code === "CONFLICT") {
+                  const typed = new Map(seats.map((seat) => [seat.seatId, { ...seat }]));
+                  const refreshed = await actions.rsvp.find({
+                    name: matchedName,
+                    turnstileToken: await turnstile.getToken(root.querySelectorAll<HTMLElement>("[data-rsvp-turnstile]")[0]),
+                  });
+                  if (refreshed.data?.invite) {
+                    invite = refreshed.data.invite as unknown as Invite;
+                    matchedName = refreshed.data.matchedName;
+                    root.dataset.rsvpToken = refreshed.data.token;
+                    seats = (invite.seatList ?? []).map((seat) => {
+                      const old = typed.get(seat.seatId);
+                      return old
+                        ? { ...old, original: seat.invitedName, shownName: old.shownName ?? seat.name }
+                        : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: seat.kind === "member" };
+                    });
+                    renderSeats();
+                  }
+                }
                 submitError.textContent = result.error.message;
                 submitError.hidden = false;
                 return;
@@ -804,7 +841,7 @@ const {
               document.dispatchEvent(
                 new CustomEvent("rsvp-ticket-open", {
                   detail: {
-                    inviteId: invite.id,
+                    inviteId: invite.ticketCode,
                     matchedName,
                     names: tickedNames,
                     guests: tickedNames.length,
@@ -1339,6 +1376,7 @@ const {
       display: flex;
       align-items: end;
       justify-content: space-between;
+      gap: var(--space-3);
       padding: var(--space-4);
     }
     .rsvp_invitation-top > div {
@@ -1346,10 +1384,16 @@ const {
       flex-direction: column;
       gap: var(--space-1);
     }
+    .rsvp_invitation-top > div:first-child {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
     .rsvp_invitation-top strong {
       font: var(--secondary-regular) var(--h6) / 1.125 var(--secondary-family);
+      overflow-wrap: anywhere;
     }
     .rsvp_admits {
+      flex: none;
       align-items: end;
     }
     .rsvp_invitation-bottom {

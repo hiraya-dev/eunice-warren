@@ -4,30 +4,30 @@ import { env } from "cloudflare:workers";
 import {
   isRsvpClosed,
   isWithinRateLimit,
-  signRsvpToken,
-  validateSubmission,
-  verifyRsvpToken,
 } from "@/lib/rsvp/logic";
 import type { RateLimiter } from "@/lib/rsvp/logic";
 import type { RsvpStore } from "@/lib/rsvp/store";
 import { createFakeRsvpStore } from "@/lib/rsvp/store";
-import { createSheetsRsvpStore } from "@/lib/rsvp/sheets";
+import { createD1RsvpStore } from "@/lib/rsvp/d1";
+import { createD1SongStore, createFakeSongStore } from "@/lib/songs/store";
+import { GuestActionFailure, runFindAction, runSongAction, runSubmitAction, selectStore } from "@/lib/guest-actions";
+import type { D1Database } from "@/lib/db/types";
 import { getLoveStore } from "@/lib/with-love/store";
 import { isJpeg, isTodayInManila, isWithinLength, stripControls } from "@/lib/with-love/validation";
+import { rsvpSubmitInput } from "@/lib/rsvp/input";
 
 const TEST_SECRET = "local-rsvp-token-secret";
 const envRecord = env as unknown as Record<string, unknown>;
 const storeName =
-  typeof envRecord.RSVP_STORE === "string" ? envRecord.RSVP_STORE : "sheets";
+  typeof envRecord.RSVP_STORE === "string" ? envRecord.RSVP_STORE : "d1";
 let selectedStore: RsvpStore | undefined;
 const getStore = () => {
   if (!selectedStore)
-    selectedStore =
-      storeName === "fake"
-        ? createFakeRsvpStore()
-        : createSheetsRsvpStore(envRecord);
+    selectedStore = selectStore(storeName, createFakeRsvpStore, () => createD1RsvpStore(envRecord.DB as D1Database));
   return selectedStore;
 };
+let selectedSongStore: ReturnType<typeof createD1SongStore> | ReturnType<typeof createFakeSongStore> | undefined;
+const getSongStore = () => selectedSongStore ??= selectStore(storeName, createFakeSongStore, () => createD1SongStore(envRecord.DB as D1Database));
 const tokenSecret =
   typeof envRecord.RSVP_TOKEN_SECRET === "string" && envRecord.RSVP_TOKEN_SECRET
     ? envRecord.RSVP_TOKEN_SECRET
@@ -72,6 +72,8 @@ async function guard(
   inputToken: string,
   context: { request: Request },
   applyRateLimit = false,
+  limiterName = "RSVP_LOOKUP_LIMITER",
+  rateLimitMessage = "Too many tries. Wait a minute and try again.",
 ) {
   let verified = false;
   let withinLimit = true;
@@ -79,7 +81,7 @@ async function guard(
     verified = await verifyTurnstile(inputToken);
     if (verified && applyRateLimit)
       withinLimit = await isWithinRateLimit(
-        envRecord.RSVP_LOOKUP_LIMITER as RateLimiter | undefined,
+        envRecord[limiterName] as RateLimiter | undefined,
         context.request.headers.get("CF-Connecting-IP") ?? "unknown",
       );
   } catch {
@@ -91,7 +93,7 @@ async function guard(
   if (!withinLimit)
     throw new ActionError({
       code: "TOO_MANY_REQUESTS",
-      message: "Too many tries. Wait a minute and try again.",
+      message: rateLimitMessage,
     });
 }
 
@@ -99,19 +101,8 @@ const findInput = z.object({
   name: z.string().trim().min(1).max(120),
   turnstileToken: z.string().max(4096),
 });
-const submitInput = z.object({
-  token: z.string().min(1),
-  name: z.string().trim().min(1).max(120),
-  attending: z.boolean(),
-  seats: z.array(z.object({
-    original: z.string().nullable(),
-    name: z.string().max(120),
-    attending: z.boolean(),
-    slipperSize: z.string().optional(),
-  })),
-  email: z.string().email().max(254),
-  note: z.string().max(1000).optional(),
-  turnstileToken: z.string().max(4096),
+const songInput = z.object({
+  name: z.string().trim().min(1).max(120), song: z.string().trim().min(1).max(120), artist: z.string().trim().max(120).optional(), dedication: z.string().trim().max(500).optional(), turnstileToken: z.string().max(4096),
 });
 const loveSubmitInput = z.object({
   photo: z.custom<File>((value) => typeof File !== "undefined" && value instanceof File),
@@ -133,75 +124,43 @@ export const server = {
         closed();
         await guard(input.turnstileToken, context, true);
         try {
-          const result = await getStore().findInvite(input.name);
-          if (!result) return { invite: null };
-          if (!result.invite) return { invite: null, suggestion: result.suggestion };
           if (!tokenSecret) fail("Something went wrong. Please try again.");
-          const token = await signRsvpToken(
-            result.invite.id,
-            Date.now() + 2 * 60 * 60 * 1000,
-            tokenSecret,
-          );
-          return {
-            invite: {
-              id: result.invite.id,
-              householdName: result.invite.householdName,
-              members: result.invite.members,
-              seats: result.invite.seats,
-            },
-            matchedName: result.matchedName,
-            previous: result.previous,
-            token,
-          };
+          return await runFindAction(getStore(), input.name, tokenSecret);
         } catch (error) {
           if (error instanceof ActionError) throw error;
+          if (error instanceof GuestActionFailure) throw new ActionError({ code: error.code, message: error.message });
           fail();
         }
       },
     }),
     submit: defineAction({
-      input: submitInput,
+      input: rsvpSubmitInput,
       handler: async (input, context) => {
         closed();
-        await guard(input.turnstileToken, context);
-        const tokenData = await verifyRsvpToken(input.token, tokenSecret);
-        if (!tokenData)
-          throw new ActionError({
-            code: "UNAUTHORIZED",
-            message: "Something went wrong. Please try again.",
-          });
+        await guard(input.turnstileToken, context, true, "RSVP_SUBMIT_LIMITER");
         try {
-          const result = await getStore().findInvite(input.name);
-          if (
-            !result || !result.invite ||
-            result.invite.id !== tokenData.inviteId ||
-            !validateSubmission({
-              attending: input.attending,
-              seats: input.seats,
-              invite: result.invite,
-            })
-          )
-            throw new ActionError({
-              code: "BAD_REQUEST",
-              message: "Something went wrong. Please try again.",
-            });
-          await getStore().submit({
-            inviteId: result.invite.id,
-            name: result.matchedName,
-            attending: input.attending,
-            guests: input.attending
-              ? input.seats.filter((seat) => seat.attending).length
-              : 0,
-            seats: input.seats,
-            email: input.email,
-            note: input.note,
-          });
-          return { ok: true };
+          return await runSubmitAction(getStore(), input, tokenSecret);
         } catch (error) {
           if (error instanceof ActionError) throw error;
+          if (error instanceof GuestActionFailure) throw new ActionError({ code: error.code, message: error.message });
           fail();
         }
       },
+    }),
+  },
+  songs: {
+    submit: defineAction({
+    input: songInput,
+    handler: async (input, context) => {
+        await guard(input.turnstileToken, context, true, "SONG_LIMITER", "Easy on the requests. Try again in a minute.");
+      const clean = { name: stripControls(input.name).trim(), song: stripControls(input.song).trim(), artist: input.artist ? stripControls(input.artist).trim() : undefined, dedication: input.dedication ? stripControls(input.dedication).trim() : undefined };
+      if (!clean.name || !clean.song) throw new ActionError({ code: "BAD_REQUEST", message: "Please add your name and song." });
+      try { return await runSongAction(getSongStore(), clean); }
+      catch (error) {
+        if (error instanceof GuestActionFailure) throw new ActionError({ code: error.code, message: error.message });
+        fail();
+      }
+    },
     }),
   },
   withLove: {

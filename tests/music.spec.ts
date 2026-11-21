@@ -114,7 +114,7 @@ test.describe("background music returning guest", () => {
     const size = page.viewportSize();
     if (size && size.width >= 1024) await page.setViewportSize({ width: size.width, height: DESKTOP.height });
     page.on("request", (request) => { if (request.url().includes("/audio/")) requests.push(request.url()); });
-    await page.addInitScript(() => localStorage.setItem("ew-guest-v1", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
+    await page.addInitScript(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
     await page.goto("/");
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
     await heroSettled(page);
@@ -355,7 +355,7 @@ test.describe("background music disc, phone", { tag: ["@single"] }, () => {
     await expect.poll(() => page.evaluate(() => Boolean((window as unknown as { musicOpened?: boolean }).musicOpened)), { timeout: 15_000 }).toBe(true);
     await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "", { timeout: 15_000 });
 
-    await page.addInitScript(() => localStorage.setItem("ew-guest-v1", JSON.stringify({ skipped: true, at: new Date().toISOString() })));
+    await page.addInitScript(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: new Date().toISOString() })));
     await page.reload();
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
     await expect(discOf(page)).toBeVisible();

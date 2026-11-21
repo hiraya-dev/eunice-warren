@@ -34,9 +34,8 @@ export const ticketNames = (names: string[] | string, legacyCompanion?: string) 
   if (firstNames.length === 2) return `${firstNames[0]} & ${firstNames[1]}`;
   return `${firstNames.slice(0, -1).join(", ")} & ${firstNames.at(-1)}`;
 };
-export const ticketReference = (inviteId: string) => inviteId.toUpperCase();
-export const ticketFilename = (inviteId: string) =>
-  `eunice-warren-ticket-${inviteId}.png`;
+export const ticketReference = (ticketCode: string) => ticketCode.toUpperCase();
+export const ticketFilename = (ticketCode: string) => `eunice-warren-ticket-${ticketCode}.png`;
 
 const icsDate = (value: string) =>
   new Date(value)
