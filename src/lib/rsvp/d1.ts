@@ -90,7 +90,7 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
         result = lookupInvite(name, candidates);
       }
       if (!result || !result.invite) return result;
-      const household = await db.select().from(households).where(eq(households.ticketCode, result.invite.ticketCode)).limit(1);
+      const household = await db.select().from(households).where(and(eq(households.ticketCode, result.invite.ticketCode), eq(households.status, "active"))).limit(1);
       if (!household[0]) return null;
       const activeSeats = await db.select().from(inviteSeats)
         .where(and(eq(inviteSeats.householdId, household[0].id), eq(inviteSeats.status, "active")))
@@ -100,6 +100,8 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
     },
     findInviteByTicketCode,
     async submit(submission: RsvpSubmission) {
+      const household = await db.select({ id: households.id }).from(households).where(and(eq(households.id, submission.inviteId), eq(households.status, "active"))).limit(1);
+      if (!household[0]) throw new InviteChangedError();
       const active = await db.select().from(inviteSeats)
         .where(and(eq(inviteSeats.householdId, submission.inviteId), eq(inviteSeats.status, "active")))
         .orderBy(inviteSeats.slot);
@@ -117,7 +119,8 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
         if (!seat.name.trim() || seat.name === shownName) return [];
         return [db.update(inviteSeats).set({ name: seat.name, namedByKind: "guest", namedBy: submission.name, namedAt: now, namedInResponseId: responseId, updatedAt: now, updatedBy: null }).where(eq(inviteSeats.id, current.id))];
       });
-      await db.batch([response, seatRows, ...updates] as [typeof response, typeof seatRows, ...typeof updates]);
+      const householdTouch = db.update(households).set({ updatedAt: now }).where(eq(households.id, submission.inviteId));
+      await db.batch([response, seatRows, householdTouch, ...updates] as [typeof response, typeof seatRows, typeof householdTouch, ...typeof updates]);
     },
   };
 };

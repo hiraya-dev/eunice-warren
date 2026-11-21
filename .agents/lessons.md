@@ -439,6 +439,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`, `src/scripts/**`
 
+### L-052 — A form with several submit buttons makes Save the default
+- **Date:** 2026-11-22
+- **Trigger:** PR #99 CHANGES_REQUIRED
+- **Symptom:** in the Guest list editor, pressing Enter in the household name field fired the seat stepper's "−" (or "+ Add member") instead of Save, silently dropping an empty seat; the specs only clicked Save, so nobody pressed Enter.
+- **Root cause:** implicit submission uses the first submit button in tree order, and the stepper buttons came before Save.
+- **Rule:** any form with more than one submit button puts its primary action first in tree order (a visually hidden, `tabindex="-1"`, `aria-hidden` copy of Save is fine) so Enter always does what Save does. Secondary submits (stepper, add row) carry their own `name`/`value`.
+- **Check:** the form's spec presses Enter in a text field and expects the save, with every other field (seat count) unchanged (`tests/admin-guests.spec.ts`).
+- **Guard:** none
+- **Paths:** `src/components/admin/**`, `src/pages/admin/**`, `src/components/sections/Rsvp.astro`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

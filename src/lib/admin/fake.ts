@@ -1,3 +1,4 @@
+import { StaleHouseholdError } from "./store.ts";
 import type {
   AdminGuestList,
   AdminHousehold,
@@ -11,9 +12,15 @@ import type {
   AdminSlipperOrder,
   AdminSongRequests,
   AdminStore,
+  NewHouseholdInput,
+  SaveHouseholdInput,
 } from "./store";
+import { normalizeGuestName } from "../rsvp/store.ts";
+import { MAX_SEATS } from "../rsvp/limits.ts";
 import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 import { songKey } from "./presentation.ts";
+
+const TICKET_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 const seat = (
   slot: number,
@@ -22,6 +29,7 @@ const seat = (
   kind: "member" | "plus_one" = "member",
   extra: Record<string, unknown> = {},
 ) => ({
+  id: slot,
   slot,
   kind,
   name,
@@ -31,6 +39,17 @@ const seat = (
   namedAt: null,
   ...extra,
 });
+const randomTicket = (used: Set<string>) => {
+  let value = "";
+  do {
+    const bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    value = [...bytes]
+      .map((byte) => TICKET_ALPHABET[byte % TICKET_ALPHABET.length])
+      .join("");
+  } while (used.has(value));
+  return value;
+};
 export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-dela-cruz",
@@ -146,7 +165,38 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     seatCount: 2,
     rsvp: { state: "coming", coming: 2 },
   },
+  {
+    id: "hh-admin-editor",
+    label: "ADMIN_EDITOR_FIXTURE",
+    displayName: "The Admin Editor Family",
+    notes: "Dedicated browser fixture",
+    updatedAt: "2026-11-21T10:00:00.000Z",
+    seats: [
+      seat(1, "Editor Parent", "Editor Parent"),
+      seat(2, "Editor Guest", "Editor Guest"),
+    ],
+    seatCount: 2,
+    rsvp: { state: "waiting" },
+  },
+  {
+    id: "hh-admin-activity",
+    label: "ADMIN_ACTIVITY_FIXTURE",
+    displayName: "The Admin Activity Family",
+    notes: "Dedicated no-JS activity fixture",
+    updatedAt: "2026-11-21T10:00:00.000Z",
+    seats: [
+      seat(1, "Activity Parent", "Activity Parent"),
+      seat(2, null, null, "plus_one", { state: "open" }),
+    ],
+    seatCount: 2,
+    rsvp: { state: "coming", coming: 1 },
+  },
 ];
+const isActive = (row: AdminHousehold) =>
+  !(row as AdminHousehold & { archived?: boolean }).archived;
+const activeFixtures = () => fakeAdminFixtures.filter(isActive);
+const activeSeats = (row: AdminHousehold) =>
+  row.seats.filter((value) => value.status !== "retired");
 export const fakeAdminSongs = [
   {
     name: "Maria",
@@ -225,6 +275,26 @@ export interface FakeAdminResponse {
 }
 
 export const fakeAdminResponses: FakeAdminResponse[] = [
+  {
+    id: 10,
+    householdId: "hh-admin-activity",
+    submittedAt: "2026-10-01T10:00:00+08:00",
+    respondentName: "Activity Parent",
+    attending: true,
+    email: "activity@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [
+      {
+        seatId: 1,
+        name: "Activity Parent",
+        attending: true,
+        slipperSize: null,
+      },
+      { seatId: 2, name: "", attending: false, slipperSize: null },
+    ],
+  },
   {
     id: 1,
     householdId: "hh-ramos",
@@ -442,14 +512,14 @@ const makeFakeSeat = (
 const makeFakeRsvpRow = (row: AdminHousehold): AdminRsvpRow => {
   const versions = responseVersions(row.id);
   const current = versions[0] ?? null;
-  const seatChanges = row.seats
+  const seatChanges = activeSeats(row)
     .filter(
       (s) =>
         (s.name && s.invitedName && s.name !== s.invitedName) ||
         (s.kind === "plus_one" && s.name && !s.invitedName),
     )
     .map((s) => ({ from: s.invitedName, to: s.name! }));
-  const seats = row.seats.map((s) => makeFakeSeat(s, current));
+  const seats = activeSeats(row).map((s) => makeFakeSeat(s, current));
   return {
     id: row.id,
     label: row.label,
@@ -480,7 +550,7 @@ const makeFakeRsvpRow = (row: AdminHousehold): AdminRsvpRow => {
 
 const fakeHistory = (row: AdminHousehold): AdminRsvpVersion[] =>
   responseVersions(row.id).map((response) => {
-    const seats = row.seats.map((seat) => makeFakeSeat(seat, response));
+    const seats = activeSeats(row).map((seat) => makeFakeSeat(seat, response));
     return {
       id: response.id,
       submittedAt: response.submittedAt,
@@ -521,12 +591,12 @@ export const fakeAdminReplies = fakeAdminFixtures
   .map(({ household, response }) => ({
     displayName: household.displayName,
     attending: response.attending,
-    coming: household.seats.filter(
+    coming: activeSeats(household).filter(
       (seat) => makeFakeSeat(seat, response).coming,
     ).length,
     seatCount: household.seatCount,
     submittedAt: response.submittedAt,
-    namedPlusOnes: household.seats
+    namedPlusOnes: activeSeats(household)
       .filter((seat) => seat.kind === "plus_one" && seat.namedBy)
       .map((seat) => ({ name: seat.name!, namedBy: seat.namedBy })),
   }));
@@ -535,7 +605,7 @@ export function createFakeAdminStore(): AdminStore {
     const counts = new Map<string, number>();
     let missing = 0;
     // Sizes come from each household's newest reply, as in the D1 store.
-    for (const row of fakeAdminFixtures.map(makeFakeRsvpRow))
+    for (const row of activeFixtures().map(makeFakeRsvpRow))
       if (row.state === "attending")
         for (const current of row.seats.filter((seat) => seat.coming)) {
           const size = current.slipperSize;
@@ -567,6 +637,255 @@ export function createFakeAdminStore(): AdminStore {
       mostCommonWomen: common(women),
       mostCommonMen: common(men),
     };
+  }
+  async function saveHousehold(input: SaveHouseholdInput, actor: string) {
+    if (!input.displayName.trim() || input.displayName.trim().length > 40)
+      return {
+        ok: false as const,
+        message:
+          "Household name is required and must be 40 characters or fewer.",
+      };
+    if (
+      !Number.isInteger(input.seatCount) ||
+      input.seatCount < 1 ||
+      input.seatCount > MAX_SEATS
+    )
+      return {
+        ok: false as const,
+        message: "Seats must be between 1 and 12.",
+      };
+    const row = fakeAdminFixtures.find((item) => item.id === input.id);
+    if (!row) return { ok: false as const, message: "Household not found." };
+    if ((input.updatedAt ?? "") !== (row.updatedAt ?? ""))
+      throw new StaleHouseholdError();
+    const retired = new Set(
+      input.seats
+        .filter((value) => value.retire && value.id)
+        .map((value) => value.id!),
+    );
+    const active = row.seats.filter(
+      (value) =>
+        value.status !== "retired" && !retired.has(value.id ?? value.slot),
+    );
+    const members = active.filter((value) => value.kind === "member");
+    if (!members.length)
+      return {
+        ok: false as const,
+        message:
+          "A household needs at least one member. Archive the household instead.",
+      };
+    if (input.seatCount < members.length)
+      return {
+        ok: false as const,
+        message: "Seats cannot be fewer than the active member count.",
+      };
+    const byId = new Map(
+      row.seats.map((value) => [value.id ?? value.slot, value]),
+    );
+    for (const value of input.seats) {
+      const current = value.id ? byId.get(value.id) : undefined;
+      if (value.retire || !current) continue;
+      if (current.kind === "member" && !value.name.trim())
+        return {
+          ok: false as const,
+          message: "Member seat names cannot be blank.",
+        };
+    }
+    if (input.seatCount < active.length) {
+      const trailing = active.at(-1)!;
+      if (trailing.name)
+        return {
+          ok: false as const,
+          message: `Seat ${trailing.slot} has activity. Review or retire this seat first.`,
+        };
+      if (
+        row.assignedSeatIds?.includes(trailing.id ?? trailing.slot) ||
+        fakeAdminResponses.some(
+          (response) =>
+            response.householdId === row.id &&
+            response.seats.some(
+              (value) => value.seatId === (trailing.id ?? trailing.slot),
+            ),
+        )
+      )
+        return {
+          ok: false as const,
+          message: `Seat ${trailing.slot} has activity. Review or retire this seat first.`,
+        };
+    }
+    for (const value of input.seats) {
+      if (value.retire && value.id && row.assignedSeatIds?.includes(value.id))
+        return {
+          ok: false as const,
+          message:
+            "Seat is assigned to a table. Review the seating plan first.",
+        };
+    }
+    const now = new Date().toISOString();
+    row.displayName = input.displayName.trim();
+    row.notes = input.notes?.trim() || null;
+    row.updatedAt = now;
+    for (const value of input.seats) {
+      if (!value.id) continue;
+      const current = byId.get(value.id);
+      if (!current) continue;
+      if (value.retire) {
+        current.status = "retired";
+        current.retiredAt = now;
+        current.retiredBy = actor;
+        current.slot = 0;
+        current.updatedAt = now;
+        continue;
+      }
+      const clean = value.name.trim();
+      const oldInvited = current.invitedName;
+      const invited =
+        current.kind === "member"
+          ? value.invitedName?.trim() || oldInvited || clean
+          : null;
+      const invitedChanged =
+        current.kind === "member" && invited !== oldInvited;
+      const nextName =
+        invitedChanged && clean === (oldInvited ?? "")
+          ? invited
+          : clean || null;
+      const nameChanged = nextName !== current.name;
+      if (nameChanged) {
+        current.name = nextName;
+        current.namedBy = actor;
+        current.namedByKind = "host";
+        current.namedAt = now;
+        current.updatedAt = now;
+      }
+      if (invitedChanged) {
+        current.invitedName = invited;
+        const key = normalizeGuestName(invited!);
+        current.nameKey = key;
+        current.surnameKey = key.split(" ").at(-1) ?? null;
+        current.updatedAt = now;
+      }
+    }
+    while (active.length > input.seatCount) {
+      const trailing = row.seats.find(
+        (value) =>
+          (value.id ?? value.slot) ===
+          (active.at(-1)?.id ?? active.at(-1)?.slot),
+      );
+      if (trailing) row.seats.splice(row.seats.indexOf(trailing), 1);
+      active.pop();
+    }
+    const used = new Set(
+      row.seats
+        .filter((value) => value.status !== "retired")
+        .map((value) => value.slot),
+    );
+    const pendingPlusOnes = input.seats.filter(
+      (value) => !value.id && !value.retire,
+    );
+    while (
+      row.seats.filter((value) => value.status !== "retired").length <
+      input.seatCount
+    ) {
+      let slot = 1;
+      while (used.has(slot)) slot += 1;
+      used.add(slot);
+      const value =
+        pendingPlusOnes[
+          row.seats.filter((item) => item.status !== "retired").length -
+            active.length
+        ];
+      const name = value?.name.trim() || null;
+      row.seats.push(
+        seat(slot, name, null, "plus_one", {
+          state: name ? "named" : "open",
+          namedBy: name ? actor : null,
+          namedByKind: name ? "host" : null,
+          namedAt: name ? now : null,
+          updatedAt: now,
+        }),
+      );
+    }
+    row.seatCount = row.seats.filter(
+      (value) => value.status !== "retired",
+    ).length;
+    return { ok: true as const };
+  }
+  async function addHousehold(input: NewHouseholdInput, actor: string) {
+    const base =
+      input.label
+        .trim()
+        .toLocaleLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "household";
+    let id = base;
+    let n = 2;
+    while (fakeAdminFixtures.some((item) => item.id === id))
+      id = `${base}-${n++}`;
+    const names = input.seats.map((value) => value.name.trim());
+    const seatCount = input.seatCount ?? names.length;
+    if (!input.label.trim() || input.label.trim().length > 80)
+      throw new Error(
+        "Host label is required and must be 80 characters or fewer.",
+      );
+    if (!input.displayName.trim() || input.displayName.trim().length > 40)
+      throw new Error(
+        "Household name is required and must be 40 characters or fewer.",
+      );
+    if (!names.length || names.some((name) => !name))
+      throw new Error("At least one member name is required.");
+    if (
+      !Number.isInteger(seatCount) ||
+      seatCount < names.length ||
+      seatCount > MAX_SEATS
+    )
+      throw new Error("Seats must be between the member count and 12.");
+    const now = new Date().toISOString();
+    const ticketCode = randomTicket(
+      new Set(
+        fakeAdminFixtures
+          .map((item) => item.ticketCode)
+          .filter(Boolean) as string[],
+      ),
+    );
+    const row: AdminHousehold = {
+      id,
+      label: input.label.trim(),
+      displayName: input.displayName.trim(),
+      ticketCode,
+      notes: input.notes,
+      updatedAt: now,
+      seats: Array.from({ length: seatCount }, (_, index) => {
+        const clean = names[index] ?? null;
+        return seat(index + 1, clean, clean, clean ? "member" : "plus_one", {
+          state: clean ? undefined : "open",
+          namedBy: clean ? actor : null,
+          namedByKind: clean ? "host" : null,
+          namedAt: clean ? now : null,
+          updatedAt: now,
+        });
+      }),
+      seatCount,
+      rsvp: { state: "waiting" },
+    };
+    fakeAdminFixtures.push(row);
+    return { id };
+  }
+  async function archiveHousehold(
+    id: string,
+    actor: string,
+    updatedAt?: string,
+  ) {
+    const row = fakeAdminFixtures.find((item) => item.id === id);
+    if (!row) return;
+    if ((updatedAt ?? row.updatedAt) !== row.updatedAt)
+      throw new StaleHouseholdError();
+    const now = new Date().toISOString();
+    row.updatedAt = now;
+    row.archivedAt = now;
+    row.archivedBy = actor;
+    (row as AdminHousehold & { archived?: boolean }).archived = true;
   }
   async function getSongRequests(): Promise<AdminSongRequests> {
     const source = fakeAdminSongs.map((row, index) => ({
@@ -602,8 +921,8 @@ export function createFakeAdminStore(): AdminStore {
   async function getNavCounts(): Promise<AdminNavCounts> {
     const slippers = await getSlipperOrder();
     return {
-      households: fakeAdminFixtures.length,
-      rsvpReplies: fakeAdminFixtures
+      households: activeFixtures().length,
+      rsvpReplies: activeFixtures()
         .map(makeFakeRsvpRow)
         .filter((row) => row.state !== "waiting").length,
       slipperPairs: slippers.pairs,
@@ -614,57 +933,72 @@ export function createFakeAdminStore(): AdminStore {
     async getGuestList(): Promise<AdminGuestList> {
       return {
         totals: {
-          households: fakeAdminFixtures.length,
-          seatsOffered: fakeAdminFixtures.reduce(
+          households: activeFixtures().length,
+          seatsOffered: activeFixtures().reduce(
             (sum, row) => sum + row.seatCount,
             0,
           ),
           // Seats, not households, and never a declined household's seat,
           // matching getUnnamedPlusOneCount on D1.
-          unnamedPlusOnes: fakeAdminFixtures
+          unnamedPlusOnes: activeFixtures()
             .filter((row) => row.rsvp.state !== "declined")
-            .flatMap((row) => row.seats)
+            .flatMap((row) => activeSeats(row))
             .filter((s) => s.kind === "plus_one" && s.state === "open").length,
         },
-        rows: fakeAdminFixtures.map((row) => ({
+        rows: activeFixtures().map((row) => ({
           ...row,
-          seats: row.seats.map(({ attending: _attending, ...seat }) => seat),
+          seats: activeSeats(row).map(({ attending: _attending, ...seat }) => ({
+            ...seat,
+            hasActivity:
+              Boolean(row.assignedSeatIds?.includes(seat.id ?? seat.slot)) ||
+              fakeAdminResponses.some(
+                (response) =>
+                  response.householdId === row.id &&
+                  response.seats.some(
+                    (value) => value.seatId === (seat.id ?? seat.slot),
+                  ),
+              ),
+          })),
         })),
       };
     },
     async getOverview(): Promise<AdminOverview> {
-      const attending = fakeAdminFixtures.filter(
+      const attending = activeFixtures().filter(
         (row) => row.rsvp.state === "coming",
       ).length;
-      const declined = fakeAdminFixtures.filter(
+      const declined = activeFixtures().filter(
         (row) => row.rsvp.state === "declined",
       ).length;
-      const waiting = fakeAdminFixtures.filter(
+      const waiting = activeFixtures().filter(
         (row) => row.rsvp.state === "waiting",
       );
       return {
-        seatsOffered: fakeAdminFixtures.reduce(
+        seatsOffered: activeFixtures().reduce(
           (sum, row) => sum + row.seatCount,
           0,
         ),
-        guestsComing: fakeAdminFixtures.reduce(
+        guestsComing: activeFixtures().reduce(
           (sum, row) =>
             sum + (row.rsvp.state === "coming" ? row.rsvp.coming : 0),
           0,
         ),
         households: {
-          invited: fakeAdminFixtures.length,
+          invited: activeFixtures().length,
           attending,
           declined,
           waiting: waiting.length,
         },
         repliedPercent: Math.round(
-          ((fakeAdminFixtures.length - waiting.length) /
-            fakeAdminFixtures.length) *
+          ((activeFixtures().length - waiting.length) /
+            activeFixtures().length) *
             100,
         ),
         songCount: fakeAdminSongs.length,
-        latestReplies: fakeAdminReplies,
+        latestReplies: fakeAdminReplies.filter(({ displayName }) =>
+          activeFixtures().some(
+            (household) => household.displayName === displayName,
+          ),
+        ),
         waiting: {
           total: waiting.length,
           households: waiting.slice(0, 3).map((row) => ({
@@ -675,7 +1009,7 @@ export function createFakeAdminStore(): AdminStore {
       };
     },
     async getRsvpList(): Promise<AdminRsvpList> {
-      const rows = fakeAdminFixtures
+      const rows = activeFixtures()
         .map(makeFakeRsvpRow)
         .sort(
           (a, b) =>
@@ -695,7 +1029,7 @@ export function createFakeAdminStore(): AdminStore {
       };
     },
     async getRsvpDetail(householdId: string): Promise<AdminRsvpDetail | null> {
-      const row = fakeAdminFixtures.find(
+      const row = activeFixtures().find(
         (fixture) => fixture.id === householdId,
       );
       if (!row) return null;
@@ -712,5 +1046,8 @@ export function createFakeAdminStore(): AdminStore {
     getSlipperOrder,
     getSongRequests,
     getNavCounts,
+    saveHousehold,
+    addHousehold,
+    archiveHousehold,
   };
 }

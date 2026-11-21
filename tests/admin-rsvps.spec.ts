@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { fakeAdminFixtures, fakeAdminResponses } from "../src/lib/admin/fake";
+import { withAdminLock } from "./helpers/admin-lock";
 
 const latest = new Map<string, (typeof fakeAdminResponses)[number]>();
 for (const response of fakeAdminResponses) {
@@ -31,13 +32,14 @@ test.describe("admin RSVPs", () => {
     "filter pills use fixture counts",
     { tag: "@smoke" },
     async ({ page }) => {
-      await page.goto("/admin/rsvps");
-      await expect(
-        page.locator(
-          '[data-admin-nav] a[href="/admin/guests"] [data-admin-count]',
-        ),
-      ).toHaveText(String(fakeAdminFixtures.length));
-      for (const [filter, count] of [
+      await withAdminLock(async () => {
+        await page.goto("/admin/rsvps");
+        await expect(
+          page.locator(
+            '[data-admin-nav] a[href="/admin/guests"] [data-admin-count]',
+          ),
+        ).toHaveText(String(fakeAdminFixtures.length));
+        for (const [filter, count] of [
         ["all", replied.length],
         [
           "attending",
@@ -58,10 +60,13 @@ test.describe("admin RSVPs", () => {
           ).length,
         ],
         ["waiting", fakeAdminFixtures.filter((r) => !latest.has(r.id)).length],
-      ] as const) {
-        await page.locator(`[data-admin-filter="${filter}"]`).click();
-        await expect(page.locator("[data-admin-rsvp-row]")).toHaveCount(count);
-      }
+        ] as const) {
+          await page.locator(`[data-admin-filter="${filter}"]`).click();
+          await expect(page.locator("[data-admin-rsvp-row]")).toHaveCount(
+            count,
+          );
+        }
+      });
     },
   );
 
