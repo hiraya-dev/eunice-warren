@@ -1,0 +1,227 @@
+---
+import { env } from "cloudflare:workers";
+import { parseAdminHosts } from "@/lib/admin/auth";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import {
+  memberLine,
+  plusOneChipText,
+  renameNote,
+} from "@/lib/admin/presentation";
+import { selectAdminStore } from "@/lib/admin/store";
+import type { AdminGuestList } from "@/lib/admin/store";
+export const prerender = false;
+const host = Astro.locals.adminHost!;
+const hostNames = parseAdminHosts(
+  String((env as Record<string, unknown>).ADMIN_HOSTS ?? ""),
+) ?? { [host.email]: host.firstName };
+let data: AdminGuestList | null = null;
+let failed = false;
+try {
+  data = await selectAdminStore(
+    (env as Record<string, unknown>).RSVP_STORE,
+    (env as Record<string, unknown>).DB as never,
+  ).getGuestList();
+} catch {
+  failed = true;
+  Astro.response.status = 503;
+}
+const view =
+  data ??
+  ({
+    totals: { households: 0, seatsOffered: 0, unnamedPlusOnes: 0 },
+    rows: [],
+  } satisfies AdminGuestList);
+const rsvpText = (rsvp: { state: string; coming?: number }) =>
+  rsvp.state === "coming"
+    ? `${rsvp.coming} coming`
+    : rsvp.state === "declined"
+      ? "Declined"
+      : "Waiting";
+---
+
+<AdminLayout
+  active="guests"
+  host={host}
+  householdCount={view.totals.households}
+>
+  <section id="guests" class="admin-guests_wrap" data-admin-guests-page>
+    {host.sample && <p class="admin_sample" data-admin-sample>Sample data</p>}
+    {
+      failed ? (
+        <div class="admin_notice error" data-admin-error>
+          <h1>Couldn't load the guest data</h1>
+          <a href={Astro.url.pathname}>Try again</a>
+        </div>
+      ) : view.totals.households === 0 ? (
+        <div class="admin_notice empty" data-admin-empty>
+          <h1>No guests yet</h1>
+          <p>The guest list hasn't been loaded.</p>
+        </div>
+      ) : (
+        <>
+          <header class="admin-guests_header">
+            <p class="admin_label">
+              Who's invited · Seats first, names when you know them
+            </p>
+            <h1>Guest list</h1>
+          </header>
+          <div class="admin-guests_toolbar">
+            <dl class="admin-guests_stats">
+              <div>
+                <dt>Households</dt>
+                <dd>{view.totals.households}</dd>
+              </div>
+              <div>
+                <dt>Seats offered</dt>
+                <dd>{view.totals.seatsOffered}</dd>
+              </div>
+              <div class="quiet">
+                <dt>Plus-ones not named yet</dt>
+                <dd>{view.totals.unnamedPlusOnes}</dd>
+              </div>
+            </dl>
+            <div class="admin-guests_search">
+              <label class="sr-only" for="admin-search">
+                Search households or members
+              </label>
+              <input
+                id="admin-search"
+                data-admin-search
+                type="search"
+                placeholder="Search households or members"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <p class="admin-guests_no-match" data-admin-no-match hidden>
+            No households match
+          </p>
+          <div class="admin-guests_card">
+            <table class="admin-guests_table" data-admin-guests>
+              <thead>
+                <tr>
+                  <th data-col="id">ID</th>
+                  <th data-col="household">Household</th>
+                  <th data-col="members">Members · Notes</th>
+                  <th data-col="seats">Seats</th>
+                  <th data-col="rsvp">RSVP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.rows.map((row) => {
+                  const plusOnes = row.seats.filter(
+                    (seat) => seat.kind === "plus_one",
+                  );
+                  return (
+                    <tr
+                      data-admin-household
+                      data-search={[
+                        row.displayName,
+                        row.label,
+                        ...row.seats.map((seat) => seat.name ?? ""),
+                      ]
+                        .join(" ")
+                        .toLocaleLowerCase()}
+                    >
+                      <td data-col="id">{row.label}</td>
+                      <th data-col="household" scope="row">
+                        {row.displayName}
+                      </th>
+                      <td data-col="members">
+                        <div class="admin-guests_detail">
+                          <div>
+                            {memberLine(
+                              row.seats
+                                .filter((seat) => seat.kind === "member")
+                                .map((seat) => seat.name ?? ""),
+                            )}
+                          </div>
+                          {plusOnes.length > 0 && (
+                            <div class="admin-guests_chips">
+                              {plusOnes.map((seat) => (
+                                <span
+                                  data-admin-plus-one
+                                  data-state={seat.state}
+                                >
+                                  {plusOneChipText(
+                                    {
+                                      ...seat,
+                                      state: seat.state ?? "open",
+                                    },
+                                    hostNames,
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {row.notes && <small>{row.notes}</small>}
+                          {row.seats
+                            .filter(
+                              (seat) =>
+                                seat.name &&
+                                seat.invitedName &&
+                                seat.name !== seat.invitedName,
+                            )
+                            .map((seat) => (
+                              <small class="rename">
+                                {renameNote(
+                                  seat.name!,
+                                  seat.invitedName!,
+                                  seat.namedBy,
+                                  seat.namedAt,
+                                  hostNames,
+                                )}
+                              </small>
+                            ))}
+                        </div>
+                      </td>
+                      <td data-col="seats">
+                        {row.seatCount}
+                        <span class="admin-guests_unit">
+                          {" "}
+                          {row.seatCount === 1 ? "seat" : "seats"}
+                        </span>
+                      </td>
+                      <td data-col="rsvp">
+                        <span
+                          class="admin_pill"
+                          data-admin-rsvp
+                          data-state={row.rsvp.state}
+                        >
+                          {rsvpText(row.rsvp)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )
+    }
+  </section>
+</AdminLayout>
+<script>
+  const input = document.querySelector<HTMLInputElement>("[data-admin-search]");
+  const rows = [
+    ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
+  ];
+  const empty = document.querySelector<HTMLElement>("[data-admin-no-match]");
+  const normalize = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase()
+      .trim();
+  input?.addEventListener("input", () => {
+    const query = normalize(input.value);
+    let visible = 0;
+    for (const row of rows) {
+      const match = normalize(row.dataset.search ?? "").includes(query);
+      row.hidden = !match;
+      if (match) visible++;
+    }
+    if (empty) empty.hidden = visible !== 0;
+  });
+</script>

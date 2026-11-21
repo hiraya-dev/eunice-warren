@@ -136,6 +136,61 @@ export default defineConfig({
         ],
       },
     },
+    {
+      name: "Newsreader",
+      cssVariable: "--font-admin-newsreader",
+      provider: fontProviders.local(),
+      fallbacks: ["Georgia", "serif"],
+      options: {
+        variants: [
+          {
+            weight: 200,
+            style: "normal",
+            src: ["./src/assets/fonts/admin/newsreader-latin-200-normal.woff2"],
+          },
+          {
+            weight: 200,
+            style: "italic",
+            src: ["./src/assets/fonts/admin/newsreader-latin-200-italic.woff2"],
+          },
+        ],
+      },
+    },
+    {
+      name: "Geist",
+      cssVariable: "--font-admin-geist",
+      provider: fontProviders.local(),
+      fallbacks: ["Arial", "sans-serif"],
+      options: {
+        variants: [
+          {
+            weight: 400,
+            style: "normal",
+            src: ["./src/assets/fonts/admin/geist-latin-400-normal.woff2"],
+          },
+          {
+            weight: 500,
+            style: "normal",
+            src: ["./src/assets/fonts/admin/geist-latin-500-normal.woff2"],
+          },
+        ],
+      },
+    },
+    {
+      name: "Geist Mono",
+      cssVariable: "--font-admin-geist-mono",
+      provider: fontProviders.local(),
+      fallbacks: ["ui-monospace", "monospace"],
+      options: {
+        variants: [
+          {
+            weight: 400,
+            style: "normal",
+            src: ["./src/assets/fonts/admin/geist-mono-latin-400-normal.woff2"],
+          },
+        ],
+      },
+    },
   ],
   vite: { build: { cssTarget: "safari15.4" } },
 });

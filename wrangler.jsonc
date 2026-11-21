@@ -6,6 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "RSVP_STORE": "d1",
+    // Set these once the Cloudflare Access app exists; empty refuses production /admin access.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
   },
 
   "d1_databases": [{
@@ -20,6 +23,11 @@
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "404-page",
+    // Browser navigations to a missing asset get 404.html without reaching the
+    // Worker, which would hide /admin from a real browser. A pattern list also
+    // sends every other non-listed POST to the asset service (405 locally), so
+    // the Worker's own routes (actions, API) are listed too.
+    "run_worker_first": ["/admin", "/admin/*", "/_actions/*", "/api/*"],
   },
 
   // With Love is off the page, so no photo KV namespace is bound. Restoring the

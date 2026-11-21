@@ -17,6 +17,7 @@ const RUNTIME_FILES = new Set([
 const RUNTIME_DIRECTORIES = ["src", "public", "tests"];
 
 export const SWEEP_SPECS = new Set([
+  "tests/admin.spec.ts",
   "tests/button-hover.spec.ts",
   "tests/nav.spec.ts",
   "tests/nav-scrollbar.spec.ts",
