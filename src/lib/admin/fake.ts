@@ -173,9 +173,12 @@ export function createFakeAdminStore(): AdminStore {
             (sum, row) => sum + row.seatCount,
             0,
           ),
-          unnamedPlusOnes: fakeAdminFixtures.filter((row) =>
-            row.seats.some((s) => s.kind === "plus_one" && s.state === "open"),
-          ).length,
+          // Seats, not households, and never a declined household's seat,
+          // matching getUnnamedPlusOneCount on D1.
+          unnamedPlusOnes: fakeAdminFixtures
+            .filter((row) => row.rsvp.state !== "declined")
+            .flatMap((row) => row.seats)
+            .filter((s) => s.kind === "plus_one" && s.state === "open").length,
         },
         rows: fakeAdminFixtures,
       };

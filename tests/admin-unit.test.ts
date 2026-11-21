@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   adminRejectResponse,
   authenticateAdmin,
+  parseAdminHosts,
   resetJwksCacheForTests,
   verifyAccessJwt,
 } from "../src/lib/admin/auth.ts";
@@ -17,6 +18,7 @@ import {
 import { createD1AdminStore } from "../src/lib/admin/d1.ts";
 import { selectAdminStore } from "../src/lib/admin/store.ts";
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
+import { createFakeAdminStore, fakeAdminFixtures } from "../src/lib/admin/fake.ts";
 
 const config = {
   ACCESS_TEAM_DOMAIN: "warren.cloudflareaccess.com",
@@ -113,6 +115,8 @@ for (const [name, claims] of [
   ["wrong aud", { aud: "wrong" }],
   ["wrong iss", { iss: "wrong" }],
   ["expired", { exp: 900 }],
+  ["expired within the clock leeway", { exp: 990 }],
+  ["missing exp", { exp: undefined }],
   ["nbf in future", { nbf: 1061 }],
   ["iat in future", { iat: 1061 }],
   ["blank email", { email: " " }],
@@ -439,4 +443,40 @@ test("D1 admin guest list exposes plus-one states, rename metadata, RSVP states,
   assert.equal(result.rows[2].seats[1].namedBy, "host@example.com");
   assert.equal(result.rows[3].seats[1].state, "freed");
   database.close();
+});
+
+for (const [name, raw] of [
+  ["invalid JSON", "{"],
+  ["an array", "[]"],
+  ["an empty object", "{}"],
+  ["a blank first name", JSON.stringify({ "host@example.com": " " })],
+  ["a non-string first name", JSON.stringify({ "host@example.com": 1 })],
+  ["a blank email", JSON.stringify({ " ": "Eunice" })],
+] as const) {
+  test(`ADMIN_HOSTS with ${name} is rejected`, () => {
+    assert.equal(parseAdminHosts(raw), null);
+  });
+}
+
+test("ADMIN_HOSTS keys are lower-cased and names trimmed", () => {
+  assert.deepEqual(
+    parseAdminHosts(JSON.stringify({ "Host@Example.com": " Eunice " })),
+    {
+      "host@example.com": "Eunice",
+    },
+  );
+});
+
+test("memberLine keeps a single name as is", () => {
+  assert.equal(memberLine(["Madonna"]), "Madonna");
+  assert.equal(memberLine(["Sofía Peña"]), "Sofía Peña");
+});
+
+test("fake unnamed plus-ones count open seats, not households", async () => {
+  const expected = fakeAdminFixtures
+    .filter((row) => row.rsvp.state !== "declined")
+    .flatMap((row) => row.seats)
+    .filter((s) => s.kind === "plus_one" && s.state === "open").length;
+  const list = await createFakeAdminStore().getGuestList();
+  assert.equal(list.totals.unnamedPlusOnes, expected);
 });

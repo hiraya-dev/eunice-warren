@@ -132,8 +132,7 @@ export async function verifyAccessJwt(
     if (claims.iss !== `https://${domain}`) return null;
     const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
     if (!allowedAud.some((aud) => audiences.includes(aud))) return null;
-    if (typeof claims.exp !== "number" || claims.exp <= now - leeway)
-      return null;
+    if (typeof claims.exp !== "number" || claims.exp <= now) return null;
     if (typeof claims.nbf === "number" && claims.nbf > now + leeway)
       return null;
     if (typeof claims.iat === "number" && claims.iat > now + leeway)

@@ -58,6 +58,7 @@ export function relativeTime(value: string, now = new Date()) {
 }
 export function memberLine(names: string[]) {
   if (!names.length) return "";
+  if (names.length === 1) return names[0].trim();
   const words = names.map((name) => name.trim().split(/\s+/));
   const twoWordSurname =
     words[0].length > 2 ? words[0].slice(-2).join(" ") : "";

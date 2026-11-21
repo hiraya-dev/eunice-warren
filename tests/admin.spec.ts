@@ -34,20 +34,24 @@ test.describe("admin dashboard", () => {
   });
 
   // Overflow is judged against the page itself: the stamp is rotated and the
-  // guest table swaps layout at 80rem, so odd widths are in the list (L-018).
+  // guest table swaps layout at 84rem (1344px), so odd widths are in the list (L-018).
   for (const path of ["/admin", "/admin/guests"]) {
     test(`has no horizontal overflow at 320 to 1920 on ${path} @sweep @single`, async ({
       page,
     }) => {
-      for (const width of [320, 390, 768, 1023, 1024, 1279, 1280, 1440, 1920]) {
+      for (const width of [
+        320, 390, 768, 1023, 1024, 1150, 1279, 1280, 1343, 1344, 1440, 1920,
+      ]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(path);
         await expect(page.locator("main")).toBeVisible();
         const overflow = await page.evaluate(
-          () =>
-            document.documentElement.scrollWidth - window.innerWidth,
+          () => document.documentElement.scrollWidth - window.innerWidth,
         );
-        expect(overflow, `scrollWidth - innerWidth at ${width}`).toBeLessThanOrEqual(0);
+        expect(
+          overflow,
+          `scrollWidth - innerWidth at ${width}`,
+        ).toBeLessThanOrEqual(0);
       }
     });
   }
