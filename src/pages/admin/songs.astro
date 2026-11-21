@@ -54,35 +54,35 @@ const text = djText(view.rows);
         </div>
       ) : (
         <>
-          <header class="admin-songs_header">
-            <>
+          <header class="admin_pagehead admin-songs_header">
+            <div>
               <p class="admin_label">
                 {songsEyebrow(view.requests, view.songs)}
               </p>
               <h1>
                 Song <em>requests</em>
               </h1>
-              <div>
-                <>
-                  <a
-                    href={view.requests ? "/admin/songs.csv" : undefined}
-                    download
-                    aria-disabled={view.requests ? undefined : "true"}
-                  >
-                    Download CSV
-                  </a>
-                  <button
-                    type="button"
-                    data-dj-copy
-                    disabled={!view.requests}
-                    aria-disabled={view.requests ? undefined : "true"}
-                  >
-                    Copy list for the DJ
-                  </button>
-                  <span role="status" aria-live="polite" data-dj-copy-status />
-                </>
-              </div>
-            </>
+            </div>
+            <div class="admin_actions">
+              <a
+                class="admin_button outline"
+                href={view.requests ? "/admin/songs.csv" : undefined}
+                download
+                aria-disabled={view.requests ? undefined : "true"}
+              >
+                Download CSV
+              </a>
+              <button
+                class="admin_button primary"
+                type="button"
+                data-dj-copy
+                disabled={!view.requests}
+                aria-disabled={view.requests ? undefined : "true"}
+              >
+                Copy list for the DJ
+              </button>
+              <span role="status" aria-live="polite" data-dj-copy-status />
+            </div>
           </header>
           {view.requests === 0 ? (
             <div class="admin_notice empty" data-admin-empty>
@@ -104,12 +104,14 @@ const text = djText(view.rows);
                     {row.no}
                   </span>
                   <div role="cell">
-                    <strong data-song>{row.song}</strong>
-                    {duplicateLabel(row.requestCount) && (
-                      <small data-song-dupe>
-                        {duplicateLabel(row.requestCount)}
-                      </small>
-                    )}
+                    <span class="admin-songs_title">
+                      <strong data-song>{row.song}</strong>
+                      {duplicateLabel(row.requestCount) && (
+                        <small data-song-dupe>
+                          {duplicateLabel(row.requestCount)}
+                        </small>
+                      )}
+                    </span>
                     <span data-song-artist>{row.artist ?? ""}</span>
                   </div>
                   <span role="cell" data-song-from>

@@ -320,6 +320,11 @@ test("fake admin store provides full slipper sizes, counts, songs, and nav count
   const songs = await store.getSongRequests();
   assert.equal(songs.requests, 8);
   assert.equal(songs.rows.filter((row) => row.requestCount === 2).length, 2);
+  // Newest first, like D1: numbers run down from the newest request.
+  assert.deepEqual(
+    songs.rows.map((row) => row.no),
+    [8, 7, 6, 5, 4, 3, 2, 1],
+  );
   assert.deepEqual(await store.getNavCounts(), {
     households: 8,
     slipperPairs: slippers.pairs,

@@ -316,7 +316,8 @@ export function createFakeAdminStore(): AdminStore {
       chronological.map((row, index) => [row.id, index + 1]),
     );
     return {
-      rows: source.map((row) => ({
+      // Newest first, like the D1 store (created_at desc, id desc).
+      rows: [...chronological].reverse().map((row) => ({
         ...row,
         no: numbers.get(row.id) ?? 0,
         requestCount: counts.get(songKey(row.song, row.artist)) ?? 1,
