@@ -2,6 +2,10 @@ import type {
   AdminGuestList,
   AdminHousehold,
   AdminOverview,
+  AdminRsvpDetail,
+  AdminRsvpList,
+  AdminRsvpRow,
+  AdminRsvpVersion,
   AdminStore,
 } from "./store";
 
@@ -115,10 +119,14 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-tan",
     label: "MT-08",
-    displayName: "Mica Tan",
+    displayName: "The Ramos Family",
     notes: null,
     seats: [
-      seat(1, "Mica Tan", "Mica Tan"),
+      seat(1, "Bea Ramos", "Paolo Ramos", "member", {
+        namedBy: "Liza",
+        namedByKind: "guest",
+        namedAt: "2026-11-14T13:00:00+08:00",
+      }),
       seat(2, null, null, "plus_one", { state: "freed" }),
     ],
     seatCount: 2,
@@ -163,6 +171,155 @@ export const fakeAdminReplies = [
     namedPlusOnes: [],
   },
 ];
+const fakeReplyMeta: Record<
+  string,
+  {
+    email: string;
+    respondentName: string;
+    submittedAt: string;
+    note: string | null;
+    versions?: number;
+    hostEdit?: boolean;
+  }
+> = {
+  "hh-dela-cruz": {
+    email: "maria@example.com",
+    respondentName: "Maria Dela Cruz",
+    submittedAt: "2026-11-15T13:00:00+08:00",
+    note: "Beach transfer",
+  },
+  "hh-villanueva": {
+    email: "ana@example.com",
+    respondentName: "Ana Villanueva",
+    submittedAt: "2026-11-17T13:00:00+08:00",
+    note: "Three seats confirmed",
+  },
+  "hh-lim": {
+    email: "kat@example.com",
+    respondentName: "Kat Lim",
+    submittedAt: "2026-11-18T13:00:00+08:00",
+    note: null,
+    versions: 2,
+    hostEdit: true,
+  },
+  "hh-pena": {
+    email: "sofia@example.com",
+    respondentName: "Sofía Peña",
+    submittedAt: "2026-11-16T13:00:00+08:00",
+    note: "Sadly we cannot make it",
+  },
+  "hh-tan": {
+    email: "liza@example.com",
+    respondentName: "Liza Ramos",
+    submittedAt: "2026-11-14T13:00:00+08:00",
+    note: null,
+    versions: 2,
+  },
+};
+const fakeHistory = (row: AdminHousehold): AdminRsvpVersion[] => {
+  const meta = fakeReplyMeta[row.id];
+  if (!meta) return [];
+  const attending = row.rsvp.state === "coming";
+  const coming = row.rsvp.state === "coming" ? row.rsvp.coming : 0;
+  const sizes: Record<string, string | null> = {
+    "hh-dela-cruz": "W 7",
+    "hh-villanueva": null,
+    "hh-lim": "W 8",
+    "hh-pena": null,
+    "hh-tan": null,
+  };
+  const seats = row.seats.map((s, i) => ({
+    seatId: s.slot,
+    name: s.name ?? "",
+    attending:
+      attending &&
+      (row.id === "hh-villanueva"
+        ? i < 3
+        : row.id === "hh-tan"
+          ? i === 0
+          : true),
+    slipperSize: s.kind === "member" ? (sizes[row.id] ?? null) : null,
+  }));
+  const latest: AdminRsvpVersion = {
+    id: meta.versions ? 20 : 10,
+    submittedAt: meta.submittedAt,
+    attending,
+    coming,
+    source: meta.hostEdit ? "host" : "guest",
+    editedBy: meta.hostEdit ? "host@example.com" : null,
+    note: meta.note,
+    seats,
+  };
+  if (!meta.versions) return [latest];
+  return [
+    latest,
+    {
+      ...latest,
+      id: 19,
+      submittedAt: "2026-11-13T13:00:00+08:00",
+      source: "guest",
+      editedBy: null,
+      seats: seats.map((s, i) =>
+        row.id === "hh-tan" && i === 0
+          ? { ...s, name: "Paolo Ramos" }
+          : row.id === "hh-lim" && i === 1
+            ? { ...s, name: row.seats[i]?.invitedName ?? s.name }
+            : s,
+      ),
+    },
+  ];
+};
+const makeFakeRsvpRow = (row: AdminHousehold): AdminRsvpRow => {
+  const meta = fakeReplyMeta[row.id];
+  const history = fakeHistory(row);
+  const current = history[0];
+  const seatChanges = row.seats
+    .filter(
+      (s) =>
+        (s.name && s.invitedName && s.name !== s.invitedName) ||
+        (s.kind === "plus_one" && s.name && !s.invitedName),
+    )
+    .map((s) => ({ from: s.invitedName, to: s.name! }));
+  const seats = row.seats.map((s, i) => ({
+    ...s,
+    coming: Boolean(
+      current?.attending &&
+      (current.seats[i]?.attending ?? s.kind === "member"),
+    ),
+    slipperSize: current?.seats[i]?.slipperSize ?? null,
+  }));
+  return {
+    id: row.id,
+    label: row.label,
+    displayName: row.displayName,
+    state:
+      row.rsvp.state === "coming"
+        ? "attending"
+        : row.rsvp.state === "declined"
+          ? "declined"
+          : "waiting",
+    email: meta?.email ?? null,
+    respondentName: meta?.respondentName ?? null,
+    submittedAt: meta?.submittedAt ?? null,
+    note: meta?.note ?? null,
+    versionCount: meta ? history.length : null,
+    seatCount: row.seatCount,
+    comingNames: seats.filter((s) => s.coming && s.name).map((s) => s.name!),
+    notComingNames:
+      row.rsvp.state === "coming"
+        ? seats.filter((s) => !s.coming && s.name).map((s) => s.name!)
+        : [],
+    seatChanges,
+    slippers: seats
+      .filter((s) => s.coming && s.name)
+      .map((s) => ({
+        firstName: s.name!.split(/\s+/)[0]!,
+        size: s.slipperSize,
+      })),
+    seatChange: seatChanges.length > 0,
+    seats,
+  };
+};
 export function createFakeAdminStore(): AdminStore {
   return {
     async getGuestList(): Promise<AdminGuestList> {
@@ -223,6 +380,41 @@ export function createFakeAdminStore(): AdminStore {
             seatCount: row.seatCount,
           })),
         },
+      };
+    },
+    async getRsvpList(): Promise<AdminRsvpList> {
+      const rows = fakeAdminFixtures
+        .map(makeFakeRsvpRow)
+        .sort(
+          (a, b) =>
+            (b.submittedAt ?? "").localeCompare(a.submittedAt ?? "") ||
+            a.displayName.localeCompare(b.displayName),
+        );
+      const replied = rows.filter((r) => r.state !== "waiting");
+      return {
+        totals: {
+          all: replied.length,
+          attending: rows.filter((r) => r.state === "attending").length,
+          declined: rows.filter((r) => r.state === "declined").length,
+          seatChanges: replied.filter((r) => r.seatChange).length,
+          waiting: rows.filter((r) => r.state === "waiting").length,
+        },
+        rows,
+      };
+    },
+    async getRsvpDetail(householdId: string): Promise<AdminRsvpDetail | null> {
+      const row = fakeAdminFixtures.find(
+        (fixture) => fixture.id === householdId,
+      );
+      if (!row) return null;
+      const view = makeFakeRsvpRow(row);
+      return {
+        ...view,
+        email: view.email,
+        respondentName: view.respondentName,
+        submittedAt: view.submittedAt,
+        versionCount: view.versionCount ?? 0,
+        history: fakeHistory(row),
       };
     },
   };

@@ -109,6 +109,140 @@
   }
 }
 
+.admin-rsvps_wrap {
+  display: grid;
+  gap: 1.5rem;
+  padding: 2rem 1.25rem 6rem;
+}
+.admin-rsvps_header,
+.admin-rsvps_toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.admin-rsvps_header h1 {
+  font-family: var(--admin-display);
+  font-size: 3rem;
+  font-weight: 200;
+}
+.admin-rsvps_toolbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.admin-rsvps_toolbar nav a {
+  padding: 0.5rem 0.75rem;
+  border: var(--border-width) solid var(--light-300);
+  border-radius: var(--radius-round);
+}
+.admin-rsvps_toolbar nav a[aria-current="page"] {
+  background: var(--dark-900);
+  color: var(--light-100);
+}
+.admin-rsvps_toolbar form {
+  display: grid;
+  gap: 0.25rem;
+}
+.admin-rsvps_toolbar input {
+  min-width: 16rem;
+  padding: 0.625rem;
+}
+.admin-rsvps_card {
+  overflow-x: auto;
+  background: var(--light-100);
+}
+.admin-rsvps_table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-rsvps_table th,
+.admin-rsvps_table td {
+  padding: 1rem;
+  text-align: left;
+  vertical-align: top;
+}
+.admin-rsvps_table tbody tr {
+  border-top: var(--border-width) solid var(--light-300);
+}
+.admin-rsvps_table tbody tr {
+  position: relative;
+}
+.admin-rsvps_table tbody tr [data-admin-rsvp-link]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.admin-rsvps_table small,
+.admin-drawer_seat small {
+  display: block;
+  color: var(--dark-700);
+}
+.admin-rsvps_table td a,
+.admin-rsvps_table th a {
+  color: inherit;
+}
+.admin-rsvps_table td small {
+  margin-top: 0.35rem;
+}
+.admin-drawer_wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+.admin-drawer_scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.35);
+}
+.admin-drawer_panel {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: min(35rem, 100%);
+  overflow-y: auto;
+  padding: 2rem 1.5rem 5rem;
+  background: var(--light-100);
+}
+.admin-drawer_panel header {
+  display: grid;
+  gap: 0.75rem;
+}
+.admin-drawer_panel h2 {
+  font-family: var(--admin-display);
+  font-size: 2.5rem;
+  font-weight: 200;
+}
+.admin-drawer_panel section {
+  margin-top: 2rem;
+}
+.admin-drawer_panel h3 {
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+.admin-drawer_seat-head,
+.admin-drawer_seat {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: var(--border-width) solid var(--light-300);
+}
+.admin-drawer_seat {
+  grid-template-columns: auto 1fr auto;
+}
+.admin-drawer_panel ol {
+  display: grid;
+  gap: 1rem;
+  padding-left: 1.25rem;
+}
+.admin-drawer_panel h4 span[data-admin-host-edit] {
+  display: block;
+}
+html[data-admin-drawer-open] {
+  overflow: hidden;
+}
+
 .admin_sample {
   align-self: flex-start;
   margin: 0 0 -0.75rem;

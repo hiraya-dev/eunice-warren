@@ -121,3 +121,128 @@ export function renameNote(
     : "unknown date";
   return `${first} invited as ${invitedName}, renamed by ${editor} · ${date}`;
 }
+
+export function adminTimestamp(value: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: manila,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+export function replyCountText(count: number) {
+  return count === 1 ? "once" : count === 2 ? "twice" : `${count} times`;
+}
+
+export function rowSlippersText(row: {
+  state: string;
+  slippers: Array<{ firstName: string; size: string | null }>;
+}) {
+  if (row.state === "declined") return "None";
+  return row.slippers
+    .map((seat) => `${seat.firstName} ${seat.size ?? "—"}`)
+    .join(" · ");
+}
+
+export function seatSubline(
+  seat: {
+    kind: "member" | "plus_one";
+    invitedName: string | null;
+    name: string | null;
+    namedBy: string | null;
+    namedByKind: "guest" | "host" | null;
+    state?: "open" | "named" | "freed";
+  },
+  hosts: Record<string, string> = {},
+) {
+  if (seat.kind === "plus_one") {
+    if (seat.state === "open" || !seat.name) return "+1 · no name yet";
+    if (seat.state === "freed") return "coming alone, seat freed";
+    const by =
+      seat.namedByKind === "host" && seat.namedBy
+        ? (hosts[seat.namedBy.toLowerCase()] ?? seat.namedBy)
+        : (seat.namedBy ?? "a host");
+    return `+1, named by ${by}`;
+  }
+  return seat.name !== seat.invitedName
+    ? `Invited as ${seat.invitedName} · renamed`
+    : `Invited as ${seat.invitedName} · lead`;
+}
+
+export function adminHistoryHeading(version: {
+  submittedAt: string;
+  attending: boolean;
+  coming: number;
+  source?: string;
+  editedBy?: string | null;
+}) {
+  const base = `${adminTimestamp(version.submittedAt)} · ${version.attending ? `Yes, ${version.coming} coming` : "No"}`;
+  return version.source === "host" && version.editedBy
+    ? `${base} · by host · ${version.editedBy}`
+    : base;
+}
+
+export function rsvpChangeSummary(
+  current: {
+    attending: boolean;
+    seats: Array<{
+      seatId: number;
+      name: string;
+      attending: boolean;
+      slipperSize: string | null;
+      namedBy?: string | null;
+      namedByKind?: "guest" | "host" | null;
+    }>;
+  },
+  previous?: {
+    attending: boolean;
+    seats: Array<{
+      seatId: number;
+      name: string;
+      attending: boolean;
+      slipperSize: string | null;
+    }>;
+  },
+  hosts: Record<string, string> = {},
+) {
+  if (!previous)
+    return current.seats
+      .filter((seat) => seat.attending && seat.name)
+      .map((seat) => seat.name);
+  const changes: string[] = [];
+  if (current.attending !== previous.attending)
+    changes.push(
+      current.attending
+        ? "Changed from decline to attending"
+        : "Changed from attending to decline",
+    );
+  current.seats.forEach((seat) => {
+    const before = previous.seats.find(
+      (candidate) => candidate.seatId === seat.seatId,
+    );
+    if (!before) return;
+    if (seat.name !== before.name && seat.name) {
+      const by =
+        seat.namedByKind === "host" && seat.namedBy
+          ? (hosts[seat.namedBy.toLowerCase()] ?? seat.namedBy.split("@")[0])
+          : seat.namedByKind === "guest"
+            ? (seat.namedBy ?? "guest")
+            : null;
+      changes.push(
+        `${before.name || "(plus-one)"} → ${seat.name}${by ? `, renamed by ${by}` : ""}`,
+      );
+    }
+    if (seat.attending !== before.attending)
+      changes.push(
+        `${seat.name || "(plus-one)"} ${seat.attending ? "started" : "stopped"} coming`,
+      );
+    if (seat.slipperSize !== before.slipperSize)
+      changes.push(
+        `${seat.name || "(plus-one)"} ${before.slipperSize ?? "—"} → ${seat.slipperSize ?? "—"}`,
+      );
+  });
+  return changes;
+}

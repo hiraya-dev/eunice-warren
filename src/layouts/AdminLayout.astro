@@ -7,19 +7,23 @@ const {
   title = "Guest ledger",
   active,
   householdCount = 0,
+  rsvpCount,
   host,
 } = Astro.props as {
   title?: string;
-  active: "overview" | "guests";
+  active: "overview" | "rsvps" | "guests";
   householdCount?: number;
+  rsvpCount?: number;
   host: AdminHost;
 };
 const links = [
   { href: "/admin", label: "Overview", key: "overview" },
+  { href: "/admin/rsvps", label: "RSVPs", key: "rsvps" },
   { href: "/admin/guests", label: "Guest list", key: "guests" },
 ];
 const tabs = [
   { href: "/admin", label: "Home", key: "overview" },
+  { href: "/admin/rsvps", label: "RSVPs", key: "rsvps" },
   { href: "/admin/guests", label: "Guests", key: "guests" },
 ];
 ---
@@ -60,6 +64,11 @@ const tabs = [
               aria-current={active === link.key ? "page" : undefined}
             >
               {link.label}
+              {link.key === "rsvps" && rsvpCount !== undefined && (
+                <span class="admin_count" data-admin-count>
+                  {rsvpCount}
+                </span>
+              )}
               {link.key === "guests" && (
                 <span class="admin_count" data-admin-count>
                   {householdCount}
