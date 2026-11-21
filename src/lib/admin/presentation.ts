@@ -176,13 +176,9 @@ export function adminHistoryHeading(version: {
   submittedAt: string;
   attending: boolean;
   coming: number;
-  source?: string;
-  editedBy?: string | null;
 }) {
-  const base = `${adminTimestamp(version.submittedAt)} · ${version.attending ? `Yes, ${version.coming} coming` : "No"}`;
-  return version.source === "host" && version.editedBy
-    ? `${base} · by host · ${version.editedBy}`
-    : base;
+  // A host edit's "by host · email" is rendered separately so it can be coloured.
+  return `${adminTimestamp(version.submittedAt)} · ${version.attending ? `Yes, ${version.coming} coming` : "No"}`;
 }
 
 export function rsvpChangeSummary(

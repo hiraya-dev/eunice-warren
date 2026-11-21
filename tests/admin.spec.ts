@@ -35,12 +35,18 @@ test.describe("admin dashboard", () => {
 
   // Overflow is judged against the page itself: the stamp is rotated and the
   // guest table swaps layout at 84rem (1344px), so odd widths are in the list (L-018).
-  for (const path of ["/admin", "/admin/guests"]) {
+  for (const path of [
+    "/admin",
+    "/admin/guests",
+    "/admin/rsvps",
+    "/admin/rsvps?household=hh-lim",
+  ]) {
     test(`has no horizontal overflow at 320 to 1920 on ${path} @sweep @single`, async ({
       page,
     }) => {
       for (const width of [
-        320, 390, 768, 1023, 1024, 1150, 1279, 1280, 1343, 1344, 1440, 1920,
+        320, 375, 390, 481, 768, 1023, 1024, 1150, 1279, 1280, 1343, 1344, 1440,
+        1920,
       ]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(path);

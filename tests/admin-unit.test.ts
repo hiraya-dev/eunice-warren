@@ -546,17 +546,23 @@ test("RSVP detail returns history and waiting households, rejecting only unknown
   assert.equal((await store.getRsvpDetail("hh-santos"))?.versionCount, 0);
 });
 
-test("admin RSVP timestamps use Manila and history headings show host edits", () => {
+test("admin RSVP timestamps use Manila and history headings read yes or no", () => {
   assert.equal(adminTimestamp("2026-11-20T13:14:00.000Z"), "Nov 20, 9:14 PM");
-  assert.match(
+  assert.equal(
     adminHistoryHeading({
       submittedAt: "2026-11-20T13:14:00.000Z",
       attending: true,
       coming: 2,
-      source: "host",
-      editedBy: "host@example.com",
     }),
-    /by host/,
+    "Nov 20, 9:14 PM · Yes, 2 coming",
+  );
+  assert.equal(
+    adminHistoryHeading({
+      submittedAt: "2026-11-20T13:14:00.000Z",
+      attending: false,
+      coming: 0,
+    }),
+    "Nov 20, 9:14 PM · No",
   );
 });
 

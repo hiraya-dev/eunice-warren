@@ -136,9 +136,11 @@ const titleParts = (name: string) => {
                   <h1>RSVPs</h1>
                 </>
               </div>
-              <a href="/admin/rsvps.csv" data-admin-download>
-                Download CSV
-              </a>
+              <div class="admin-rsvps_actions">
+                <a href="/admin/rsvps.csv" data-admin-download>
+                  Download CSV
+                </a>
+              </div>
             </>
           </header>
           <div class="admin-rsvps_toolbar">
@@ -158,8 +160,8 @@ const titleParts = (name: string) => {
                     aria-current={filter === key ? "page" : undefined}
                     data-admin-filter={key}
                   >
-                    {label}{" "}
-                    <span>
+                    <span>{label}</span>{" "}
+                    <span class="admin-rsvps_count">
                       {
                         view.totals[
                           key === "seat-changes" ? "seatChanges" : key
@@ -172,12 +174,36 @@ const titleParts = (name: string) => {
               <form method="get" data-admin-search-form>
                 <>
                   <input type="hidden" name="filter" value={filter} />
-                  <label for="admin-rsvp-search">Search a name or email</label>
+                  <label class="sr-only" for="admin-rsvp-search">
+                    Search a name or email
+                  </label>
+                  <svg
+                    viewBox="0 0 16 16"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="7"
+                      cy="7"
+                      r="5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <path
+                      d="M11 11l3.5 3.5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
                   <input
                     id="admin-rsvp-search"
                     type="search"
                     name="q"
                     value={q}
+                    placeholder="Search a name or email"
                     data-admin-search
                     autocomplete="off"
                   />
@@ -194,11 +220,11 @@ const titleParts = (name: string) => {
                 <thead>
                   <tr>
                     <>
-                      <th>Reply</th>
-                      <th>Household · email</th>
-                      <th>Who's coming · note</th>
-                      <th>Slippers</th>
-                      <th>Sent ↓</th>
+                      <th data-col="reply">Reply</th>
+                      <th data-col="household">Household · email</th>
+                      <th data-col="who">Who's coming · note</th>
+                      <th data-col="slippers">Slippers</th>
+                      <th data-col="sent">Sent ↓</th>
                     </>
                   </tr>
                 </thead>
@@ -220,7 +246,7 @@ const titleParts = (name: string) => {
                         ].join(" "),
                       )}
                     >
-                      <td>
+                      <td data-col="reply">
                         <span
                           class="admin_pill"
                           data-state={
@@ -238,7 +264,7 @@ const titleParts = (name: string) => {
                               : "WAITING"}
                         </span>
                       </td>
-                      <th scope="row">
+                      <th scope="row" data-col="household">
                         <a
                           href={href({ household: row.id })}
                           data-admin-rsvp-link
@@ -251,29 +277,47 @@ const titleParts = (name: string) => {
                           </small>
                         </a>
                       </th>
-                      <td>
-                        <div>
-                          {row.state === "declined"
-                            ? `Not coming · 0 of ${row.seatCount}`
-                            : row.state === "waiting"
-                              ? `Waiting · 0 of ${row.seatCount}`
-                              : `${row.comingNames.join(", ")} · ${row.comingNames.length} of ${row.seatCount}`}
+                      <td data-col="who">
+                        <div class="admin-rsvps_who">
+                          {row.state === "declined" ? (
+                            <>
+                              Not coming <span>· 0 of {row.seatCount}</span>
+                            </>
+                          ) : row.state === "waiting" ? (
+                            <>
+                              Waiting <span>· 0 of {row.seatCount}</span>
+                            </>
+                          ) : (
+                            <>
+                              {row.comingNames.join(", ")}{" "}
+                              <span>
+                                · {row.comingNames.length} of {row.seatCount}
+                              </span>
+                            </>
+                          )}
                         </div>
                         {row.seatChanges.map((change) => (
-                          <small>
+                          <small class="admin-rsvps_change">
                             Seat change · {change.from ?? "(plus-one)"} →{" "}
                             {change.to}
                           </small>
                         ))}
                         {row.notComingNames.length > 0 && (
-                          <small>
+                          <small class="admin-rsvps_out">
                             Not coming: {row.notComingNames.join(", ")}
                           </small>
                         )}
-                        {row.note && <small>“{row.note}”</small>}
+                        {row.note && (
+                          <small class="admin-rsvps_note">“{row.note}”</small>
+                        )}
                       </td>
-                      <td>{rowSlippersText(row)}</td>
-                      <td>
+                      <td
+                        data-col="slippers"
+                        data-none={row.state === "declined" ? "" : undefined}
+                      >
+                        {rowSlippersText(row)}
+                      </td>
+                      <td data-col="sent">
                         {row.submittedAt ? relativeTime(row.submittedAt) : "—"}
                       </td>
                     </tr>
@@ -296,7 +340,7 @@ const titleParts = (name: string) => {
                 aria-label="Close"
               />
               <div class="admin-drawer_panel">
-                <header>
+                <div class="admin-drawer_top">
                   <p class="admin_label">
                     Household {detail.label} ·{" "}
                     {detail.versionCount
@@ -308,8 +352,24 @@ const titleParts = (name: string) => {
                     data-admin-drawer-close
                     aria-label="Close"
                   >
-                    Close
+                    <svg
+                      viewBox="0 0 14 14"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M2 2l10 10M12 2L2 12"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                    <span class="sr-only">Close</span>
                   </a>
+                </div>
+                <header>
                   {(() => {
                     const parts = titleParts(detail.displayName);
                     return (
@@ -324,15 +384,30 @@ const titleParts = (name: string) => {
                       : `No reply yet · ${detail.seatCount} seats`}
                   </p>
                 </header>
-                <section>
+                <section class="admin-drawer_seats">
                   <div class="admin-drawer_seat-head">
                     <span>Seats</span>
                     <span>Slippers</span>
                   </div>
                   {detail.seats.map((seat) => (
                     <div class="admin-drawer_seat" data-admin-seat>
-                      <span data-coming={seat.coming}>
-                        {seat.coming ? "✓" : "○"}
+                      <span data-coming={seat.coming} aria-hidden="true">
+                        {seat.coming && (
+                          <svg
+                            viewBox="0 0 12 10"
+                            width="12"
+                            height="10"
+                            fill="none"
+                          >
+                            <path
+                              d="M1 5l3.5 3.5L11 1.5"
+                              stroke="currentColor"
+                              stroke-width="1.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        )}
                       </span>
                       <div>
                         <strong>{seat.name ?? seat.invitedName ?? "+1"}</strong>
@@ -350,13 +425,13 @@ const titleParts = (name: string) => {
                   ))}
                 </section>
                 {detail.note && (
-                  <section>
+                  <section class="admin-drawer_note">
                     <h3>Their note</h3>
                     <p>“{detail.note}”</p>
                   </section>
                 )}
                 {detail.history.length > 0 && (
-                  <section>
+                  <section class="admin-drawer_history">
                     <h3>Reply history · every version they sent</h3>
                     <ol>
                       {detail.history.map((version, index) => (
