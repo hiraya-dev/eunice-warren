@@ -259,4 +259,34 @@ test.describe("guest list editor", () => {
       await expect(rowById(page, householdId)).toHaveCount(0);
     });
   });
+
+  test("pressing Enter in a new household's name adds it without changing seats", async ({
+    page,
+  }) => {
+    await withAdminLock(async () => {
+      const label = `En ${run}`;
+      const householdId = label.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-");
+      await page.goto("/admin/guests?new=1");
+      const form = page.locator("[data-new-household]");
+      await form.locator('input[name="label"]').fill(label);
+      await form
+        .locator('input[name="member_name"]')
+        .first()
+        .fill(`Enter Member ${run}`);
+      const name = form.locator('input[name="display_name"]');
+      await name.fill(`The ${label} Family`);
+      await name.press("Enter");
+      const added = rowById(page, householdId);
+      await expect(added).toBeVisible();
+      await expect(added.locator('[data-col="seats"]')).toContainText("1 seat");
+      // Archive it again so the shared fake store's counts return to the fixtures.
+      await added.locator("summary").click();
+      await added.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(rowById(page, householdId)).toHaveCount(0);
+    });
+  });
 });
