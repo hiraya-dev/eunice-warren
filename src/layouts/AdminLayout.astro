@@ -3,28 +3,31 @@ import { Font } from "astro:assets";
 import "@/styles/global.css";
 import "@/styles/admin.css";
 import type { AdminHost } from "@/lib/admin/auth";
+import type { AdminNavCounts } from "@/lib/admin/store";
 const {
   title = "Guest ledger",
   active,
-  householdCount = 0,
-  rsvpCount,
+  counts = { households: 0, rsvpReplies: 0, slipperPairs: 0, songRequests: 0 },
   host,
 } = Astro.props as {
   title?: string;
-  active: "overview" | "rsvps" | "guests";
-  householdCount?: number;
-  rsvpCount?: number;
+  active: "overview" | "rsvps" | "guests" | "slippers" | "songs";
+  counts?: AdminNavCounts;
   host: AdminHost;
 };
 const links = [
   { href: "/admin", label: "Overview", key: "overview" },
   { href: "/admin/rsvps", label: "RSVPs", key: "rsvps" },
   { href: "/admin/guests", label: "Guest list", key: "guests" },
+  { href: "/admin/slippers", label: "Slippers", key: "slippers" },
+  { href: "/admin/songs", label: "Songs", key: "songs" },
 ];
 const tabs = [
   { href: "/admin", label: "Home", key: "overview" },
   { href: "/admin/rsvps", label: "RSVPs", key: "rsvps" },
   { href: "/admin/guests", label: "Guests", key: "guests" },
+  { href: "/admin/slippers", label: "Slippers", key: "slippers" },
+  { href: "/admin/songs", label: "Songs", key: "songs" },
 ];
 ---
 
@@ -64,16 +67,18 @@ const tabs = [
               aria-current={active === link.key ? "page" : undefined}
             >
               {link.label}
-              {link.key === "rsvps" && rsvpCount !== undefined && (
+              {link.key === "rsvps" && (
                 <span class="admin_count" data-admin-count>
-                  {rsvpCount}
+                  {counts.rsvpReplies}
                 </span>
               )}
               {link.key === "guests" && (
                 <span class="admin_count" data-admin-count>
-                  {householdCount}
+                  {counts.households}
                 </span>
               )}
+              {link.key === "slippers" && <span class="admin_count" data-admin-count>{counts.slipperPairs}</span>}
+              {link.key === "songs" && <span class="admin_count" data-admin-count>{counts.songRequests}</span>}
             </a>
           ))
         }

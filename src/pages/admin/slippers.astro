@@ -1,0 +1,175 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { mostCommonCaption, pairsCaption } from "@/lib/admin/presentation";
+import { selectAdminStore, type AdminSlipperOrder } from "@/lib/admin/store";
+export const prerender = false;
+const host = Astro.locals.adminHost!;
+const store = selectAdminStore(
+  (env as Record<string, unknown>).RSVP_STORE,
+  (env as Record<string, unknown>).DB as never,
+);
+let data: AdminSlipperOrder | null = null;
+let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
+let failed = false;
+try {
+  [data, counts] = await Promise.all([
+    store.getSlipperOrder(),
+    store.getNavCounts(),
+  ]);
+} catch {
+  failed = true;
+  Astro.response.status = 503;
+}
+const view = data ?? {
+  women: [],
+  men: [],
+  womenTotal: 0,
+  menTotal: 0,
+  pairs: 0,
+  missing: 0,
+  mostCommonWomen: null,
+  mostCommonMen: null,
+};
+const maximum = Math.max(
+  0,
+  ...view.women.map((row) => row.count),
+  ...view.men.map((row) => row.count),
+);
+const chart = (items: typeof view.women, label: string) =>
+  items.map((row) => ({
+    ...row,
+    number: row.size.slice(2),
+    share: maximum ? row.count / maximum : 0,
+    label: `${label} ${row.size.slice(2)}: ${row.count} pairs`,
+  }));
+const women = chart(view.women, "Women's");
+const men = chart(view.men, "Men's");
+---
+
+<AdminLayout active="slippers" host={host} counts={counts}>
+  <section id="slippers" class="admin-slippers_wrap" data-admin-slippers-page>
+    {
+      host.sample && (
+        <p class="admin_sample" data-admin-sample>
+          Sample data
+        </p>
+      )
+    }
+    {
+      failed ? (
+        <div class="admin_notice error" data-admin-error>
+          <>
+            <h1>Couldn't load the slipper order</h1>
+            <a href={Astro.url.pathname}>Try again</a>
+          </>
+        </div>
+      ) : (
+        <>
+          <header class="admin_pagehead admin-slippers_header">
+            <>
+              <div>
+                <>
+                  <p class="admin_label">A little gift from us · US sizes</p>
+                  <h1>
+                    Slipper <em>order</em>
+                  </h1>
+                </>
+              </div>
+              <div class="admin_actions">
+                <a
+                  class="admin_button primary"
+                  href="/admin/slippers.csv"
+                  download
+                >
+                  Download order list
+                </a>
+              </div>
+            </>
+          </header>
+          <section class="admin-slippers_stats" aria-label="Slipper totals">
+            <div data-slipper-stat="pairs">
+              <>
+                <span>Pairs to order</span>
+                <strong>{view.pairs}</strong>
+                <small>{pairsCaption(view.missing)}</small>
+              </>
+            </div>
+            <div data-slipper-stat="women">
+              <>
+                <span>Women's</span>
+                <strong>{view.womenTotal}</strong>
+                <small>
+                  {mostCommonCaption(
+                    view.mostCommonWomen,
+                    view.women.find((row) => row.size === view.mostCommonWomen)
+                      ?.count ?? 0,
+                  )}
+                </small>
+              </>
+            </div>
+            <div data-slipper-stat="men">
+              <>
+                <span>Men's</span>
+                <strong>{view.menTotal}</strong>
+                <small>
+                  {mostCommonCaption(
+                    view.mostCommonMen,
+                    view.men.find((row) => row.size === view.mostCommonMen)
+                      ?.count ?? 0,
+                  )}
+                </small>
+              </>
+            </div>
+          </section>
+          <section class="admin-slippers_charts" aria-label="Slipper sizes">
+            <>
+              <div data-slipper-chart="women">
+                <>
+                  <h2>Women's · US sizes</h2>
+                  <ol>
+                    {women.map((row) => (
+                      <li
+                        data-size={row.size}
+                        data-count={row.count}
+                        aria-label={row.label}
+                        style={`--share:${row.share}`}
+                      >
+                        <span>{row.count}</span>
+                        <i aria-hidden="true" />
+                        <b>{row.number}</b>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              </div>
+              <div data-slipper-chart="men">
+                <>
+                  <h2>Men's · US sizes</h2>
+                  <ol>
+                    {men.map((row) => (
+                      <li
+                        data-size={row.size}
+                        data-count={row.count}
+                        aria-label={row.label}
+                        style={`--share:${row.share}`}
+                      >
+                        <span>{row.count}</span>
+                        <i aria-hidden="true" />
+                        <b>{row.number}</b>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              </div>
+            </>
+            <p class="admin-slippers_note">
+              Every size the RSVP form offers, half sizes included. Sizes nobody
+              picked show 0, so you can still ask the vendor about them.
+            </p>
+          </section>
+        </>
+      )
+    }
+  </section>
+</AdminLayout>

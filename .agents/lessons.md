@@ -419,7 +419,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/lib/**`, `src/components/sections/Rsvp.astro`
 
-### L-049 — State a script keeps in the URL must reach every link and the focus trap
+### L-050 — State a script keeps in the URL must reach every link and the focus trap
 - **Date:** 2026-11-21
 - **Trigger:** PR #98, CHANGES_REQUIRED (typed search lost on a filter or row click; Tab escaped the open drawer)
 - **Symptom:** the RSVPs page filtered rows in place and `replaceState`d `q`, but every pill, row and close link still carried the server's `q`, so a click dropped the search and `pushState` overwrote it; the drawer focused a `tabindex="-1"` heading the trap's list skipped, so Tab left the dialog.
@@ -460,3 +460,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the review pack measures the component at the narrowest and widest widths of its compact band, and the overlap sweep covers that band. `tests/hero.spec.ts` "centres the compact photo pair over the title" pins the hero case.
 - **Guard:** taste — the user's call on how large the compact envelope reads; no test measures "too small"
 - **Paths:** `src/components/**`
+
+### L-049 — A transient status resets its own timer
+- **Date:** 2026-11-21
+- **Trigger:** #97 CHANGES_REQUIRED (the "Copy list for the DJ" status: a second click within 2 s let the first click's timer clear the new "Copied" message early; Codex and the spec only tested one click)
+- **Symptom:** a status, toast or "Copied" message that should stay for N seconds vanishes early when the action repeats.
+- **Root cause:** each trigger scheduled its own `setTimeout` to clear the status, and no trigger cancelled the previous one.
+- **Rule:** a client script that shows a status for a fixed time keeps one timer id, clears it before setting a new message (success or failure), and only then schedules the clear. The brief for any such script names the repeated-trigger case.
+- **Check:** the spec triggers the action twice inside the window and asserts the status is still visible just after the first timer would have fired, then cleared by the second (`tests/admin.spec.ts` DJ copy).
+- **Guard:** none
+- **Paths:** `src/pages/**`, `src/components/**`, `src/scripts/**`

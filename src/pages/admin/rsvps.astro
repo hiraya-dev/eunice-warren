@@ -101,8 +101,7 @@ const titleParts = (name: string) => {
 <AdminLayout
   active="rsvps"
   host={host}
-  householdCount={view.rows.length}
-  rsvpCount={view.totals.all}
+  counts={loaded.counts}
 >
   <section id="rsvps" class="admin-rsvps_wrap" data-admin-rsvps-page>
     {

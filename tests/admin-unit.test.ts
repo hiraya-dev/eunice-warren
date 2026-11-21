@@ -720,6 +720,7 @@ test("RSVP page loader renders failure state when the store fails", async () => 
   assert.deepEqual(loaded, {
     data: null,
     detail: null,
+    counts: undefined,
     failed: true,
     notFound: false,
   });
