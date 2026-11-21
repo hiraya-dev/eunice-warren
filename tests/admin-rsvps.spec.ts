@@ -73,6 +73,23 @@ test.describe("admin RSVPs", () => {
     ).toHaveCount(1);
   });
 
+  test("drops the divider under the last visible row", async ({ page }) => {
+    const borders = () =>
+      page
+        .locator("[data-admin-rsvp-row]:not([hidden])")
+        .evaluateAll((rows) =>
+          rows.map((row) => getComputedStyle(row).borderBottomWidth),
+        );
+    await page.goto("/admin/rsvps");
+    let widths = await borders();
+    expect(widths.at(-1)).toBe("0px");
+    expect(widths.slice(0, -1).every((width) => width !== "0px")).toBe(true);
+    // Search hides the rows after a match; the match becomes the last one.
+    await page.locator("[data-admin-search]").fill("liza@example.com");
+    widths = await borders();
+    expect(widths).toEqual(["0px"]);
+  });
+
   test("keeps typed search in filter, row, and close URLs", async ({
     page,
   }) => {

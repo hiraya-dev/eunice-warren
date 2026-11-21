@@ -387,6 +387,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/consts.ts`
 
+### L-051 — A divided list drops the divider under its last visible row
+- **Date:** 2026-11-21
+- **Trigger:** PR #98, Local-review round (the user saw a rule under the last RSVP card, above the card's bottom edge)
+- **Symptom:** every RSVP row drew `border-bottom`, so the last card ended with a hairline floating just above the white card's rounded bottom.
+- **Root cause:** the brief copied the Paper table's per-row border and nobody checked the list's end, at 390 or with search hiding rows.
+- **Rule:** a list that separates rows with borders removes the one under its last visible row (`:not([hidden]):not(:has(~ tr:not([hidden])))`, or the gap/`+` sibling pattern), and the screenshot review looks at the end of every list, not only the top.
+- **Check:** a spec reads the last visible row's `border-bottom-width` at rest and after a search hides rows (`tests/admin-rsvps.spec.ts` "drops the divider under the last visible row").
+- **Guard:** none
+- **Paths:** `src/styles/admin.css`, `src/pages/admin/**`, `src/components/**`
+
 ## Data and backend
 
 ### L-045 — External data the user owns is read-only
