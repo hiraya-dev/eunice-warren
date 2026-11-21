@@ -65,7 +65,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     const unnamedPlusOnes = await getUnnamedPlusOneCount(database);
     const hs = await households();
     const seats = await query<Record<string, unknown>>(
-      `SELECT s.*, h.id household_id FROM invite_seats s JOIN households h ON h.id=s.household_id AND h.status='active' WHERE s.status='active' ORDER BY s.household_id,s.slot`,
+      `SELECT s.*, h.id household_id, EXISTS (SELECT 1 FROM response_seats rs WHERE rs.seat_id=s.id) OR EXISTS (SELECT 1 FROM seat_assignments sa WHERE sa.seat_id=s.id) has_activity FROM invite_seats s JOIN households h ON h.id=s.household_id AND h.status='active' WHERE s.status='active' ORDER BY s.household_id,s.slot`,
     );
     const responses = await query<Record<string, unknown>>(
       `SELECT r.household_id,r.attending,r.id response_id FROM ${latest} r`,
@@ -100,6 +100,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
             ? s.named_by_kind
             : null,
         namedAt: s.named_at ? String(s.named_at) : null,
+        hasActivity: Boolean(s.has_activity),
         ...(s.kind === "plus_one"
           ? { state: plusStates.get(Number(s.id))?.state ?? "open" }
           : {}),

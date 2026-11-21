@@ -5,6 +5,7 @@ import {
   fakeAdminReplies,
 } from "../src/lib/admin/fake";
 import { djText, duplicateLabel } from "../src/lib/admin/presentation";
+import { withAdminLock } from "./helpers/admin-lock";
 
 test.describe("admin dashboard", () => {
   test("renders the fixture overview and protected headers @smoke", async ({
@@ -28,16 +29,18 @@ test.describe("admin dashboard", () => {
   });
 
   test("lists and searches fixture households @smoke", async ({ page }) => {
-    await page.goto("/admin/guests");
-    await expect(page.locator("[data-admin-household]")).toHaveCount(
-      fakeAdminFixtures.length,
-    );
-    await page.locator("[data-admin-search]").fill("mendoza");
-    await expect(
-      page.locator("[data-admin-household]:not([hidden])"),
-    ).toHaveCount(1);
-    await page.locator("[data-admin-search]").fill("no such household");
-    await expect(page.locator("[data-admin-no-match]")).toBeVisible();
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests");
+      await expect(page.locator("[data-admin-household]")).toHaveCount(
+        fakeAdminFixtures.length,
+      );
+      await page.locator("[data-admin-search]").fill("mendoza");
+      await expect(
+        page.locator("[data-admin-household]:not([hidden])"),
+      ).toHaveCount(1);
+      await page.locator("[data-admin-search]").fill("no such household");
+      await expect(page.locator("[data-admin-no-match]")).toBeVisible();
+    });
   });
 
   // Overflow is judged against the page itself: the stamp is rotated and the

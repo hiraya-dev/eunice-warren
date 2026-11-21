@@ -8,6 +8,7 @@ interface DraftSeat {
   name: string;
   invitedName: string | null;
   retire?: boolean;
+  hasActivity?: boolean;
 }
 
 interface NewDraft {
@@ -67,6 +68,14 @@ const openSeats =
           style="--idcol: 8.75rem"
         >
           <input type="hidden" name="action" value="add" />
+          <button
+            class="sr-only"
+            type="submit"
+            aria-hidden="true"
+            tabindex="-1"
+          >
+            Save household
+          </button>
           <input
             type="hidden"
             name="seat_count"
@@ -124,6 +133,9 @@ const openSeats =
                 value="remove"
                 type="submit"
                 aria-label="Remove a seat"
+                disabled={
+                  props.draft.seatCount <= props.draft.memberNames.length
+                }
               >
                 −
               </button>
@@ -133,6 +145,7 @@ const openSeats =
                 value="add"
                 type="submit"
                 aria-label="Add a seat"
+                disabled={props.draft.seatCount >= 12}
               >
                 +
               </button>
@@ -183,6 +196,14 @@ const openSeats =
           data-seat-count={props.seats.length}
         >
           <input type="hidden" name="action" value="save" />
+          <button
+            class="sr-only"
+            type="submit"
+            aria-hidden="true"
+            tabindex="-1"
+          >
+            Save
+          </button>
           <input type="hidden" name="id" value={props.row.id} />
           <input type="hidden" name="updated_at" value={props.updatedAt} />
           <div class="admin_guests_top">
@@ -208,6 +229,7 @@ const openSeats =
                     { "is-retired": seat.retire },
                   ]}
                   data-seat-kind={seat.kind}
+                  data-activity={seat.hasActivity ? "true" : undefined}
                 >
                   <span class="sr-only">
                     {seat.kind === "member"
@@ -266,6 +288,10 @@ const openSeats =
                 value="remove"
                 type="submit"
                 aria-label="Remove a seat"
+                disabled={Boolean(
+                  props.seats.at(-1)?.kind === "member" ||
+                  props.seats.at(-1)?.name.trim(),
+                )}
               >
                 −
               </button>
@@ -275,6 +301,7 @@ const openSeats =
                 value="add"
                 type="submit"
                 aria-label="Add a seat"
+                disabled={props.seats.length >= 12}
               >
                 +
               </button>

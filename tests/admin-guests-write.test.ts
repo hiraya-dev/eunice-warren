@@ -262,6 +262,105 @@ test("D1 add validates label length and creates a collision-safe household", asy
   database.close();
 });
 
+for (const scenario of [
+  {
+    name: "blank household name",
+    input: {
+      label: "NEW_01",
+      displayName: "",
+      notes: null,
+      seats: [{ name: "Member" }],
+    },
+  },
+  {
+    name: "no members",
+    input: {
+      label: "NEW_01",
+      displayName: "New household",
+      notes: null,
+      seats: [],
+    },
+  },
+  {
+    name: "blank member",
+    input: {
+      label: "NEW_01",
+      displayName: "New household",
+      notes: null,
+      seats: [{ name: "Member" }, { name: "" }],
+    },
+  },
+  {
+    name: "fewer seats than members",
+    input: {
+      label: "NEW_01",
+      displayName: "New household",
+      notes: null,
+      seats: [{ name: "One" }, { name: "Two" }],
+      seatCount: 1,
+    },
+  },
+  {
+    name: "more than twelve seats",
+    input: {
+      label: "NEW_01",
+      displayName: "New household",
+      notes: null,
+      seats: [{ name: "Member" }],
+      seatCount: 13,
+    },
+  },
+])
+  test(`D1 add refuses ${scenario.name}`, async () => {
+    const database = setup();
+    await assert.rejects(
+      () =>
+        createD1AdminStore(database).addHousehold(
+          scenario.input,
+          "host@example.com",
+        ),
+      Error,
+    );
+    database.close();
+  });
+
+test("D1 save refuses a missing household", async () => {
+  const database = setup();
+  const result = await createD1AdminStore(database).saveHousehold(
+    {
+      id: "missing",
+      updatedAt: now,
+      displayName: "Missing",
+      notes: null,
+      seatCount: 1,
+      seats: [{ name: "Member" }],
+    },
+    "host@example.com",
+  );
+  assert.deepEqual(result, { ok: false, message: "Household not found." });
+  database.close();
+});
+
+test("D1 save refuses a seat from another household", async () => {
+  const database = setup();
+  const result = await createD1AdminStore(database).saveHousehold(
+    {
+      id: "alpha",
+      updatedAt: now,
+      displayName: "Alpha",
+      notes: null,
+      seatCount: 3,
+      seats: seatInput({ 3: { id: 999 } }),
+    },
+    "host@example.com",
+  );
+  assert.deepEqual(result, {
+    ok: false,
+    message: "Household changed. Reload to see the latest.",
+  });
+  database.close();
+});
+
 test("D1 stale save rolls back every statement", async () => {
   const database = setup();
   const store = createD1AdminStore(database);
@@ -299,6 +398,36 @@ test("D1 stale save rolls back every statement", async () => {
   assert.deepEqual(
     { ...row },
     { display_name: "First save", notes: null, updated_by: "host@example.com" },
+  );
+  database.close();
+});
+
+test("D1 stale archive rolls back without changing the household", async () => {
+  const database = setup();
+  await assert.rejects(
+    () =>
+      createD1AdminStore(database).archiveHousehold(
+        "alpha",
+        "host@example.com",
+        "stale-token",
+      ),
+    StaleHouseholdError,
+  );
+  assert.deepEqual(
+    {
+      ...(database.db
+        .prepare(
+          "SELECT status,archived_at,archived_by,updated_at,updated_by FROM households WHERE id='alpha'",
+        )
+        .get() as Record<string, unknown>),
+    },
+    {
+      status: "active",
+      archived_at: null,
+      archived_by: null,
+      updated_at: now,
+      updated_by: null,
+    },
   );
   database.close();
 });
@@ -363,7 +492,7 @@ test("D1 refuses removal with a name, a response, or an assignment", async () =>
   named.close();
   const assigned = setup();
   assigned.db.exec(
-    "INSERT INTO seating_tables (id,name,kind,capacity,sort_order,created_at,updated_at) VALUES (1,'One','round',12,1,'${now}','${now}'); INSERT INTO seat_assignments (table_id,seat_id,position,created_at,updated_at) VALUES (1,3,1,'${now}','${now}');",
+    `INSERT INTO seating_tables (id,name,kind,capacity,sort_order,created_at,updated_at) VALUES (1,'One','round',12,1,'${now}','${now}'); INSERT INTO seat_assignments (table_id,seat_id,position,created_at,updated_at) VALUES (1,3,1,'${now}','${now}');`,
   );
   assert.equal(
     (
@@ -387,7 +516,7 @@ test("D1 refuses removal with a name, a response, or an assignment", async () =>
 test("D1 refuses retiring an assigned member and retiring the last member", async () => {
   const database = setup();
   database.db.exec(
-    "INSERT INTO seating_tables (id,name,kind,capacity,sort_order,created_at,updated_at) VALUES (1,'One','round',12,1,'${now}','${now}'); INSERT INTO seat_assignments (table_id,seat_id,position,created_at,updated_at) VALUES (1,1,1,'${now}','${now}');",
+    `INSERT INTO seating_tables (id,name,kind,capacity,sort_order,created_at,updated_at) VALUES (1,'One','round',12,1,'${now}','${now}'); INSERT INTO seat_assignments (table_id,seat_id,position,created_at,updated_at) VALUES (1,1,1,'${now}','${now}');`,
   );
   const store = createD1AdminStore(database);
   assert.equal(
@@ -519,6 +648,46 @@ test("guest reply rejects an old form after a host adds a seat or retires one", 
   retiredDatabase.close();
 });
 
+test("guest lookup and an open form both reject an archived household", async () => {
+  const database = setup();
+  const guest = createD1RsvpStore(database);
+  const lookup = await guest.findInvite("Alice Alpha");
+  assert(lookup?.invite);
+  await createD1AdminStore(database).archiveHousehold(
+    "alpha",
+    "host@example.com",
+    now,
+  );
+  assert.equal(await guest.findInvite("Alice Alpha"), null);
+  await assert.rejects(
+    () =>
+      guest.submit({
+        inviteId: "alpha",
+        name: "Alice Alpha",
+        attending: true,
+        guests: 2,
+        email: "alice@example.com",
+        seats: lookup.invite.seatList!.map((seat) => ({
+          seatId: seat.seatId,
+          name: seat.name ?? "",
+          attending: true,
+        })),
+      }),
+    InviteChangedError,
+  );
+  assert.equal(
+    (
+      database.db
+        .prepare(
+          "SELECT count(*) AS count FROM responses WHERE household_id='alpha'",
+        )
+        .get() as { count: number }
+    ).count,
+    0,
+  );
+  database.close();
+});
+
 test("fake stale save is refused without changing typed values", async () => {
   const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-santos")!;
   const original = structuredClone(row);
@@ -561,6 +730,186 @@ test("fake stale save is refused without changing typed values", async () => {
       StaleHouseholdError,
     );
     assert.equal(row.displayName, "First fake save");
+  } finally {
+    Object.assign(row, original);
+    row.seats = original.seats;
+  }
+});
+
+test("fake refuses a blank member name", async () => {
+  const row = fakeAdminFixtures.find(
+    (fixture) => fixture.id === "hh-admin-editor",
+  )!;
+  const original = structuredClone(row);
+  try {
+    const result = await createFakeAdminStore().saveHousehold(
+      {
+        id: row.id,
+        updatedAt: row.updatedAt,
+        displayName: row.displayName,
+        notes: row.notes,
+        seatCount: row.seatCount,
+        seats: row.seats.map((seat, index) => ({
+          id: seat.id ?? seat.slot,
+          name: index === 0 ? "" : (seat.name ?? ""),
+          invitedName: seat.invitedName ?? undefined,
+        })),
+      },
+      "host@example.com",
+    );
+    assert.deepEqual(result, {
+      ok: false,
+      message: "Member seat names cannot be blank.",
+    });
+  } finally {
+    Object.assign(row, original);
+    row.seats = original.seats;
+  }
+});
+
+test("fake refuses seat counts outside one through twelve", async () => {
+  const row = fakeAdminFixtures.find(
+    (fixture) => fixture.id === "hh-admin-editor",
+  )!;
+  const input = {
+    id: row.id,
+    updatedAt: row.updatedAt,
+    displayName: row.displayName,
+    notes: row.notes,
+    seats: row.seats.map((seat) => ({
+      id: seat.id ?? seat.slot,
+      name: seat.name ?? "",
+      invitedName: seat.invitedName ?? undefined,
+    })),
+  };
+  for (const seatCount of [0, 13])
+    assert.deepEqual(
+      await createFakeAdminStore().saveHousehold(
+        { ...input, seatCount },
+        "host@example.com",
+      ),
+      { ok: false, message: "Seats must be between 1 and 12." },
+    );
+});
+
+test("fake refuses removing a trailing seat with response activity", async () => {
+  const row = fakeAdminFixtures.find(
+    (fixture) => fixture.id === "hh-admin-activity",
+  )!;
+  const result = await createFakeAdminStore().saveHousehold(
+    {
+      id: row.id,
+      updatedAt: row.updatedAt,
+      displayName: row.displayName,
+      notes: row.notes,
+      seatCount: 1,
+      seats: row.seats.map((seat) => ({
+        id: seat.id ?? seat.slot,
+        name: seat.name ?? "",
+        invitedName: seat.invitedName ?? undefined,
+      })),
+    },
+    "host@example.com",
+  );
+  assert.deepEqual(result, {
+    ok: false,
+    message: "Seat 2 has activity. Review or retire this seat first.",
+  });
+});
+
+test("fake assigned-seat retirement validates before mutating", async () => {
+  const row = fakeAdminFixtures.find(
+    (fixture) => fixture.id === "hh-admin-editor",
+  )!;
+  const original = structuredClone(row);
+  try {
+    row.assignedSeatIds = [2];
+    const before = {
+      displayName: row.displayName,
+      notes: row.notes,
+      updatedAt: row.updatedAt,
+      seats: structuredClone(row.seats),
+    };
+    const result = await createFakeAdminStore().saveHousehold(
+      {
+        id: row.id,
+        updatedAt: row.updatedAt,
+        displayName: "Must not persist",
+        notes: "Must not persist",
+        seatCount: 1,
+        seats: row.seats.map((seat) => ({
+          id: seat.id ?? seat.slot,
+          name: seat.name ?? "",
+          invitedName: seat.invitedName ?? undefined,
+          retire: seat.id === 2,
+        })),
+      },
+      "host@example.com",
+    );
+    assert.deepEqual(result, {
+      ok: false,
+      message: "Seat is assigned to a table. Review the seating plan first.",
+    });
+    assert.deepEqual(
+      {
+        displayName: row.displayName,
+        notes: row.notes,
+        updatedAt: row.updatedAt,
+        seats: row.seats,
+      },
+      before,
+    );
+  } finally {
+    Object.assign(row, original);
+    row.seats = original.seats;
+    row.assignedSeatIds = original.assignedSeatIds;
+  }
+});
+
+test("fake can save unchanged after a seat was retired", async () => {
+  const row = fakeAdminFixtures.find(
+    (fixture) => fixture.id === "hh-admin-editor",
+  )!;
+  const original = structuredClone(row);
+  try {
+    row.assignedSeatIds = undefined;
+    const store = createFakeAdminStore();
+    const retired = await store.saveHousehold(
+      {
+        id: row.id,
+        updatedAt: row.updatedAt,
+        displayName: row.displayName,
+        notes: row.notes,
+        seatCount: 1,
+        seats: row.seats.map((seat) => ({
+          id: seat.id ?? seat.slot,
+          name: seat.name ?? "",
+          invitedName: seat.invitedName ?? undefined,
+          retire: seat.id === 2,
+        })),
+      },
+      "host@example.com",
+    );
+    assert.equal(retired.ok, true);
+    const reopened = (await store.getGuestList()).rows.find(
+      (fixture) => fixture.id === row.id,
+    )!;
+    const unchanged = await store.saveHousehold(
+      {
+        id: reopened.id,
+        updatedAt: reopened.updatedAt,
+        displayName: reopened.displayName,
+        notes: reopened.notes,
+        seatCount: reopened.seatCount,
+        seats: reopened.seats.map((seat) => ({
+          id: seat.id ?? seat.slot,
+          name: seat.name ?? "",
+          invitedName: seat.invitedName ?? undefined,
+        })),
+      },
+      "host@example.com",
+    );
+    assert.equal(unchanged.ok, true);
   } finally {
     Object.assign(row, original);
     row.seats = original.seats;

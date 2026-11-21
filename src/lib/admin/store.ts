@@ -20,6 +20,7 @@ export interface AdminSeat {
   retiredBy?: string | null;
   nameKey?: string | null;
   surnameKey?: string | null;
+  hasActivity?: boolean;
 }
 export interface AdminHousehold {
   id: string;

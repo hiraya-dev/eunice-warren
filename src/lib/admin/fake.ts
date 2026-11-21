@@ -178,6 +178,19 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     seatCount: 2,
     rsvp: { state: "waiting" },
   },
+  {
+    id: "hh-admin-activity",
+    label: "ADMIN_ACTIVITY_FIXTURE",
+    displayName: "The Admin Activity Family",
+    notes: "Dedicated no-JS activity fixture",
+    updatedAt: "2026-11-21T10:00:00.000Z",
+    seats: [
+      seat(1, "Activity Parent", "Activity Parent"),
+      seat(2, null, null, "plus_one", { state: "open" }),
+    ],
+    seatCount: 2,
+    rsvp: { state: "coming", coming: 1 },
+  },
 ];
 const isActive = (row: AdminHousehold) =>
   !(row as AdminHousehold & { archived?: boolean }).archived;
@@ -262,6 +275,26 @@ export interface FakeAdminResponse {
 }
 
 export const fakeAdminResponses: FakeAdminResponse[] = [
+  {
+    id: 10,
+    householdId: "hh-admin-activity",
+    submittedAt: "2026-10-01T10:00:00+08:00",
+    respondentName: "Activity Parent",
+    attending: true,
+    email: "activity@example.com",
+    note: null,
+    source: "guest",
+    editedBy: null,
+    seats: [
+      {
+        seatId: 1,
+        name: "Activity Parent",
+        attending: true,
+        slipperSize: null,
+      },
+      { seatId: 2, name: "", attending: false, slipperSize: null },
+    ],
+  },
   {
     id: 1,
     householdId: "hh-ramos",
@@ -631,7 +664,8 @@ export function createFakeAdminStore(): AdminStore {
         .map((value) => value.id!),
     );
     const active = row.seats.filter(
-      (value) => !retired.has(value.id ?? value.slot),
+      (value) =>
+        value.status !== "retired" && !retired.has(value.id ?? value.slot),
     );
     const members = active.filter((value) => value.kind === "member");
     if (!members.length)
@@ -679,6 +713,14 @@ export function createFakeAdminStore(): AdminStore {
           message: `Seat ${trailing.slot} has activity. Review or retire this seat first.`,
         };
     }
+    for (const value of input.seats) {
+      if (value.retire && value.id && row.assignedSeatIds?.includes(value.id))
+        return {
+          ok: false as const,
+          message:
+            "Seat is assigned to a table. Review the seating plan first.",
+        };
+    }
     const now = new Date().toISOString();
     row.displayName = input.displayName.trim();
     row.notes = input.notes?.trim() || null;
@@ -688,12 +730,6 @@ export function createFakeAdminStore(): AdminStore {
       const current = byId.get(value.id);
       if (!current) continue;
       if (value.retire) {
-        if (row.assignedSeatIds?.includes(value.id))
-          return {
-            ok: false as const,
-            message:
-              "Seat is assigned to a table. Review the seating plan first.",
-          };
         current.status = "retired";
         current.retiredAt = now;
         current.retiredBy = actor;
@@ -911,9 +947,18 @@ export function createFakeAdminStore(): AdminStore {
         },
         rows: activeFixtures().map((row) => ({
           ...row,
-          seats: activeSeats(row).map(
-            ({ attending: _attending, ...seat }) => seat,
-          ),
+          seats: activeSeats(row).map(({ attending: _attending, ...seat }) => ({
+            ...seat,
+            hasActivity:
+              Boolean(row.assignedSeatIds?.includes(seat.id ?? seat.slot)) ||
+              fakeAdminResponses.some(
+                (response) =>
+                  response.householdId === row.id &&
+                  response.seats.some(
+                    (value) => value.seatId === (seat.id ?? seat.slot),
+                  ),
+              ),
+          })),
         })),
       };
     },

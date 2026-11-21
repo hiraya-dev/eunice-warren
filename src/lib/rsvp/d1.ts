@@ -90,7 +90,7 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
         result = lookupInvite(name, candidates);
       }
       if (!result || !result.invite) return result;
-      const household = await db.select().from(households).where(eq(households.ticketCode, result.invite.ticketCode)).limit(1);
+      const household = await db.select().from(households).where(and(eq(households.ticketCode, result.invite.ticketCode), eq(households.status, "active"))).limit(1);
       if (!household[0]) return null;
       const activeSeats = await db.select().from(inviteSeats)
         .where(and(eq(inviteSeats.householdId, household[0].id), eq(inviteSeats.status, "active")))
@@ -100,6 +100,8 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
     },
     findInviteByTicketCode,
     async submit(submission: RsvpSubmission) {
+      const household = await db.select({ id: households.id }).from(households).where(and(eq(households.id, submission.inviteId), eq(households.status, "active"))).limit(1);
+      if (!household[0]) throw new InviteChangedError();
       const active = await db.select().from(inviteSeats)
         .where(and(eq(inviteSeats.householdId, submission.inviteId), eq(inviteSeats.status, "active")))
         .orderBy(inviteSeats.slot);

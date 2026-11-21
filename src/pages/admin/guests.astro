@@ -26,6 +26,7 @@ type DraftSeat = {
   name: string;
   invitedName: string | null;
   retire?: boolean;
+  hasActivity?: boolean;
 };
 let editDraft: {
   id: string;
@@ -42,6 +43,7 @@ let newDraft = {
   memberNames: [""],
   seatCount: 1,
 };
+let writeHouseholdId = Astro.url.searchParams.get("edit");
 if (Astro.request.method === "POST") {
   const origin = Astro.request.headers.get("origin");
   if (origin && origin !== Astro.url.origin) {
@@ -51,13 +53,14 @@ if (Astro.request.method === "POST") {
     const form = await Astro.request.formData();
     const action = String(form.get("action") ?? "");
     try {
-      if (action === "archive")
+      if (action === "archive") {
+        writeHouseholdId = String(form.get("id") ?? "");
         await store.archiveHousehold(
-          String(form.get("id") ?? ""),
+          writeHouseholdId,
           host.email,
           String(form.get("updated_at") ?? "") || undefined,
         );
-      else if (action === "add" && form.get("member_action") === "add") {
+      } else if (action === "add" && form.get("member_action") === "add") {
         const memberNames = form.getAll("member_name").map(String);
         const seatCount = Number(form.get("seat_count") ?? memberNames.length);
         newDraft = {
@@ -86,11 +89,18 @@ if (Astro.request.method === "POST") {
       } else if (action === "add") {
         const names = form.getAll("member_name").map(String);
         const seatCount = Number(form.get("seat_count") ?? names.length);
+        newDraft = {
+          displayName: String(form.get("display_name") ?? ""),
+          label: String(form.get("label") ?? ""),
+          notes: String(form.get("notes") ?? ""),
+          memberNames: names,
+          seatCount,
+        };
         await store.addHousehold(
           {
-            label: String(form.get("label")),
-            displayName: String(form.get("display_name")),
-            notes: String(form.get("notes") ?? "") || null,
+            label: newDraft.label,
+            displayName: newDraft.displayName,
+            notes: newDraft.notes || null,
             seats: names.map((name) => ({ name })),
             seatCount,
           },
@@ -120,6 +130,7 @@ if (Astro.request.method === "POST") {
         const finalCount =
           currentCount + delta - seats.filter((seat) => seat.retire).length;
         const householdId = String(form.get("id"));
+        writeHouseholdId = householdId;
         const storedRow = (await store.getGuestList()).rows.find(
           (row) => row.id === householdId,
         );
@@ -137,8 +148,27 @@ if (Astro.request.method === "POST") {
             slot: index + 1,
             kind: seat.id ? (kindsById.get(seat.id) ?? "plus_one") : "plus_one",
             invitedName: seat.invitedName ?? null,
+            hasActivity: seat.id
+              ? storedRow?.seats.find((stored) => stored.id === seat.id)
+                  ?.hasActivity
+              : false,
           })),
         };
+        if (delta > 0 && currentCount >= MAX_SEATS) {
+          editDraft.seatCount = currentCount;
+          writeError = "Seats must be between 1 and 12.";
+        } else if (delta < 0) {
+          const trailing = editDraft.seats.at(-1);
+          if (
+            trailing &&
+            (trailing.kind === "member" ||
+              Boolean(trailing.name.trim()) ||
+              trailing.hasActivity)
+          ) {
+            editDraft.seatCount = currentCount;
+            writeError = `Seat ${trailing.slot} has activity. Review or retire this seat first.`;
+          }
+        }
         if (!form.get("seat_action")) {
           const result = await store.saveHousehold(
             {
@@ -205,7 +235,7 @@ const errorInRow =
   Boolean(writeError) &&
   (newOpen || view.rows.some((row) => row.id === editId));
 const reloadHref = writeError.startsWith("This household")
-  ? `/admin/guests?edit=${editId}`
+  ? `/admin/guests?edit=${writeHouseholdId}`
   : undefined;
 const editSeats = (row: AdminHousehold) => {
   const draft = editDraft?.id === row.id ? editDraft : null;
@@ -217,6 +247,7 @@ const editSeats = (row: AdminHousehold) => {
         kind: seat.kind,
         name: seat.name ?? "",
         invitedName: seat.invitedName,
+        hasActivity: seat.hasActivity,
       }));
   const target = draft?.seatCount ?? row.seatCount;
   while (source.length < target)
@@ -267,8 +298,7 @@ const editSeats = (row: AdminHousehold) => {
           </header>
           {writeError && !errorInRow && (
             <p class="admin_guests_error page" data-admin-write-error>
-              {writeError}{" "}
-              {reloadHref && <a href={reloadHref}>Reload</a>}
+              {writeError} {reloadHref && <a href={reloadHref}>Reload</a>}
             </p>
           )}
           <div class="admin-guests_toolbar">
@@ -337,8 +367,16 @@ const editSeats = (row: AdminHousehold) => {
                           <div class="admin_guests_confirm">
                             <p>Archive {archiveRow.displayName}?</p>
                             <form method="post">
-                              <input type="hidden" name="action" value="archive" />
-                              <input type="hidden" name="id" value={archiveRow.id} />
+                              <input
+                                type="hidden"
+                                name="action"
+                                value="archive"
+                              />
+                              <input
+                                type="hidden"
+                                name="id"
+                                value={archiveRow.id}
+                              />
                               <input
                                 type="hidden"
                                 name="updated_at"
@@ -351,7 +389,10 @@ const editSeats = (row: AdminHousehold) => {
                                 >
                                   Archive
                                 </button>
-                                <a class="admin_guests_btn" href="/admin/guests">
+                                <a
+                                  class="admin_guests_btn"
+                                  href="/admin/guests"
+                                >
                                   Cancel
                                 </a>
                               </div>
@@ -558,14 +599,17 @@ const editSeats = (row: AdminHousehold) => {
       const add = editForm.querySelector<HTMLButtonElement>(
         'button[name="seat_action"][value="add"]',
       );
-      if (remove)
+      if (remove) {
+        const trailing = seats.at(-1);
+        const trailingName = trailing?.querySelector<HTMLInputElement>(
+          'input[name="seat_name"]',
+        );
         remove.disabled =
-          seats.length <=
-          [
-            ...list.querySelectorAll<HTMLInputElement>(
-              'input[name="seat_name"][required]',
-            ),
-          ].length;
+          !trailing ||
+          trailing.dataset.seatKind === "member" ||
+          Boolean(trailingName?.value.trim()) ||
+          Boolean(trailing.dataset.activity);
+      }
       if (add) add.disabled = seats.length >= max;
     };
     for (const button of editForm.querySelectorAll<HTMLButtonElement>(
@@ -581,8 +625,13 @@ const editSeats = (row: AdminHousehold) => {
           const name = last.querySelector<HTMLInputElement>(
             'input[name="seat_name"]',
           );
-          const response = last.dataset.response;
-          if (name?.value || response) return;
+          const activity = last.dataset.activity;
+          if (
+            last.dataset.seatKind === "member" ||
+            name?.value.trim() ||
+            activity
+          )
+            return;
           last.remove();
         } else if (button.value === "add" && seats.length < max && list) {
           const wrapper = document.createElement("label");
@@ -619,6 +668,29 @@ const editSeats = (row: AdminHousehold) => {
     const addMember = newForm.querySelector<HTMLButtonElement>(
       'button[name="member_action"]',
     );
+    const syncNew = () => {
+      const count = newForm.querySelector<HTMLInputElement>(
+        "[data-new-seat-count]",
+      );
+      const output = newForm.querySelector<HTMLOutputElement>(
+        "[data-new-seat-output]",
+      );
+      const memberCount = newForm.querySelectorAll(
+        'input[name="member_name"]',
+      ).length;
+      if (!count || !output) return;
+      const next = Math.max(memberCount, Math.min(12, Number(count.value)));
+      count.value = String(next);
+      output.value = String(next);
+      const remove = newForm.querySelector<HTMLButtonElement>(
+        'button[name="seat_action"][value="remove"]',
+      );
+      const add = newForm.querySelector<HTMLButtonElement>(
+        'button[name="seat_action"][value="add"]',
+      );
+      if (remove) remove.disabled = next <= memberCount;
+      if (add) add.disabled = next >= 12;
+    };
     addMember?.addEventListener("click", (event) => {
       event.preventDefault();
       if (!members) return;
@@ -628,6 +700,7 @@ const editSeats = (row: AdminHousehold) => {
       field.name = "member_name";
       label.append(field);
       members.append(label);
+      syncNew();
       field.focus();
     });
     for (const button of newForm.querySelectorAll<HTMLButtonElement>(
@@ -651,6 +724,8 @@ const editSeats = (row: AdminHousehold) => {
             : Math.max(membersCount, Number(count.value) - 1);
         count.value = String(next);
         output.value = String(next);
+        syncNew();
       });
+    syncNew();
   }
 </script>
