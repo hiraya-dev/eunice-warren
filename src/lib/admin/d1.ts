@@ -7,9 +7,14 @@ import type { D1Database } from "../db/types";
 import type {
   AdminGuestList,
   AdminHousehold,
+  AdminNavCounts,
   AdminOverview,
+  AdminSlipperOrder,
+  AdminSongRequests,
   AdminStore,
 } from "./store";
+import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
+import { songKey } from "./presentation.ts";
 
 export function createD1AdminStore(database: D1Database): AdminStore {
   const query = async <T>(sql: string, ...values: unknown[]) =>
@@ -172,5 +177,28 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       },
     };
   }
-  return { getOverview, getGuestList };
+  async function getSlipperOrder(): Promise<AdminSlipperOrder> {
+    const rows = await query<{ size: string | null; count: number }>(`WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT rs.slipper_size size, count(*) count FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id AND s.status='active' JOIN households h ON h.id=s.household_id AND h.status='active' WHERE r.attending=1 AND rs.attending=1 GROUP BY rs.slipper_size`);
+    const counts = new Map(rows.map((row) => [row.size ?? "", Number(row.count)]));
+    const women = SLIPPER_SIZES.filter((size) => size.startsWith("W ")).map((size) => ({ size, count: counts.get(size) ?? 0 }));
+    const men = SLIPPER_SIZES.filter((size) => size.startsWith("M ")).map((size) => ({ size, count: counts.get(size) ?? 0 }));
+    const common = (items: Array<{ size: string; count: number }>) => { const best = items.reduce<{ size: string; count: number } | null>((value, item) => !value || item.count > value.count ? item : value, null); return best && best.count > 0 ? best.size : null; };
+    const womenTotal = women.reduce((sum, row) => sum + row.count, 0);
+    const menTotal = men.reduce((sum, row) => sum + row.count, 0);
+    return { women, men, womenTotal, menTotal, pairs: womenTotal + menTotal, missing: rows.filter((row) => !row.size || !SLIPPER_SIZES.includes(row.size as never)).reduce((sum, row) => sum + Number(row.count), 0), mostCommonWomen: common(women), mostCommonMen: common(men) };
+  }
+  async function getSongRequests(): Promise<AdminSongRequests> {
+    const source = await query<{ id: number; song: string; artist: string | null; name: string; dedication: string | null; created_at: string }>(`SELECT id,song,artist,name,dedication,created_at FROM songs ORDER BY created_at DESC,id DESC`);
+    const counts = new Map<string, number>();
+    for (const row of source) { const key = songKey(row.song, row.artist); counts.set(key, (counts.get(key) ?? 0) + 1); }
+    const chronological = [...source].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id);
+    const numbers = new Map(chronological.map((row, index) => [row.id, index + 1]));
+    return { rows: source.map((row) => ({ id: Number(row.id), no: numbers.get(row.id) ?? 0, song: row.song, artist: row.artist, name: row.name, dedication: row.dedication, createdAt: row.created_at, requestCount: counts.get(songKey(row.song, row.artist)) ?? 1 })), requests: source.length, songs: counts.size };
+  }
+  async function getNavCounts(): Promise<AdminNavCounts> {
+    const allowedSizes = SLIPPER_SIZES.map((size) => `'${size}'`).join(",");
+    const [row] = await query<{ households: number; slipper_pairs: number; song_requests: number }>(`WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT (SELECT count(DISTINCT h.id) FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active') households, (SELECT count(*) FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active' AND r.attending=1 AND rs.attending=1 AND rs.slipper_size IN (${allowedSizes})) slipper_pairs, (SELECT count(*) FROM songs) song_requests`);
+    return { households: Number(row?.households ?? 0), slipperPairs: Number(row?.slipper_pairs ?? 0), songRequests: Number(row?.song_requests ?? 0) };
+  }
+  return { getOverview, getGuestList, getSlipperOrder, getSongRequests, getNavCounts };
 }

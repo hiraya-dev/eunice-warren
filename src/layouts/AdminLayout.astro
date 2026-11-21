@@ -3,24 +3,29 @@ import { Font } from "astro:assets";
 import "@/styles/global.css";
 import "@/styles/admin.css";
 import type { AdminHost } from "@/lib/admin/auth";
+import type { AdminNavCounts } from "@/lib/admin/store";
 const {
   title = "Guest ledger",
   active,
-  householdCount = 0,
+  counts = { households: 0, slipperPairs: 0, songRequests: 0 },
   host,
 } = Astro.props as {
   title?: string;
-  active: "overview" | "guests";
-  householdCount?: number;
+  active: "overview" | "guests" | "slippers" | "songs";
+  counts?: AdminNavCounts;
   host: AdminHost;
 };
 const links = [
   { href: "/admin", label: "Overview", key: "overview" },
   { href: "/admin/guests", label: "Guest list", key: "guests" },
+  { href: "/admin/slippers", label: "Slippers", key: "slippers" },
+  { href: "/admin/songs", label: "Songs", key: "songs" },
 ];
 const tabs = [
   { href: "/admin", label: "Home", key: "overview" },
   { href: "/admin/guests", label: "Guests", key: "guests" },
+  { href: "/admin/slippers", label: "Slippers", key: "slippers" },
+  { href: "/admin/songs", label: "Songs", key: "songs" },
 ];
 ---
 
@@ -62,9 +67,11 @@ const tabs = [
               {link.label}
               {link.key === "guests" && (
                 <span class="admin_count" data-admin-count>
-                  {householdCount}
+                  {counts.households}
                 </span>
               )}
+              {link.key === "slippers" && <span class="admin_count" data-admin-count>{counts.slipperPairs}</span>}
+              {link.key === "songs" && <span class="admin_count" data-admin-count>{counts.songRequests}</span>}
             </a>
           ))
         }

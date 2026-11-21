@@ -11,13 +11,12 @@ import {
 export const prerender = false;
 import type { AdminOverview } from "@/lib/admin/store";
 const host = Astro.locals.adminHost!;
+const store = selectAdminStore((env as Record<string, unknown>).RSVP_STORE, (env as Record<string, unknown>).DB as never);
 let data: AdminOverview | null = null;
+let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
 let failed = false;
 try {
-  data = await selectAdminStore(
-    (env as Record<string, unknown>).RSVP_STORE,
-    (env as Record<string, unknown>).DB as never,
-  ).getOverview();
+  [data, counts] = await Promise.all([store.getOverview(), store.getNavCounts()]);
 } catch {
   failed = true;
   Astro.response.status = 503;
@@ -47,7 +46,7 @@ const statCaptions = ["yes", "no", "waiting", "songs"];
 <AdminLayout
   active="overview"
   host={host}
-  householdCount={view.households.invited}
+  counts={counts}
 >
   <section id="overview" class="admin-overview_wrap" data-admin-overview>
     {host.sample && <p class="admin_sample" data-admin-sample>Sample data</p>}
