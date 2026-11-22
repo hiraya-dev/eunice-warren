@@ -35,6 +35,8 @@ type DraftSeat = {
   retire?: boolean;
   hasActivity?: boolean;
   rsvp?: string;
+  namedBy?: string | null;
+  namedByKind?: "guest" | "host" | null;
 };
 let editDraft: {
   id: string;
@@ -44,6 +46,7 @@ let editDraft: {
   seatCount: number;
   seats: DraftSeat[];
   removedSeatIds?: number[];
+  invitationEdited: boolean;
 } | null = null;
 let newDraft = {
   displayName: "",
@@ -53,6 +56,7 @@ let newDraft = {
   seatCount: 1,
   confirmedNames: [] as string[],
   labelEdited: false,
+  invitationEdited: false,
 };
 let writeHouseholdId = Astro.url.searchParams.get("edit");
 let duplicateOpenId = "";
@@ -99,7 +103,7 @@ if (Astro.request.method === "POST") {
         const list = await store.getGuestList();
         const added = normalizeName(String(form.get("member_input") ?? ""));
         const plusOnes = parsePlusOne(added);
-        if (form.get("member_action") === "add" && added && !plusOnes)
+        if (added && !plusOnes)
           memberNames.push(added);
         const currentCount = Number(
           form.get("seat_count") ?? memberNames.length,
@@ -123,11 +127,13 @@ if (Astro.request.method === "POST") {
           Math.min(
             MAX_SEATS,
             toggledCount +
-              (plusOnes && form.get("member_action") === "add" ? plusOnes : 0),
+              (plusOnes || 0),
           ),
         );
+        const postedDisplayName = String(form.get("display_name") ?? "");
+        const suggestedDisplayName = suggestInvitationName(memberNames);
         newDraft = {
-          displayName: String(form.get("display_name") ?? ""),
+          displayName: postedDisplayName,
           label: String(form.get("label") ?? ""),
           notes: String(form.get("notes") ?? ""),
           memberNames,
@@ -136,6 +142,10 @@ if (Astro.request.method === "POST") {
             ...form.getAll("confirmed_name").map(String),
             ...(form.get("confirm_duplicate") ? memberNames : []),
           ],
+          invitationEdited:
+            Boolean(form.get("invitation_edited")) ||
+            (Boolean(postedDisplayName) &&
+              postedDisplayName !== suggestedDisplayName),
           labelEdited:
             Boolean(form.get("label_edited")) ||
             String(form.get("label") ?? "") !==
@@ -164,8 +174,9 @@ if (Astro.request.method === "POST") {
             duplicateOpenId = duplicate.row.id;
             writeError = `${duplicate.name} is already invited with ${duplicate.row.displayName}.`;
           } else {
-            const displayName =
-              newDraft.displayName || suggestInvitationName(memberNames);
+            const displayName = newDraft.invitationEdited
+              ? newDraft.displayName
+              : suggestInvitationName(memberNames);
             await store.addHousehold(
               {
                 label: newDraft.labelEdited
@@ -203,7 +214,7 @@ if (Astro.request.method === "POST") {
         const kindsById = new Map(
           storedRow?.seats.map((seat) => [seat.id, seat.kind]) ?? [],
         );
-        const seats = names.map((name, index) => {
+        let seats = names.map((name, index) => {
           const id = ids[index];
           const fixedInvited = id
             ? String(form.get(`invited_name_${id}`) ?? invited[index] ?? "")
@@ -232,11 +243,19 @@ if (Astro.request.method === "POST") {
           String(form.get("member_input") ?? ""),
         );
         const plusOnes = parsePlusOne(memberInput);
-        if (form.get("member_action") === "add" && memberInput) {
-          const nextSeats = [...seats];
+        const saveWithPendingInput = Boolean(
+          memberInput &&
+            (form.get("save") || form.get("save_and_add")),
+        );
+        const shouldAddInput = Boolean(
+          memberInput &&
+            (form.get("member_action") === "add" || saveWithPendingInput),
+        );
+        const pendingCount = shouldAddInput ? plusOnes || 1 : 0;
+        if (shouldAddInput) {
           if (plusOnes)
             for (let index = 0; index < plusOnes; index += 1)
-              nextSeats.push({
+              seats.push({
                 id: undefined,
                 kind: "plus_one",
                 name: "",
@@ -244,13 +263,29 @@ if (Astro.request.method === "POST") {
                 retire: false,
               });
           else
-            nextSeats.push({
+            seats.push({
               id: undefined,
               kind: "member",
               name: memberInput,
               invitedName: memberInput,
               retire: false,
             });
+        }
+        const postedDisplayName = String(form.get("display_name") ?? "");
+        const suggestedDisplayName = suggestInvitationName(
+          seats
+            .filter((seat) => seat.kind === "member" && seat.name)
+            .map((seat) => seat.name),
+        );
+        const invitationWasEdited =
+          Boolean(form.get("invitation_edited")) ||
+          (Boolean(postedDisplayName) &&
+            postedDisplayName !== suggestedDisplayName);
+        if (
+          form.get("member_action") === "add" &&
+          !saveWithPendingInput &&
+          memberInput
+        ) {
           editDraft = {
             id: householdId,
             updatedAt: String(form.get("updated_at") ?? ""),
@@ -258,17 +293,19 @@ if (Astro.request.method === "POST") {
             notes: String(form.get("notes") ?? ""),
             seatCount: Math.min(
               MAX_SEATS,
-              Number(form.get("seat_count") ?? names.length) + (plusOnes || 1),
+              Number(form.get("seat_count") ?? names.length) + pendingCount,
             ),
-            seats: nextSeats.map((seat, index) => ({
+            seats: seats.map((seat, index) => ({
               ...seat,
               slot: index + 1,
               invitedName: seat.invitedName ?? null,
               rsvp: storedRow?.rsvp.state,
             })),
+            invitationEdited: invitationWasEdited,
           };
         } else {
-          const currentCount = Number(form.get("seat_count") ?? names.length);
+          const currentCount =
+            Number(form.get("seat_count") ?? names.length) + pendingCount;
           const delta =
             form.get("seat_action") === "add"
               ? 1
@@ -296,8 +333,30 @@ if (Astro.request.method === "POST") {
             1,
             currentCount + delta - (removeNow ? 1 : 0),
           );
+          const plusOffIds =
+            form.get("plus_one") === "off"
+              ? seats
+                  .filter((seat) => {
+                    if (seat.kind !== "plus_one" || seat.name) return false;
+                    if (!seat.id) return true;
+                    return !storedRow?.seats.find(
+                      (stored) => stored.id === seat.id,
+                    )?.hasActivity;
+                  })
+                  .map((seat) => seat.id)
+                  .filter((id): id is number => Boolean(id))
+              : [];
+          const plusOffPending =
+            form.get("plus_one") === "off"
+              ? seats.filter(
+                  (seat) => seat.kind === "plus_one" && !seat.name && !seat.id,
+                ).length
+              : 0;
+          for (const id of plusOffIds)
+            if (!removedIds.includes(id)) removedIds.push(id);
+          const removablePlusOnes = plusOffIds.length + plusOffPending;
           const retiredCount = seats.filter((seat) => seat.retire).length;
-          const finalCount = Math.max(1, draftCount - retiredCount);
+          let finalCount = Math.max(1, draftCount - retiredCount);
           editDraft = {
             id: householdId,
             updatedAt: String(form.get("updated_at") ?? ""),
@@ -313,8 +372,17 @@ if (Astro.request.method === "POST") {
                 ? storedRow?.seats.find((stored) => stored.id === seat.id)
                     ?.hasActivity
                 : false,
+              namedBy: seat.id
+                ? storedRow?.seats.find((stored) => stored.id === seat.id)
+                    ?.namedBy
+                : null,
+              namedByKind: seat.id
+                ? storedRow?.seats.find((stored) => stored.id === seat.id)
+                    ?.namedByKind
+                : null,
               rsvp: storedRow?.rsvp.state,
             })),
+            invitationEdited: invitationWasEdited,
           };
           if (delta > 0 && currentCount >= MAX_SEATS)
             writeError = "Seats must be between 1 and 12.";
@@ -324,7 +392,12 @@ if (Astro.request.method === "POST") {
               names.filter(Boolean).length + 1,
             );
           if (form.get("plus_one") === "off")
-            editDraft.seatCount = names.filter(Boolean).length;
+            finalCount = Math.max(1, draftCount - removablePlusOnes);
+          if (form.get("plus_one") === "off")
+            editDraft.seatCount = Math.max(
+              1,
+              draftCount - removablePlusOnes,
+            );
           if (
             !form.get("seat_action") &&
             !form.get("plus_one") &&
@@ -353,13 +426,9 @@ if (Astro.request.method === "POST") {
                   id: householdId,
                   label: String(form.get("label") ?? ""),
                   updatedAt: String(form.get("updated_at") ?? "") || undefined,
-                  displayName:
-                    String(form.get("display_name") ?? "") ||
-                    suggestInvitationName(
-                      seats
-                        .filter((seat) => seat.kind === "member")
-                        .map((seat) => seat.name),
-                    ),
+                  displayName: invitationWasEdited
+                    ? postedDisplayName
+                    : suggestedDisplayName,
                   notes: String(form.get("notes") ?? "") || null,
                   seatCount: finalCount,
                   seats,
@@ -470,6 +539,14 @@ if (!newDraft.label)
 const archiveId = Astro.url.searchParams.get("archive");
 const newOpen = Astro.url.searchParams.get("new") === "1";
 const archiveRow = view.rows.find((row) => row.id === archiveId);
+const takenHouseholds = view.rows.map((row) => ({
+  id: row.id,
+  label: row.label,
+  displayName: row.displayName,
+  names: row.seats
+    .flatMap((seat) => [seat.name, seat.invitedName])
+    .filter((name): name is string => Boolean(name)),
+}));
 // A refusal shows inside the open edit or new row, above its bottom line; any
 // other failure (an archive, a failed load) keeps the page-level notice.
 const errorInRow =
@@ -496,9 +573,19 @@ const editSeats = (row: AdminHousehold) => {
         invitedName: seat.invitedName,
         hasActivity: seat.hasActivity,
         rsvp: row.rsvp.state,
+        namedBy: seat.namedBy,
+        namedByKind: seat.namedByKind,
       }));
-  const target = draft?.seatCount ?? row.seatCount;
-  while (source.length < target)
+  const retiredCount = source.filter((seat) => seat.retire).length;
+  const target = draft
+    ? Math.max(1, draft.seatCount - retiredCount)
+    : row.seatCount;
+  while (source.filter((seat) => !seat.retire).length > target) {
+    const index = source.findLastIndex((seat) => !seat.retire);
+    if (index < 0) break;
+    source.splice(index, 1);
+  }
+  while (source.filter((seat) => !seat.retire).length < target)
     source.push({
       id: undefined,
       slot: source.length + 1,
@@ -507,7 +594,7 @@ const editSeats = (row: AdminHousehold) => {
       invitedName: null,
       rsvp: row.rsvp.state,
     });
-  return source.slice(0, target);
+  return source;
 };
 ---
 
@@ -672,6 +759,11 @@ const editSeats = (row: AdminHousehold) => {
                                 value={filter === "all" ? "" : filter}
                               />
                               <input type="hidden" name="q" value={q} />
+                              <input
+                                type="hidden"
+                                name="edit"
+                                value={archiveRow.id}
+                              />
                               <div class="admin_guests_form-actions">
                                 <button
                                   class="admin_guests_btn accent"
@@ -815,6 +907,7 @@ const editSeats = (row: AdminHousehold) => {
                 duplicateOpenId={duplicateOpenId}
                 error={errorInRow ? writeError : undefined}
                 reloadHref={reloadHref}
+                takenHouseholds={takenHouseholds}
               />
             ) : (
               (() => {
@@ -848,6 +941,12 @@ const editSeats = (row: AdminHousehold) => {
                     }
                     error={errorInRow ? writeError : undefined}
                     reloadHref={reloadHref}
+                    takenHouseholds={takenHouseholds}
+                    invitationEdited={
+                      editDraft?.id === row.id
+                        ? editDraft.invitationEdited
+                        : undefined
+                    }
                   />
                 );
               })()
@@ -1033,6 +1132,12 @@ const editSeats = (row: AdminHousehold) => {
     const labelEdited = form.querySelector<HTMLInputElement>(
       "[data-label-edited]",
     );
+    const generatedLabel = form.querySelector<HTMLInputElement>(
+      "[name='generated_label']",
+    );
+    const invitationEdited = form.querySelector<HTMLInputElement>(
+      "[data-invitation-edited]",
+    );
     const warning = form.querySelector<HTMLElement>("[data-duplicate-warning]");
     const warningMessage = form.querySelector<HTMLElement>(
       "[data-duplicate-message]",
@@ -1044,11 +1149,19 @@ const editSeats = (row: AdminHousehold) => {
     const isEdit = form.dataset.variant === "edit";
     const currentId =
       form.querySelector<HTMLInputElement>("input[name='id']")?.value;
+    const households = JSON.parse(
+      drawer.dataset.adminHouseholds ?? "[]",
+    ) as Array<{
+      id: string;
+      label: string;
+      displayName: string;
+      names: string[];
+    }>;
     const allNames = () =>
       isEdit
         ? [
             ...form.querySelectorAll<HTMLInputElement>(
-              "[data-seat-kind='member']:not(.is-retired) input[name='seat_name']",
+              "[data-seat-row]:not(.is-retired) input[name='seat_name']",
             ),
           ]
             .map((field) => normalizeName(field.value))
@@ -1061,11 +1174,9 @@ const editSeats = (row: AdminHousehold) => {
             .map((field) => normalizeName(field.value))
             .filter(Boolean);
     const takenNames = () =>
-      [...document.querySelectorAll<HTMLElement>("[data-admin-household]")]
-        .filter((row) => row.dataset.householdId !== currentId)
-        .flatMap((row) =>
-          (row.dataset.invitedNames ?? "").split("|").filter(Boolean),
-        );
+      households
+        .filter((household) => household.id !== currentId)
+        .flatMap((household) => household.names);
     const updateDuplicate = () => {
       const names = allNames();
       const duplicate = names.find((name) =>
@@ -1077,30 +1188,39 @@ const editSeats = (row: AdminHousehold) => {
         if (warning) warning.hidden = true;
         return;
       }
-      const row = [
-        ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
-      ].find((item) =>
-        (item.dataset.invitedNames ?? "")
-          .split("|")
-          .some(
-            (taken) => duplicateNameKey(taken) === duplicateNameKey(duplicate),
-          ),
+      const row = households.find((household) =>
+        household.names.some(
+          (taken) => duplicateNameKey(taken) === duplicateNameKey(duplicate),
+        ),
       );
       if (warningMessage)
-        warningMessage.textContent = `${duplicate} is already invited with ${row?.querySelector<HTMLElement>("[data-col='household']")?.firstChild?.textContent?.trim() ?? "another household"}.`;
-      if (openLink && row?.dataset.householdId) {
+        warningMessage.textContent = `${duplicate} is already invited with ${row?.displayName ?? "another household"}.`;
+      if (openLink && row?.id) {
         const url = new URL(location.href);
-        url.searchParams.set("edit", row.dataset.householdId);
+        url.searchParams.set("edit", row.id);
         openLink.href = `${url.pathname}${url.search}`;
         openLink.hidden = false;
       }
       if (warning) warning.hidden = false;
     };
     const seatNames = () => allNames();
+    // Invited members only: the suggestion and the host ID never use a
+    // plus-one's name.
+    const memberNames = () =>
+      isEdit
+        ? [
+            ...form.querySelectorAll<HTMLInputElement>(
+              "[data-seat-row][data-seat-kind='member']:not(.is-retired) input[name='seat_name']",
+            ),
+          ]
+            .map((field) => normalizeName(field.value))
+            .filter(Boolean)
+        : allNames();
     const sync = () => {
       if (!count) return;
       const names = seatNames();
       const seats = Math.max(
+        1,
         names.length,
         Math.min(12, Number(count.value) || names.length),
       );
@@ -1124,22 +1244,20 @@ const editSeats = (row: AdminHousehold) => {
         );
         toggle.value = seats > names.length ? "off" : "on";
       }
-      const nextSuggestion = suggestInvitationName(names);
-      if (hostId && !hostId.dataset.edited && names.length) {
-        const idNames = names.map((name) =>
+      const members = memberNames();
+      const nextSuggestion = suggestInvitationName(members);
+      if (hostId && !hostId.dataset.edited && members.length) {
+        const idNames = members.map((name) =>
           name.includes(" ")
             ? `${name.split(/\s+/)[0]} ${displaySurname(name)}`
             : name,
         );
-        const taken = [
-          ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
-        ]
-          .flatMap((row) => [
-            row.dataset.householdId,
-            row.dataset.householdLabel,
-          ])
-          .filter(Boolean) as string[];
+        const taken = households.flatMap((household) => [
+          household.id,
+          household.label,
+        ]);
         hostId.value = generateHostId(idNames, taken);
+        if (generatedLabel) generatedLabel.value = hostId.value;
         if (hostIdText) hostIdText.textContent = hostId.value;
       }
       if (invitation && !invitation.dataset.edited)
@@ -1225,17 +1343,53 @@ const editSeats = (row: AdminHousehold) => {
         const next =
           Number(count?.value) +
           (submitter.matches("[data-seat-plus]") ? 1 : -1);
-        if (count) count.value = String(Math.max(names, Math.min(12, next)));
+        if (count)
+          count.value = String(Math.max(1, names, Math.min(12, next)));
         sync();
       } else if (submitter.matches("[data-plus-one-toggle]")) {
         event.preventDefault();
         const names = seatNames().length;
         const buttonValue = (submitter as HTMLButtonElement).value;
         if (count)
-          count.value =
-            buttonValue === "on"
-              ? String(Math.min(12, names + 1))
-              : String(names);
+          if (buttonValue === "on") {
+            count.value = String(Math.min(12, names + 1));
+          } else if (form.dataset.variant === "new") {
+            // Add has no seat rows: open seats are seat_count minus the names.
+            count.value = String(Math.max(1, names));
+          } else {
+            const removable = [
+              ...form.querySelectorAll<HTMLElement>(
+                "[data-seat-kind='plus_one'][data-seat-row]",
+              ),
+            ].filter((row) => {
+              const name = row.querySelector<HTMLInputElement>(
+                "input[name='seat_name']",
+              )?.value;
+              return (
+                !normalizeName(name ?? "") &&
+                row.dataset.activity !== "true"
+              );
+            });
+            for (const row of removable) {
+              const id = row.dataset.seatId;
+              if (id) {
+                const hidden = document.createElement("input");
+                hidden.type = "hidden";
+                hidden.name = "removed_seat";
+                hidden.value = id;
+                form.append(hidden);
+              }
+              row.remove();
+            }
+            // Off also drops open seats added in this draft (they have no row
+            // yet); the seats left are the rows that remain.
+            count.value = String(
+              Math.max(
+                1,
+                form.querySelectorAll("[data-seat-row]:not([hidden])").length,
+              ),
+            );
+          }
         sync();
       } else if (submitter.matches("[data-remove-open-seat]")) {
         event.preventDefault();
@@ -1301,8 +1455,8 @@ const editSeats = (row: AdminHousehold) => {
       }
     });
     invitation?.addEventListener("input", () => {
-      invitation.dataset.edited =
-        invitation.value !== suggestInvitationName(seatNames()) ? "true" : "";
+      invitation.dataset.edited = "true";
+      if (invitationEdited) invitationEdited.value = "1";
       sync();
     });
     hostId?.addEventListener("input", () => {
@@ -1313,7 +1467,8 @@ const editSeats = (row: AdminHousehold) => {
     restore?.addEventListener("click", () => {
       if (invitation) {
         delete invitation.dataset.edited;
-        invitation.value = suggestInvitationName(seatNames());
+        if (invitationEdited) invitationEdited.value = "";
+        invitation.value = suggestInvitationName(memberNames());
       }
       sync();
     });

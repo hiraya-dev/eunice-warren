@@ -262,6 +262,24 @@ test("D1 add validates label length and creates a collision-safe household", asy
   database.close();
 });
 
+test("D1 add refuses an active host ID collision", async () => {
+  const database = setup();
+  await assert.rejects(
+    () =>
+      createD1AdminStore(database).addHousehold(
+        {
+          label: "ALPHA_01",
+          displayName: "Another Alpha",
+          notes: null,
+          seats: [{ name: "A new guest" }],
+        },
+        "host@example.com",
+      ),
+    /Host ID is already in use/,
+  );
+  database.close();
+});
+
 test("D1 refuses an already invited full name and accepts it after confirmation", async () => {
   const database = setup();
   database.db.exec(`
@@ -353,6 +371,139 @@ test("D1 refuses a duplicate host ID on save", async () => {
     message: "Host ID is already in use.",
   });
   database.close();
+});
+
+test("save refuses duplicate names inside the draft in both stores", async () => {
+  const database = setup();
+  const d1 = await createD1AdminStore(database).saveHousehold(
+    {
+      id: "alpha",
+      updatedAt: now,
+      displayName: "Alpha",
+      notes: null,
+      seatCount: 3,
+      seats: seatInput({ 2: { name: "Alice Alpha", invitedName: "Alice Alpha" } }),
+    },
+    "host@example.com",
+  );
+  assert.deepEqual(d1, {
+    ok: false,
+    message: "The name “alice alpha” is already in this draft.",
+  });
+  database.close();
+
+  const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-admin-editor")!;
+  const original = structuredClone(row);
+  try {
+    const fake = await createFakeAdminStore().saveHousehold(
+      {
+        id: row.id,
+        updatedAt: row.updatedAt,
+        displayName: row.displayName,
+        notes: row.notes,
+        seatCount: row.seatCount,
+        seats: row.seats.map((seat, index) => ({
+          id: seat.id ?? seat.slot,
+          name: index === 1 ? row.seats[0].name ?? "" : seat.name ?? "",
+          invitedName: index === 1 ? row.seats[0].invitedName ?? undefined : seat.invitedName ?? undefined,
+        })),
+      },
+      "host@example.com",
+    );
+    assert.deepEqual(fake, {
+      ok: false,
+      message: "A guest name can only be added once.",
+    });
+  } finally {
+    Object.assign(row, original);
+    row.seats = original.seats;
+  }
+});
+
+test("edit refuses an already invited name until it is confirmed in both stores", async () => {
+  const database = setup();
+  database.db.exec(`
+    INSERT INTO households (id,label,display_name,ticket_code,status,created_at,updated_at)
+      VALUES ('beta','BETA_01','The Beta Family','BETA1','active','${now}','${now}');
+    INSERT INTO invite_seats (id,household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at)
+      VALUES (4,'beta','member',1,'active','Casey Beta','casey beta','beta','Casey Beta','${now}','${now}');
+  `);
+  const d1Store = createD1AdminStore(database);
+  const input = {
+    id: "alpha",
+    updatedAt: now,
+    displayName: "Alpha",
+    notes: null,
+    seatCount: 3,
+    seats: seatInput({ 2: { name: "Casey Beta", invitedName: "Casey Beta" } }),
+  };
+  assert.deepEqual(await d1Store.saveHousehold(input, "host@example.com"), {
+    ok: false,
+    message: "casey beta is already invited with The Beta Family.",
+  });
+  assert.equal(
+    (await d1Store.saveHousehold({ ...input, confirmedNames: ["Casey Beta"] }, "host@example.com")).ok,
+    true,
+  );
+  database.close();
+
+  const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-admin-editor")!;
+  const source = fakeAdminFixtures.find((fixture) => fixture.id === "hh-santos")!;
+  const original = structuredClone(row);
+  try {
+    const fakeStore = createFakeAdminStore();
+    const fakeInput = {
+      id: row.id,
+      updatedAt: row.updatedAt,
+      displayName: row.displayName,
+      notes: row.notes,
+      seatCount: row.seatCount,
+      seats: row.seats.map((seat, index) => ({
+        id: seat.id ?? seat.slot,
+        name: index === 1 ? source.seats[0].name ?? "" : seat.name ?? "",
+        invitedName: index === 1 ? source.seats[0].invitedName ?? undefined : seat.invitedName ?? undefined,
+      })),
+    };
+    const refused = await fakeStore.saveHousehold(fakeInput, "host@example.com");
+    assert.equal(refused.ok, false);
+    if (!refused.ok) assert.match(refused.message, /already invited/);
+    assert.equal(
+      (
+        await fakeStore.saveHousehold(
+          { ...fakeInput, confirmedNames: [source.seats[0].name!] },
+          "host@example.com",
+        )
+      ).ok,
+      true,
+    );
+  } finally {
+    Object.assign(row, original);
+    row.seats = original.seats;
+  }
+});
+
+test("save rejects blank and overlong host labels in both stores", async () => {
+  const database = setup();
+  const d1Store = createD1AdminStore(database);
+  for (const label of ["", "x".repeat(81)])
+    assert.deepEqual(
+      await d1Store.saveHousehold(
+        { id: "alpha", updatedAt: now, label, displayName: "Alpha", notes: null, seatCount: 3, seats: seatInput() },
+        "host@example.com",
+      ),
+      { ok: false, message: "Host label is required and must be 80 characters or fewer." },
+    );
+  database.close();
+
+  const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-admin-editor")!;
+  for (const label of ["", "x".repeat(81)])
+    assert.deepEqual(
+      await createFakeAdminStore().saveHousehold(
+        { id: row.id, updatedAt: row.updatedAt, label, displayName: row.displayName, notes: row.notes, seatCount: row.seatCount, seats: row.seats.map((seat) => ({ id: seat.id ?? seat.slot, name: seat.name ?? "", invitedName: seat.invitedName ?? undefined })) },
+        "host@example.com",
+      ),
+      { ok: false, message: "Host label is required and must be 80 characters or fewer." },
+    );
 });
 
 for (const scenario of [
@@ -782,16 +933,17 @@ test("guest lookup and an open form both reject an archived household", async ()
 });
 
 test("fake stale save is refused without changing typed values", async () => {
-  const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-santos")!;
+  const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-admin-editor")!;
   const original = structuredClone(row);
   try {
     const store = createFakeAdminStore();
     const list = await store.getGuestList();
     const current = list.rows.find((item) => item.id === row.id)!;
+    const token = current.updatedAt;
     await store.saveHousehold(
       {
         id: row.id,
-        updatedAt: current.updatedAt,
+        updatedAt: token,
         displayName: "First fake save",
         notes: null,
         seatCount: row.seatCount,
@@ -808,7 +960,7 @@ test("fake stale save is refused without changing typed values", async () => {
         store.saveHousehold(
           {
             id: row.id,
-            updatedAt: current.updatedAt,
+            updatedAt: token,
             displayName: "Stale fake save",
             notes: "no",
             seatCount: row.seatCount,
@@ -826,6 +978,141 @@ test("fake stale save is refused without changing typed values", async () => {
   } finally {
     Object.assign(row, original);
     row.seats = original.seats;
+  }
+});
+
+test("removeSeatIds refuses named and active seats and removes a safe seat in both stores", async () => {
+  const database = setup();
+  const d1Store = createD1AdminStore(database);
+  const named = await d1Store.saveHousehold(
+    { id: "alpha", updatedAt: now, displayName: "Alpha", notes: null, seatCount: 2, seats: seatInput(), removeSeatIds: [1] },
+    "host@example.com",
+  );
+  assert.deepEqual(named, {
+    ok: false,
+    message: "Only an unnamed open seat with no activity can be removed.",
+  });
+  const safeDatabase = setup();
+  const safe = await createD1AdminStore(safeDatabase).saveHousehold(
+    { id: "alpha", updatedAt: now, displayName: "Alpha", notes: null, seatCount: 2, seats: seatInput(), removeSeatIds: [3] },
+    "host@example.com",
+  );
+  assert.equal(safe.ok, true);
+  assert.equal(
+    (safeDatabase.db.prepare("SELECT count(*) AS count FROM invite_seats WHERE id=3").get() as { count: number }).count,
+    0,
+  );
+  safeDatabase.close();
+  database.db.exec("INSERT INTO responses (id,household_id,submitted_at,respondent_name,attending,guest_count,email) VALUES (1,'alpha','2026-11-21T01:00:00Z','Alice',1,1,'a@example.com'); INSERT INTO response_seats (response_id,seat_id,kind,name,attending) VALUES (1,3,'plus_one','Guest',1);");
+  const active = await d1Store.saveHousehold(
+    { id: "alpha", updatedAt: now, displayName: "Alpha", notes: null, seatCount: 2, seats: seatInput(), removeSeatIds: [3] },
+    "host@example.com",
+  );
+  assert.deepEqual(active, {
+    ok: false,
+    message: "Only an unnamed open seat with no activity can be removed.",
+  });
+  database.close();
+
+  const namedRow = fakeAdminFixtures.find((row) => row.id === "hh-lim")!;
+  const namedOriginal = structuredClone(namedRow);
+  const openRow = fakeAdminFixtures.find((row) => row.id === "hh-mendoza")!;
+  const openOriginal = structuredClone(openRow);
+  const activityRow = fakeAdminFixtures.find((row) => row.id === "hh-admin-activity")!;
+  const activityOriginal = structuredClone(activityRow);
+  try {
+    const fake = createFakeAdminStore();
+    const namedResult = await fake.saveHousehold(
+      { id: namedRow.id, updatedAt: namedRow.updatedAt, displayName: namedRow.displayName, notes: namedRow.notes, seatCount: 1, seats: namedRow.seats.map((seat) => ({ id: seat.id ?? seat.slot, name: seat.name ?? "", invitedName: seat.invitedName ?? undefined })), removeSeatIds: [2] },
+      "host@example.com",
+    );
+    assert.deepEqual(namedResult, {
+      ok: false,
+      message: "Only an unnamed open seat with no activity can be removed.",
+    });
+    const activityResult = await fake.saveHousehold(
+      { id: activityRow.id, updatedAt: activityRow.updatedAt, displayName: activityRow.displayName, notes: activityRow.notes, seatCount: 1, seats: activityRow.seats.map((seat) => ({ id: seat.id ?? seat.slot, name: seat.name ?? "", invitedName: seat.invitedName ?? undefined })), removeSeatIds: [2] },
+      "host@example.com",
+    );
+    assert.deepEqual(activityResult, {
+      ok: false,
+      message: "Only an unnamed open seat with no activity can be removed.",
+    });
+    const removed = await fake.saveHousehold(
+      { id: openRow.id, updatedAt: openRow.updatedAt, displayName: openRow.displayName, notes: openRow.notes, seatCount: 1, seats: openRow.seats.map((seat) => ({ id: seat.id ?? seat.slot, name: seat.name ?? "", invitedName: seat.invitedName ?? undefined })), removeSeatIds: [2] },
+      "host@example.com",
+    );
+    assert.equal(removed.ok, true);
+    assert.equal(openRow.seats.some((seat) => seat.id === 2), false);
+  } finally {
+    Object.assign(namedRow, namedOriginal);
+    namedRow.seats = namedOriginal.seats;
+    Object.assign(openRow, openOriginal);
+    openRow.seats = openOriginal.seats;
+    Object.assign(activityRow, activityOriginal);
+    activityRow.seats = activityOriginal.seats;
+  }
+});
+
+test("dashboard stores use the last surname token and tolerate missing fake timestamps", async () => {
+  const database = setup();
+  const added = await createD1AdminStore(database).addHousehold(
+    { label: "Compound", displayName: "Compound", notes: null, seats: [{ name: "Ana De Castro" }] },
+    "host@example.com",
+  );
+  assert.equal(
+    (database.db.prepare("SELECT surname_key FROM invite_seats WHERE household_id=?").get(added.id) as { surname_key: string }).surname_key,
+    "castro",
+  );
+  database.close();
+
+  const addedFake = await createFakeAdminStore().addHousehold(
+    { label: "Compound Fake", displayName: "Compound Fake", notes: null, seats: [{ name: "Ana De Castro" }] },
+    "host@example.com",
+  );
+  const fakeRow = fakeAdminFixtures.find((row) => row.id === addedFake.id)!;
+  assert.equal(fakeRow.seats[0].surnameKey, "castro");
+  const index = fakeAdminFixtures.indexOf(fakeRow);
+  if (index >= 0) fakeAdminFixtures.splice(index, 1);
+
+  const noTimestamp = fakeAdminFixtures.find((row) => row.id === "hh-mendoza")!;
+  const originalNoTimestamp = structuredClone(noTimestamp);
+  try {
+    const result = await createFakeAdminStore().saveHousehold({
+      id: noTimestamp.id,
+      displayName: noTimestamp.displayName,
+      notes: noTimestamp.notes,
+      seatCount: noTimestamp.seatCount,
+      seats: noTimestamp.seats.map((seat) => ({ id: seat.id ?? seat.slot, name: seat.name ?? "", invitedName: seat.invitedName ?? undefined })),
+    }, "host@example.com");
+    assert.equal(result.ok, true);
+  } finally {
+    Object.assign(noTimestamp, originalNoTimestamp);
+    noTimestamp.seats = originalNoTimestamp.seats;
+  }
+});
+
+test("fake save treats an archived household as missing", async () => {
+  const row = fakeAdminFixtures.find((fixture) => fixture.id === "hh-admin-editor")!;
+  const original = structuredClone(row);
+  try {
+    const store = createFakeAdminStore();
+    await store.archiveHousehold(row.id, "host@example.com", row.updatedAt);
+    const result = await store.saveHousehold({
+      id: row.id,
+      updatedAt: row.updatedAt,
+      displayName: row.displayName,
+      notes: row.notes,
+      seatCount: row.seatCount,
+      seats: row.seats.map((seat) => ({ id: seat.id ?? seat.slot, name: seat.name ?? "", invitedName: seat.invitedName ?? undefined })),
+    }, "host@example.com");
+    assert.deepEqual(result, { ok: false, message: "Household not found." });
+  } finally {
+    Object.assign(row, original);
+    row.seats = original.seats;
+    delete (row as typeof row & { archived?: boolean }).archived;
+    delete row.archivedAt;
+    delete row.archivedBy;
   }
 });
 

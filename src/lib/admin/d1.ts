@@ -24,7 +24,7 @@ import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 import { songKey } from "./presentation.ts";
 import { normalizeGuestName } from "../rsvp/store.ts";
 import { MAX_SEATS } from "../rsvp/limits.ts";
-import { displaySurname, duplicateNameKey } from "./names.ts";
+import { duplicateNameKey } from "./names.ts";
 
 const TICKET_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -776,7 +776,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
               nextName,
               invited,
               key,
-              duplicateNameKey(displaySurname(invited!)) || null,
+              key.split(" ").at(-1) || null,
               actor,
               now,
               now,
@@ -803,7 +803,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
             .bind(
               invited,
               key,
-              duplicateNameKey(displaySurname(invited!)) || null,
+              key.split(" ").at(-1) || null,
               now,
               actor,
               seat.id,
@@ -854,7 +854,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
             slot,
             kind === "member" ? name : null,
             key,
-            key ? duplicateNameKey(displaySurname(name!)) : null,
+            key ? key.split(" ").at(-1) : null,
             name,
             name ? "host" : null,
             name ? actor : null,
@@ -987,7 +987,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
             index + 1,
             clean,
             key,
-            key ? duplicateNameKey(displaySurname(clean)) : null,
+            key ? key.split(" ").at(-1) : null,
             clean,
             now,
             now,

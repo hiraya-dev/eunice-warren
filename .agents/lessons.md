@@ -441,13 +441,23 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-052 — A form with several submit buttons makes Save the default
 - **Date:** 2026-11-22
-- **Trigger:** PR #99 CHANGES_REQUIRED
+- **Trigger:** PR #99 CHANGES_REQUIRED; PR #101 CHANGES_REQUIRED (the Enter-saves specs were deleted when the form moved into a drawer)
 - **Symptom:** in the Guest list editor, pressing Enter in the household name field fired the seat stepper's "−" (or "+ Add member") instead of Save, silently dropping an empty seat; the specs only clicked Save, so nobody pressed Enter.
 - **Root cause:** implicit submission uses the first submit button in tree order, and the stepper buttons came before Save.
 - **Rule:** any form with more than one submit button puts its primary action first in tree order (a visually hidden, `tabindex="-1"`, `aria-hidden` copy of Save is fine) so Enter always does what Save does. Secondary submits (stepper, add row) carry their own `name`/`value`.
 - **Check:** the form's spec presses Enter in a text field and expects the save, with every other field (seat count) unchanged (`tests/admin-guests.spec.ts`).
 - **Guard:** none
 - **Paths:** `src/components/admin/**`, `src/pages/admin/**`, `src/components/sections/Rsvp.astro`
+
+### L-053 — A rewritten form keeps its old assertions and proves every round trip
+- **Date:** 2026-11-22
+- **Trigger:** PR #101 CHANGES_REQUIRED
+- **Symptom:** the Guest list editor moved from inline rows into a drawer. The rewrite deleted the Enter-saves, Cancel-keeps-query, stale-refusal and stepper specs without replacing them. It also shipped no-JS paths that never reached a save: "Add anyway" was forgotten on the round trip; the invitation name flipped to "edited"; an archived seat was dropped by "−"; "Remove open seat" skipped the save and counted the seat twice. A named plus-one also showed as an open seat. The JS and no-JS halves drifted, and only the JS half had specs.
+- **Root cause:** the brief listed the new flows. It never required each deleted assertion to come back, so draft state carried across a POST (confirmations, an "edited" flag, removed or archived seats) had no test on the no-JS path.
+- **Rule:** before a form rewrite, list the old spec's assertions in the brief and keep or replace every one. Any draft state that must survive a round trip goes into a hidden field the server re-emits, and each secondary submit (add, confirm, remove, stepper, toggle) gets one no-JS spec that ends in a real save and checks the stored result. The JS path and the no-JS path share the same helpers and the same counts.
+- **Check:** `git diff origin/main -- tests/` shows no deleted `test(` or `expect(` without a replacement named in the PR body, and `tests/admin-guests.spec.ts` has a `javaScriptEnabled: false` spec per secondary submit that ends in a save.
+- **Guard:** none
+- **Paths:** `src/components/admin/**`, `src/pages/admin/**`, `tests/admin-*.spec.ts`
 
 ## CI scripts
 

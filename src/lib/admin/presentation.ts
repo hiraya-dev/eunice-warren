@@ -1,3 +1,5 @@
+import { displaySurname, duplicateNameKey } from "./names.ts";
+
 const manila = "Asia/Manila";
 const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
 const RSVP_DEADLINE_LABEL = "December 12";
@@ -345,4 +347,3 @@ export function rsvpHistoryBody(
   if (current.note) return `“${current.note}”`;
   return current.attending ? "No changes" : "Not coming";
 }
-import { displaySurname, duplicateNameKey } from "./names.ts";

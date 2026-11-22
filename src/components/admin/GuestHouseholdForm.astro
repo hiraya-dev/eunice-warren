@@ -11,6 +11,8 @@ interface DraftSeat {
   retire?: boolean;
   hasActivity?: boolean;
   rsvp?: string;
+  namedBy?: string | null;
+  namedByKind?: "guest" | "host" | null;
 }
 
 interface NewDraft {
@@ -21,6 +23,14 @@ interface NewDraft {
   seatCount: number;
   confirmedNames?: string[];
   labelEdited?: boolean;
+  invitationEdited?: boolean;
+}
+
+interface TakenHousehold {
+  id: string;
+  label: string;
+  displayName: string;
+  names: string[];
 }
 
 type Props =
@@ -31,6 +41,7 @@ type Props =
       duplicateOpenId?: string;
       error?: string;
       reloadHref?: string;
+      takenHouseholds: TakenHousehold[];
     }
   | {
       variant: "edit";
@@ -44,6 +55,8 @@ type Props =
       duplicateOpenId?: string;
       error?: string;
       reloadHref?: string;
+      takenHouseholds: TakenHousehold[];
+      invitationEdited?: boolean;
     };
 
 const props = Astro.props;
@@ -62,17 +75,34 @@ const names =
   props.variant === "new"
     ? props.draft.memberNames.filter(Boolean)
     : props.seats
-        .filter((seat) => seat.kind === "member" && !seat.retire && seat.name)
+        .filter((seat) => !seat.retire && seat.name)
         .map((seat) => seat.name);
-const suggestion = suggestInvitationName(names);
+// The invitation is addressed to the invited members; a plus-one the guest
+// named counts as a seat, never as part of the suggested name.
+const suggestion = suggestInvitationName(
+  props.variant === "new"
+    ? names
+    : props.seats
+        .filter((seat) => seat.kind === "member" && !seat.retire && seat.name)
+        .map((seat) => seat.name),
+);
 const seatCount =
-  props.variant === "new" ? props.draft.seatCount : props.seats.length;
+  props.variant === "new"
+    ? props.draft.seatCount
+    : props.seats.filter((seat) => !seat.retire).length;
 const openSeats = Math.max(0, seatCount - names.length);
 const invitationName =
   props.variant === "new"
-    ? props.draft.displayName || suggestion
-    : props.displayName || suggestion;
-const invitationEdited = invitationName !== suggestion;
+    ? props.draft.invitationEdited
+      ? props.draft.displayName
+      : suggestion
+    : (props.invitationEdited ?? props.displayName !== suggestion)
+      ? props.displayName
+      : suggestion;
+const invitationEdited =
+  props.variant === "new"
+    ? Boolean(props.draft.invitationEdited)
+    : (props.invitationEdited ?? invitationName !== suggestion);
 const label =
   props.variant === "new"
     ? props.draft.labelEdited
@@ -119,6 +149,7 @@ const rsvpState = (value: string | undefined) =>
   aria-labelledby="admin-drawer-title"
   data-admin-drawer
   data-admin-drawer-kind={props.variant}
+  data-admin-households={JSON.stringify(props.takenHouseholds)}
 >
   <a
     class="admin-drawer_scrim"
@@ -161,6 +192,9 @@ const rsvpState = (value: string | undefined) =>
               value={props.draft.labelEdited ? "1" : ""}
               data-label-edited
             />
+            {(props.draft.confirmedNames ?? []).map((name) => (
+              <input type="hidden" name="confirmed_name" value={name} />
+            ))}
             <input
               type="hidden"
               name="generated_label"
@@ -169,6 +203,12 @@ const rsvpState = (value: string | undefined) =>
           </>
         )
       }
+      <input
+        type="hidden"
+        name="invitation_edited"
+        value={invitationEdited ? "1" : ""}
+        data-invitation-edited
+      />
       <button
         class="sr-only"
         type="submit"
@@ -380,6 +420,35 @@ const rsvpState = (value: string | undefined) =>
                           </label>
                         )}
                       </div>
+                    </div>
+                  ) : seat.name ? (
+                    <div
+                      class="admin_guests_person"
+                      data-seat-row
+                      data-seat-kind="plus_one"
+                      data-seat-id={seat.id}
+                      data-activity={seat.hasActivity ? "true" : undefined}
+                    >
+                      <input
+                        type="hidden"
+                        name="seat_id"
+                        value={seat.id ?? ""}
+                      />
+                      <input type="hidden" name="seat_name" value={seat.name} />
+                      <input type="hidden" name="invited_name" value="" />
+                      <div class="admin_guests_person_identity">
+                        <strong>{seat.name}</strong>
+                        <small>
+                          +1 · named by {seat.namedBy ?? "their guest"}
+                        </small>
+                      </div>
+                      <div
+                        class="admin_guests_person_rsvp"
+                        data-state={seat.rsvp ?? "none"}
+                      >
+                        {rsvpState(seat.rsvp)}
+                      </div>
+                      <div class="admin_guests_person_action"></div>
                     </div>
                   ) : (
                     <div
@@ -599,7 +668,10 @@ const rsvpState = (value: string | undefined) =>
           props.variant === "new" ? (
             <span class="admin_guests_footer_hint">Enter saves</span>
           ) : (
-            <a class="accent" href={withParam("archive", props.row.id)}>
+            <a
+              class="accent"
+              href={withParam("archive", props.row.id)}
+            >
               Archive household
             </a>
           )

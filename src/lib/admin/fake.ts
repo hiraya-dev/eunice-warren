@@ -19,7 +19,7 @@ import { normalizeGuestName } from "../rsvp/store.ts";
 import { MAX_SEATS } from "../rsvp/limits.ts";
 import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 import { songKey } from "./presentation.ts";
-import { displaySurname, duplicateNameKey } from "./names.ts";
+import { duplicateNameKey } from "./names.ts";
 
 const TICKET_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -663,7 +663,9 @@ export function createFakeAdminStore(): AdminStore {
         ok: false as const,
         message: "Seats must be between 1 and 12.",
       };
-    const row = fakeAdminFixtures.find((item) => item.id === input.id);
+    const row = fakeAdminFixtures.find(
+      (item) => item.id === input.id && !item.archivedAt,
+    );
     if (!row) return { ok: false as const, message: "Household not found." };
     if (
       input.label !== undefined &&
@@ -676,7 +678,7 @@ export function createFakeAdminStore(): AdminStore {
       )
     )
       return { ok: false as const, message: "Host ID is already in use." };
-    if ((input.updatedAt ?? "") !== (row.updatedAt ?? ""))
+    if ((input.updatedAt ?? row.updatedAt) !== row.updatedAt)
       throw new StaleHouseholdError();
     const retired = new Set(
       input.seats
@@ -835,7 +837,8 @@ export function createFakeAdminStore(): AdminStore {
         current.invitedName = invited;
         const key = normalizeGuestName(invited!);
         current.nameKey = key;
-        current.surnameKey = duplicateNameKey(displaySurname(invited!)) || null;
+        current.surnameKey =
+          key.split(" ").at(-1) || null;
         current.updatedAt = now;
       }
     }
@@ -873,6 +876,7 @@ export function createFakeAdminStore(): AdminStore {
             active.length
         ];
       const name = value?.name.trim() || null;
+      const key = name ? normalizeGuestName(name) : null;
       row.seats.push(
         seat(
           slot,
@@ -884,6 +888,8 @@ export function createFakeAdminStore(): AdminStore {
             namedBy: name ? actor : null,
             namedByKind: name ? "host" : null,
             namedAt: name ? now : null,
+            nameKey: key,
+            surnameKey: key ? key.split(" ").at(-1) : null,
             updatedAt: now,
           },
         ),
@@ -973,11 +979,14 @@ export function createFakeAdminStore(): AdminStore {
       updatedAt: now,
       seats: Array.from({ length: seatCount }, (_, index) => {
         const clean = names[index] ?? null;
+        const key = clean ? normalizeGuestName(clean) : null;
         return seat(index + 1, clean, clean, clean ? "member" : "plus_one", {
           state: clean ? undefined : "open",
           namedBy: clean ? actor : null,
           namedByKind: clean ? "host" : null,
           namedAt: clean ? now : null,
+          nameKey: key,
+          surnameKey: key ? key.split(" ").at(-1) : null,
           updatedAt: now,
         });
       }),

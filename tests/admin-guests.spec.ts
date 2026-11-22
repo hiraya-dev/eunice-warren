@@ -87,8 +87,59 @@ test.describe("guest list drawer", () => {
     );
     await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(
+            document
+              .querySelector("[data-admin-drawer]")
+              ?.contains(document.activeElement),
+          ),
+        ),
+      )
+      .toBe(true);
     await page.keyboard.press("Shift+Tab");
-    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(
+            document
+              .querySelector("[data-admin-drawer]")
+              ?.contains(document.activeElement),
+          ),
+        ),
+      )
+      .toBe(true);
+    await page.getByRole("link", { name: "Cancel" }).click();
+    await expect(page).toHaveURL(/filter=waiting.*q=editor/);
+    await expect(add).toBeFocused();
+
+    await add.click();
+    await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(
+            document
+              .querySelector("[data-admin-drawer]")
+              ?.contains(document.activeElement),
+          ),
+        ),
+      )
+      .toBe(true);
+    await page.keyboard.press("Shift+Tab");
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(
+            document
+              .querySelector("[data-admin-drawer]")
+              ?.contains(document.activeElement),
+          ),
+        ),
+      )
+      .toBe(true);
     await page.keyboard.press("Escape");
     await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
     await expect(add).toBeFocused();
@@ -140,6 +191,11 @@ test.describe("guest list drawer", () => {
         new RegExp(`(?=.*new=1)(?=.*filter=waiting)(?=.*q=${surname})`),
       );
       await expect(page.locator("[data-admin-added]")).toContainText("Added");
+      await expect(
+        page
+          .locator("[data-admin-household]")
+          .filter({ hasText: `Sage ${surname}` }),
+      ).toHaveCount(1);
 
       // Archive what the test added: other specs count the active households.
       await page.goto(`/admin/guests?filter=waiting&q=${surname}`);
@@ -172,6 +228,176 @@ test.describe("guest list drawer", () => {
     );
     await form.locator("[data-confirm-duplicate]").click();
     await expect(form.locator("[data-duplicate-warning]")).toBeHidden();
+    await expect(form.locator("[data-name-chip]")).toContainText(
+      "Antonio Santos",
+    );
+  });
+
+  test("checks names outside the active filter", async ({ page }) => {
+    await page.goto("/admin/guests?new=1&filter=waiting");
+    const form = page.locator("[data-new-household]");
+    await form.locator("[data-add-name]").fill("Kat Lim");
+    await form.locator("[data-add-name]").press("Enter");
+    await expect(form.locator("[data-duplicate-warning]")).toBeVisible();
+    await expect(form.locator("[data-duplicate-message]")).toContainText(
+      "Kat Lim",
+    );
+  });
+
+  test("renders a named plus-one as a person and keeps it when turning plus-one off", async ({
+    page,
+  }) => {
+    await page.goto(`/admin/guests?edit=hh-lim`);
+    const form = page.locator("[data-edit-household]");
+    const named = form.locator("[data-seat-kind='plus_one']").filter({
+      hasText: "Jonas Ong",
+    });
+    await expect(named).toHaveCount(1);
+    await expect(named).not.toContainText("Remove open seat");
+    await expect(named).toContainText("+1 · named by Kat");
+    await expect(form.locator("[data-seat-summary]")).toContainText(
+      "2 names + 0",
+    );
+    // The suggestion is built from the invited members only.
+    await expect(form.locator("[data-restore-suggestion]")).not.toContainText(
+      "Jonas",
+    );
+    // Edit hides the switch (Admin 12 has none); its handler still guards
+    // named plus-ones, so drive it directly.
+    const toggle = form.locator("[data-plus-one-toggle]");
+    await toggle.evaluate((button: HTMLButtonElement) => button.click());
+    await toggle.evaluate((button: HTMLButtonElement) => button.click());
+    await expect(form.locator("[data-seat-kind='plus_one']")).toContainText(
+      "Jonas Ong",
+    );
+    await expect(form.locator("[data-seat-summary]")).toContainText(
+      "2 names + 0",
+    );
+  });
+
+  test("pressing Enter in the invitation name saves add and edit", async ({
+    page,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    await withAdminLock(async () => {
+      await page.goto(`/admin/guests?new=1&q=${surname}`);
+      const addForm = page.locator("[data-new-household]");
+      await addForm.locator("[data-add-name]").fill(`Enter ${surname}`);
+      await addForm.locator("[data-add-name]").press("Enter");
+      await addForm
+        .locator("[name='display_name']")
+        .fill(`Enter invite ${surname}`);
+      await addForm.locator("[name='display_name']").press("Enter");
+      await expect(page).toHaveURL(new RegExp(`q=${surname}`));
+      const added = page.locator("[data-admin-household]").filter({
+        hasText: `Enter ${surname}`,
+      });
+      await expect(added.locator("[data-col='seats']")).toContainText("1 seat");
+      await expect(added).toContainText(`Enter invite ${surname}`);
+      await added.locator("summary").click();
+      await added.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+
+      await page.goto(`/admin/guests?edit=${editor.id}&q=${surname}`);
+      const editForm = page.locator("[data-edit-household]");
+      const seatCount = await editForm.locator("[data-seat-row]").count();
+      await editForm.locator("[name='display_name']").fill("Enter edit");
+      await editForm.locator("[name='display_name']").press("Enter");
+      await expect(page).toHaveURL(/q=/);
+      const edited = rowById(page, editor.id);
+      await expect(edited.locator("[data-col='seats']")).toContainText(
+        `${seatCount} seats`,
+      );
+      await expect(edited).toContainText("Enter edit");
+    });
+  });
+
+  test("keeps the stepper between one and twelve seats", async ({ page }) => {
+    await page.goto("/admin/guests?new=1");
+    const form = page.locator("[data-new-household]");
+    await form.locator("summary").filter({ hasText: "More seats" }).click();
+    await form.locator("[data-seat-minus]").click();
+    await expect(form.locator("[data-seat-output]")).toHaveText("1");
+    for (let index = 0; index < 15; index += 1)
+      await form.locator("[data-seat-plus]").click();
+    await expect(form.locator("[data-seat-output]")).toHaveText("12");
+  });
+
+  test("keeps rejected stale save and archive drafts in the drawer with Reload", async ({
+    browser,
+  }) => {
+    await withAdminLock(async () => {
+      const page = await browser.newPage();
+      const other = await browser.newPage();
+      await page.goto(`/admin/guests?edit=${editor.id}&filter=waiting&q=stale`);
+      await other.goto(
+        `/admin/guests?edit=${editor.id}&filter=waiting&q=stale`,
+      );
+      await other
+        .locator("[data-edit-household] [name='notes']")
+        .fill("Fresh edit");
+      await other
+        .locator("[data-edit-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(other).toHaveURL(/filter=waiting.*q=stale/);
+      const staleForm = page.locator("[data-edit-household]");
+      await staleForm
+        .locator("[name='display_name']")
+        .fill("Stale typed value");
+      await staleForm
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(staleForm.locator("[data-admin-write-error]")).toContainText(
+        "Reload",
+      );
+      await expect(staleForm.locator("[name='display_name']")).toHaveValue(
+        "Stale typed value",
+      );
+      await expect(
+        staleForm.getByRole("link", { name: "Reload" }),
+      ).toBeVisible();
+
+      await page.goto(
+        `/admin/guests?edit=${editor.id}&filter=waiting&q=stale-archive`,
+      );
+      await other.goto(
+        `/admin/guests?edit=${editor.id}&filter=waiting&q=stale-archive`,
+      );
+      // Open the confirm first, then change the household elsewhere, so the
+      // confirm's token is stale and the archive is refused.
+      await page
+        .locator("[data-edit-household]")
+        .getByRole("link", { name: "Archive household" })
+        .click();
+      await expect(page.locator("[data-admin-archive-confirm]")).toBeVisible();
+      await other
+        .locator("[data-edit-household] [name='notes']")
+        .fill("Fresh archive edit");
+      await other
+        .locator("[data-edit-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(other).toHaveURL(/q=stale-archive/);
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      // Archive household closes the drawer for #99's confirm row (until PR 4),
+      // so a stale archive is refused with the page-level notice and Reload.
+      await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+      await expect(page.locator("[data-admin-write-error]")).toContainText(
+        "Reload",
+      );
+      await expect(page.locator("[data-admin-write-error] a")).toHaveText(
+        "Reload",
+      );
+      await other.close();
+      await page.close();
+    });
   });
 
   test("supports edit archive undo, invited-name fix, add guest and open-seat removal", async ({
@@ -292,5 +518,68 @@ test.describe("guest list drawer", () => {
       form.locator("details").filter({ hasText: "Edit ID" }),
     ).toHaveCount(1);
     await page.close();
+  });
+
+  test("saves typed guest input without pressing Enter when JavaScript is disabled", async ({
+    browser,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    await withAdminLock(async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.goto(`/admin/guests?new=1&q=${surname}`);
+      const form = page.locator("[data-new-household]");
+      await form.locator("[data-add-name]").fill(`NoJS ${surname}`);
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      const added = page.locator("[data-admin-household]").filter({
+        hasText: `NoJS ${surname}`,
+      });
+      await expect(added).toHaveCount(1);
+      await expect(added.locator("[data-col='seats']")).toContainText("1 seat");
+
+      await added.locator("summary").click();
+      await added.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(
+        page
+          .locator("[data-admin-household]")
+          .filter({ hasText: `NoJS ${surname}` }),
+      ).toHaveCount(0);
+      await page.close();
+    });
+  });
+
+  test("keeps no-JS duplicate confirmation in the draft", async ({
+    browser,
+  }) => {
+    await withAdminLock(async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.goto("/admin/guests?new=1");
+      const form = page.locator("[data-new-household]");
+      await form.locator("[data-add-name]").fill("Antonio Santos");
+      await form.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(form.locator("[data-duplicate-warning]")).toBeVisible();
+      await form.getByRole("button", { name: "Add anyway" }).click();
+      // The round trip keeps the confirmed name in the draft; Save then adds it.
+      const draft = page.locator("[data-new-household]");
+      await expect(draft.locator("[data-duplicate-warning]")).toBeHidden();
+      await expect(draft.locator("input[name='confirmed_name']")).toHaveCount(1);
+      await draft.getByRole("button", { name: "Save", exact: true }).click();
+      const added = page.locator("[data-admin-household]").filter({
+        has: page.locator("[data-col='household']", {
+          hasText: /^Antonio Santos/,
+        }),
+      });
+      await expect(added).toHaveCount(1);
+      await added.locator("summary").click();
+      await added.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await page.close();
+    });
   });
 });
