@@ -276,6 +276,104 @@ test.describe("guest list drawer", () => {
     }
   });
 
+  test("a clean edit of a household sharing a name closes without asking", async ({
+    page,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests?new=1");
+      const add = page.locator("[data-new-household]");
+      await add.locator("[data-add-name]").fill(`Lead ${surname}`);
+      await add.locator("[data-add-name]").press("Enter");
+      // A made-up name the fake store already has, saved with Add anyway.
+      await add.locator("[data-add-name]").fill("Antonio Santos");
+      await add.locator("[data-add-name]").press("Enter");
+      await add.locator("[data-confirm-duplicate]").click();
+      await add.getByRole("button", { name: "Save", exact: true }).click();
+      const row = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await expect(row).toHaveCount(1);
+      const id = await row.getAttribute("data-household-id");
+
+      let dialogs = 0;
+      const unexpected = async (dialog: import("@playwright/test").Dialog) => {
+        dialogs += 1;
+        await dialog.dismiss();
+      };
+      page.on("dialog", unexpected);
+      try {
+        await page.goto(`/admin/guests?edit=${id}`);
+        const drawer = page.locator("[data-admin-drawer]");
+        await expect(drawer.locator("h2")).toBeFocused();
+        // The script shows the shared-name warning; that alone is no change.
+        await expect(drawer.locator("[data-duplicate-warning]")).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(drawer).toHaveCount(0);
+        expect(dialogs).toBe(0);
+      } finally {
+        page.off("dialog", unexpected);
+      }
+
+      await page.goto("/admin/guests");
+      const saved = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await saved.locator("summary").click();
+      await saved.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(
+        page.locator("[data-admin-household]").filter({ hasText: surname }),
+      ).toHaveCount(0);
+    });
+  });
+
+  test("guards Archive household and warns on reload after a drawer swap", async ({
+    page,
+  }) => {
+    await page.goto(`/admin/guests?edit=${editor.id}`);
+    const drawer = page.locator("[data-admin-drawer]");
+    await expect(drawer.locator("h2")).toBeFocused();
+    await drawer.locator("[name='notes']").fill("Swap guard");
+
+    // Archive household is a full navigation: dismissing keeps the draft.
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await drawer.getByRole("link", { name: "Archive household" }).click();
+    await expect(page).toHaveURL(new RegExp(`edit=${editor.id}`));
+    await expect(drawer.locator("[name='notes']")).toHaveValue("Swap guard");
+
+    // OK on a row link swaps the drawer in place; the scrim covers the list,
+    // so click from script.
+    const types: string[] = [];
+    page.once("dialog", async (dialog) => {
+      types.push(dialog.type());
+      await dialog.accept();
+    });
+    await rowById(page, openSeatFixture.id)
+      .locator("[data-admin-edit]")
+      .first()
+      .evaluate((link: HTMLAnchorElement) => link.click());
+    await expect(drawer.locator("input[name='id']")).toHaveValue(
+      openSeatFixture.id,
+    );
+    expect(types).toEqual(["confirm"]);
+
+    // A stepper change fires no input event; reload must still warn.
+    await drawer.locator("summary").filter({ hasText: "More seats" }).click();
+    await drawer.locator("[data-seat-plus]").click();
+    const unload = page.waitForEvent("dialog");
+    void page.evaluate(() => location.reload()).catch(() => {});
+    const dialog = await unload;
+    expect(dialog.type()).toBe("beforeunload");
+    await dialog.dismiss();
+    await expect(drawer.locator("input[name='id']")).toHaveValue(
+      openSeatFixture.id,
+    );
+  });
+
   test("secondary guest actions do not prompt", async ({ page, browser }) => {
     let dialogs = 0;
     const unexpected = async (dialog: import("@playwright/test").Dialog) => {

@@ -1092,6 +1092,9 @@ const editSeats = (row: AdminHousehold) => {
       if (push) history.pushState(null, "", href);
       setDrawerOpen(true);
       hydrateDrawer(next);
+      // The discard was for the drawer just replaced; the new one starts clean,
+      // and its stepper/switch changes fire no input event to clear the flag.
+      discardConfirmed = false;
       syncLinks();
       next.querySelector<HTMLElement>("h2")?.focus();
     } catch {
@@ -1253,6 +1256,13 @@ const editSeats = (row: AdminHousehold) => {
     if (!form) return;
     // The no-JS "Add" button is hidden once the script owns Enter.
     form.dataset.js = "true";
+    // A drawer the server re-rendered after a refused save holds a draft that
+    // was never stored, so it starts dirty. Read this before sync(): sync()
+    // shows the duplicate warning for any shared name, refused or not.
+    const refusedOnLoad = Boolean(
+      form.querySelector("[data-admin-write-error]") ||
+        form.querySelector("[data-duplicate-warning]:not([hidden])"),
+    );
     const addInput = form.querySelector<HTMLInputElement>("[data-add-name]");
     const list = form.querySelector<HTMLElement>("[data-name-list]");
     const count = form.querySelector<HTMLInputElement>(
@@ -1652,11 +1662,7 @@ const editSeats = (row: AdminHousehold) => {
     });
     sync();
     rememberGuestForm(form);
-    if (
-      form.querySelector("[data-admin-write-error]") ||
-      form.querySelector<HTMLElement>("[data-duplicate-warning]:not([hidden])")
-    )
-      form.dataset.dirtyStart = "true";
+    if (refusedOnLoad) form.dataset.dirtyStart = "true";
   }
 
   function hydrateInitialDrawer() {
