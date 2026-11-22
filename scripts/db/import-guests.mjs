@@ -33,7 +33,7 @@ export function normalizeImportName(value) {
 const normalizedForSlug = (value) => normalizeImportName(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const guestKey = (value) => normalizeImportName(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const slugify = (value) => normalizedForSlug(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-const placeholderPattern = /^(\d+)\s+guest(?:s|\(s\))?$|^\+(\d+)$|^plus\s+one$/i;
+export const placeholderPattern = /^(\d+)\s+guest(?:s|\(s\))?$|^\+(\d+)$|^plus\s+one$/i;
 const singleSurnameParticles = new Set(["de", "del", "dela", "delos", "della", "san", "sta", "sto", "van", "von", "da", "di"]);
 
 export function displaySurname(name) {

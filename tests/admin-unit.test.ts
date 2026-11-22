@@ -22,6 +22,18 @@ import {
   rowSlippersText,
   seatSubline,
 } from "../src/lib/admin/presentation.ts";
+import {
+  displaySurname,
+  duplicateNameKey,
+  generateHostId,
+  parsePlusOne,
+  suggestInvitationName,
+} from "../src/lib/admin/names.ts";
+import {
+  displaySurname as importDisplaySurname,
+  placeholderPattern as importPlaceholderPattern,
+} from "../scripts/db/import-guests.mjs";
+import { placeholderPattern } from "../src/lib/admin/names.ts";
 import { csvCell, rsvpCsv, rsvpCsvResponse } from "../src/lib/admin/csv.ts";
 import { loadAdminRsvps } from "../src/lib/admin/rsvps.ts";
 import { createD1AdminStore } from "../src/lib/admin/d1.ts";
@@ -515,6 +527,138 @@ test("ADMIN_HOSTS keys are lower-cased and names trimmed", () => {
 test("memberLine keeps a single name as is", () => {
   assert.equal(memberLine(["Madonna"]), "Madonna");
   assert.equal(memberLine(["Sofía Peña"]), "Sofía Peña");
+});
+
+test("suggestion returns empty, one-name, and same-surname cases", () => {
+  assert.equal(suggestInvitationName([]), "");
+  assert.equal(
+    suggestInvitationName(["Mara Olave-Garcia"]),
+    "Mara Olave-Garcia",
+  );
+  assert.equal(
+    suggestInvitationName(["Ana Dela Cruz", "Bea Dela Cruz"]),
+    "The Dela Cruz Family",
+  );
+});
+
+test("suggestion handles different surnames, long names, and majority groups", () => {
+  assert.equal(
+    suggestInvitationName(["Ana Rivero", "Bea Santos"]),
+    "Ana Rivero & Bea Santos",
+  );
+  assert.equal(
+    suggestInvitationName([
+      "Alexandria Verylongsurname Montemayor",
+      "Bartholomew Superlongsurname Villacorta",
+    ]),
+    "Alexandria & Bartholomew",
+  );
+  assert.equal(
+    suggestInvitationName(["Mara Dela Cruz", "Nico Dela Cruz", "Pia Santos"]),
+    "The Dela Cruz Family",
+  );
+  assert.equal(
+    suggestInvitationName(["Ma. Luz Reyes", "Ma. Pia Reyes"]),
+    "The Reyes Family",
+  );
+  assert.equal(suggestInvitationName(["Ari", "Bea"]), "Ari & Bea");
+  assert.ok(
+    suggestInvitationName([
+      "Ari",
+      "Bea",
+      "Cleo",
+      "Dani",
+      "Eli",
+      "Faye",
+      "Gio",
+      "Hana",
+      "Ivo",
+      "Juno",
+    ]).length <= 40,
+  );
+});
+
+test("plus-one parsing covers every placeholder spelling", () => {
+  assert.equal(parsePlusOne("+1"), 1);
+  assert.equal(parsePlusOne("2 guests"), 2);
+  assert.equal(parsePlusOne("2 guest(s)"), 2);
+  assert.equal(parsePlusOne("plus one"), 1);
+  assert.equal(parsePlusOne("guest"), 1);
+  assert.equal(parsePlusOne("ordinary guest name"), 0);
+});
+
+test("host IDs are a short slug of the invitation name and avoid collisions", () => {
+  assert.equal(generateHostId("The Dela Cruz Family"), "dela-cruz");
+  assert.equal(generateHostId("the olave-garcia family"), "olave-garcia");
+  assert.equal(
+    generateHostId("Liza Ramos & Jun Delos Reyes"),
+    "liza-ramos-jun-delos-reyes",
+  );
+  assert.equal(generateHostId("Gloria, Fiona & Venz"), "gloria-fiona-venz");
+  assert.equal(generateHostId("Jay R Nearents & family"), "jay-r-nearents");
+  assert.equal(generateHostId("Sofía Peña"), "sofia-pena");
+  assert.equal(generateHostId("Madonna"), "madonna");
+  assert.equal(generateHostId(""), "household");
+  // "Theo" is a name, not the article.
+  assert.equal(generateHostId("Theo Cruz"), "theo-cruz");
+  assert.equal(
+    generateHostId("The Dela Cruz Family", ["dela-cruz"]),
+    "dela-cruz-2",
+  );
+  assert.equal(
+    generateHostId("The Dela Cruz Family", ["DELA-CRUZ", "dela-cruz-2"]),
+    "dela-cruz-3",
+  );
+  assert.equal(duplicateNameKey("  Ána   Dela Cruz "), "ana dela cruz");
+});
+
+test("memberLine groups surnames by first appearance and keeps one-word names", () => {
+  assert.equal(
+    memberLine([
+      "Gloria Paz Toledo",
+      "Fiona Larra Toledo",
+      "Venz Philip Montealto",
+    ]),
+    "Gloria Paz & Fiona Larra Toledo, Venz Philip Montealto",
+  );
+  assert.equal(
+    memberLine(["Ari De Castro", "Bea De Castro", "Cleo Olave-Garcia"]),
+    "Ari & Bea De Castro, Cleo Olave-Garcia",
+  );
+  assert.equal(
+    memberLine(["Madonna", "Prince", "Ari Reyes"]),
+    "Madonna, Prince, Ari Reyes",
+  );
+});
+
+test("admin surname logic stays in parity with the import script", () => {
+  for (const name of [
+    "Ari",
+    "Ana De Castro",
+    "Bea Delos Santos",
+    "Cleo Olave-Garcia",
+    "Dani Van Dijk",
+    "Eli Reyes",
+  ]) {
+    assert.equal(displaySurname(name), importDisplaySurname(name), name);
+  }
+});
+
+test("admin placeholder parsing stays in parity with the import script", () => {
+  for (const value of [
+    "+1",
+    "2 guests",
+    "3 guest(s)",
+    "plus one",
+    "guest",
+    "ordinary guest",
+  ]) {
+    assert.equal(
+      Boolean(value.match(placeholderPattern)),
+      Boolean(value.match(importPlaceholderPattern)),
+      value,
+    );
+  }
 });
 
 test("fake unnamed plus-ones count open seats, not households", async () => {

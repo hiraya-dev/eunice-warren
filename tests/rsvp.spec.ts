@@ -431,7 +431,7 @@ test.describe("RSVP section", () => {
       await expect(rsvp(page)).not.toContainText(fixture.id);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const bounds = await rsvp(page).evaluate((section) => {
-        // The household name sits on the invitation stub, not inside the form card.
+        // The invitation name sits on the invitation stub, not inside the form card.
         const card = section.querySelector<HTMLElement>("[data-rsvp-invitation]")!.getBoundingClientRect();
         const name = section.querySelector<HTMLElement>("[data-rsvp-household]")!.getBoundingClientRect();
         const admits = section.querySelector<HTMLElement>(".rsvp_admits")!.getBoundingClientRect();

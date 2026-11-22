@@ -41,17 +41,28 @@ export interface AdminHousehold {
 }
 export class StaleHouseholdError extends Error {
   constructor() {
-    super("This household changed since you opened it. Reload to see the latest.");
+    super(
+      "This household changed since you opened it. Reload to see the latest.",
+    );
     this.name = "StaleHouseholdError";
   }
 }
 export interface SaveHouseholdInput {
   id: string;
+  label?: string;
   updatedAt?: string;
   displayName: string;
   notes: string | null;
   seatCount: number;
-  seats: Array<{ id?: number; name: string; invitedName?: string; retire?: boolean }>;
+  seats: Array<{
+    id?: number;
+    kind?: "member" | "plus_one";
+    name: string;
+    invitedName?: string;
+    retire?: boolean;
+  }>;
+  confirmedNames?: string[];
+  removeSeatIds?: number[];
 }
 export interface NewHouseholdInput {
   label: string;
@@ -59,6 +70,7 @@ export interface NewHouseholdInput {
   notes: string | null;
   seats: Array<{ name: string }>;
   seatCount?: number;
+  confirmedNames?: string[];
 }
 export interface AdminOverview {
   seatsOffered: number;
@@ -199,9 +211,19 @@ export interface AdminStore {
   getSlipperOrder(): Promise<AdminSlipperOrder>;
   getSongRequests(): Promise<AdminSongRequests>;
   getNavCounts(): Promise<AdminNavCounts>;
-  saveHousehold(input: SaveHouseholdInput, actor: string): Promise<{ ok: true } | { ok: false; message: string }>;
-  addHousehold(input: NewHouseholdInput, actor: string): Promise<{ id: string }>;
-  archiveHousehold(id: string, actor: string, updatedAt?: string): Promise<void>;
+  saveHousehold(
+    input: SaveHouseholdInput,
+    actor: string,
+  ): Promise<{ ok: true } | { ok: false; message: string }>;
+  addHousehold(
+    input: NewHouseholdInput,
+    actor: string,
+  ): Promise<{ id: string }>;
+  archiveHousehold(
+    id: string,
+    actor: string,
+    updatedAt?: string,
+  ): Promise<void>;
 }
 export function selectAdminStore(
   storeName: unknown,

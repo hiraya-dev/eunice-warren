@@ -1,5 +1,6 @@
 ---
 import type { AdminHousehold } from "@/lib/admin/store";
+import { suggestInvitationName, generateHostId } from "@/lib/admin/names";
 
 interface DraftSeat {
   id?: number;
@@ -9,6 +10,9 @@ interface DraftSeat {
   invitedName: string | null;
   retire?: boolean;
   hasActivity?: boolean;
+  rsvp?: string;
+  namedBy?: string | null;
+  namedByKind?: "guest" | "host" | null;
 }
 
 interface NewDraft {
@@ -17,360 +21,677 @@ interface NewDraft {
   notes: string;
   memberNames: string[];
   seatCount: number;
+  confirmedNames?: string[];
+  labelEdited?: boolean;
+  invitationEdited?: boolean;
 }
 
-type Props = {
-  render?: boolean;
-  /** A refusal to show above the bottom line, inside the open row. */
-  error?: string;
-  reloadHref?: string;
-} & (
+interface TakenHousehold {
+  id: string;
+  label: string;
+  displayName: string;
+  names: string[];
+}
+
+type Props =
   | {
       variant: "new";
       draft: NewDraft;
+      takenIds: string[];
+      duplicateOpenId?: string;
+      error?: string;
+      reloadHref?: string;
+      takenHouseholds: TakenHousehold[];
     }
   | {
       variant: "edit";
       row: AdminHousehold;
       seats: DraftSeat[];
+      removedSeatIds?: number[];
       updatedAt: string;
       displayName: string;
       notes: string;
-    }
-);
+      takenIds: string[];
+      duplicateOpenId?: string;
+      error?: string;
+      reloadHref?: string;
+      takenHouseholds: TakenHousehold[];
+      invitationEdited?: boolean;
+    };
 
 const props = Astro.props;
-const render = props.render ?? true;
-const firstMember =
-  props.variant === "edit"
-    ? (props.row.seats
-        .find((seat) => seat.kind === "member")
-        ?.name?.trim()
-        .split(/\s+/)[0] ?? "the first member")
-    : "";
-const openSeats =
-  props.variant === "new"
-    ? Math.max(
-        0,
-        props.draft.seatCount - props.draft.memberNames.filter(Boolean).length,
-      )
-    : 0;
-const returnParams = new URLSearchParams();
+const params = new URLSearchParams();
 for (const key of ["filter", "q"]) {
   const value = Astro.url.searchParams.get(key);
-  if (value) returnParams.set(key, value);
+  if (value) params.set(key, value);
 }
-const returnHref = `${Astro.url.pathname}${returnParams.toString() ? `?${returnParams}` : ""}`;
+const closeHref = `${Astro.url.pathname}${params.toString() ? `?${params}` : ""}`;
+const withParam = (key: string, value: string) => {
+  const next = new URLSearchParams(params);
+  next.set(key, value);
+  return `${Astro.url.pathname}?${next}`;
+};
+const names =
+  props.variant === "new"
+    ? props.draft.memberNames.filter(Boolean)
+    : props.seats
+        .filter((seat) => !seat.retire && seat.name)
+        .map((seat) => seat.name);
+// The invitation is addressed to the invited members; a plus-one the guest
+// named counts as a seat, never as part of the suggested name.
+const suggestion = suggestInvitationName(
+  props.variant === "new"
+    ? names
+    : props.seats
+        .filter((seat) => seat.kind === "member" && !seat.retire && seat.name)
+        .map((seat) => seat.name),
+);
+const seatCount =
+  props.variant === "new"
+    ? props.draft.seatCount
+    : props.seats.filter((seat) => !seat.retire).length;
+// A new household with no names yet holds one seat for its first name, not a
+// plus-one.
+const openSeats =
+  props.variant === "new" && names.length === 0
+    ? 0
+    : Math.max(0, seatCount - names.length);
+const invitationName =
+  props.variant === "new"
+    ? props.draft.invitationEdited
+      ? props.draft.displayName
+      : suggestion
+    : (props.invitationEdited ?? props.displayName !== suggestion)
+      ? props.displayName
+      : suggestion;
+const invitationEdited =
+  props.variant === "new"
+    ? Boolean(props.draft.invitationEdited)
+    : (props.invitationEdited ?? invitationName !== suggestion);
+const label =
+  props.variant === "new"
+    ? props.draft.labelEdited
+      ? props.draft.label
+      : generateHostId(invitationName, props.takenIds)
+    : props.row.label;
+// The last part of the title is set in italic (Paper Admin 11 and 12).
+const splitLast = (text: string): [string, string] => {
+  const at = text.lastIndexOf(" ");
+  return at < 0 ? [text, ""] : [text.slice(0, at), text.slice(at + 1)];
+};
+const titleParts: [string, string] =
+  props.variant === "new"
+    ? ["Who are you", "inviting?"]
+    : (() => {
+        const firstNames = names.map((name) => name.split(/\s+/)[0]);
+        if (firstNames.length > 3) return splitLast(invitationName);
+        if (firstNames.length < 2)
+          return splitLast(firstNames[0] ?? invitationName);
+        return [
+          firstNames.slice(0, -1).join(", "),
+          `& ${firstNames.at(-1)}`,
+        ] as [string, string];
+      })();
+const seatNoun = (count: number) => (count === 1 ? "seat" : "seats");
+const seatRest =
+  props.variant === "new"
+    ? `· ${names.length} ${names.length === 1 ? "name" : "names"} + ${openSeats} plus-one${openSeats === 1 ? "" : "s"}`
+    : `· ${names.length} ${names.length === 1 ? "name" : "names"} + ${openSeats} open seat${openSeats === 1 ? "" : "s"}${openSeats > 0 ? " · plus-one allowed" : ""}`;
+const rsvpState = (value: string | undefined) =>
+  value === "coming"
+    ? "Coming"
+    : value === "declined"
+      ? "Declined"
+      : value === "waiting"
+        ? "Waiting"
+        : "—";
 ---
 
-{
-  render && props.variant === "new" && (
-    <tr class="admin-guests_edit-row admin-guests_new-row">
-      <td colspan={4}>
-        <form
-          class="admin_guests_form"
-          method="post"
-          data-new-household
-          style="--idcol: 8.75rem"
-        >
-          <input type="hidden" name="action" value="add" />
-          <input
-            type="hidden"
-            name="filter"
-            value={Astro.url.searchParams.get("filter") ?? ""}
-          />
-          <input
-            type="hidden"
-            name="q"
-            value={Astro.url.searchParams.get("q") ?? ""}
-          />
-          <button
-            class="sr-only"
-            type="submit"
+<aside
+  class="admin-drawer_wrap"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="admin-drawer-title"
+  data-admin-drawer
+  data-admin-drawer-kind={props.variant}
+  data-admin-households={JSON.stringify(props.takenHouseholds)}
+>
+  <a
+    class="admin-drawer_scrim"
+    href={closeHref}
+    data-admin-drawer-close
+    aria-label="Close"></a>
+  <div
+    class="admin-drawer_panel admin_guests_panel"
+    data-variant={props.variant}
+  >
+    <form
+      class="admin_guests_drawer"
+      method="post"
+      data-admin-household-form
+      data-variant={props.variant}
+      data-new-household={props.variant === "new" ? true : undefined}
+      data-edit-household={props.variant === "edit" ? true : undefined}
+    >
+      <input
+        type="hidden"
+        name="action"
+        value={props.variant === "new" ? "add" : "save"}
+      />
+      <input
+        type="hidden"
+        name="filter"
+        value={Astro.url.searchParams.get("filter") ?? ""}
+      />
+      <input
+        type="hidden"
+        name="q"
+        value={Astro.url.searchParams.get("q") ?? ""}
+      />
+      {
+        props.variant === "new" && (
+          <>
+            <input
+              type="hidden"
+              name="label_edited"
+              value={props.draft.labelEdited ? "1" : ""}
+              data-label-edited
+            />
+            {(props.draft.confirmedNames ?? []).map((name) => (
+              <input type="hidden" name="confirmed_name" value={name} />
+            ))}
+            <input
+              type="hidden"
+              name="generated_label"
+              value={generateHostId(invitationName, props.takenIds)}
+            />
+          </>
+        )
+      }
+      <input
+        type="hidden"
+        name="invitation_edited"
+        value={invitationEdited ? "1" : ""}
+        data-invitation-edited
+      />
+      <button
+        class="sr-only"
+        type="submit"
+        name="save"
+        value="1"
+        tabindex="-1"
+        aria-hidden="true">Save</button
+      >
+      {
+        props.variant === "edit" && (
+          <>
+            <input type="hidden" name="id" value={props.row.id} />
+            <input type="hidden" name="updated_at" value={props.updatedAt} />
+            {(props.removedSeatIds ?? []).map((id) => (
+              <input type="hidden" name="removed_seat" value={id} />
+            ))}
+          </>
+        )
+      }
+
+      <div class="admin-drawer_top">
+        <p class="admin_label">
+          {
+            props.variant === "new"
+              ? "New household"
+              : `Edit household · ${props.row.label}`
+          }
+        </p>
+        <a href={closeHref} data-admin-drawer-close aria-label="Close">
+          <svg
+            viewBox="0 0 14 14"
+            width="14"
+            height="14"
+            fill="none"
             aria-hidden="true"
-            tabindex="-1"
           >
-            Save household
+            <path
+              d="M2 2l10 10M12 2L2 12"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class="admin_guests_drawer_scroll">
+        <header class="admin_guests_drawer_header">
+          <h2 id="admin-drawer-title" tabindex="-1">
+            {titleParts[0]}{titleParts[1] && " "}{
+              titleParts[1] && <em>{titleParts[1]}</em>
+            }
+          </h2>
+        </header>
+
+        {
+          props.variant === "new" ? (
+            <section
+              class="admin_guests_drawer_section"
+              aria-labelledby="guest-names-label"
+            >
+              <div class="admin_guests_label_row">
+                <p id="guest-names-label" class="admin_guests_label">
+                  Guests · one name at a time
+                </p>
+                <p class="admin_guests_hint">Full name, then Enter to add</p>
+              </div>
+              <div class="admin_guests_names" data-name-list>
+                {props.draft.memberNames.filter(Boolean).map((name) => (
+                  <span class="admin_guests_name-chip" data-name-chip>
+                    <span>{name}</span>
+                    <button
+                      type="button"
+                      data-remove-name
+                      aria-label={`Remove ${name}`}
+                    >
+                      ×
+                    </button>
+                    <input type="hidden" name="member_name" value={name} />
+                  </span>
+                ))}
+                <label class="admin_guests_add_guest">
+                  <span class="sr-only">Add a guest</span>
+                  <input
+                    name="member_input"
+                    data-add-name
+                    autocomplete="off"
+                    placeholder="Full name, then Enter to add"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  name="member_action"
+                  value="add"
+                  data-no-js-add
+                  class="admin_guests_btn compact"
+                >
+                  Add
+                </button>
+              </div>
+              <div
+                data-duplicate-warning
+                hidden={!props.duplicateOpenId}
+                class="admin_guests_duplicate_warning"
+                role="alert"
+              >
+                <p data-duplicate-message>
+                  {props.duplicateOpenId ? props.error : ""}
+                </p>
+                <a
+                  data-duplicate-open
+                  href={
+                    props.duplicateOpenId
+                      ? withParam("edit", props.duplicateOpenId)
+                      : withParam("edit", "")
+                  }
+                  hidden={!props.duplicateOpenId}
+                >
+                  Open it
+                </a>
+                <button
+                  type="submit"
+                  name="confirm_duplicate"
+                  value="1"
+                  data-confirm-duplicate
+                >
+                  Add anyway
+                </button>
+              </div>
+            </section>
+          ) : (
+            <section
+              class="admin_guests_drawer_section is-people"
+              aria-labelledby="guest-table-label"
+            >
+              <div class="admin_guests_people_head">
+                <p id="guest-table-label" class="admin_guests_label">
+                  Guests
+                </p>
+                <p class="admin_guests_label muted">RSVP</p>
+              </div>
+              <div class="admin_guests_people" data-name-list>
+                {props.seats.map((seat) =>
+                  seat.kind === "member" ? (
+                    <div
+                      class:list={[
+                        "admin_guests_person",
+                        { "is-retired": seat.retire },
+                      ]}
+                      data-seat-row
+                      data-seat-kind="member"
+                      data-seat-id={seat.id}
+                      data-activity={seat.hasActivity ? "true" : undefined}
+                    >
+                      <input
+                        type="hidden"
+                        name="seat_id"
+                        value={seat.id ?? ""}
+                      />
+                      <input type="hidden" name="seat_name" value={seat.name} />
+                      <input
+                        type="hidden"
+                        name="invited_name"
+                        value={seat.invitedName ?? seat.name}
+                      />
+                      <div class="admin_guests_person_identity">
+                        <strong>{seat.name}</strong>
+                        <small>
+                          {seat.invitedName && seat.invitedName !== seat.name
+                            ? `Invited as ${seat.invitedName} · renamed`
+                            : `Invited as ${seat.invitedName ?? seat.name} · lead`}
+                        </small>
+                        <details class="admin_guests_fix">
+                          <summary>Fix invited name</summary>
+                          <label>
+                            <span class="sr-only">Invited name</span>
+                            <input
+                              name={`invited_name_${seat.id}`}
+                              value={seat.invitedName ?? seat.name}
+                            />
+                          </label>
+                          <p>
+                            Was “{seat.invitedName ?? seat.name}”. Lookup uses
+                            the fixed name only.
+                          </p>
+                        </details>
+                      </div>
+                      <div
+                        class="admin_guests_person_rsvp"
+                        data-state={seat.rsvp ?? "none"}
+                      >
+                        {rsvpState(seat.rsvp)}
+                      </div>
+                      <div class="admin_guests_person_action">
+                        {seat.id &&
+                        props.row.assignedSeatIds?.includes(seat.id) ? (
+                          <span>Unseat to archive</span>
+                        ) : (
+                          <label>
+                            <input
+                              type="checkbox"
+                              name={`retire_seat_${seat.id}`}
+                              value="1"
+                              checked={seat.retire}
+                              data-archive-seat
+                            />
+                            <span data-archive-label>
+                              {seat.retire ? "Undo" : "Archive"}
+                            </span>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ) : seat.name ? (
+                    <div
+                      class="admin_guests_person"
+                      data-seat-row
+                      data-seat-kind="plus_one"
+                      data-seat-id={seat.id}
+                      data-activity={seat.hasActivity ? "true" : undefined}
+                    >
+                      <input
+                        type="hidden"
+                        name="seat_id"
+                        value={seat.id ?? ""}
+                      />
+                      <input type="hidden" name="seat_name" value={seat.name} />
+                      <input type="hidden" name="invited_name" value="" />
+                      <div class="admin_guests_person_identity">
+                        <strong>{seat.name}</strong>
+                        <small>
+                          +1 · named by {seat.namedBy ?? "their guest"}
+                        </small>
+                      </div>
+                      <div
+                        class="admin_guests_person_rsvp"
+                        data-state={seat.rsvp ?? "none"}
+                      >
+                        {rsvpState(seat.rsvp)}
+                      </div>
+                      <div class="admin_guests_person_action"></div>
+                    </div>
+                  ) : (
+                    <div
+                      class="admin_guests_person"
+                      data-seat-row
+                      data-seat-kind="plus_one"
+                      data-seat-id={seat.id}
+                      data-activity={seat.hasActivity ? "true" : undefined}
+                    >
+                      <input
+                        type="hidden"
+                        name="seat_id"
+                        value={seat.id ?? ""}
+                      />
+                      <input type="hidden" name="seat_name" value={seat.name} />
+                      <input type="hidden" name="invited_name" value="" />
+                      <div class="admin_guests_person_identity">
+                        <strong>Open seat · no name yet</strong>
+                        <small>+1 · They name their guest in the RSVP.</small>
+                      </div>
+                      <div class="admin_guests_person_rsvp" data-state="none">
+                        —
+                      </div>
+                      <div class="admin_guests_person_action">
+                        <button
+                          type="submit"
+                          name="remove_seat"
+                          value={seat.id ?? ""}
+                          data-remove-open-seat
+                        >
+                          Remove open seat
+                        </button>
+                      </div>
+                    </div>
+                  ),
+                )}
+                <label class="admin_guests_add_guest">
+                  <span class="sr-only">Add a guest</span>
+                  <input
+                    name="member_input"
+                    data-add-name
+                    autocomplete="off"
+                    placeholder="Add a guest · full name, or “+1” for an open seat"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  name="member_action"
+                  value="add"
+                  data-no-js-add
+                  class="admin_guests_btn compact"
+                >
+                  Add
+                </button>
+              </div>
+              <div
+                data-duplicate-warning
+                hidden={!props.duplicateOpenId}
+                class="admin_guests_duplicate_warning"
+                role="alert"
+              >
+                <p data-duplicate-message>
+                  {props.duplicateOpenId ? props.error : ""}
+                </p>
+                <a
+                  data-duplicate-open
+                  href={
+                    props.duplicateOpenId
+                      ? withParam("edit", props.duplicateOpenId)
+                      : withParam("edit", "")
+                  }
+                  hidden={!props.duplicateOpenId}
+                >
+                  Open it
+                </a>
+                <button
+                  type="submit"
+                  name="confirm_duplicate"
+                  value="1"
+                  data-confirm-duplicate
+                >
+                  Add anyway
+                </button>
+              </div>
+            </section>
+          )
+        }
+
+        <section class="admin_guests_drawer_section admin_guests_plus">
+          <button
+            class="admin_guests_switch"
+            type="submit"
+            name="plus_one"
+            value={openSeats > 0 ? "off" : "on"}
+            data-plus-one-toggle
+            aria-pressed={openSeats > 0 ? "true" : "false"}
+            aria-labelledby="plus-one-title"
+            aria-describedby="plus-one-note"
+          >
+            <span class="admin_guests_switch_track" aria-hidden="true"
+              ><span></span></span
+            >
+            <span class="admin_guests_switch_text">
+              <span id="plus-one-title">Allow a plus-one</span>
+              <span id="plus-one-note"
+                >Adds an open seat. They name their guest in the RSVP.</span
+              >
+            </span>
           </button>
+          <div class="admin_guests_seatline">
+            <p data-seat-summary>
+              <b data-seat-number>{seatCount}</b>
+              <span data-seat-unit>{seatNoun(seatCount)}</span>
+              <span data-seat-rest>{seatRest}</span>
+            </p>
+            <details class="admin_guests_more">
+              <summary>More seats</summary>
+              <div class="admin_guests_stepper" role="group" aria-label="Seats">
+                <button
+                  type="submit"
+                  name="seat_action"
+                  value="remove"
+                  aria-label="Fewer seats"
+                  data-seat-minus>−</button
+                ><output data-seat-output>{seatCount}</output><button
+                  type="submit"
+                  name="seat_action"
+                  value="add"
+                  aria-label="More seats"
+                  data-seat-plus>+</button
+                >
+              </div>
+            </details>
+          </div>
           <input
             type="hidden"
             name="seat_count"
-            value={props.draft.seatCount}
-            data-new-seat-count
+            value={seatCount}
+            data-seat-count-input
           />
-          <div class="admin_guests_top">
-            <label class="admin_guests_field admin_guests_host">
-              <span class="sr-only">Host label / ID</span>
-              <input
-                class="admin_guests_input"
-                name="label"
-                required
-                maxlength={80}
-                placeholder="Host label / ID"
-                value={props.draft.label}
-              />
-            </label>
-            <label class="admin_guests_field admin_guests_name">
-              <span class="sr-only">Household name</span>
-              <input
-                class="admin_guests_input"
-                name="display_name"
-                required
-                maxlength={40}
-                placeholder="Household name"
-                value={props.draft.displayName}
-              />
-            </label>
-            <div class="admin_guests_edit-seats admin_guests_new-names">
-              <div class="admin_guests_new-members" data-new-members>
-                {props.draft.memberNames.map((name, index) => (
-                  <label class="admin_guests_member">
-                    <span class="sr-only">Member name {index + 1}</span>
-                    <input
-                      name="member_name"
-                      value={name}
-                      placeholder="Member name"
-                    />
-                  </label>
-                ))}
-              </div>
-              <button
-                class="admin_guests_btn compact"
-                type="submit"
-                name="member_action"
-                value="add"
-              >
-                + Add member
-              </button>
-            </div>
-            <div class="admin_guests_stepper" role="group" aria-label="Seats">
-              <button
-                name="seat_action"
-                value="remove"
-                type="submit"
-                aria-label="Remove a seat"
-                disabled={
-                  props.draft.seatCount <= props.draft.memberNames.length
-                }
-              >
-                −
-              </button>
-              <output data-new-seat-output>{props.draft.seatCount}</output>
-              <button
-                name="seat_action"
-                value="add"
-                type="submit"
-                aria-label="Add a seat"
-                disabled={props.draft.seatCount >= 12}
-              >
-                +
-              </button>
-            </div>
-            <label class="admin_guests_field admin_guests_notes">
-              <span class="sr-only">Notes</span>
-              <input
-                class="admin_guests_input quiet"
-                name="notes"
-                placeholder="Notes"
-                value={props.draft.notes}
-              />
-            </label>
-          </div>
-          {props.error && (
-            <p class="admin_guests_error" data-admin-write-error>
-              {props.error}{" "}
-              {props.reloadHref && <a href={props.reloadHref}>Reload</a>}
-            </p>
-          )}
-          <div class="admin_guests_bottom">
-            <p class="admin_guests_helper">
-              {openSeats} open {openSeats === 1 ? "seat" : "seats"}
-            </p>
-            <div class="admin_guests_form-actions">
-              <a class="admin_guests_btn" href={returnHref}>
-                Cancel
-              </a>
-              <button class="admin_guests_btn primary" type="submit">
-                Save household
-              </button>
-            </div>
-          </div>
-        </form>
-      </td>
-    </tr>
-  )
-}
+        </section>
 
-{
-  render && props.variant === "edit" && (
-    <tr class="admin-guests_edit-row" data-household-id={props.row.id}>
-      <td colspan={4}>
-        <form
-          class="admin_guests_form"
-          method="post"
-          data-edit-household
-          data-seat-count={props.seats.length}
-        >
-          <input type="hidden" name="action" value="save" />
-          <input
-            type="hidden"
-            name="filter"
-            value={Astro.url.searchParams.get("filter") ?? ""}
-          />
-          <input
-            type="hidden"
-            name="q"
-            value={Astro.url.searchParams.get("q") ?? ""}
-          />
-          <button
-            class="sr-only"
-            type="submit"
-            aria-hidden="true"
-            tabindex="-1"
-          >
-            Save
-          </button>
-          <input type="hidden" name="id" value={props.row.id} />
-          <input type="hidden" name="updated_at" value={props.updatedAt} />
-          <div class="admin_guests_top">
-            <p class="admin_guests_host">
-              <span class="sr-only">Host label / ID: </span>
-              {props.row.label}
+        <section class="admin_guests_drawer_section">
+          <div class="admin_guests_label_row">
+            <label class="admin_guests_label" for="display-name"
+              >Invitation name</label
+            >
+            <p class="admin_guests_hint" data-invitation-hint>
+              <span data-hint-text>
+                {
+                  invitationEdited
+                    ? "Your own · "
+                    : "Suggested from the names · edit freely"
+                }
+              </span><button
+                type="button"
+                data-restore-suggestion
+                hidden={!invitationEdited}>use suggestion: {suggestion}</button
+              >
             </p>
-            <label class="admin_guests_field admin_guests_name">
-              <span class="sr-only">Household name</span>
-              <input
-                class="admin_guests_input"
-                name="display_name"
-                required
-                maxlength={40}
-                value={props.displayName}
-              />
-            </label>
-            <div class="admin_guests_edit-seats" data-seat-list>
-              {props.seats.map((seat) => (
-                <label
-                  class:list={[
-                    "admin_guests_chip",
-                    { "is-retired": seat.retire },
-                  ]}
-                  data-seat-kind={seat.kind}
-                  data-activity={seat.hasActivity ? "true" : undefined}
-                >
-                  <span class="sr-only">
-                    {seat.kind === "member"
-                      ? (seat.invitedName ?? "Member")
-                      : seat.name
-                        ? "Plus-one"
-                        : "Open seat · add a name"}
-                  </span>
-                  <input type="hidden" name="seat_id" value={seat.id ?? ""} />
-                  {seat.kind === "member" ? (
-                    <span class="admin_guests_chip-main">
-                      <input
-                        name="seat_name"
-                        required={!seat.retire}
-                        value={seat.name}
-                        placeholder="Member name"
-                      />
-                      {seat.id && (
-                        <span class="admin_guests_retire">
-                          <span data-retire-label>
-                            {seat.retire ? "Undo" : "× Retire"}
-                          </span>
-                          <input
-                            type="checkbox"
-                            name={`retire_seat_${seat.id}`}
-                            value="1"
-                            aria-label={`Retire seat ${seat.slot}`}
-                            checked={seat.retire}
-                          />
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <input
-                      name="seat_name"
-                      value={seat.name}
-                      placeholder="Open seat · add a name"
-                    />
-                  )}
-                  {seat.kind === "member" ? (
-                    <input
-                      name="invited_name"
-                      value={seat.invitedName ?? ""}
-                      aria-label="Fix invited name"
-                      placeholder="Fix invited name"
-                    />
-                  ) : (
-                    <input type="hidden" name="invited_name" value="" />
-                  )}
-                </label>
-              ))}
-            </div>
-            <div class="admin_guests_stepper" role="group" aria-label="Seats">
-              <button
-                name="seat_action"
-                value="remove"
-                type="submit"
-                aria-label="Remove a seat"
-                disabled={Boolean(
-                  props.seats.at(-1)?.kind === "member" ||
-                  props.seats.at(-1)?.name.trim(),
-                )}
-              >
-                −
-              </button>
-              <output data-seat-output>{props.seats.length}</output>
-              <button
-                name="seat_action"
-                value="add"
-                type="submit"
-                aria-label="Add a seat"
-                disabled={props.seats.length >= 12}
-              >
-                +
-              </button>
-            </div>
+          </div>
+          <div class="admin_guests_invite_row">
             <input
-              type="hidden"
-              name="seat_count"
-              value={props.seats.length}
-              data-seat-count-input
+              id="display-name"
+              name="display_name"
+              maxlength="40"
+              value={invitationName}
+              data-edited={invitationEdited ? "true" : undefined}
             />
-            <label class="admin_guests_field admin_guests_notes">
-              <span class="sr-only">Notes</span>
-              <input
-                class="admin_guests_input quiet"
-                name="notes"
-                placeholder="Notes"
-                value={props.notes}
-              />
-            </label>
-          </div>
-          {props.error && (
-            <p class="admin_guests_error" data-admin-write-error>
-              {props.error}{" "}
-              {props.reloadHref && <a href={props.reloadHref}>Reload</a>}
-            </p>
-          )}
-          <div class="admin_guests_bottom">
-            <p class="admin_guests_helper">
-              Set the seats first, then name who you know. + adds an open seat;
-              − only removes an open seat nobody has answered for. Names you
-              type are pre-filled in {firstMember}'s RSVP.
-            </p>
-            <div class="admin_guests_form-actions">
-              <a class="admin_guests_btn" href={returnHref}>
-                Cancel
-              </a>
-              <button class="admin_guests_btn primary" type="submit">
-                Save
-              </button>
+            <div class="admin_guests_preview">
+              <span>Guests see</span>
+              <strong data-preview-name>{invitationName}</strong>
+              <span data-preview-admits>Admits {seatCount}</span>
             </div>
           </div>
-        </form>
-      </td>
-    </tr>
-  )
-}
+          <div class="admin_guests_hostid">
+            <span>Host ID</span>
+            <strong data-host-id>{label}</strong>
+            <span aria-hidden="true">·</span>
+            <details>
+              <summary>Edit ID</summary>
+              <label
+                ><span class="sr-only">Host ID</span><input
+                  name="label"
+                  value={label}
+                  maxlength="80"
+                  data-edited={props.variant === "edit" ? "true" : undefined}
+                /></label
+              >
+            </details>
+          </div>
+        </section>
+
+        <section class="admin_guests_drawer_section">
+          <label class="admin_guests_label" for="guest-notes"
+            >Notes for you only</label
+          >
+          <textarea id="guest-notes" name="notes"
+            >{
+              props.variant === "new" ? props.draft.notes : props.notes
+            }</textarea
+          >
+        </section>
+      </div>
+
+      {
+        props.error && !props.duplicateOpenId && (
+          <p class="admin_guests_error" data-admin-write-error role="alert">
+            {props.error}{" "}
+            {props.reloadHref && <a href={props.reloadHref}>Reload</a>}
+          </p>
+        )
+      }
+
+      <footer class="admin_guests_drawer_footer">
+        {
+          props.variant === "new" ? (
+            <span class="admin_guests_footer_hint">Enter saves</span>
+          ) : (
+            <a
+              class="accent"
+              href={withParam("archive", props.row.id)}
+            >
+              Archive household
+            </a>
+          )
+        }
+        <a href={closeHref} data-admin-drawer-close>Cancel</a>
+        {
+          props.variant === "new" && (
+            <button type="submit" name="save_and_add" value="1">
+              Save and add another
+            </button>
+          )
+        }
+        <button type="submit" name="save" value="1" class="primary">Save</button
+        >
+      </footer>
+    </form>
+  </div>
+</aside>

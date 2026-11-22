@@ -19,6 +19,7 @@ import { normalizeGuestName } from "../rsvp/store.ts";
 import { MAX_SEATS } from "../rsvp/limits.ts";
 import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 import { songKey } from "./presentation.ts";
+import { duplicateNameKey } from "./names.ts";
 
 const TICKET_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -643,7 +644,15 @@ export function createFakeAdminStore(): AdminStore {
       return {
         ok: false as const,
         message:
-          "Household name is required and must be 40 characters or fewer.",
+          "Invitation name is required and must be 40 characters or fewer.",
+      };
+    if (
+      input.label !== undefined &&
+      (!input.label.trim() || input.label.trim().length > 80)
+    )
+      return {
+        ok: false as const,
+        message: "Host label is required and must be 80 characters or fewer.",
       };
     if (
       !Number.isInteger(input.seatCount) ||
@@ -654,18 +663,53 @@ export function createFakeAdminStore(): AdminStore {
         ok: false as const,
         message: "Seats must be between 1 and 12.",
       };
-    const row = fakeAdminFixtures.find((item) => item.id === input.id);
+    const row = fakeAdminFixtures.find(
+      (item) => item.id === input.id && !item.archivedAt,
+    );
     if (!row) return { ok: false as const, message: "Household not found." };
-    if ((input.updatedAt ?? "") !== (row.updatedAt ?? ""))
+    if (
+      input.label !== undefined &&
+      fakeAdminFixtures.some(
+        (item) =>
+          item.id !== input.id &&
+          !item.archivedAt &&
+          item.label.toLocaleLowerCase() ===
+            input.label!.trim().toLocaleLowerCase(),
+      )
+    )
+      return { ok: false as const, message: "Host ID is already in use." };
+    if ((input.updatedAt ?? row.updatedAt) !== row.updatedAt)
       throw new StaleHouseholdError();
     const retired = new Set(
       input.seats
         .filter((value) => value.retire && value.id)
         .map((value) => value.id!),
     );
+    const removed = new Set(input.removeSeatIds ?? []);
+    for (const removedId of removed) {
+      const value = row.seats.find((seatValue) => seatValue.id === removedId);
+      const hasActivity =
+        value &&
+        (value.hasActivity ||
+          row.assignedSeatIds?.includes(removedId) ||
+          fakeAdminResponses.some(
+            (response) =>
+              response.householdId === row.id &&
+              response.seats.some(
+                (seatValue) => seatValue.seatId === removedId,
+              ),
+          ));
+      if (!value || value.kind !== "plus_one" || value.name || hasActivity)
+        return {
+          ok: false as const,
+          message: "Only an unnamed open seat with no activity can be removed.",
+        };
+    }
     const active = row.seats.filter(
       (value) =>
-        value.status !== "retired" && !retired.has(value.id ?? value.slot),
+        value.status !== "retired" &&
+        !retired.has(value.id ?? value.slot) &&
+        !removed.has(value.id ?? value.slot),
     );
     const members = active.filter((value) => value.kind === "member");
     if (!members.length)
@@ -713,6 +757,37 @@ export function createFakeAdminStore(): AdminStore {
           message: `Seat ${trailing.slot} has activity. Review or retire this seat first.`,
         };
     }
+    const candidates = input.seats
+      .filter(
+        (value) =>
+          !value.retire && value.kind !== "plus_one" && value.name.trim(),
+      )
+      .map((value) => duplicateNameKey(value.name));
+    if (new Set(candidates).size !== candidates.length)
+      return {
+        ok: false as const,
+        message: "A guest name can only be added once.",
+      };
+    const confirmed = new Set(
+      (input.confirmedNames ?? []).map(duplicateNameKey),
+    );
+    for (const candidate of candidates) {
+      const household = fakeAdminFixtures.find(
+        (item) =>
+          item.id !== input.id &&
+          !item.archivedAt &&
+          item.seats.some((value) =>
+            [value.name, value.invitedName].some(
+              (name) => name && duplicateNameKey(name) === candidate,
+            ),
+          ),
+      );
+      if (household && !confirmed.has(candidate))
+        return {
+          ok: false as const,
+          message: `${candidate} is already invited with ${household.displayName}.`,
+        };
+    }
     for (const value of input.seats) {
       if (value.retire && value.id && row.assignedSeatIds?.includes(value.id))
         return {
@@ -723,6 +798,7 @@ export function createFakeAdminStore(): AdminStore {
     }
     const now = new Date().toISOString();
     row.displayName = input.displayName.trim();
+    if (input.label !== undefined) row.label = input.label.trim();
     row.notes = input.notes?.trim() || null;
     row.updatedAt = now;
     for (const value of input.seats) {
@@ -761,9 +837,14 @@ export function createFakeAdminStore(): AdminStore {
         current.invitedName = invited;
         const key = normalizeGuestName(invited!);
         current.nameKey = key;
-        current.surnameKey = key.split(" ").at(-1) ?? null;
+        current.surnameKey =
+          key.split(" ").at(-1) || null;
         current.updatedAt = now;
       }
+    }
+    for (const removedId of removed) {
+      const index = row.seats.findIndex((value) => value.id === removedId);
+      if (index >= 0) row.seats.splice(index, 1);
     }
     while (active.length > input.seatCount) {
       const trailing = row.seats.find(
@@ -795,14 +876,23 @@ export function createFakeAdminStore(): AdminStore {
             active.length
         ];
       const name = value?.name.trim() || null;
+      const key = name ? normalizeGuestName(name) : null;
       row.seats.push(
-        seat(slot, name, null, "plus_one", {
-          state: name ? "named" : "open",
-          namedBy: name ? actor : null,
-          namedByKind: name ? "host" : null,
-          namedAt: name ? now : null,
-          updatedAt: now,
-        }),
+        seat(
+          slot,
+          name,
+          value?.kind === "member" ? name : null,
+          value?.kind ?? "plus_one",
+          {
+            state: name ? "named" : "open",
+            namedBy: name ? actor : null,
+            namedByKind: name ? "host" : null,
+            namedAt: name ? now : null,
+            nameKey: key,
+            surnameKey: key ? key.split(" ").at(-1) : null,
+            updatedAt: now,
+          },
+        ),
       );
     }
     row.seatCount = row.seats.filter(
@@ -831,7 +921,7 @@ export function createFakeAdminStore(): AdminStore {
       );
     if (!input.displayName.trim() || input.displayName.trim().length > 40)
       throw new Error(
-        "Household name is required and must be 40 characters or fewer.",
+        "Invitation name is required and must be 40 characters or fewer.",
       );
     if (!names.length || names.some((name) => !name))
       throw new Error("At least one member name is required.");
@@ -841,6 +931,37 @@ export function createFakeAdminStore(): AdminStore {
       seatCount > MAX_SEATS
     )
       throw new Error("Seats must be between the member count and 12.");
+    if (new Set(names.map(duplicateNameKey)).size !== names.length)
+      throw new Error("A guest name can only be added once.");
+    if (
+      fakeAdminFixtures.some(
+        (item) =>
+          !item.archivedAt &&
+          item.label.toLocaleLowerCase() ===
+            input.label.trim().toLocaleLowerCase(),
+      )
+    )
+      throw new Error("Host ID is already in use.");
+    const confirmed = new Set(
+      (input.confirmedNames ?? []).map(duplicateNameKey),
+    );
+    for (const name of names) {
+      const household = fakeAdminFixtures.find(
+        (item) =>
+          !item.archivedAt &&
+          item.seats.some((value) =>
+            [value.name, value.invitedName].some(
+              (candidate) =>
+                candidate &&
+                duplicateNameKey(candidate) === duplicateNameKey(name),
+            ),
+          ),
+      );
+      if (household && !confirmed.has(duplicateNameKey(name)))
+        throw new Error(
+          `${name} is already invited with ${household.displayName}.`,
+        );
+    }
     const now = new Date().toISOString();
     const ticketCode = randomTicket(
       new Set(
@@ -858,11 +979,14 @@ export function createFakeAdminStore(): AdminStore {
       updatedAt: now,
       seats: Array.from({ length: seatCount }, (_, index) => {
         const clean = names[index] ?? null;
+        const key = clean ? normalizeGuestName(clean) : null;
         return seat(index + 1, clean, clean, clean ? "member" : "plus_one", {
           state: clean ? undefined : "open",
           namedBy: clean ? actor : null,
           namedByKind: clean ? "host" : null,
           namedAt: clean ? now : null,
+          nameKey: key,
+          surnameKey: key ? key.split(" ").at(-1) : null,
           updatedAt: now,
         });
       }),

@@ -603,18 +603,10 @@
   }
   .waiting {
     border: var(--border-width) solid var(--accent-500);
-    background-image: repeating-linear-gradient(
-      135deg,
-      var(--accent-500) 0 0.125rem,
-      transparent 0.125rem 0.375rem
-    );
+    background-image: repeating-linear-gradient(135deg, var(--accent-500) 0 0.125rem, transparent 0.125rem 0.375rem);
 
     @media (min-width: 64rem) {
-      background-image: repeating-linear-gradient(
-        135deg,
-        var(--accent-500) 0 0.125rem,
-        transparent 0.125rem 0.4375rem
-      );
+      background-image: repeating-linear-gradient(135deg, var(--accent-500) 0 0.125rem, transparent 0.125rem 0.4375rem);
     }
   }
 }
@@ -2139,7 +2131,6 @@ label.admin_guests_host {
   > * {
     min-width: 0;
     overflow-wrap: anywhere;
-
   }
   [data-song-no] {
     justify-self: end;
@@ -2200,7 +2191,6 @@ label.admin_guests_host {
     color: var(--dark-700);
   }
   [data-song-from] {
-
     @media (min-width: 84rem) {
       font-family: var(--admin-sans);
       font-size: 0.875rem;
@@ -2831,6 +2821,738 @@ html[data-admin-drawer-open] {
   .admin-drawer_scrim,
   .admin-drawer_panel {
     animation: none;
+  }
+}
+
+/*
+ * Guest list add/edit drawer (Paper Admin 11 and 12). The panel and scrim come
+ * from the RSVP drawer above; this block docks it at 37.5rem from 40rem, pins
+ * the footer and lets only the middle scroll.
+ */
+.admin_guests_panel {
+  --drawer-pad: 1.25rem;
+  --drawer-gap: 1.5rem;
+  gap: 0;
+  overflow: hidden;
+  padding: 1.5rem var(--drawer-pad) 0;
+
+  @media (min-width: 40rem) {
+    --drawer-pad: 3rem;
+    --drawer-gap: 2.25rem;
+    inset: 0 0 0 auto;
+    width: min(37.5rem, 100%);
+    padding-top: 2.5rem;
+    box-shadow: -1.5rem 0 4rem #1f2f5c2e;
+    animation-name: admin-drawer-in;
+    animation-duration: 240ms;
+
+    &[data-variant="edit"] {
+      --drawer-gap: 1.75rem;
+    }
+  }
+}
+/* Above .admin-drawer_panel header h2, which comes later in the file. */
+.admin_guests_panel .admin_guests_drawer_header h2 {
+  @media (min-width: 40rem) {
+    font-size: 3.5rem;
+  }
+  em {
+    font-weight: inherit;
+  }
+}
+
+/* Every control sets its own face; the browser defaults would not follow.
+   Zero specificity, so each part below overrides it. */
+:where(.admin_guests_drawer) :where(button, input, textarea, summary) {
+  margin: 0;
+  font-family: var(--admin-sans);
+  letter-spacing: 0;
+}
+:where(.admin_guests_drawer) :where(button) {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+:where(.admin_guests_drawer) :where(summary) {
+  list-style: none;
+  cursor: pointer;
+}
+.admin_guests_drawer summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin_guests_panel > .admin_guests_drawer {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-wrap: anywhere;
+
+  [hidden] {
+    display: none;
+  }
+
+  .admin-drawer_top {
+    position: static;
+    flex: none;
+    margin: 0 0 var(--drawer-gap);
+    padding: 0;
+    background: none;
+
+    a {
+      @media (min-width: 40rem) {
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+    }
+  }
+}
+
+.admin_guests_drawer_scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--drawer-gap);
+  min-height: 0;
+  /* The scrollbar sits on the drawer's edge, not inside its padding. */
+  margin-inline: calc(var(--drawer-pad) * -1);
+  padding: 0 var(--drawer-pad) var(--drawer-gap);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  > * {
+    flex: none;
+  }
+}
+
+.admin_guests_drawer_section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+
+  &.is-people {
+    gap: 0;
+  }
+}
+
+.admin_guests_label_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+.admin_guests_label {
+  font-family: var(--admin-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--dark-900);
+
+  &.muted {
+    color: var(--dark-700);
+  }
+}
+.admin_guests_hint {
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  color: var(--dark-700);
+
+  button {
+    font-size: inherit;
+    line-height: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: inherit;
+  }
+}
+
+/* Names chip box (add) */
+.admin_guests_names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: var(--border-width) solid var(--dark-900);
+  border-radius: 0.75rem;
+  background-color: #fff;
+
+  &:focus-within {
+    box-shadow: 0 0 0 var(--border-width) var(--dark-900);
+  }
+  &:has([data-name-chip]) input::placeholder {
+    color: transparent;
+  }
+}
+.admin_guests_name-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+  padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+  border-radius: var(--radius-round);
+  background-color: var(--light-100);
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+  color: var(--dark-900);
+
+  button {
+    position: relative;
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    color: var(--dark-700);
+    /* The glyph is small; the tap target is not. */
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -0.5rem;
+    }
+  }
+}
+.admin_guests_add_guest {
+  display: block;
+  flex: 1 1 9rem;
+  min-width: 0;
+
+  input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    color: var(--dark-900);
+
+    @media (max-width: 39.99rem) {
+      font-size: 1rem;
+    }
+    &::placeholder {
+      color: var(--dark-700);
+      opacity: 1;
+    }
+  }
+}
+.admin_guests_names .admin_guests_add_guest input {
+  padding: 0.375rem 0.25rem;
+  border: 0;
+  background: none;
+  outline: 0;
+}
+.admin_guests_panel [data-js] [data-no-js-add] {
+  display: none;
+}
+
+/* Already invited */
+.admin_guests_duplicate_warning {
+  padding: 0.625rem 0.75rem;
+  border-inline-start: 0.125rem solid var(--accent-500);
+  background-color: #c23b2e0f;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--dark-900);
+
+  p {
+    display: inline;
+    margin-inline-end: 0.3em;
+  }
+  a,
+  button {
+    display: inline;
+    font-size: inherit;
+    line-height: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--dark-900);
+  }
+  a {
+    color: var(--accent-500);
+    &:not([hidden])::after {
+      content: "·";
+      display: inline-block;
+      margin-inline: 0.3em;
+      text-decoration: none;
+      color: var(--dark-900);
+    }
+  }
+}
+.is-people .admin_guests_duplicate_warning {
+  margin-top: 0.625rem;
+}
+
+/* Plus-one switch and seat line */
+.admin_guests_plus {
+  gap: 0.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: var(--border-width) solid var(--light-300);
+}
+.admin_guests_switch {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-width: 0;
+  color: var(--dark-900);
+
+  .admin_guests_panel[data-variant="edit"] & {
+    display: none;
+  }
+}
+.admin_guests_switch_track {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 2.5rem;
+  height: 1.5rem;
+  padding: 0.1875rem;
+  border-radius: var(--radius-round);
+  background-color: var(--light-300);
+  transition: background-color var(--hover-duration) var(--hover-ease);
+
+  span {
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: var(--radius-round);
+    background-color: #fff;
+  }
+  [aria-pressed="true"] > & {
+    justify-content: flex-end;
+    background-color: var(--dark-900);
+
+    span {
+      background-color: var(--light-100);
+    }
+  }
+}
+.admin_guests_switch_text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  span:first-child {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+  }
+  span:last-child {
+    font-size: 0.875rem;
+    line-height: 1.125rem;
+    color: var(--dark-700);
+  }
+}
+.admin_guests_seatline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.625rem;
+
+  p {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.25rem;
+    min-width: 0;
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    color: var(--dark-700);
+  }
+  b {
+    margin-inline-end: 0.375rem;
+    font-family: var(--admin-display);
+    font-size: 2rem;
+    font-weight: 200;
+    line-height: 2.25rem;
+    color: var(--dark-900);
+  }
+  [data-seat-unit] {
+    color: var(--dark-900);
+  }
+}
+.admin_guests_more {
+  flex: none;
+  margin-inline-start: auto;
+  text-align: right;
+
+  summary {
+    font-size: 0.875rem;
+    line-height: 1.125rem;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--dark-900);
+  }
+}
+.admin_guests_stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: var(--border-width) solid var(--light-300);
+    border-radius: var(--radius-round);
+    font-size: 1.125rem;
+    line-height: 1;
+    text-align: center;
+    color: var(--dark-900);
+  }
+  output {
+    min-width: 1.5rem;
+    font-family: var(--admin-display);
+    font-size: 1.5rem;
+    font-weight: 200;
+    line-height: 2rem;
+    text-align: center;
+    color: var(--dark-900);
+  }
+}
+
+/* Invitation name, Host ID and notes */
+.admin_guests_invite_row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+
+  @media (max-width: 29.99rem) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  input {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+.admin_guests_drawer :is(#display-name, .admin_guests_hostid input, textarea) {
+  padding: 0.75rem 1rem;
+  border: var(--border-width) solid var(--light-300);
+  border-radius: 0.75rem;
+  background-color: #fff;
+  font-size: 1rem;
+  line-height: 1.25rem;
+  color: var(--dark-900);
+  &::placeholder {
+    color: var(--dark-700);
+  }
+}
+.admin_guests_drawer textarea {
+  display: block;
+  width: 100%;
+  height: 4.5rem;
+  min-height: 4.5rem;
+  resize: vertical;
+}
+.admin_guests_preview {
+  display: flex;
+  flex: 0 0 10.5rem;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.625rem 0.875rem;
+  border: var(--border-width) dashed var(--dark-700);
+  border-radius: 0.25rem;
+
+  @media (max-width: 29.99rem) {
+    flex-basis: auto;
+  }
+  span {
+    font-family: var(--admin-mono);
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+    letter-spacing: var(--letter-spacing-wider);
+    text-transform: uppercase;
+    color: var(--dark-700);
+  }
+  strong {
+    font-family: var(--admin-display);
+    font-size: 1.125rem;
+    font-weight: 200;
+    line-height: 1.375rem;
+    color: var(--dark-900);
+  }
+  span:last-child {
+    color: var(--accent-500);
+  }
+}
+.admin_guests_hostid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+  color: var(--dark-700);
+
+  strong {
+    font-family: var(--admin-mono);
+    font-weight: 400;
+    color: var(--dark-900);
+  }
+  summary {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--dark-900);
+  }
+  details[open] {
+    flex-basis: 100%;
+  }
+  details label {
+    display: block;
+    margin-top: 0.625rem;
+  }
+  details input {
+    width: 100%;
+  }
+}
+
+/* Edit: guests table */
+.admin_guests_people_head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: var(--border-width) solid var(--dark-900);
+}
+.admin_guests_person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-width: 0;
+  padding: 0.875rem 0;
+  border-bottom: var(--border-width) solid var(--light-300);
+
+  &.is-retired {
+    opacity: 0.5;
+
+    strong {
+      text-decoration: line-through;
+    }
+  }
+}
+.admin_guests_person_identity {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.375rem;
+  min-width: 0;
+
+  @media (min-width: 40rem) {
+    flex: 1 1 0;
+  }
+  strong {
+    flex-basis: 100%;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: var(--dark-900);
+  }
+  small {
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    color: var(--dark-700);
+  }
+}
+.admin_guests_person[data-seat-kind="plus_one"] strong {
+  font-weight: 400;
+  color: var(--dark-700);
+}
+.admin_guests_fix {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+
+  summary {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--dark-700);
+  }
+  &[open] {
+    flex-basis: 100%;
+  }
+  label {
+    display: block;
+    margin-top: 0.625rem;
+  }
+  input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 0.625rem 0.875rem;
+    border: var(--border-width) solid var(--dark-900);
+    border-radius: 0.625rem;
+    background-color: #fff;
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    color: var(--dark-900);
+
+    @media (max-width: 39.99rem) {
+      font-size: 1rem;
+    }
+  }
+  p {
+    margin-top: 0.5rem;
+    color: var(--dark-700);
+  }
+}
+.admin_guests_person_rsvp {
+  flex: 1 1 0;
+  font-family: var(--admin-mono);
+  font-size: 0.6875rem;
+  line-height: 0.875rem;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--dark-700);
+
+  @media (min-width: 40rem) {
+    flex: 0 0 6rem;
+  }
+  &[data-state="coming"],
+  &[data-state="declined"] {
+    color: var(--dark-900);
+  }
+  &[data-state="waiting"] {
+    color: var(--accent-500);
+  }
+}
+.admin_guests_person_action {
+  flex: 1 1 0;
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+  text-align: right;
+  color: var(--dark-900);
+
+  @media (min-width: 40rem) {
+    flex: 0 0 9.375rem;
+  }
+  label {
+    position: relative;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    &:has(:focus-visible) {
+      outline: var(--border-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+  }
+  input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  button {
+    font-size: inherit;
+    line-height: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--dark-900);
+  }
+  span:not([data-archive-label]) {
+    font-size: 0.8125rem;
+    color: var(--dark-700);
+  }
+}
+.admin_guests_people .admin_guests_add_guest {
+  flex-basis: auto;
+  padding-top: 0.875rem;
+
+  input {
+    padding: 0.625rem 0.875rem;
+    border: var(--border-width) solid var(--light-300);
+    border-radius: 0.625rem;
+    background-color: #fff;
+  }
+}
+
+/* A save refusal, above the footer */
+.admin_guests_drawer .admin_guests_error {
+  flex: none;
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.75rem;
+  border-inline-start: 0.125rem solid var(--accent-500);
+  background-color: #c23b2e0f;
+  line-height: 1.25rem;
+  color: var(--dark-900);
+
+  a {
+    color: var(--accent-500);
+  }
+}
+
+/* Footer, pinned */
+.admin_guests_drawer_footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 0 calc(1rem + var(--admin-inset));
+  border-top: var(--border-width) solid var(--light-300);
+
+  @media (min-width: 40rem) {
+    padding-bottom: 2.5rem;
+  }
+  > :is(a, button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.125rem;
+    border: 0;
+    border-radius: var(--radius-round);
+    font-family: var(--admin-sans);
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    color: var(--dark-900);
+    cursor: pointer;
+  }
+  > button[name="save_and_add"] {
+    padding-inline: 1.25rem;
+    border: var(--border-width) solid var(--dark-900);
+  }
+  > .primary {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--dark-900);
+    font-weight: 500;
+    color: var(--light-100);
+  }
+  > .accent {
+    margin-inline-end: auto;
+    padding: 0;
+    border: 0;
+    font-size: 0.875rem;
+    line-height: 1rem;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--accent-500);
+  }
+}
+.admin_guests_footer_hint {
+  margin-inline-end: auto;
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  color: var(--dark-700);
+
+  @media (max-width: 39.99rem) {
+    display: none;
   }
 }
 
