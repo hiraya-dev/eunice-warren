@@ -1002,9 +1002,72 @@ const editSeats = (row: AdminHousehold) => {
   if (input?.value) filterRows();
 
   let opener: HTMLElement | null = null;
+  const guestFormValues = (form: HTMLFormElement) =>
+    [...form.elements]
+      .filter(
+        (
+          element,
+        ): element is
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLSelectElement ||
+          element instanceof HTMLTextAreaElement,
+      )
+      .filter(
+        (element) =>
+          element.name &&
+          !["submit", "button", "reset", "image"].includes(element.type),
+      )
+      .map((element) => {
+        if (
+          element instanceof HTMLInputElement &&
+          (element.type === "checkbox" || element.type === "radio")
+        )
+          return `${element.name}=${element.checked ? element.value : ""}`;
+        return `${element.name}=${element.value}`;
+      })
+      .join("\u0000");
+  const guestFormInitialValues = new WeakMap<HTMLFormElement, string>();
+  const rememberGuestForm = (form: HTMLFormElement) => {
+    if (!guestFormInitialValues.has(form))
+      guestFormInitialValues.set(form, guestFormValues(form));
+  };
+  const guestFormIsDirty = (form: HTMLFormElement) =>
+    form.dataset.dirtyStart === "true" ||
+    (guestFormInitialValues.get(form) !== undefined &&
+      guestFormInitialValues.get(form) !== guestFormValues(form));
+  const currentGuestFormIsDirty = () => {
+    const form = document.querySelector<HTMLFormElement>(
+      "[data-admin-household-form]",
+    );
+    return Boolean(form && !form.dataset.submitting && guestFormIsDirty(form));
+  };
+  const discardMessage = "Discard your changes to this household?";
+  const confirmDiscard = () =>
+    !currentGuestFormIsDirty() || window.confirm(discardMessage);
+  let discardConfirmed = false;
+  document.addEventListener("input", () => {
+    discardConfirmed = false;
+  });
   const setDrawerOpen = (open: boolean) =>
     document.documentElement.toggleAttribute("data-admin-drawer-open", open);
+  const currentDrawerUrl = () => {
+    const url = new URL(location.href);
+    const form = document.querySelector<HTMLFormElement>(
+      "[data-admin-household-form]",
+    );
+    url.searchParams.delete("new");
+    url.searchParams.delete("edit");
+    if (form?.dataset.variant === "new") url.searchParams.set("new", "1");
+    else {
+      const id =
+        form?.querySelector<HTMLInputElement>("input[name='id']")?.value;
+      if (id) url.searchParams.set("edit", id);
+    }
+    return `${url.pathname}${url.search}`;
+  };
   const closeDrawer = () => {
+    if (!confirmDiscard()) return;
     const url = new URL(location.href);
     url.searchParams.delete("new");
     url.searchParams.delete("edit");
@@ -1029,9 +1092,13 @@ const editSeats = (row: AdminHousehold) => {
       if (push) history.pushState(null, "", href);
       setDrawerOpen(true);
       hydrateDrawer(next);
+      // The discard was for the drawer just replaced; the new one starts clean,
+      // and its stepper/switch changes fire no input event to clear the flag.
+      discardConfirmed = false;
       syncLinks();
       next.querySelector<HTMLElement>("h2")?.focus();
     } catch {
+      if (currentGuestFormIsDirty()) discardConfirmed = true;
       location.href = href;
     }
   };
@@ -1050,14 +1117,59 @@ const editSeats = (row: AdminHousehold) => {
       "[data-admin-edit], .admin_guests_add",
     );
     if (link) {
+      const dirty = currentGuestFormIsDirty();
+      if (!confirmDiscard()) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
+      if (dirty) discardConfirmed = true;
       opener = link;
       void loadDrawer(link.href);
       return;
     }
+    const duplicateOpen = target.closest<HTMLAnchorElement>(
+      "[data-duplicate-open]",
+    );
+    if (duplicateOpen) {
+      const dirty = currentGuestFormIsDirty();
+      if (!confirmDiscard()) {
+        event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      if (dirty) discardConfirmed = true;
+      void loadDrawer(duplicateOpen.href);
+      return;
+    }
+    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    const clickedLink = target.closest<HTMLAnchorElement>("a");
+    if (clickedLink && drawer?.contains(clickedLink)) {
+      const url = new URL(clickedLink.href, location.href);
+      const isArchive = url.searchParams.has("archive");
+      const isReload = Boolean(clickedLink.closest("[data-admin-write-error]"));
+      if (isArchive || isReload) {
+        const dirty = currentGuestFormIsDirty();
+        if (!confirmDiscard()) {
+          event.preventDefault();
+          return;
+        }
+        if (dirty) discardConfirmed = true;
+        return;
+      }
+    }
     if (target.closest("[data-admin-drawer-close], .admin-drawer_scrim")) {
       event.preventDefault();
       closeDrawer();
+      return;
+    }
+    const dashboardNav = target.closest<HTMLAnchorElement>(
+      "[data-admin-nav] a, [data-admin-tabbar] a, [data-admin-filter], .admin_brand, .admin_topbar a, .admin_account a",
+    );
+    if (dashboardNav) {
+      const dirty = currentGuestFormIsDirty();
+      if (!confirmDiscard()) event.preventDefault();
+      else if (dirty) discardConfirmed = true;
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -1091,11 +1203,49 @@ const editSeats = (row: AdminHousehold) => {
   });
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
+    const form = document.querySelector<HTMLFormElement>(
+      "[data-admin-household-form]",
+    );
+    if (form && (url.searchParams.has("new") || url.searchParams.has("edit"))) {
+      const current = currentDrawerUrl();
+      if (current !== `${url.pathname}${url.search}` && !confirmDiscard()) {
+        history.pushState(null, "", current);
+        return;
+      }
+    } else if (form && !confirmDiscard()) {
+      history.pushState(null, "", currentDrawerUrl());
+      return;
+    }
     if (url.searchParams.has("new") || url.searchParams.has("edit"))
       void loadDrawer(url.href, false);
     else {
       document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
       setDrawerOpen(false);
+    }
+  });
+  window.addEventListener("beforeunload", (event) => {
+    if (discardConfirmed || !currentGuestFormIsDirty()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  window.addEventListener("pageshow", (event) => {
+    discardConfirmed = false;
+    if (!event.persisted) return;
+    for (const form of document.querySelectorAll<HTMLFormElement>(
+      "[data-admin-household-form]",
+    )) {
+      delete form.dataset.submitting;
+      for (const mirror of form.querySelectorAll<HTMLInputElement>(
+        "[data-admin-submit-mirror]",
+      ))
+        mirror.remove();
+      for (const button of form.querySelectorAll<HTMLButtonElement>(
+        "button[type='submit'][name='save'], button[type='submit'][name='save_and_add']",
+      )) {
+        button.disabled = false;
+        button.textContent =
+          button.name === "save_and_add" ? "Save and add another" : "Save";
+      }
     }
   });
 
@@ -1106,6 +1256,13 @@ const editSeats = (row: AdminHousehold) => {
     if (!form) return;
     // The no-JS "Add" button is hidden once the script owns Enter.
     form.dataset.js = "true";
+    // A drawer the server re-rendered after a refused save holds a draft that
+    // was never stored, so it starts dirty. Read this before sync(): sync()
+    // shows the duplicate warning for any shared name, refused or not.
+    const refusedOnLoad = Boolean(
+      form.querySelector("[data-admin-write-error]") ||
+        form.querySelector("[data-duplicate-warning]:not([hidden])"),
+    );
     const addInput = form.querySelector<HTMLInputElement>("[data-add-name]");
     const list = form.querySelector<HTMLElement>("[data-name-list]");
     const count = form.querySelector<HTMLInputElement>(
@@ -1215,12 +1372,16 @@ const editSeats = (row: AdminHousehold) => {
     const sync = () => {
       if (!count) return;
       const names = seatNames();
-      const seats = Math.max(
+      const draftSeats = Math.max(
         1,
         names.length,
         Math.min(12, Number(count.value) || names.length),
       );
-      count.value = String(seats);
+      const retiredCount = isEdit
+        ? form.querySelectorAll("[data-seat-row].is-retired").length
+        : 0;
+      const seats = Math.max(1, draftSeats - retiredCount);
+      count.value = String(draftSeats);
       if (output) output.value = String(seats);
       if (summary) {
         const open = !isEdit && names.length === 0 ? 0 : seats - names.length;
@@ -1328,6 +1489,10 @@ const editSeats = (row: AdminHousehold) => {
     form.addEventListener("submit", (event) => {
       const submitter = (event as SubmitEvent).submitter as HTMLElement | null;
       if (!submitter) return;
+      if (form.dataset.submitting) {
+        event.preventDefault();
+        return;
+      }
       if (submitter.matches("[data-no-js-add]")) {
         event.preventDefault();
         addValue();
@@ -1403,6 +1568,34 @@ const editSeats = (row: AdminHousehold) => {
           );
         sync();
       }
+      if (
+        !event.defaultPrevented &&
+        submitter.matches(
+          "button[type='submit'][name='save'], button[type='submit'][name='save_and_add']",
+        )
+      ) {
+        form.dataset.submitting = "true";
+        const mirror = document.createElement("input");
+        mirror.type = "hidden";
+        mirror.name = submitter.getAttribute("name") ?? "";
+        mirror.value = submitter.getAttribute("value") ?? "";
+        mirror.dataset.adminSubmitMirror = "true";
+        form.append(mirror);
+        const buttons = form.querySelectorAll<HTMLButtonElement>(
+          "button[type='submit'][name='save'], button[type='submit'][name='save_and_add']",
+        );
+        const visibleSubmitter =
+          submitter.classList.contains("sr-only") &&
+          submitter.getAttribute("name") === "save"
+            ? form.querySelector<HTMLButtonElement>(
+                "button[type='submit'][name='save'].primary",
+              )
+            : submitter;
+        queueMicrotask(() => {
+          for (const button of buttons) button.disabled = true;
+          if (visibleSubmitter) visibleSubmitter.textContent = "Saving…";
+        });
+      }
     });
     addInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -1446,6 +1639,7 @@ const editSeats = (row: AdminHousehold) => {
           "[data-archive-label]",
         );
         if (label) label.textContent = target.checked ? "Undo" : "Archive";
+        sync();
       }
     });
     invitation?.addEventListener("input", () => {
@@ -1467,6 +1661,8 @@ const editSeats = (row: AdminHousehold) => {
       sync();
     });
     sync();
+    rememberGuestForm(form);
+    if (refusedOnLoad) form.dataset.dirtyStart = "true";
   }
 
   function hydrateInitialDrawer() {
