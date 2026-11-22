@@ -502,7 +502,7 @@ if (savedNotice && !editMode) {
               />
               <div class="admin-drawer_panel">
                 <div class="admin-drawer_top">
-                  <p class="admin_label">
+                  <p class={`admin_label${detail.versionCount ? "" : " admin-drawer_waiting-eyebrow"}`}>
                     {editMode
                       ? detail.versionCount
                         ? `Edit reply · ${detail.label} · ${replyCountText(detail.versionCount)}`
@@ -637,7 +637,7 @@ if (savedNotice && !editMode) {
                                   {seat.kind === "member"
                                     ? `Invited as ${seat.invitedName ?? ""}${index === 0 ? " · lead" : ""}`
                                     : "Open seat · plus-one"}
-                                  {!draft.attending && " · not coming"}
+                                  <span data-admin-seat-state>{!draft.attending && " · not coming"}</span>
                                   <span
                                     class="admin-drawer_was"
                                     data-admin-was
@@ -829,6 +829,8 @@ if (savedNotice && !editMode) {
     for (const checkbox of form.querySelectorAll<HTMLInputElement>("input[type='checkbox'][name^='seat_attending_']")) {
       const select = form.querySelector<HTMLSelectElement>(`select[name='slipper_size_${checkbox.name.replace("seat_attending_", "")}']`);
       if (select) select.disabled = no || !checkbox.checked;
+      const state = checkbox.closest<HTMLElement>("[data-admin-seat]")?.querySelector<HTMLElement>("[data-admin-seat-state]");
+      if (state) state.textContent = checkbox.checked ? "" : " · not coming";
     }
     for (const nameInput of form.querySelectorAll<HTMLInputElement>("input[name^='seat_name_']")) {
       const was = nameInput.closest(".admin-drawer_edit-seat-fields")?.querySelector<HTMLElement>("[data-admin-was]");
@@ -841,6 +843,49 @@ if (savedNotice && !editMode) {
   const syncEditForms = () => {
     for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form"))
       syncEditForm(form);
+  };
+
+  const editFormValues = (form: HTMLFormElement) =>
+    [...form.elements]
+      .filter((element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement,
+      )
+      .filter((element) => element.name && element.type !== "submit" && element.type !== "button")
+      .map((element) => {
+        if (element instanceof HTMLInputElement && (element.type === "checkbox" || element.type === "radio"))
+          return `${element.name}=${element.checked ? element.value : ""}`;
+        return `${element.name}=${element.value}`;
+      })
+      .join("\u0000");
+  const editFormInitialValues = new WeakMap<HTMLFormElement, string>();
+  const rememberEditForm = (form: HTMLFormElement) => {
+    if (!editFormInitialValues.has(form)) editFormInitialValues.set(form, editFormValues(form));
+  };
+  const editFormIsDirty = (form: HTMLFormElement) =>
+    editFormInitialValues.get(form) !== undefined &&
+    editFormInitialValues.get(form) !== editFormValues(form);
+  const currentEditFormIsDirty = () => {
+    const form = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form");
+    return Boolean(form && !form.dataset.submitting && editFormIsDirty(form));
+  };
+  const discardMessage = "Discard your changes to this reply?";
+  const confirmDiscard = () => !currentEditFormIsDirty() || window.confirm(discardMessage);
+
+  const markEditForms = () => {
+    for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form"))
+      rememberEditForm(form);
+  };
+  const submitEditForm = (form: HTMLFormElement) => {
+    if (form.dataset.submitting) return;
+    form.dataset.submitting = "true";
+    const button = form.querySelector<HTMLButtonElement>("button[type='submit']");
+    queueMicrotask(() => {
+      if (!button) return;
+      button.disabled = true;
+      button.textContent = "Saving…";
+    });
   };
   document.addEventListener("change", (event) => {
     const form = (event.target as Element | null)?.closest<HTMLFormElement>(
@@ -855,6 +900,17 @@ if (savedNotice && !editMode) {
       if (error) error.hidden = true;
     }
   });
+  document.addEventListener("submit", (event) => {
+    const form = event.target instanceof HTMLFormElement
+      ? event.target.closest<HTMLFormElement>(".admin-drawer_edit-form")
+      : null;
+    if (!form) return;
+    if (form.dataset.submitting) {
+      event.preventDefault();
+      return;
+    }
+    submitEditForm(form);
+  });
   document.addEventListener("input", (event) => {
     const nameInput = event.target instanceof HTMLInputElement && event.target.name.startsWith("seat_name_")
       ? event.target
@@ -864,12 +920,14 @@ if (savedNotice && !editMode) {
     const storedName = nameInput.dataset.shownName ?? "";
     if (was) was.hidden = !storedName || nameInput.value === storedName;
   });
+  markEditForms();
   syncEditForms();
   let opener: HTMLAnchorElement | null = null;
   const setOpen = (open: boolean) => {
     document.documentElement.toggleAttribute("data-admin-drawer-open", open);
   };
   const closeDrawer = () => {
+    if (!confirmDiscard()) return;
     const url = new URL(location.href);
     url.searchParams.delete("household");
     history.pushState(null, "", url);
@@ -893,6 +951,7 @@ if (savedNotice && !editMode) {
         .querySelector<HTMLElement>("[data-admin-rsvps-page]")
         ?.append(next);
       syncLinks();
+      markEditForms();
       syncEditForms();
       if (push) history.pushState(null, "", url);
       setOpen(true);
@@ -914,6 +973,7 @@ if (savedNotice && !editMode) {
       return;
     const rowLink = target.closest<HTMLAnchorElement>("[data-admin-rsvp-link]");
     if (rowLink) {
+      if (!confirmDiscard()) return;
       event.preventDefault();
       opener = rowLink;
       void loadDrawer(rowLink.href);
@@ -921,6 +981,7 @@ if (savedNotice && !editMode) {
     }
     const drawerNav = target.closest<HTMLAnchorElement>("[data-admin-drawer-nav]");
     if (drawerNav) {
+      if (!confirmDiscard()) return;
       event.preventDefault();
       void loadDrawer(drawerNav.href);
       return;
@@ -928,6 +989,11 @@ if (savedNotice && !editMode) {
     if (target.closest("[data-admin-drawer-close], .admin-drawer_scrim")) {
       event.preventDefault();
       closeDrawer();
+      return;
+    }
+    const dashboardNav = target.closest<HTMLAnchorElement>("[data-admin-nav] a, [data-admin-tabbar] a, [data-admin-filter], [data-admin-download], .admin_brand, .admin_topbar a, .admin_account a");
+    if (dashboardNav && !confirmDiscard()) {
+      event.preventDefault();
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -936,6 +1002,7 @@ if (savedNotice && !editMode) {
     if (event.key === "Escape") {
       event.preventDefault();
       if (drawer.querySelector(".admin-drawer_edit-form")) {
+        if (!confirmDiscard()) return;
         const url = new URL(location.href);
         url.searchParams.delete("edit");
         void loadDrawer(url.href);
@@ -979,6 +1046,22 @@ if (savedNotice && !editMode) {
     syncLinks();
     document.querySelector<HTMLElement>("[data-admin-drawer] h2")?.focus();
   }
+  window.addEventListener("beforeunload", (event) => {
+    if (!currentEditFormIsDirty()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form")) {
+      delete form.dataset.submitting;
+      const button = form.querySelector<HTMLButtonElement>("button[type='submit']");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Save reply";
+      }
+    }
+  });
   if (document.querySelector("[data-admin-saved]")) {
     const url = new URL(location.href);
     url.searchParams.delete("saved");

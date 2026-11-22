@@ -530,3 +530,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the stale spec saves twice after the refusal and both are refused (`tests/admin-rsvps.spec.ts` "refuses a stale host edit and keeps the draft").
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`
+
+### L-057 — Dashboard edit forms protect the host's typing
+- **Date:** 2026-11-22
+- **Trigger:** #102, Local review fix round
+- **Symptom:** the RSVP edit drawer let Esc, ×, the scrim or a nav link throw away a half-typed edit without a word, a second click on Save could post twice, and seat state ("not coming", size select) only caught up after a save. The user asked for the dashboard to be "as UX friendly as possible".
+- **Root cause:** the criteria covered the data rules and the happy path, not how a non-technical host can lose work or get unclear feedback.
+- **Rule:** every dashboard edit form (a) asks "Discard your changes…?" before any JS exit while it differs from how it loaded, and warns on reload/tab close (`beforeunload`); (b) shows a busy "Saving…" state and blocks a second submit; (c) reflects each control's consequence live. Write these into the criteria of any new edit form. Test a transient submit state by preventing the submit at the form in the spec, not by holding the navigation request with `page.route`.
+- **Check:** `tests/admin-rsvps.spec.ts` "guards dirty edit exits and allows a clean Escape", "shows Saving while a dirty reply is submitting without a guard", "updates the seat state and size control live".
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`

@@ -3634,6 +3634,10 @@ html[data-admin-drawer-open] {
   }
 }
 
+.admin-drawer_top .admin-drawer_waiting-eyebrow {
+  color: var(--accent-500);
+}
+
 /*
  * RSVP edit form (Paper Admin 15, 15b and 16). The panel stops scrolling in
  * edit mode: the middle scrolls, the footer stays pinned, as in the Guest list
@@ -3740,6 +3744,7 @@ html[data-admin-drawer-open] {
       font-size: 2.25rem;
     }
     p {
+      display: none;
       font-size: 0.875rem;
     }
   }

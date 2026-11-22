@@ -299,6 +299,106 @@ test.describe("admin RSVPs", () => {
     await expect(page.getByRole("button", { name: "Save reply" })).toBeVisible();
   });
 
+  test("hides the edit header sub-line only on phones", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    await expect(page.locator(".admin-drawer_edit-scroll > header > p")).toBeHidden();
+    await page.goto("/admin/rsvps?household=hh-ramos");
+    await expect(page.locator(".admin-drawer_panel > header > p")).toBeVisible();
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    await expect(page.locator(".admin-drawer_edit-scroll > header > p")).toBeVisible();
+  });
+
+  test("updates the seat state and size control live", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    const checkbox = page.locator('input[name="seat_attending_1"]');
+    const select = page.locator('select[name="slipper_size_1"]');
+    const subline = checkbox.locator("xpath=ancestor::*[@data-admin-seat]").locator("[data-admin-seat-state]");
+    await checkbox.uncheck();
+    await expect(subline).toHaveText(" · not coming");
+    await expect(select).toBeDisabled();
+    await checkbox.check();
+    await expect(subline).toHaveText("");
+    await expect(select).toBeEnabled();
+  });
+
+  test("guards dirty edit exits and allows a clean Escape", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    const name = page.locator('input[name="seat_name_1"]');
+    await name.fill("Changed for the guard test");
+    let dialogs = 0;
+    const dismiss = async (dialog: import("@playwright/test").Dialog) => {
+      dialogs += 1;
+      await dialog.dismiss();
+    };
+    page.on("dialog", dismiss);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".admin-drawer_edit-form")).toBeVisible();
+    await expect(name).toHaveValue("Changed for the guard test");
+    expect(dialogs).toBe(1);
+    page.off("dialog", dismiss);
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.locator("[data-admin-drawer-close]").click();
+    await expect(page.locator(".admin-drawer_edit-form")).toHaveCount(0);
+
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    let cleanDialogs = 0;
+    const unexpected = async (dialog: import("@playwright/test").Dialog) => {
+      cleanDialogs += 1;
+      await dialog.dismiss();
+    };
+    page.on("dialog", unexpected);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".admin-drawer_edit-form")).toHaveCount(0);
+    expect(cleanDialogs).toBe(0);
+    page.off("dialog", unexpected);
+  });
+
+  test("shows Saving while a dirty reply is submitting without a guard", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    await page.locator('input[name="seat_name_1"]').fill("Changed and saved");
+    // Stop the browser's own submission at the form, so the page stays put and
+    // nothing is saved; the page's submit listener still runs (it sits on
+    // document). The real save path is covered by the save specs above.
+    await page.evaluate(() => {
+      document
+        .querySelector(".admin-drawer_edit-form")!
+        .addEventListener("submit", (event) => event.preventDefault());
+    });
+    let dialogs = 0;
+    const unexpected = async (dialog: import("@playwright/test").Dialog) => {
+      dialogs += 1;
+      await dialog.dismiss();
+    };
+    page.on("dialog", unexpected);
+    try {
+      await page.getByRole("button", { name: "Save reply" }).click();
+      const saving = page.locator(".admin-drawer_edit-form button[type='submit']");
+      await expect(saving).toHaveText("Saving…");
+      await expect(saving).toBeDisabled();
+      expect(dialogs).toBe(0);
+    } finally {
+      page.off("dialog", unexpected);
+    }
+  });
+
+  test("uses the accent color for a waiting read eyebrow", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-santos");
+    const colors = await page.locator(".admin-drawer_top .admin_label").evaluate((eyebrow) => {
+      const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent-500").trim();
+      const probe = document.createElement("span");
+      probe.style.color = accent;
+      document.body.append(probe);
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      return { actual: getComputedStyle(eyebrow).color, expected };
+    });
+    expect(colors.actual).toBe(colors.expected);
+  });
+
   test("pins the edit footer to the sheet and keeps Save reply under no other layer", { tag: "@single" }, async ({ page }) => {
     // Read-only: opens the form and measures, never saves.
     const measure = () =>
