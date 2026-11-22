@@ -15,10 +15,12 @@ import type {
   AdminRsvpRow,
   AdminRsvpSeat,
   AdminSlipperOrder,
+  AdminHostActor,
   AdminSongRequests,
   AdminStore,
   NewHouseholdInput,
   SaveHouseholdInput,
+  SaveRsvpInput,
 } from "./store";
 import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 import { songKey } from "./presentation.ts";
@@ -101,6 +103,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
             ? s.named_by_kind
             : null,
         namedAt: s.named_at ? String(s.named_at) : null,
+        namedInResponseId: s.named_in_response_id ? Number(s.named_in_response_id) : null,
         hasActivity: Boolean(s.has_activity),
         ...(s.kind === "plus_one"
           ? { state: plusStates.get(Number(s.id))?.state ?? "open" }
@@ -211,6 +214,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     label: string;
     display_name: string;
     seat_count: number;
+    updated_at: string;
   };
   type RawSeat = {
     id: number;
@@ -222,6 +226,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     named_by: string | null;
     named_by_kind: string | null;
     named_at: string | null;
+    named_in_response_id: number | null;
   };
   type RawResponse = {
     id: number;
@@ -244,11 +249,11 @@ export function createD1AdminStore(database: D1Database): AdminStore {
   async function rsvpData(householdId?: string) {
     const where = householdId ? " AND h.id = ?" : "";
     const hs = await query<RawHousehold>(
-      `SELECT h.id,h.label,h.display_name,count(s.id) seat_count FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active'${where} GROUP BY h.id`,
+      `SELECT h.id,h.label,h.display_name,h.updated_at,count(s.id) seat_count FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active'${where} GROUP BY h.id`,
       ...(householdId ? [householdId] : []),
     );
     const seats = await query<RawSeat>(
-      `SELECT s.id,s.household_id,s.slot,s.kind,s.invited_name,s.name,s.named_by,s.named_by_kind,s.named_at FROM invite_seats s JOIN households h ON h.id=s.household_id AND h.status='active' WHERE s.status='active'${householdId ? " AND h.id = ?" : ""} ORDER BY s.household_id,s.slot`,
+      `SELECT s.id,s.household_id,s.slot,s.kind,s.invited_name,s.name,s.named_by,s.named_by_kind,s.named_at,s.named_in_response_id FROM invite_seats s JOIN households h ON h.id=s.household_id AND h.status='active' WHERE s.status='active'${householdId ? " AND h.id = ?" : ""} ORDER BY s.household_id,s.slot`,
       ...(householdId ? [householdId] : []),
     );
     const responses = await query<RawResponse>(
@@ -374,6 +379,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
         note: null,
         seats: row.seats,
         history: [],
+        updatedAt: household.updated_at,
       };
     const versions = responses
       .filter((r) => r.household_id === household.id)
@@ -423,6 +429,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
             };
           }),
       })),
+      updatedAt: (household as RawHousehold & { updated_at?: string }).updated_at,
     };
   }
   async function getRsvpList(): Promise<AdminRsvpList> {
@@ -553,6 +560,126 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     ok: false as const,
     message,
   });
+  async function saveRsvp(input: SaveRsvpInput, actor: AdminHostActor) {
+    const household = await database
+      .prepare(
+        `SELECT id,updated_at FROM households WHERE id=? AND status='active'`,
+      )
+      .bind(input.id)
+      .first<{ id: string; updated_at: string }>();
+    if (!household) throw new StaleHouseholdError();
+    const currentSeats = (
+      await database
+        .prepare(
+          `SELECT id,kind,name,invited_name FROM invite_seats WHERE household_id=? AND status='active' ORDER BY slot`,
+        )
+        .bind(input.id)
+        .all<{
+          id: number;
+          kind: "member" | "plus_one";
+          name: string | null;
+          invited_name: string | null;
+        }>()
+    ).results;
+    const postedIds = input.seats.map((seat) => seat.seatId).sort((a, b) => a - b);
+    const activeIds = currentSeats.map((seat) => seat.id).sort((a, b) => a - b);
+    if (
+      postedIds.length !== activeIds.length ||
+      postedIds.some((id, index) => id !== activeIds[index])
+    )
+      throw new StaleHouseholdError();
+    if (input.updatedAt !== household.updated_at) throw new StaleHouseholdError();
+    const latest = await database
+      .prepare(
+        `SELECT respondent_name,email,(SELECT max(id) FROM responses WHERE household_id=?) AS max_id FROM responses WHERE household_id=? ORDER BY submitted_at DESC,id DESC LIMIT 1`,
+      )
+      .bind(input.id, input.id)
+      .first<{ respondent_name: string; email: string; max_id: number | null }>();
+    const now = new Date().toISOString();
+    // Two saves in the same millisecond share submitted_at, and history breaks
+    // that tie by id, so the new id must sort after every earlier one.
+    const responseId = Math.max(
+      Date.now() * 1000 + Math.floor(Math.random() * 1000),
+      Number(latest?.max_id ?? 0) + 1,
+    );
+    const response = database
+      .prepare(
+        `INSERT INTO responses (id,household_id,submitted_at,respondent_name,attending,guest_count,email,note,source,edited_by) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      )
+      .bind(
+        responseId,
+        input.id,
+        now,
+        latest?.respondent_name || actor.firstName,
+        input.attending ? 1 : 0,
+        input.attending ? input.seats.filter((seat) => seat.attending).length : 0,
+        latest?.email ?? "",
+        input.note?.trim() || null,
+        "host",
+        actor.email,
+      );
+    const seats = database
+      .prepare(
+        `INSERT INTO response_seats (response_id,seat_id,kind,name,attending,slipper_size) VALUES ${currentSeats.map(() => "(?,?,?,?,?,?)").join(",")}`,
+      )
+      .bind(
+        ...currentSeats.flatMap((current) => {
+          const posted = input.seats.find((seat) => seat.seatId === current.id)!;
+          const attending = input.attending && posted.attending;
+          return [
+            responseId,
+            current.id,
+            current.kind,
+            posted.name,
+            attending ? 1 : 0,
+            attending ? posted.slipperSize ?? null : null,
+          ];
+        }),
+      );
+    const statements: D1PreparedStatement[] = [
+      database
+        .prepare(
+          `UPDATE households SET updated_at=CASE WHEN updated_at=? THEN ? ELSE NULL END,updated_by=? WHERE id=? AND status='active'`,
+        )
+        .bind(input.updatedAt, now, actor.email, input.id),
+      response,
+      seats,
+    ];
+    for (const current of currentSeats) {
+      const posted = input.seats.find((seat) => seat.seatId === current.id)!;
+      const clean = posted.name.trim();
+      if (!clean || clean === (posted.shownName ?? current.name ?? "")) continue;
+      // Only the current name changes: name_key/surname_key follow the invited
+      // name, which guest lookup uses, and a host rename never touches it.
+      statements.push(
+        database
+          .prepare(
+            `UPDATE invite_seats SET name=?,named_by_kind='host',named_by=?,named_at=?,named_in_response_id=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`,
+          )
+          .bind(
+            clean,
+            actor.email,
+            now,
+            responseId,
+            now,
+            actor.email,
+            current.id,
+            input.id,
+          ),
+      );
+    }
+    try {
+      await database.batch(statements);
+    } catch (error) {
+      if (
+        String(error).toLowerCase().includes("not null constraint") &&
+        String(error).toLowerCase().includes("updated_at")
+      )
+        throw new StaleHouseholdError();
+      throw error;
+    }
+    return { ok: true as const };
+  }
   async function saveHousehold(input: SaveHouseholdInput, actor: string) {
     const displayName = input.displayName.trim();
     const label = input.label?.trim();
@@ -1043,6 +1170,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     getSongRequests,
     getNavCounts,
     saveHousehold,
+    saveRsvp,
     addHousehold,
     archiveHousehold,
   };

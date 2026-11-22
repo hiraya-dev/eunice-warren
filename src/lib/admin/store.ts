@@ -12,6 +12,7 @@ export interface AdminSeat {
   namedBy: string | null;
   namedByKind: "guest" | "host" | null;
   namedAt: string | null;
+  namedInResponseId?: number | null;
   state?: "open" | "named" | "freed";
   slipperSize?: string | null;
   attending?: boolean;
@@ -170,6 +171,24 @@ export interface AdminRsvpDetail {
   note: string | null;
   seats: AdminRsvpSeat[];
   history: AdminRsvpVersion[];
+  updatedAt?: string;
+}
+export interface AdminHostActor {
+  email: string;
+  firstName: string;
+}
+export interface SaveRsvpInput {
+  id: string;
+  updatedAt: string;
+  attending: boolean;
+  seats: Array<{
+    seatId: number;
+    shownName: string;
+    name: string;
+    attending: boolean;
+    slipperSize?: string;
+  }>;
+  note: string | null;
 }
 export interface AdminSlipperOrder {
   women: Array<{ size: string; count: number }>;
@@ -215,6 +234,10 @@ export interface AdminStore {
     input: SaveHouseholdInput,
     actor: string,
   ): Promise<{ ok: true } | { ok: false; message: string }>;
+  saveRsvp(
+    input: SaveRsvpInput,
+    actor: AdminHostActor,
+  ): Promise<{ ok: true }>;
   addHousehold(
     input: NewHouseholdInput,
     actor: string,

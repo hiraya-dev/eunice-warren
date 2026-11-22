@@ -12,6 +12,10 @@ import {
   seatSubline,
 } from "@/lib/admin/presentation";
 import { selectAdminStore } from "@/lib/admin/store";
+import { StaleHouseholdError } from "@/lib/admin/store";
+import { isRsvpClosed, submissionProblems } from "@/lib/rsvp/logic";
+import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
+import { normalizeName } from "@/lib/admin/names";
 import { loadAdminRsvps } from "@/lib/admin/rsvps";
 import type {
   AdminRsvpDetail,
@@ -23,16 +27,34 @@ const host = Astro.locals.adminHost!;
 const hosts = parseAdminHosts(
   String((env as Record<string, unknown>).ADMIN_HOSTS ?? ""),
 ) ?? { [host.email]: host.firstName };
+const store = selectAdminStore(
+  (env as Record<string, unknown>).RSVP_STORE,
+  (env as Record<string, unknown>).DB as never,
+);
 let data: AdminRsvpList | null = null;
 let detail: AdminRsvpDetail | null = null;
 let failed = false;
+let editDraft: {
+  updatedAt: string;
+  attending: boolean | null;
+  note: string;
+  seats: Array<{
+    seatId: number;
+    shownName: string;
+    name: string;
+    attending: boolean;
+    slipperSize: string;
+  }>;
+} | null = null;
+let validationErrors: Array<{
+  seatId?: number;
+  field: string;
+  message: string;
+}> = [];
+let staleError = false;
 const requested = Astro.url.searchParams.get("household");
 const loaded = await loadAdminRsvps(
-  () =>
-    selectAdminStore(
-      (env as Record<string, unknown>).RSVP_STORE,
-      (env as Record<string, unknown>).DB as never,
-    ),
+  () => store,
   requested,
 );
 data = loaded.data;
@@ -92,10 +114,138 @@ const href = (next: Record<string, string | null>) => {
     if (value) params.set(key, value);
   return `${Astro.url.pathname}?${params}`;
 };
+const redirectHref = (form: FormData, extra: Record<string, string> = {}) => {
+  const params = new URLSearchParams();
+  const filterValue = String(form.get("filter") ?? "");
+  const queryValue = String(form.get("q") ?? "");
+  if (filterValue && filterValue !== "all") params.set("filter", filterValue);
+  if (queryValue) params.set("q", queryValue);
+  for (const [key, value] of Object.entries(extra)) params.set(key, value);
+  return `/admin/rsvps${params.toString() ? `?${params}` : ""}`;
+};
+const savedCookieName = "admin_rsvp_saved";
+const savedCookie = `${savedCookieName}=1`;
+const hasSavedCookie = (Astro.request.headers.get("cookie") ?? "")
+  .split(";")
+  .some((cookie) => cookie.trim() === savedCookie);
+if (Astro.request.method === "POST") {
+  const origin = Astro.request.headers.get("origin");
+  if (origin && origin !== Astro.url.origin) {
+    Astro.response.status = 403;
+    validationErrors = [{ field: "form", message: "Forbidden" }];
+  } else {
+    const form = await Astro.request.formData();
+    if (String(form.get("action") ?? "") === "save") {
+      const householdId = String(form.get("id") ?? "");
+      const postedUpdatedAt = String(form.get("updated_at") ?? "");
+      const postedDetail = detail ?? (await store.getRsvpDetail(householdId));
+      if (postedDetail) {
+        detail = postedDetail;
+        const answer = String(form.get("attending") ?? "");
+        const attending = answer === "yes" ? true : answer === "no" ? false : null;
+        const seats = postedDetail.seats.map((seat) => ({
+          seatId: seat.seatId!,
+          shownName: String(form.get(`shown_name_${seat.seatId}`) ?? seat.name ?? ""),
+          name: normalizeName(String(form.get(`seat_name_${seat.seatId}`) ?? seat.name ?? "")),
+          attending: form.get(`seat_attending_${seat.seatId}`) === "on",
+          slipperSize: String(form.get(`slipper_size_${seat.seatId}`) ?? ""),
+        }));
+        const note = String(form.get("note") ?? "");
+        // Without JS the size select stays enabled, so an unticked seat can
+        // post a size; it is not coming, so the size is dropped, not refused.
+        for (const seat of seats) if (!seat.attending) seat.slipperSize = "";
+        if (attending === false) {
+          for (const seat of seats) {
+            seat.attending = false;
+            seat.slipperSize = "";
+          }
+        }
+        editDraft = { updatedAt: postedUpdatedAt, attending, note, seats };
+        if (postedDetail.id !== householdId) {
+          staleError = true;
+          validationErrors = [];
+        } else {
+          const invite = {
+            id: postedDetail.id,
+            householdName: postedDetail.displayName,
+            ticketCode: postedDetail.id,
+            members: postedDetail.seats
+              .filter((seat) => seat.kind === "member")
+              .map((seat) => seat.invitedName ?? ""),
+            seats: postedDetail.seats.length,
+            seatList: postedDetail.seats.map((seat) => ({
+              seatId: seat.seatId!,
+              kind: seat.kind,
+              invitedName: seat.invitedName,
+              name: seat.name,
+            })),
+          };
+          validationErrors = submissionProblems({
+            attending,
+            seats: seats.map((seat) => ({ ...seat, slipperSize: seat.slipperSize || undefined })),
+            invite,
+            note,
+            requireMemberNames: true,
+          });
+          if (!validationErrors.length && attending !== null) {
+            try {
+              await store.saveRsvp(
+                {
+                  id: postedDetail.id,
+                  updatedAt: postedUpdatedAt,
+                  attending,
+                  seats,
+                  note: note.trim() || null,
+                },
+                { email: host.email, firstName: host.firstName },
+              );
+              const response = Astro.redirect(
+                redirectHref(form, { household: postedDetail.id, saved: "1" }),
+                303,
+              );
+              response.headers.append(
+                "Set-Cookie",
+                `${savedCookie}; HttpOnly; SameSite=Lax; Path=/admin/rsvps; Max-Age=60`,
+              );
+              return response;
+            } catch (error) {
+              if (error instanceof StaleHouseholdError) staleError = true;
+              else validationErrors = [{ field: "form", message: "Could not save the reply." }];
+            }
+          }
+        }
+      }
+    }
+  }
+}
 const titleParts = (name: string) => {
   const parts = name.split(/\s+/);
   return { first: parts.slice(0, -1).join(" "), last: parts.at(-1) ?? name };
 };
+const editMode = Boolean(detail && Astro.url.searchParams.get("edit") === "1");
+const formSeats = detail
+  ? editDraft?.seats ??
+    detail.seats.map((seat) => ({
+      seatId: seat.seatId!,
+      shownName: seat.name ?? seat.invitedName ?? "",
+      name: seat.name ?? seat.invitedName ?? "",
+      attending: seat.coming,
+      slipperSize: seat.slipperSize ?? "",
+    }))
+  : [];
+const formAttending = editDraft?.attending ?? (detail?.history[0]?.attending ?? null);
+const formNote = editDraft?.note ?? detail?.note ?? "";
+const problemFor = (seatId: number, field: string) =>
+  validationErrors.find((problem) => problem.seatId === seatId && problem.field === field);
+const formProblem = (field: string) =>
+  validationErrors.find((problem) => !problem.seatId && problem.field === field);
+const savedNotice = hasSavedCookie;
+if (savedNotice && !editMode) {
+  Astro.response.headers.append(
+    "Set-Cookie",
+    `${savedCookieName}=; HttpOnly; SameSite=Lax; Path=/admin/rsvps; Max-Age=0`,
+  );
+}
 ---
 
 <AdminLayout
@@ -148,6 +298,11 @@ const titleParts = (name: string) => {
               </div>
             </>
           </header>
+          {savedNotice && !detail && (
+            <p class="admin-rsvps_saved" data-admin-saved>
+              <span aria-hidden="true">✓</span> Reply saved
+            </p>
+          )}
           <div class="admin-rsvps_toolbar">
             <>
               <nav aria-label="RSVP filters" data-admin-filters>
@@ -237,6 +392,7 @@ const titleParts = (name: string) => {
                   {filtered.map((row) => (
                     <tr
                       data-admin-rsvp-row
+                      data-household={row.id}
                       data-state={row.state}
                       data-search={normalize(
                         [
@@ -277,8 +433,8 @@ const titleParts = (name: string) => {
                         >
                           <strong>{row.displayName}</strong>
                           <small>
-                            {row.email ??
-                              `${row.seatCount} ${row.seatCount === 1 ? "seat" : "seats"}`}
+                            {row.email || (row.respondentName ? "—" :
+                              `${row.seatCount} ${row.seatCount === 1 ? "seat" : "seats"}`)}
                           </small>
                         </a>
                       </th>
@@ -346,12 +502,23 @@ const titleParts = (name: string) => {
               />
               <div class="admin-drawer_panel">
                 <div class="admin-drawer_top">
-                  <p class="admin_label">
-                    Household {detail.label} ·{" "}
-                    {detail.versionCount
-                      ? `replied ${replyCountText(detail.versionCount)}`
-                      : "no reply yet"}
+                  <p class={`admin_label${detail.versionCount || editMode ? "" : " admin-drawer_waiting-eyebrow"}`}>
+                    {editMode
+                      ? detail.versionCount
+                        ? `Edit reply · ${detail.label} · ${replyCountText(detail.versionCount)}`
+                        : `Answer for them · ${detail.label} · waiting`
+                      : `Household ${detail.label} · ${detail.versionCount ? `replied ${replyCountText(detail.versionCount)}` : "no reply yet"}`}
                   </p>
+                  {!editMode && (
+                    <a
+                      class="admin-drawer_edit-link"
+                      data-fill={detail.versionCount ? undefined : ""}
+                      href={href({ household: detail.id, edit: "1" })}
+                      data-admin-drawer-nav
+                    >
+                      {detail.versionCount ? "Edit reply" : "Answer for them"}
+                    </a>
+                  )}
                   <a
                     href={href({ household: null })}
                     data-admin-drawer-close
@@ -374,6 +541,144 @@ const titleParts = (name: string) => {
                     <span class="sr-only">Close</span>
                   </a>
                 </div>
+                {savedNotice && !editMode && (
+                  <p class="admin-rsvps_saved" data-admin-saved>
+                    <svg viewBox="0 0 14 14" width="14" height="14" fill="none" aria-hidden="true">
+                      <path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    Reply saved
+                  </p>
+                )}
+                {editMode ? (
+                  <form class="admin-drawer_edit-form" method="post">
+                    <input type="hidden" name="action" value="save" />
+                    <input type="hidden" name="id" value={detail.id} />
+                    <input type="hidden" name="updated_at" value={editDraft?.updatedAt ?? detail.updatedAt ?? ""} />
+                    <input type="hidden" name="filter" value={filter} />
+                    <input type="hidden" name="q" value={q} />
+                    <div class="admin-drawer_edit-scroll">
+                    <header>
+                      {(() => {
+                        const parts = titleParts(detail.displayName);
+                        return (
+                          <h2 id="admin-drawer-title" tabindex="-1">
+                            {parts.first} <em>{parts.last}</em>
+                          </h2>
+                        );
+                      })()}
+                      <p>
+                        {detail.versionCount
+                          ? `${detail.email || "—"} · ${detail.seatCount} seats`
+                          : `No reply yet · ${detail.seatCount} seats`}
+                      </p>
+                    </header>
+                    {staleError && (
+                      <div class="admin-drawer_stale" role="alert">
+                        <div>
+                          <strong>This reply changed while you were editing</strong>
+                          <p>Nothing was saved. Reload to see the latest, then make your edit again.</p>
+                        </div>
+                        <a href={href({ household: detail.id, edit: "1" })}>Reload</a>
+                      </div>
+                    )}
+                    {formProblem("form") && <p class="admin-drawer_error">{formProblem("form")?.message}</p>}
+                    {isRsvpClosed() && (
+                      <p class="admin-drawer_deadline-note">
+                        RSVPs closed on December 12. Guests can't change this reply any more; you still can.
+                      </p>
+                    )}
+                    <fieldset id="admin-rsvp-answer" class="admin-drawer_answer">
+                      <legend>Their answer</legend>
+                      <div class="admin-drawer_segmented">
+                        <label>
+                          <input type="radio" name="attending" value="yes" checked={formAttending === true} />
+                          <span>Yes, coming</span>
+                        </label>
+                        <label>
+                          <input type="radio" name="attending" value="no" checked={formAttending === false} />
+                          <span>No, can't make it</span>
+                        </label>
+                      </div>
+                      {formProblem("answer") && <p class="admin-drawer_error">{formProblem("answer")?.message}</p>}
+                    </fieldset>
+                    <section id="admin-rsvp-nobody" class="admin-drawer_nobody" data-admin-nobody hidden>
+                        <strong>Nobody is coming</strong>
+                        <p>
+                          {formSeats.map((seat) => seat.name || "+1").join(", ")}. Ticks and slipper sizes are cleared on Save; names stay. Switch back to Yes to tick seats again.
+                        </p>
+                    </section>
+                    <section id="admin-rsvp-seats" class="admin-drawer_edit-seats" data-admin-edit-seats>
+                        <div class="admin-drawer_seat-head">
+                          <span>In</span><span>Seats<span class="admin-drawer_head-wide"> · name on the place card</span><span class="admin-drawer_head-narrow"> · tick who's coming</span></span><span>Slippers</span>
+                        </div>
+                        {detail.seats.map((seat, index) => {
+                          const draft = formSeats[index]!;
+                          const nameProblem = problemFor(seat.seatId!, "name");
+                          const sizeProblem = problemFor(seat.seatId!, "slipperSize");
+                          return (
+                            <div class="admin-drawer_edit-seat" data-admin-seat>
+                              <input type="hidden" name={`seat_id`} value={seat.seatId} />
+                              <input type="hidden" name={`shown_name_${seat.seatId}`} value={draft.shownName} />
+                              <label class="admin-drawer_check">
+                                <span class="sr-only">{`Seat ${index + 1} attending`}</span>
+                                <input type="checkbox" name={`seat_attending_${seat.seatId}`} checked={draft.attending} />
+                                <span aria-hidden="true" />
+                              </label>
+                              <div class="admin-drawer_edit-seat-fields">
+                                <input
+                                  class={nameProblem ? "has-error" : undefined}
+                                  name={`seat_name_${seat.seatId}`}
+                                  value={draft.name}
+                                  data-shown-name={draft.shownName}
+                                  placeholder={seat.kind === "plus_one" && !seat.name ? "Name of their guest" : undefined}
+                                  aria-label={`Name for seat ${index + 1}`}
+                                />
+                                <small>
+                                  {seat.kind === "member"
+                                    ? `Invited as ${seat.invitedName ?? ""}${index === 0 ? " · lead" : ""}`
+                                    : "Open seat · plus-one"}
+                                  <span data-admin-seat-state>{!draft.attending && " · not coming"}</span>
+                                  <span
+                                    class="admin-drawer_was"
+                                    data-admin-was
+                                    hidden={!(draft.name !== draft.shownName && draft.shownName)}
+                                  >
+                                    was “{draft.shownName}”
+                                  </span>
+                                  {nameProblem && <span class="admin-drawer_error">{nameProblem.message}</span>}
+                                  {sizeProblem && <span class="admin-drawer_error admin-drawer_size-error">{sizeProblem.message}</span>}
+                                </small>
+                              </div>
+                              <span class="admin-drawer_select">
+                                <select
+                                  class={sizeProblem ? "has-error" : undefined}
+                                  name={`slipper_size_${seat.seatId}`}
+                                  aria-label={`Slipper size for seat ${index + 1}`}
+                                >
+                                  <option value="">Size</option>
+                                  {SLIPPER_SIZES.map((size) => <option value={size} selected={size === draft.slipperSize}>{size}</option>)}
+                                </select>
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {formProblem("seats") && <p class="admin-drawer_error">{formProblem("seats")?.message}</p>}
+                    </section>
+                    <section id="admin-rsvp-note" class="admin-drawer_edit-note">
+                      <div><h3>Their note</h3><span>Their words · optional</span></div>
+                      <textarea name="note" maxlength="1000" aria-label="Their note">{formNote}</textarea>
+                      {formProblem("note") && <p class="admin-drawer_error">{formProblem("note")?.message}</p>}
+                    </section>
+                    <p class="admin-drawer_footnote">Saved as a new version, by host. Earlier replies stay in the history.</p>
+                    </div>
+                    <footer class="admin-drawer_edit-footer">
+                      <p>Saved as a new version, by host. Earlier replies stay in the history.</p>
+                      <a href={href({ household: detail.id })} data-admin-drawer-nav>Cancel</a>
+                      <button type="submit">Save reply</button>
+                    </footer>
+                  </form>
+                ) : (
+                  <>
                 <header>
                   {(() => {
                     const parts = titleParts(detail.displayName);
@@ -384,8 +689,8 @@ const titleParts = (name: string) => {
                     );
                   })()}
                   <p>
-                    {detail.email
-                      ? `${detail.email} · ${detail.seatCount} seats · sent ${adminTimestamp(detail.submittedAt)}`
+                    {detail.versionCount
+                      ? `${detail.email || "—"} · ${detail.seatCount} seats · sent ${adminTimestamp(detail.submittedAt)}`
                       : `No reply yet · ${detail.seatCount} seats`}
                   </p>
                 </header>
@@ -464,6 +769,8 @@ const titleParts = (name: string) => {
                     </ol>
                   </section>
                 )}
+                  </>
+                )}
               </div>
             </aside>
           )}
@@ -486,12 +793,12 @@ const titleParts = (name: string) => {
   const syncLinks = () => {
     const query = input?.value ?? "";
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      "[data-admin-filter], [data-admin-rsvp-link], [data-admin-drawer-close], .admin-drawer_scrim",
+      "[data-admin-filter], [data-admin-rsvp-link], [data-admin-drawer-nav], [data-admin-drawer-close], .admin-drawer_scrim",
     )) {
       const url = new URL(link.href);
       if (query) url.searchParams.set("q", query);
       else url.searchParams.delete("q");
-      link.href = url.href;
+      link.href = `${url.pathname}${url.search}${url.hash}`;
     }
   };
   input?.addEventListener("input", () => {
@@ -509,11 +816,125 @@ const titleParts = (name: string) => {
     history.replaceState(null, "", url);
     syncLinks();
   });
+  // The edit form can arrive later through the drawer swap, so the change
+  // listener is delegated and every swap re-syncs the form it brings in.
+  const syncEditForm = (form: HTMLFormElement) => {
+    const no =
+      form.querySelector<HTMLInputElement>("input[name='attending']:checked")
+        ?.value === "no";
+    const nobody = form.querySelector<HTMLElement>("[data-admin-nobody]");
+    const seats = form.querySelector<HTMLElement>("[data-admin-edit-seats]");
+    if (nobody) nobody.hidden = !no;
+    if (seats) seats.hidden = no;
+    for (const checkbox of form.querySelectorAll<HTMLInputElement>("input[type='checkbox'][name^='seat_attending_']")) {
+      const select = form.querySelector<HTMLSelectElement>(`select[name='slipper_size_${checkbox.name.replace("seat_attending_", "")}']`);
+      if (select) select.disabled = no || !checkbox.checked;
+      const state = checkbox.closest<HTMLElement>("[data-admin-seat]")?.querySelector<HTMLElement>("[data-admin-seat-state]");
+      if (state) state.textContent = checkbox.checked ? "" : " · not coming";
+    }
+    for (const nameInput of form.querySelectorAll<HTMLInputElement>("input[name^='seat_name_']")) {
+      const was = nameInput.closest(".admin-drawer_edit-seat-fields")?.querySelector<HTMLElement>("[data-admin-was]");
+      const storedName = nameInput.dataset.shownName ?? "";
+      if (was) {
+        was.hidden = !storedName || nameInput.value === storedName;
+      }
+    }
+  };
+  const syncEditForms = () => {
+    for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form"))
+      syncEditForm(form);
+  };
+
+  const editFormValues = (form: HTMLFormElement) =>
+    [...form.elements]
+      .filter((element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement,
+      )
+      .filter((element) => element.name && element.type !== "submit" && element.type !== "button")
+      .map((element) => {
+        if (element instanceof HTMLInputElement && (element.type === "checkbox" || element.type === "radio"))
+          return `${element.name}=${element.checked ? element.value : ""}`;
+        return `${element.name}=${element.value}`;
+      })
+      .join("\u0000");
+  const editFormInitialValues = new WeakMap<HTMLFormElement, string>();
+  const rememberEditForm = (form: HTMLFormElement) => {
+    if (!editFormInitialValues.has(form)) editFormInitialValues.set(form, editFormValues(form));
+  };
+  const editFormIsDirty = (form: HTMLFormElement) =>
+    editFormInitialValues.get(form) !== undefined &&
+    editFormInitialValues.get(form) !== editFormValues(form);
+  const currentEditFormIsDirty = () => {
+    const form = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form");
+    return Boolean(form && !form.dataset.submitting && editFormIsDirty(form));
+  };
+  const discardMessage = "Discard your changes to this reply?";
+  const confirmDiscard = () => !currentEditFormIsDirty() || window.confirm(discardMessage);
+  // Set when the host said OK to discarding on a link that leaves the page, so
+  // beforeunload doesn't ask a second time. Any new typing clears it, and so
+  // does showing the page again.
+  let discardConfirmed = false;
+  document.addEventListener("input", () => {
+    discardConfirmed = false;
+  });
+
+  const markEditForms = () => {
+    for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form"))
+      rememberEditForm(form);
+  };
+  const submitEditForm = (form: HTMLFormElement) => {
+    if (form.dataset.submitting) return;
+    form.dataset.submitting = "true";
+    const button = form.querySelector<HTMLButtonElement>("button[type='submit']");
+    queueMicrotask(() => {
+      if (!button) return;
+      button.disabled = true;
+      button.textContent = "Saving…";
+    });
+  };
+  document.addEventListener("change", (event) => {
+    const form = (event.target as Element | null)?.closest<HTMLFormElement>(
+      ".admin-drawer_edit-form",
+    );
+    if (!form) return;
+    syncEditForm(form);
+    const select = event.target instanceof HTMLSelectElement ? event.target : null;
+    if (select?.name.startsWith("slipper_size_") && select.value) {
+      select.classList.remove("has-error");
+      const error = select.closest(".admin-drawer_edit-seat")?.querySelector<HTMLElement>(".admin-drawer_size-error");
+      if (error) error.hidden = true;
+    }
+  });
+  document.addEventListener("submit", (event) => {
+    const form = event.target instanceof HTMLFormElement
+      ? event.target.closest<HTMLFormElement>(".admin-drawer_edit-form")
+      : null;
+    if (!form) return;
+    if (form.dataset.submitting) {
+      event.preventDefault();
+      return;
+    }
+    submitEditForm(form);
+  });
+  document.addEventListener("input", (event) => {
+    const nameInput = event.target instanceof HTMLInputElement && event.target.name.startsWith("seat_name_")
+      ? event.target
+      : null;
+    if (!nameInput) return;
+    const was = nameInput.closest(".admin-drawer_edit-seat-fields")?.querySelector<HTMLElement>("[data-admin-was]");
+    const storedName = nameInput.dataset.shownName ?? "";
+    if (was) was.hidden = !storedName || nameInput.value === storedName;
+  });
+  markEditForms();
+  syncEditForms();
   let opener: HTMLAnchorElement | null = null;
   const setOpen = (open: boolean) => {
     document.documentElement.toggleAttribute("data-admin-drawer-open", open);
   };
   const closeDrawer = () => {
+    if (!confirmDiscard()) return;
     const url = new URL(location.href);
     url.searchParams.delete("household");
     history.pushState(null, "", url);
@@ -537,6 +958,8 @@ const titleParts = (name: string) => {
         .querySelector<HTMLElement>("[data-admin-rsvps-page]")
         ?.append(next);
       syncLinks();
+      markEditForms();
+      syncEditForms();
       if (push) history.pushState(null, "", url);
       setOpen(true);
       next.querySelector<HTMLElement>("h2")?.focus();
@@ -557,14 +980,30 @@ const titleParts = (name: string) => {
       return;
     const rowLink = target.closest<HTMLAnchorElement>("[data-admin-rsvp-link]");
     if (rowLink) {
+      if (!confirmDiscard()) return;
       event.preventDefault();
       opener = rowLink;
       void loadDrawer(rowLink.href);
       return;
     }
+    const drawerNav = target.closest<HTMLAnchorElement>("[data-admin-drawer-nav]");
+    if (drawerNav) {
+      if (!confirmDiscard()) return;
+      event.preventDefault();
+      void loadDrawer(drawerNav.href);
+      return;
+    }
     if (target.closest("[data-admin-drawer-close], .admin-drawer_scrim")) {
       event.preventDefault();
       closeDrawer();
+      return;
+    }
+    // The CSV link downloads without leaving the page, so it is not guarded.
+    const dashboardNav = target.closest<HTMLAnchorElement>("[data-admin-nav] a, [data-admin-tabbar] a, [data-admin-filter], .admin_brand, .admin_topbar a, .admin_account a");
+    if (dashboardNav) {
+      const dirty = currentEditFormIsDirty();
+      if (!confirmDiscard()) event.preventDefault();
+      else if (dirty) discardConfirmed = true;
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -572,15 +1011,22 @@ const titleParts = (name: string) => {
     if (!drawer) return;
     if (event.key === "Escape") {
       event.preventDefault();
-      closeDrawer();
+      if (drawer.querySelector(".admin-drawer_edit-form")) {
+        if (!confirmDiscard()) return;
+        const url = new URL(location.href);
+        url.searchParams.delete("edit");
+        void loadDrawer(url.href);
+      } else {
+        closeDrawer();
+      }
       return;
     }
     if (event.key !== "Tab") return;
     const focusable = [
       ...drawer.querySelectorAll<HTMLElement>(
-        "a,button,input,select,textarea,[tabindex]:not([tabindex='-1'])",
+        "a,button:not([disabled]),input:not([type='hidden']):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])",
       ),
-    ];
+    ].filter((element) => !element.hidden && !element.closest("[hidden]") && element.getAttribute("aria-hidden") !== "true");
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable.at(-1)!;
@@ -599,6 +1045,16 @@ const titleParts = (name: string) => {
   });
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
+    // Back from a dirty edit asks first; keeping the edit puts its URL back.
+    const dirtyForm = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form");
+    if (dirtyForm && url.searchParams.get("edit") !== "1" && !confirmDiscard()) {
+      const editUrl = new URL(location.href);
+      const id = dirtyForm.querySelector<HTMLInputElement>('input[name="id"]')?.value;
+      if (id) editUrl.searchParams.set("household", id);
+      editUrl.searchParams.set("edit", "1");
+      history.pushState(null, "", editUrl);
+      return;
+    }
     if (url.searchParams.has("household")) void loadDrawer(url.href, false);
     else {
       document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
@@ -609,5 +1065,27 @@ const titleParts = (name: string) => {
     setOpen(true);
     syncLinks();
     document.querySelector<HTMLElement>("[data-admin-drawer] h2")?.focus();
+  }
+  window.addEventListener("beforeunload", (event) => {
+    if (discardConfirmed || !currentEditFormIsDirty()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  window.addEventListener("pageshow", (event) => {
+    discardConfirmed = false;
+    if (!event.persisted) return;
+    for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form")) {
+      delete form.dataset.submitting;
+      const button = form.querySelector<HTMLButtonElement>("button[type='submit']");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Save reply";
+      }
+    }
+  });
+  if (document.querySelector("[data-admin-saved]")) {
+    const url = new URL(location.href);
+    url.searchParams.delete("saved");
+    history.replaceState(null, "", url);
   }
 </script>

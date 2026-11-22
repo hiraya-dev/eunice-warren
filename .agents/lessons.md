@@ -510,3 +510,43 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the spec triggers the action twice inside the window and asserts the status is still visible just after the first timer would have fired, then cleared by the second (`tests/admin.spec.ts` DJ copy).
 - **Guard:** none
 - **Paths:** `src/pages/**`, `src/components/**`, `src/scripts/**`
+
+### L-055 — Focus-trap specs wait for the opened drawer
+- **Date:** 2026-11-22
+- **Trigger:** #102, flaky test
+- **Symptom:** the focus-trap spec pressed Tab before the asynchronously swapped drawer had focused its heading, so the first assertion sometimes observed focus outside the dialog.
+- **Root cause:** the test began keyboard navigation immediately after the click instead of synchronizing on the drawer's opened and focused state.
+- **Rule:** wait for the drawer to be visible and its programmatic heading focus to be established before the first Tab or Shift+Tab assertion.
+- **Check:** the spec awaits drawer visibility and heading focus before tabbing in both directions.
+- **Guard:** none
+- **Paths:** `tests/admin-rsvps.spec.ts`
+
+### L-056 — A refused form re-emits the token it was posted with
+- **Date:** 2026-11-22
+- **Trigger:** #102, CHANGES_REQUIRED
+- **Symptom:** after a stale refusal, the re-rendered RSVP edit form carried the household's new `updated_at`, so pressing Save a second time passed the stale check and wrote the host's old draft over the newer reply.
+- **Root cause:** the page reloaded the record on the POST and rendered the hidden token from that fresh read instead of from the posted form.
+- **Rule:** any form that re-renders after a refusal (stale or validation) keeps the posted concurrency token in its draft and emits that, never a value read during the POST. Only an explicit Reload (a GET) may pick up the new token.
+- **Check:** the stale spec saves twice after the refusal and both are refused (`tests/admin-rsvps.spec.ts` "refuses a stale host edit and keeps the draft").
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`
+
+### L-057 — Dashboard edit forms protect the host's typing
+- **Date:** 2026-11-22
+- **Trigger:** #102, Local review fix round
+- **Symptom:** the RSVP edit drawer let Esc, ×, the scrim or a nav link throw away a half-typed edit without a word, a second click on Save could post twice, and seat state ("not coming", size select) only caught up after a save. The user asked for the dashboard to be "as UX friendly as possible".
+- **Root cause:** the criteria covered the data rules and the happy path, not how a non-technical host can lose work or get unclear feedback.
+- **Rule:** every dashboard edit form (a) asks "Discard your changes…?" before any JS exit while it differs from how it loaded, and warns on reload/tab close (`beforeunload`); (b) shows a busy "Saving…" state and blocks a second submit; (c) reflects each control's consequence live. Write these into the criteria of any new edit form. Test a transient submit state by preventing the submit at the form in the spec, not by holding the navigation request with `page.route`.
+- **Check:** `tests/admin-rsvps.spec.ts` "guards dirty edit exits and allows a clean Escape", "shows Saving while a dirty reply is submitting without a guard", "updates the seat state and size control live".
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`
+
+### L-058 — Never pipe the gate in front of a push
+- **Date:** 2026-11-22
+- **Trigger:** #102, a failing head pushed (a730968)
+- **Symptom:** `npm run prepush 2>&1 | tail -1 && git push` printed "prepush failed at test:unit" and pushed anyway, because the `&&` saw `tail`'s exit status. The failure was a real same-millisecond ordering bug in the D1 host save.
+- **Root cause:** the pipe-commit hook rule covers commits only; the same pipe before `git push` is not caught, and trimming output with a pipe felt harmless.
+- **Rule:** run the gate unpiped and redirect its output to a file instead: `npm run prepush > .context/<task>/prepush.log 2>&1 && git push`, then read the log. Never put `| tail`, `| head` or `| grep` between a check and `&&`.
+- **Check:** every push in the thread follows an unpiped `prepush` whose exit status gates it.
+- **Guard:** none yet; a guard-git rule that blocks a pipe before `git push` is proposed as its own workflow PR (it would have saved a CI run here).
+- **Paths:** `.agents/skills/local-checks/**`, `scripts/hooks/**`

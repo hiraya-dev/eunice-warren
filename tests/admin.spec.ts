@@ -143,6 +143,9 @@ test.describe("admin slippers and songs", () => {
   test("charts every slipper size with the fake store's counts @smoke", async ({
     page,
   }) => {
+    // Host RSVP specs save replies on temporary households under this lock;
+    // reading the chart under it keeps their sizes out of the totals (L-022).
+    await withAdminLock(async () => {
     const order = await fakeStore.getSlipperOrder();
     await page.goto("/admin/slippers");
     await expect(page.locator("[data-admin-slippers-page]")).toBeVisible();
@@ -164,6 +167,7 @@ test.describe("admin slippers and songs", () => {
     expect(await counts(women)).toEqual(order.women.map((row) => row.count));
     expect(await counts(men)).toEqual(order.men.map((row) => row.count));
     await expect(page.locator("[data-slipper-stat]")).toHaveCount(3);
+    });
   });
 
   for (const [width, height] of [

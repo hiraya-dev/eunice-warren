@@ -9,11 +9,13 @@ import type {
   AdminRsvpRow,
   AdminRsvpSeat,
   AdminRsvpVersion,
+  AdminHostActor,
   AdminSlipperOrder,
   AdminSongRequests,
   AdminStore,
   NewHouseholdInput,
   SaveHouseholdInput,
+  SaveRsvpInput,
 } from "./store";
 import { normalizeGuestName } from "../rsvp/store.ts";
 import { MAX_SEATS } from "../rsvp/limits.ts";
@@ -175,6 +177,20 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     seats: [
       seat(1, "Editor Parent", "Editor Parent"),
       seat(2, "Editor Guest", "Editor Guest"),
+    ],
+    seatCount: 2,
+    rsvp: { state: "waiting" },
+  },
+  {
+    // Owned by the host RSVP edit specs in admin-rsvps.spec.ts (L-022).
+    id: "hh-rsvp-editor",
+    label: "RSVP_EDITOR_FIXTURE",
+    displayName: "The Reply Editor Family",
+    notes: "Dedicated host RSVP edit fixture",
+    updatedAt: "2026-11-21T10:00:00.000Z",
+    seats: [
+      seat(1, "Reply Parent", "Reply Parent"),
+      seat(2, "Reply Guest", "Reply Guest"),
     ],
     seatCount: 2,
     rsvp: { state: "waiting" },
@@ -900,6 +916,60 @@ export function createFakeAdminStore(): AdminStore {
     ).length;
     return { ok: true as const };
   }
+  async function saveRsvp(input: SaveRsvpInput, actor: AdminHostActor) {
+    const row = activeFixtures().find((item) => item.id === input.id);
+    if (!row || input.updatedAt !== (row.updatedAt ?? ""))
+      throw new StaleHouseholdError();
+    const active = activeSeats(row);
+    const activeIds = active.map((item) => item.id ?? item.slot).sort((a, b) => a - b);
+    const postedIds = input.seats.map((item) => item.seatId).sort((a, b) => a - b);
+    if (
+      activeIds.length !== postedIds.length ||
+      activeIds.some((id, index) => id !== postedIds[index])
+    )
+      throw new StaleHouseholdError();
+    const current = responseVersions(row.id)[0];
+    const now = new Date().toISOString();
+    const id = Math.max(0, ...fakeAdminResponses.map((response) => response.id)) + 1;
+    const responseSeats = active.map((seat) => {
+      const posted = input.seats.find((item) => item.seatId === (seat.id ?? seat.slot))!;
+      const attending = input.attending && posted.attending;
+      return {
+        seatId: seat.id ?? seat.slot,
+        name: posted.name,
+        attending,
+        slipperSize: attending ? posted.slipperSize ?? null : null,
+      };
+    });
+    fakeAdminResponses.push({
+      id,
+      householdId: row.id,
+      submittedAt: now,
+      respondentName: current?.respondentName || actor.firstName,
+      attending: input.attending,
+      email: current?.email ?? "",
+      note: input.note?.trim() || null,
+      source: "host",
+      editedBy: actor.email,
+      seats: responseSeats,
+    });
+    for (const value of input.seats) {
+      const currentSeat = active.find((seat) => (seat.id ?? seat.slot) === value.seatId)!;
+      const clean = value.name.trim();
+      if (!clean || clean === (value.shownName ?? currentSeat.name ?? "")) continue;
+      currentSeat.name = clean;
+      currentSeat.namedBy = actor.email;
+      currentSeat.namedByKind = "host";
+      currentSeat.namedAt = now;
+      currentSeat.namedInResponseId = id;
+      currentSeat.updatedAt = now;
+    }
+    row.rsvp = input.attending
+      ? { state: "coming", coming: responseSeats.filter((seat) => seat.attending).length }
+      : { state: "declined" };
+    row.updatedAt = now;
+    return { ok: true as const };
+  }
   async function addHousehold(input: NewHouseholdInput, actor: string) {
     const base =
       input.label
@@ -1069,21 +1139,30 @@ export function createFakeAdminStore(): AdminStore {
             .flatMap((row) => activeSeats(row))
             .filter((s) => s.kind === "plus_one" && s.state === "open").length,
         },
-        rows: activeFixtures().map((row) => ({
-          ...row,
-          seats: activeSeats(row).map(({ attending: _attending, ...seat }) => ({
-            ...seat,
-            hasActivity:
-              Boolean(row.assignedSeatIds?.includes(seat.id ?? seat.slot)) ||
-              fakeAdminResponses.some(
-                (response) =>
-                  response.householdId === row.id &&
-                  response.seats.some(
-                    (value) => value.seatId === (seat.id ?? seat.slot),
-                  ),
-              ),
-          })),
-        })),
+        rows: activeFixtures().map((row) => {
+          const current = makeFakeRsvpRow(row);
+          return {
+            ...row,
+            rsvp:
+              current.state === "attending"
+                ? { state: "coming" as const, coming: current.comingNames.length }
+                : current.state === "declined"
+                  ? { state: "declined" as const }
+                  : { state: "waiting" as const },
+            seats: activeSeats(row).map(({ attending: _attending, ...seat }) => ({
+              ...seat,
+              hasActivity:
+                Boolean(row.assignedSeatIds?.includes(seat.id ?? seat.slot)) ||
+                fakeAdminResponses.some(
+                  (response) =>
+                    response.householdId === row.id &&
+                    response.seats.some(
+                      (value) => value.seatId === (seat.id ?? seat.slot),
+                    ),
+                ),
+            })),
+          };
+        }),
       };
     },
     async getOverview(): Promise<AdminOverview> {
@@ -1118,11 +1197,25 @@ export function createFakeAdminStore(): AdminStore {
             100,
         ),
         songCount: fakeAdminSongs.length,
-        latestReplies: fakeAdminReplies.filter(({ displayName }) =>
-          activeFixtures().some(
-            (household) => household.displayName === displayName,
-          ),
-        ),
+        latestReplies: activeFixtures()
+          .map((household) => ({ household, row: makeFakeRsvpRow(household) }))
+          .filter(({ row }) => row.state !== "waiting")
+          .sort(
+            (a, b) =>
+              (b.row.submittedAt ?? "").localeCompare(a.row.submittedAt ?? "") ||
+              a.household.displayName.localeCompare(b.household.displayName),
+          )
+          .slice(0, 4)
+          .map(({ household, row }) => ({
+            displayName: household.displayName,
+            attending: row.state === "attending",
+            coming: row.comingNames.length,
+            seatCount: row.seatCount,
+            submittedAt: row.submittedAt!,
+            namedPlusOnes: row.seats
+              .filter((seat) => seat.kind === "plus_one" && seat.name && seat.namedBy)
+              .map((seat) => ({ name: seat.name!, namedBy: seat.namedBy })),
+          })),
         waiting: {
           total: waiting.length,
           households: waiting.slice(0, 3).map((row) => ({
@@ -1165,12 +1258,14 @@ export function createFakeAdminStore(): AdminStore {
         submittedAt: view.submittedAt,
         versionCount: view.versionCount ?? 0,
         history: fakeHistory(row),
+        updatedAt: row.updatedAt,
       };
     },
     getSlipperOrder,
     getSongRequests,
     getNavCounts,
     saveHousehold,
+    saveRsvp,
     addHousehold,
     archiveHousehold,
   };

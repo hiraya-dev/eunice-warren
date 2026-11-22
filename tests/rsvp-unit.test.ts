@@ -7,6 +7,7 @@ import {
   RSVP_DEADLINE_TIME,
   signRsvpToken,
   validateSubmission,
+  validateSubmissionProblems,
   verifyRsvpToken,
 } from "../src/lib/rsvp/logic.ts";
 import { normalizeGuestName } from "../src/lib/rsvp/store.ts";
@@ -160,6 +161,51 @@ test("validates seat checklist rules", () => {
     validateSubmission({ attending: false, seats: [{ ...seats(false, false)[0], slipperSize: "W 7" }, seats(false, false)[1]], invite }),
     false,
   );
+});
+
+const hostValidationInvite = {
+  householdName: "Fictional Family",
+  ticketCode: "HOST01",
+  members: ["Ada Fiction", "Bea Fiction"],
+  seats: 2,
+  seatList: [
+    { seatId: 1, kind: "member" as const, invitedName: "Ada Fiction", name: "Ada Fiction" },
+    { seatId: 2, kind: "member" as const, invitedName: "Bea Fiction", name: "Bea Fiction" },
+  ],
+};
+const hostValidationBase = [
+  { seatId: 1, shownName: "Ada Fiction", name: "Ada Fiction", attending: true, slipperSize: "W 7" },
+  { seatId: 2, shownName: "Bea Fiction", name: "Bea Fiction", attending: false, slipperSize: undefined },
+];
+const hostProblems = (input: Parameters<typeof validateSubmissionProblems>[0]) =>
+  validateSubmissionProblems(input).map((problem) => problem.message);
+
+test("submission problems refuse a missing answer", () => {
+  assert.deepEqual(hostProblems({ attending: null, seats: hostValidationBase, invite: hostValidationInvite }), ["Choose Yes or No."]);
+});
+test("submission problems refuse Yes with no attending seats", () => {
+  assert(hostProblems({ attending: true, seats: hostValidationBase.map((seat) => ({ ...seat, attending: false })), invite: hostValidationInvite }).includes("Tick at least one guest, or choose No."));
+});
+test("submission problems refuse a ticked seat without a slipper size", () => {
+  assert(hostProblems({ attending: true, seats: hostValidationBase.map((seat) => ({ ...seat, slipperSize: seat.attending ? undefined : undefined })), invite: hostValidationInvite }).includes("Pick a slipper size for Ada."));
+});
+test("submission problems refuse a ticked seat without a name", () => {
+  assert(hostProblems({ attending: true, seats: hostValidationBase.map((seat) => ({ ...seat, name: seat.seatId === 1 ? "" : seat.name, slipperSize: undefined })), invite: hostValidationInvite, requireMemberNames: true }).includes("Add a name to tick this seat."));
+});
+test("submission problems refuse a blank member name", () => {
+  assert(hostProblems({ attending: false, seats: hostValidationBase.map((seat) => ({ ...seat, name: "", attending: false })), invite: hostValidationInvite, requireMemberNames: true }).includes("Add a name, or untick the seat."));
+});
+test("submission problems refuse duplicate attending names", () => {
+  assert(hostProblems({ attending: true, seats: hostValidationBase.map((seat) => ({ ...seat, attending: true, name: "Same Fiction", slipperSize: "W 7" })), invite: hostValidationInvite }).includes("Same Fiction is on two seats. Change one of them."));
+});
+test("submission problems refuse an overlong name", () => {
+  assert(hostProblems({ attending: true, seats: [{ ...hostValidationBase[0], name: "x".repeat(121), slipperSize: "W 7" }, hostValidationBase[1]], invite: hostValidationInvite }).includes("Keep names under 120 characters."));
+});
+test("submission problems refuse an overlong note", () => {
+  assert(hostProblems({ attending: true, seats: hostValidationBase, invite: hostValidationInvite, note: "x".repeat(1001) }).includes("Keep the note under 1,000 characters."));
+});
+test("submission problems refuse an invalid slipper size", () => {
+  assert(hostProblems({ attending: true, seats: [{ ...hostValidationBase[0], slipperSize: "XL" }, hostValidationBase[1]], invite: hostValidationInvite }).includes("Pick a slipper size for Ada."));
 });
 
 test("rejects invalid seat counts, duplicate seat ids, and unknown seat ids directly", () => {
