@@ -510,3 +510,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the spec triggers the action twice inside the window and asserts the status is still visible just after the first timer would have fired, then cleared by the second (`tests/admin.spec.ts` DJ copy).
 - **Guard:** none
 - **Paths:** `src/pages/**`, `src/components/**`, `src/scripts/**`
+
+### L-055 — Focus-trap specs wait for the opened drawer
+- **Date:** 2026-11-22
+- **Trigger:** this PR, flaky test
+- **Symptom:** the focus-trap spec pressed Tab before the asynchronously swapped drawer had focused its heading, so the first assertion sometimes observed focus outside the dialog.
+- **Root cause:** the test began keyboard navigation immediately after the click instead of synchronizing on the drawer's opened and focused state.
+- **Rule:** wait for the drawer to be visible and its programmatic heading focus to be established before the first Tab or Shift+Tab assertion.
+- **Check:** the spec awaits drawer visibility and heading focus before tabbing in both directions.
+- **Guard:** none
+- **Paths:** `tests/admin-rsvps.spec.ts`

@@ -86,6 +86,12 @@ const fromBase64Url = (value: string) => {
 
 export const isRsvpClosed = (now = Date.now()) => now > RSVP_DEADLINE_TIME;
 
+export interface SubmissionProblem {
+  seatId?: number;
+  field: "answer" | "seats" | "name" | "slipperSize" | "note";
+  message: string;
+}
+
 /** Cloudflare's Workers rate-limit binding takes an options object, not a bare key. */
 export type RateLimiter = {
   limit: (options: { key: string }) => Promise<{ success: boolean }>;
@@ -192,34 +198,64 @@ export function parseGuestRows(rows: unknown[][]): {
   };
 }
 
+export function validateSubmissionProblems(input: {
+  attending: boolean | null;
+  seats: RsvpSeat[];
+  invite: Invite;
+  note?: string | null;
+  requireMemberNames?: boolean;
+}): SubmissionProblem[] {
+  const problems: SubmissionProblem[] = [];
+  if (input.attending === null) {
+    problems.push({ field: "answer", message: "Choose Yes or No." });
+    return problems;
+  }
+  if (input.seats.length !== input.invite.seats || input.seats.length < 1 || input.seats.length > MAX_SEATS) {
+    return [{ field: "seats", message: "The invite changed. Reload and try again." }];
+  }
+  const expectedSeats = input.invite.seatList ?? input.invite.members.map((member, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: member, name: member }));
+  const expectedById = new Map(expectedSeats.map((seat) => [seat.seatId, seat]));
+  const seatIds = input.seats.map((seat, index) => seat.seatId ?? index + 1);
+  if (new Set(seatIds).size !== input.seats.length) return [{ field: "seats", message: "The invite changed. Reload and try again." }];
+  let attendingCount = 0;
+  const attendingNames = new Map<string, string>();
+  for (const [index, seat] of input.seats.entries()) {
+    const expected = expectedById.get(seatIds[index]);
+    if (!expected) return [{ field: "seats", message: "The invite changed. Reload and try again." }];
+    if (seat.name !== seat.name.trim())
+      problems.push({ seatId: seatIds[index], field: "name", message: "Remove spaces before or after the name." });
+    if (seat.name.length > 120) problems.push({ seatId: seatIds[index], field: "name", message: "Keep names under 120 characters." });
+    if (input.requireMemberNames && expected.kind === "member" && !seat.name.trim()) {
+      problems.push({ seatId: seatIds[index], field: "name", message: "Add a name, or untick the seat." });
+    }
+    if (seat.attending) {
+      if (!input.attending || !seat.name.trim()) {
+        problems.push({ seatId: seatIds[index], field: "name", message: "Add a name to tick this seat." });
+        continue;
+      }
+      const normalizedName = normalizeGuestName(seat.name);
+      const previousName = attendingNames.get(normalizedName);
+      if (previousName) problems.push({ seatId: seatIds[index], field: "name", message: `${seat.name} is on two seats. Change one of them.` });
+      attendingNames.set(normalizedName, seat.name);
+      if (!seat.slipperSize || !SLIPPER_SIZES.includes(seat.slipperSize as (typeof SLIPPER_SIZES)[number])) {
+        problems.push({ seatId: seatIds[index], field: "slipperSize", message: `Pick a slipper size for ${seat.name.trim().split(/\s+/)[0]}.` });
+      }
+      attendingCount += 1;
+    } else {
+      if (seat.slipperSize) problems.push({ seatId: seatIds[index], field: "slipperSize", message: "Clear the slipper size for a seat that is not coming." });
+    }
+  }
+  if (input.attending && attendingCount === 0) problems.push({ field: "seats", message: "Tick at least one guest, or choose No." });
+  if (input.note && input.note.length > 1000) problems.push({ field: "note", message: "Keep the note under 1,000 characters." });
+  return problems;
+}
+
 export function validateSubmission(input: {
   attending: boolean;
   seats: RsvpSeat[];
   invite: Invite;
 }) {
-  if (input.seats.length !== input.invite.seats || input.seats.length < 1 || input.seats.length > MAX_SEATS) return false;
-  const expectedSeats = input.invite.seatList ?? input.invite.members.map((member, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: member, name: member }));
-  const expectedById = new Map(expectedSeats.map((seat) => [seat.seatId, seat]));
-  const seatIds = input.seats.map((seat, index) => seat.seatId ?? index + 1);
-  if (new Set(seatIds).size !== input.seats.length) return false;
-  let attendingCount = 0;
-  const attendingNames = new Set<string>();
-  for (const [index, seat] of input.seats.entries()) {
-    const expected = expectedById.get(seatIds[index]);
-    if (!expected) return false;
-    if (seat.name !== seat.name.trim())
-      return false;
-    if (seat.name.length > 120) return false;
-    if (seat.attending) {
-      if (!input.attending || !seat.name) return false;
-      const normalizedName = normalizeGuestName(seat.name);
-      if (attendingNames.has(normalizedName)) return false;
-      attendingNames.add(normalizedName);
-      if (!seat.slipperSize || !SLIPPER_SIZES.includes(seat.slipperSize as (typeof SLIPPER_SIZES)[number])) return false;
-      attendingCount += 1;
-    } else {
-      if (seat.slipperSize) return false;
-    }
-  }
-  return input.attending ? attendingCount > 0 : attendingCount === 0;
+  return validateSubmissionProblems(input).length === 0;
 }
+
+export const submissionProblems = validateSubmissionProblems;

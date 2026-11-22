@@ -34,7 +34,12 @@ import {
   placeholderPattern as importPlaceholderPattern,
 } from "../scripts/db/import-guests.mjs";
 import { placeholderPattern } from "../src/lib/admin/names.ts";
-import { csvCell, rsvpCsv, rsvpCsvResponse } from "../src/lib/admin/csv.ts";
+import {
+  buildSlipperCsv,
+  csvCell,
+  rsvpCsv,
+  rsvpCsvResponse,
+} from "../src/lib/admin/csv.ts";
 import { loadAdminRsvps } from "../src/lib/admin/rsvps.ts";
 import { createD1AdminStore } from "../src/lib/admin/d1.ts";
 import { selectAdminStore } from "../src/lib/admin/store.ts";
@@ -44,6 +49,117 @@ import {
   fakeAdminFixtures,
   fakeAdminResponses,
 } from "../src/lib/admin/fake.ts";
+import { StaleHouseholdError } from "../src/lib/admin/store.ts";
+
+test("fake host RSVP save appends history, clears declines, and refuses stale drafts", async () => {
+  const fixture = fakeAdminFixtures.find((row) => row.id === "hh-rsvp-editor")!;
+  const responseIndex = fakeAdminResponses.findIndex((response) => response.householdId === fixture.id);
+  const savedResponses = responseIndex >= 0 ? fakeAdminResponses.splice(responseIndex, 1) : [];
+  const original = structuredClone(fixture);
+  try {
+    const store = createFakeAdminStore();
+    const before = await store.getRsvpDetail(fixture.id);
+    assert(before);
+    const beforeList = await store.getRsvpList();
+    const beforeOverview = await store.getOverview();
+    const beforeSlipper = await store.getSlipperOrder();
+    const beforeNav = await store.getNavCounts();
+    await store.saveRsvp(
+      {
+        id: fixture.id,
+        updatedAt: before.updatedAt ?? "",
+        attending: true,
+        note: "A host note",
+        seats: before.seats.map((seat, index) => ({
+          seatId: seat.seatId!,
+          shownName: seat.name ?? seat.invitedName ?? "",
+          name: index === 1 ? "Fictional Guest" : seat.name ?? "",
+          attending: true,
+          slipperSize: index === 0 ? "W 7" : "M 9",
+        })),
+      },
+      { email: "host@example.com", firstName: "Eunice" },
+    );
+    const after = await store.getRsvpDetail(fixture.id);
+    assert(after);
+    assert.equal(after.history.length, 1);
+    assert.equal(after.history[0]?.source, "host");
+    assert.equal(after.history[0]?.editedBy, "host@example.com");
+    assert.equal(after.history[0]?.respondentName, "Eunice");
+    assert.equal(after.seats[1]?.name, "Fictional Guest");
+    const afterList = await store.getRsvpList();
+    const afterRow = afterList.rows.find((row) => row.id === fixture.id);
+    assert.equal(afterRow?.state, "attending");
+    assert.equal(afterRow?.email, "");
+    assert.deepEqual(afterRow?.comingNames, ["Reply Parent", "Fictional Guest"]);
+    assert.equal(afterList.totals.all, beforeList.totals.all + 1);
+    assert.equal(afterList.totals.attending, beforeList.totals.attending + 1);
+    assert.equal(afterList.totals.waiting, beforeList.totals.waiting - 1);
+    const afterOverview = await store.getOverview();
+    assert.equal(afterOverview.households.attending, beforeOverview.households.attending + 1);
+    assert.equal(afterOverview.households.waiting, beforeOverview.households.waiting - 1);
+    assert.equal(afterOverview.guestsComing, beforeOverview.guestsComing + 2);
+    const afterSlipper = await store.getSlipperOrder();
+    assert.equal(afterSlipper.pairs, beforeSlipper.pairs + 2);
+    assert.equal(afterSlipper.women.find((row) => row.size === "W 7")?.count, beforeSlipper.women.find((row) => row.size === "W 7")!.count + 1);
+    assert.equal(afterSlipper.men.find((row) => row.size === "M 9")?.count, beforeSlipper.men.find((row) => row.size === "M 9")!.count + 1);
+    const afterNav = await store.getNavCounts();
+    assert.equal(afterNav.rsvpReplies, beforeNav.rsvpReplies + 1);
+    assert.equal(afterNav.slipperPairs, beforeNav.slipperPairs + 2);
+    const csv = rsvpCsv(afterList).body;
+    assert.match(csv, new RegExp(`${fixture.label},${fixture.displayName},yes,,[^,]*,1,host@example\\.com`));
+    const slipperCsv = await buildSlipperCsv(store);
+    assert.equal(slipperCsv.status, 200);
+    assert.match(await slipperCsv.text(), new RegExp(`W 7,${afterSlipper.women.find((row) => row.size === "W 7")!.count}`));
+    const staleToken = before.updatedAt ?? "";
+    await assert.rejects(
+      store.saveRsvp(
+        {
+          id: fixture.id,
+          updatedAt: staleToken,
+          attending: false,
+          note: null,
+          seats: after.seats.map((seat) => ({
+            seatId: seat.seatId!,
+            shownName: seat.name ?? "",
+            name: seat.name ?? "",
+            attending: false,
+            slipperSize: "W 5",
+          })),
+        },
+        { email: "host@example.com", firstName: "Eunice" },
+      ),
+      StaleHouseholdError,
+    );
+    const unchanged = await store.getRsvpDetail(fixture.id);
+    assert.equal(unchanged?.history.length, 1);
+    await store.saveRsvp(
+      {
+        id: fixture.id,
+        updatedAt: unchanged?.updatedAt ?? "",
+        attending: false,
+        note: null,
+        seats: unchanged!.seats.map((seat) => ({
+          seatId: seat.seatId!,
+          shownName: seat.name ?? "",
+          name: seat.name ?? "",
+          attending: true,
+          slipperSize: "W 5",
+        })),
+      },
+      { email: "host@example.com", firstName: "Eunice" },
+    );
+    const declined = await store.getRsvpDetail(fixture.id);
+    assert.equal(declined?.history.length, 2);
+    assert.equal(declined?.history[0]?.attending, false);
+    assert(declined?.history[0]?.seats.every((seat) => !seat.attending && !seat.slipperSize));
+  } finally {
+    const responseIndex = fakeAdminResponses.findIndex((response) => response.householdId === fixture.id);
+    if (responseIndex >= 0) fakeAdminResponses.splice(responseIndex, 1);
+    fakeAdminResponses.push(...savedResponses);
+    Object.assign(fixture, original);
+  }
+});
 
 const config = {
   ACCESS_TEAM_DOMAIN: "warren.cloudflareaccess.com",
@@ -409,6 +525,65 @@ function adminDatabase() {
   `);
   return database;
 }
+
+test("D1 host RSVP save appends a version atomically and refuses stale input", async () => {
+  const database = adminDatabase();
+  const store = createD1AdminStore(database);
+  const before = await store.getRsvpDetail("b");
+  assert(before);
+  await store.saveRsvp(
+    {
+      id: "b",
+      updatedAt: before.updatedAt!,
+      attending: true,
+      note: "Host answer",
+      seats: before.seats.map((seat, index) => ({
+        seatId: seat.seatId!,
+        shownName: seat.name ?? seat.invitedName ?? "",
+        name: index === 1 ? "Fictional Plus One" : seat.name ?? seat.invitedName ?? "",
+        attending: true,
+        slipperSize: index === 0 ? "W 7" : "M 9",
+      })),
+    },
+    { email: "host@example.com", firstName: "Eunice" },
+  );
+  const after = await store.getRsvpDetail("b");
+  assert(after);
+  assert.equal(after.history.length, 1);
+  assert.equal(after.history[0]?.source, "host");
+  assert.equal(after.history[0]?.editedBy, "host@example.com");
+  assert.equal(after.history[0]?.respondentName, "Eunice");
+  assert.equal(after.email, "");
+  assert.equal(after.seats[1]?.name, "Fictional Plus One");
+  assert.equal(
+    database.db.prepare("SELECT count(*) AS count FROM responses WHERE household_id='b'").get()?.count,
+    1,
+  );
+  await assert.rejects(
+    store.saveRsvp(
+      {
+        id: "b",
+        updatedAt: before.updatedAt!,
+        attending: false,
+        note: null,
+        seats: after.seats.map((seat) => ({
+          seatId: seat.seatId!,
+          shownName: seat.name ?? "",
+          name: seat.name ?? "",
+          attending: false,
+          slipperSize: "W 5",
+        })),
+      },
+      { email: "host@example.com", firstName: "Eunice" },
+    ),
+    StaleHouseholdError,
+  );
+  assert.equal(
+    database.db.prepare("SELECT count(*) AS count FROM responses WHERE household_id='b'").get()?.count,
+    1,
+  );
+  database.close();
+});
 
 test("D1 admin overview uses newest responses and excludes archived and retired seats", async () => {
   const database = adminDatabase();
