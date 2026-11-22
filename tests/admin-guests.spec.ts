@@ -2,6 +2,106 @@ import { test, expect, type Page } from "@playwright/test";
 import { fakeAdminFixtures } from "../src/lib/admin/fake";
 import { withAdminLock } from "./helpers/admin-lock";
 
+const expectedIds = (filter: string) =>
+  fakeAdminFixtures
+    .filter((row) => {
+      if (filter === "waiting") return row.rsvp.state === "waiting";
+      if (filter === "coming") return row.rsvp.state === "coming";
+      if (filter === "declined") return row.rsvp.state === "declined";
+      if (filter === "no-name")
+        return row.seats.some(
+          (seat) => !seat.name?.trim() && (seat.state ?? "open") === "open",
+        );
+      return true;
+    })
+    .map((row) => row.id);
+
+test.describe("guest list filters", () => {
+  test("filters households from fixture state and carries search", async ({
+    page,
+  }) => {
+    for (const filter of ["all", "waiting", "no-name", "coming", "declined"]) {
+      await page.goto(
+        filter === "all" ? "/admin/guests" : `/admin/guests?filter=${filter}`,
+      );
+      const expected = expectedIds(filter);
+      await expect(page.locator("[data-admin-household]")).toHaveCount(
+        expected.length,
+      );
+      expect(
+        await page
+          .locator("[data-admin-household]")
+          .evaluateAll((rows) =>
+            rows.map((row) => row.getAttribute("data-household-id")),
+          ),
+      ).toEqual(expected);
+    }
+    await page.goto("/admin/guests?filter=waiting");
+    await expect(
+      page.locator('[data-admin-filter="waiting"][aria-current="page"]'),
+    ).toHaveCount(1);
+
+    const searchTerm =
+      fakeAdminFixtures.find((row) => row.rsvp.state === "waiting")?.label ??
+      "waiting";
+    const search = page.locator("[data-admin-search]");
+    await search.fill(searchTerm);
+    await expect(page).toHaveURL(/filter=waiting.*q=/);
+    await expect(
+      page.locator("[data-admin-household]:not([hidden])"),
+    ).toHaveCount(1);
+    const edit = page.locator("[data-admin-edit]").first();
+    const editHref = await edit.getAttribute("href");
+    expect(new URL(editHref!, "http://localhost").searchParams.get("q")).toBe(
+      searchTerm,
+    );
+
+    // A query typed after load reaches the filter links too (L-050).
+    await page.locator('[data-admin-filter="all"]').click();
+    await expect(page).toHaveURL(/\/admin\/guests\?q=/);
+    await expect(search).toHaveValue(searchTerm);
+  });
+
+  test("filter links work without JavaScript and stat links preserve q", async ({
+    browser,
+  }) => {
+    const page = await browser.newPage({ javaScriptEnabled: false });
+    await page.goto("/admin/guests?q=host");
+    await expect(
+      page.locator("[data-admin-filters] a[data-admin-filter]"),
+    ).toHaveCount(5);
+    await page.locator('[data-admin-filter="declined"]').click();
+    await expect(page).toHaveURL(/filter=declined.*q=host/);
+    await expect(page.locator("[data-admin-household]")).toHaveCount(
+      expectedIds("declined").length,
+    );
+    if (expectedIds("declined").length > 0)
+      await expect(page.locator("[data-admin-household]").last()).toHaveCSS(
+        "border-bottom-width",
+        "0px",
+      );
+    await page.goto("/admin/guests?q=host");
+    await expect(
+      page.locator(".admin-guests_stats a").filter({ hasText: "Waiting" }),
+    ).toHaveAttribute("href", /filter=waiting.*q=host/);
+    await expect(
+      page.locator(".admin-guests_stats a").filter({ hasText: "Plus-ones" }),
+    ).toHaveAttribute("href", /filter=no-name.*q=host/);
+    await page.close();
+  });
+
+  test("renders the host ID below the household name", async ({ page }) => {
+    await page.goto("/admin/guests");
+    const row = page.locator("[data-admin-household]").first();
+    const id = await row.getAttribute("data-household-id");
+    const label = fakeAdminFixtures.find((fixture) => fixture.id === id)?.label;
+    await expect(
+      row.locator("[data-col=household] .admin-guests_id"),
+    ).toHaveText(label ?? "");
+    await expect(page.locator('[data-col="id"]')).toHaveCount(0);
+  });
+});
+
 test.describe("guest list editor", () => {
   test.describe.configure({ mode: "serial" });
   const fixture = fakeAdminFixtures.find(
