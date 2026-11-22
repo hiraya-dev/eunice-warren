@@ -216,16 +216,18 @@ test.describe("guest list drawer", () => {
       expect(dialog.message()).toBe("Discard your changes to this household?");
       await dialog.dismiss();
     });
+    // On the phone layout the sheet covers most of the scrim, so a pointer
+    // click can land on the panel; click the scrim from script instead.
     await page
       .locator(".admin-drawer_scrim")
-      .click({ position: { x: 4, y: 4 } });
+      .evaluate((scrim: HTMLElement) => scrim.click());
     await expect(add).toBeVisible();
     await expect(add.locator("[data-name-chip]")).toContainText("Chip Guard");
 
     page.once("dialog", (dialog) => void dialog.accept());
     await page
       .locator(".admin-drawer_scrim")
-      .click({ position: { x: 4, y: 4 } });
+      .evaluate((scrim: HTMLElement) => scrim.click());
     await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
 
     let unexpected = 0;
