@@ -591,12 +591,17 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     if (input.updatedAt !== household.updated_at) throw new StaleHouseholdError();
     const latest = await database
       .prepare(
-        `SELECT respondent_name,email FROM responses WHERE household_id=? ORDER BY submitted_at DESC,id DESC LIMIT 1`,
+        `SELECT respondent_name,email,(SELECT max(id) FROM responses WHERE household_id=?) AS max_id FROM responses WHERE household_id=? ORDER BY submitted_at DESC,id DESC LIMIT 1`,
       )
-      .bind(input.id)
-      .first<{ respondent_name: string; email: string }>();
+      .bind(input.id, input.id)
+      .first<{ respondent_name: string; email: string; max_id: number | null }>();
     const now = new Date().toISOString();
-    const responseId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+    // Two saves in the same millisecond share submitted_at, and history breaks
+    // that tie by id, so the new id must sort after every earlier one.
+    const responseId = Math.max(
+      Date.now() * 1000 + Math.floor(Math.random() * 1000),
+      Number(latest?.max_id ?? 0) + 1,
+    );
     const response = database
       .prepare(
         `INSERT INTO responses (id,household_id,submitted_at,respondent_name,attending,guest_count,email,note,source,edited_by) VALUES (?,?,?,?,?,?,?,?,?,?)`,
