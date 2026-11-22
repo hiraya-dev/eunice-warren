@@ -160,6 +160,14 @@ test.describe("guest list drawer", () => {
     await withAdminLock(async () => {
       await page.goto(`/admin/guests?new=1&filter=waiting&q=${surname}`);
       const form = page.locator("[data-new-household]");
+      // A new household's one seat is for its first name, not a plus-one.
+      await expect(form.locator("[data-plus-one-toggle]")).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+      await expect(form.locator("[data-seat-summary]")).toContainText(
+        "0 names + 0 plus-ones",
+      );
       const name = form.locator("[data-add-name]");
       await name.fill(`  Rowan   ${surname} `);
       await name.press("Enter");

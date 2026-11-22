@@ -1222,7 +1222,7 @@ const editSeats = (row: AdminHousehold) => {
       count.value = String(seats);
       if (output) output.value = String(seats);
       if (summary) {
-        const open = seats - names.length;
+        const open = !isEdit && names.length === 0 ? 0 : seats - names.length;
         const noun = isEdit ? "open seat" : "plus-one";
         const number = summary.querySelector("[data-seat-number]");
         const unit = summary.querySelector("[data-seat-unit]");
@@ -1230,14 +1230,12 @@ const editSeats = (row: AdminHousehold) => {
         if (number) number.textContent = String(seats);
         if (unit) unit.textContent = seats === 1 ? "seat" : "seats";
         if (rest)
-          rest.textContent = `· ${names.length} names + ${open} ${noun}${open === 1 ? "" : "s"}${isEdit && open > 0 ? " · plus-one allowed" : ""}`;
+          rest.textContent = `· ${names.length} ${names.length === 1 ? "name" : "names"} + ${open} ${noun}${open === 1 ? "" : "s"}${isEdit && open > 0 ? " · plus-one allowed" : ""}`;
       }
       if (toggle) {
-        toggle.setAttribute(
-          "aria-pressed",
-          seats > names.length ? "true" : "false",
-        );
-        toggle.value = seats > names.length ? "off" : "on";
+        const plusOne = (isEdit || names.length > 0) && seats > names.length;
+        toggle.setAttribute("aria-pressed", plusOne ? "true" : "false");
+        toggle.value = plusOne ? "off" : "on";
       }
       const members = memberNames();
       const nextSuggestion = suggestInvitationName(members);

@@ -90,7 +90,12 @@ const seatCount =
   props.variant === "new"
     ? props.draft.seatCount
     : props.seats.filter((seat) => !seat.retire).length;
-const openSeats = Math.max(0, seatCount - names.length);
+// A new household with no names yet holds one seat for its first name, not a
+// plus-one.
+const openSeats =
+  props.variant === "new" && names.length === 0
+    ? 0
+    : Math.max(0, seatCount - names.length);
 const invitationName =
   props.variant === "new"
     ? props.draft.invitationEdited
@@ -130,8 +135,8 @@ const titleParts: [string, string] =
 const seatNoun = (count: number) => (count === 1 ? "seat" : "seats");
 const seatRest =
   props.variant === "new"
-    ? `· ${names.length} names + ${openSeats} plus-one${openSeats === 1 ? "" : "s"}`
-    : `· ${names.length} names + ${openSeats} open seat${openSeats === 1 ? "" : "s"}${openSeats > 0 ? " · plus-one allowed" : ""}`;
+    ? `· ${names.length} ${names.length === 1 ? "name" : "names"} + ${openSeats} plus-one${openSeats === 1 ? "" : "s"}`
+    : `· ${names.length} ${names.length === 1 ? "name" : "names"} + ${openSeats} open seat${openSeats === 1 ? "" : "s"}${openSeats > 0 ? " · plus-one allowed" : ""}`;
 const rsvpState = (value: string | undefined) =>
   value === "coming"
     ? "Coming"
