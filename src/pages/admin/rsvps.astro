@@ -502,7 +502,7 @@ if (savedNotice && !editMode) {
               />
               <div class="admin-drawer_panel">
                 <div class="admin-drawer_top">
-                  <p class={`admin_label${detail.versionCount ? "" : " admin-drawer_waiting-eyebrow"}`}>
+                  <p class={`admin_label${detail.versionCount || editMode ? "" : " admin-drawer_waiting-eyebrow"}`}>
                     {editMode
                       ? detail.versionCount
                         ? `Edit reply · ${detail.label} · ${replyCountText(detail.versionCount)}`
@@ -872,6 +872,13 @@ if (savedNotice && !editMode) {
   };
   const discardMessage = "Discard your changes to this reply?";
   const confirmDiscard = () => !currentEditFormIsDirty() || window.confirm(discardMessage);
+  // Set when the host said OK to discarding on a link that leaves the page, so
+  // beforeunload doesn't ask a second time. Any new typing clears it, and so
+  // does showing the page again.
+  let discardConfirmed = false;
+  document.addEventListener("input", () => {
+    discardConfirmed = false;
+  });
 
   const markEditForms = () => {
     for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form"))
@@ -991,9 +998,12 @@ if (savedNotice && !editMode) {
       closeDrawer();
       return;
     }
-    const dashboardNav = target.closest<HTMLAnchorElement>("[data-admin-nav] a, [data-admin-tabbar] a, [data-admin-filter], [data-admin-download], .admin_brand, .admin_topbar a, .admin_account a");
-    if (dashboardNav && !confirmDiscard()) {
-      event.preventDefault();
+    // The CSV link downloads without leaving the page, so it is not guarded.
+    const dashboardNav = target.closest<HTMLAnchorElement>("[data-admin-nav] a, [data-admin-tabbar] a, [data-admin-filter], .admin_brand, .admin_topbar a, .admin_account a");
+    if (dashboardNav) {
+      const dirty = currentEditFormIsDirty();
+      if (!confirmDiscard()) event.preventDefault();
+      else if (dirty) discardConfirmed = true;
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -1035,6 +1045,16 @@ if (savedNotice && !editMode) {
   });
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
+    // Back from a dirty edit asks first; keeping the edit puts its URL back.
+    const dirtyForm = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form");
+    if (dirtyForm && url.searchParams.get("edit") !== "1" && !confirmDiscard()) {
+      const editUrl = new URL(location.href);
+      const id = dirtyForm.querySelector<HTMLInputElement>('input[name="id"]')?.value;
+      if (id) editUrl.searchParams.set("household", id);
+      editUrl.searchParams.set("edit", "1");
+      history.pushState(null, "", editUrl);
+      return;
+    }
     if (url.searchParams.has("household")) void loadDrawer(url.href, false);
     else {
       document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
@@ -1047,11 +1067,12 @@ if (savedNotice && !editMode) {
     document.querySelector<HTMLElement>("[data-admin-drawer] h2")?.focus();
   }
   window.addEventListener("beforeunload", (event) => {
-    if (!currentEditFormIsDirty()) return;
+    if (discardConfirmed || !currentEditFormIsDirty()) return;
     event.preventDefault();
     event.returnValue = "";
   });
   window.addEventListener("pageshow", (event) => {
+    discardConfirmed = false;
     if (!event.persisted) return;
     for (const form of document.querySelectorAll<HTMLFormElement>(".admin-drawer_edit-form")) {
       delete form.dataset.submitting;

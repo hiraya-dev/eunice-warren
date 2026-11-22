@@ -357,6 +357,55 @@ test.describe("admin RSVPs", () => {
     page.off("dialog", unexpected);
   });
 
+  test("asks once before a dashboard link leaves a dirty edit", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    await page.locator('input[name="seat_name_1"]').fill("Changed before leaving");
+    const types: string[] = [];
+    const accept = async (dialog: import("@playwright/test").Dialog) => {
+      types.push(dialog.type());
+      await dialog.accept();
+    };
+    page.on("dialog", accept);
+    try {
+      // The scrim covers the sidebar while the drawer is open, so the link is
+      // clicked from script, as a keyboard shortcut or extension would.
+      await page
+        .locator('[data-admin-nav] a[href="/admin/guests"]')
+        .evaluate((link: HTMLAnchorElement) => link.click());
+      await expect(page).toHaveURL(/\/admin\/guests/);
+      // One confirm, and no second "Leave site?" (beforeunload) prompt.
+      expect(types).toEqual(["confirm"]);
+    } finally {
+      page.off("dialog", accept);
+    }
+  });
+
+  test("asks before Back drops a dirty edit and keeps it on Cancel", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-ramos");
+    await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
+    await page.locator("[data-admin-drawer-nav]").click();
+    const form = page.locator(".admin-drawer_edit-form");
+    await expect(form).toBeVisible();
+    const name = page.locator('input[name="seat_name_1"]');
+    await name.fill("Kept after Back");
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await page.goBack();
+    await expect(page).toHaveURL(/household=hh-ramos.*edit=1|edit=1.*household=hh-ramos/);
+    await expect(form).toBeVisible();
+    await expect(name).toHaveValue("Kept after Back");
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.goBack();
+    await expect(form).toHaveCount(0);
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+  });
+
+  test("keeps the Waiting eyebrow red only in the read view", async ({ page }) => {
+    await page.goto("/admin/rsvps?household=hh-santos&edit=1");
+    await expect(page.locator(".admin-drawer_top .admin-drawer_waiting-eyebrow")).toHaveCount(0);
+    await page.goto("/admin/rsvps?household=hh-santos");
+    await expect(page.locator(".admin-drawer_top .admin-drawer_waiting-eyebrow")).toHaveCount(1);
+  });
+
   test("shows Saving while a dirty reply is submitting without a guard", async ({ page }) => {
     await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
     await page.locator('input[name="seat_name_1"]').fill("Changed and saved");
