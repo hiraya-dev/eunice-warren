@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -143,11 +143,20 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     // Gallery photos are webp variants under /_astro/. Count only requests that start
     // after the overlay opens: the old queue fetched them strictly one at a time.
     let opened = false;
+    // Pre-open photo requests stay in this set until their response body has arrived
+    // (route.continue() resolves when the request is sent, not when it finishes).
+    const preOpenInFlight = new Set<Request>();
+    const settle = (request: Request) => preOpenInFlight.delete(request);
+    page.on("requestfinished", settle);
+    page.on("requestfailed", settle);
     let active = 0;
     let peak = 0;
     let started = 0;
     await page.route("**/_astro/*.webp", async (route) => {
-      if (!opened) return route.continue();
+      if (!opened) {
+        preOpenInFlight.add(route.request());
+        return route.continue();
+      }
       started += 1;
       active += 1;
       peak = Math.max(peak, active);
@@ -161,7 +170,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     await open.scrollIntoViewIfNeeded();
     await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
     // Let the section's own images and the intent prefetch settle before counting.
-    await page.waitForLoadState("networkidle");
+    await expect.poll(() => preOpenInFlight.size).toBe(0);
     opened = true;
     await open.click();
     await expect.poll(() => started, { timeout: 10_000 }).toBeGreaterThan(3);

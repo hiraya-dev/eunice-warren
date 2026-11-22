@@ -550,3 +550,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** every push in the thread follows an unpiped `prepush` whose exit status gates it.
 - **Guard:** none yet; a guard-git rule that blocks a pipe before `git push` is proposed as its own workflow PR (it would have saved a CI run here).
 - **Paths:** `.agents/skills/local-checks/**`, `scripts/hooks/**`
+
+### L-059 — Wait for traffic the spec controls
+- **Date:** 2026-11-22
+- **Trigger:** #102, flaky test; #104
+- **Symptom:** the gallery concurrency spec timed out waiting for 500 ms of global network quiet while unrelated lazy images, fonts, intent prefetch and a canvas module import kept the page busy.
+- **Root cause:** `networkidle` synchronized the test with every request on the page instead of only the gallery image requests relevant to the assertion.
+- **Rule:** never wait on `networkidle` in a spec; wait for the requests the spec routes or for a DOM state it owns.
+- **Check:** `grep -rn networkidle tests` finds nothing.
+- **Guard:** none
+- **Paths:** `tests/**`
