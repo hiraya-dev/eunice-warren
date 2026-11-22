@@ -185,7 +185,7 @@ if (Astro.request.method === "POST") {
                 label: newDraft.labelEdited
                   ? newDraft.label
                   : generateHostId(
-                      memberNames,
+                      displayName,
                       list.rows.flatMap((row) => [row.id, row.label]),
                     ),
                 displayName,
@@ -533,7 +533,9 @@ if (!newDraft.memberNames.length) newDraft.memberNames = [""];
 const takenIds = view.rows.flatMap((row) => [row.id, row.label]);
 if (!newDraft.label)
   newDraft.label = generateHostId(
-    newDraft.memberNames.filter(Boolean),
+    newDraft.invitationEdited
+      ? newDraft.displayName
+      : suggestInvitationName(newDraft.memberNames.filter(Boolean)),
     takenIds,
   );
 const archiveId = Astro.url.searchParams.get("archive");
@@ -953,7 +955,6 @@ const editSeats = (row: AdminHousehold) => {
 </AdminLayout>
 <script>
   import {
-    displaySurname,
     duplicateNameKey,
     generateHostId,
     normalizeName,
@@ -1239,17 +1240,17 @@ const editSeats = (row: AdminHousehold) => {
       }
       const members = memberNames();
       const nextSuggestion = suggestInvitationName(members);
-      if (hostId && !hostId.dataset.edited && members.length) {
-        const idNames = members.map((name) =>
-          name.includes(" ")
-            ? `${name.split(/\s+/)[0]} ${displaySurname(name)}`
-            : name,
-        );
+      // The ID follows the invitation name (typed or suggested) until the host
+      // uses Edit ID; an existing household keeps its ID.
+      const idSource = invitation?.dataset.edited
+        ? invitation.value
+        : nextSuggestion;
+      if (hostId && !isEdit && !hostId.dataset.edited && idSource) {
         const taken = households.flatMap((household) => [
           household.id,
           household.label,
         ]);
-        hostId.value = generateHostId(idNames, taken);
+        hostId.value = generateHostId(idSource, taken);
         if (generatedLabel) generatedLabel.value = hostId.value;
         if (hostIdText) hostIdText.textContent = hostId.value;
       }

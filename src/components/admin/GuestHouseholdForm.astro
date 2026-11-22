@@ -112,7 +112,7 @@ const label =
   props.variant === "new"
     ? props.draft.labelEdited
       ? props.draft.label
-      : generateHostId(names, props.takenIds)
+      : generateHostId(invitationName, props.takenIds)
     : props.row.label;
 // The last part of the title is set in italic (Paper Admin 11 and 12).
 const splitLast = (text: string): [string, string] => {
@@ -203,7 +203,7 @@ const rsvpState = (value: string | undefined) =>
             <input
               type="hidden"
               name="generated_label"
-              value={generateHostId(names, props.takenIds)}
+              value={generateHostId(invitationName, props.takenIds)}
             />
           </>
         )

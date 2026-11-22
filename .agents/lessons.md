@@ -459,6 +459,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/admin/**`, `src/pages/admin/**`, `tests/admin-*.spec.ts`
 
+### L-054 — A generated value the host sees names its source in the criteria
+- **Date:** 2026-11-22
+- **Trigger:** PR #101 Local-review round (the user asked for the host ID to come from the invitation name)
+- **Symptom:** the add drawer generated the host ID from the guests' surnames ("ruiz-ilagan"), a source Claude picked when writing the criteria. On the preview, the user asked for it to follow the household's invitation name, which cost a fix round after PASS.
+- **Root cause:** the criteria stated how the ID was built but did not put the choice of source to the user. The design (Paper) showed an ID that happened to fit either source.
+- **Rule:** when criteria auto-generate something the host reads or keeps (an ID, a default name, a slug), the approval message names its source and an example, and offers the obvious alternative. Generated values follow what the host already sees on the form (here, the invitation name) unless the user says otherwise.
+- **Check:** the posted criteria for a generated field show "from <source>: <example>"; `tests/admin-unit.test.ts` pins `generateHostId` on invitation names.
+- **Guard:** none
+- **Paths:** `src/lib/admin/**`, `src/components/admin/**`, `src/pages/admin/**`
+
 ## CI scripts
 
 ### L-019 — Build a parser's test fixtures from the real output

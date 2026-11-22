@@ -743,6 +743,60 @@ test.describe("guest drawer round trips without JavaScript", () => {
   });
 });
 
+test.describe("host ID from the invitation name", () => {
+  test("follows the invitation name in add and keeps the ID in edit", async ({
+    page,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    const slug = surname.toLowerCase();
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests?new=1");
+      const form = page.locator("[data-new-household]");
+      for (const name of [`Ilse ${surname}`, `Otto ${surname}`]) {
+        await form.locator("[data-add-name]").fill(name);
+        await form.locator("[data-add-name]").press("Enter");
+      }
+      // "The <S> Family" → "<s>"
+      await expect(form.locator("[data-host-id]")).toHaveText(slug);
+      await form.locator("[name='display_name']").fill(`Casa ${surname}`);
+      await expect(form.locator("[data-host-id]")).toHaveText(`casa-${slug}`);
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      const row = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await expect(row.locator(".admin-guests_id")).toHaveText(`casa-${slug}`);
+
+      // Renaming in edit keeps the ID.
+      const id = await row.getAttribute("data-household-id");
+      await page.goto(`/admin/guests?edit=${id}`);
+      const edit = page.locator("[data-edit-household]");
+      await edit.locator("[name='display_name']").fill(`Villa ${surname}`);
+      await expect(edit.locator("[data-host-id]")).toHaveText(`casa-${slug}`);
+      await edit.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(
+        page
+          .locator("[data-admin-household]")
+          .filter({ hasText: surname })
+          .locator(".admin-guests_id"),
+      ).toHaveText(`casa-${slug}`);
+
+      await page.goto("/admin/guests");
+      const saved = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await saved.locator("summary").click();
+      await saved.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(
+        page.locator("[data-admin-household]").filter({ hasText: surname }),
+      ).toHaveCount(0);
+    });
+  });
+});
+
 test.describe("guest drawer plus-one off with JavaScript", () => {
   test("drops a saved open seat and a draft-only seat", async ({
     page,

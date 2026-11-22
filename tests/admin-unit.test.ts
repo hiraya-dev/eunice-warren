@@ -587,18 +587,26 @@ test("plus-one parsing covers every placeholder spelling", () => {
   assert.equal(parsePlusOne("ordinary guest name"), 0);
 });
 
-test("host IDs slug distinct surnames in order and avoid collisions", () => {
+test("host IDs are a short slug of the invitation name and avoid collisions", () => {
+  assert.equal(generateHostId("The Dela Cruz Family"), "dela-cruz");
+  assert.equal(generateHostId("the olave-garcia family"), "olave-garcia");
   assert.equal(
-    generateHostId(["Ana Dela Cruz", "Bea Olave-Garcia"]),
-    "dela-cruz-olave-garcia",
+    generateHostId("Liza Ramos & Jun Delos Reyes"),
+    "liza-ramos-jun-delos-reyes",
   );
-  assert.equal(generateHostId(["Ana Dela Cruz"], ["dela-cruz"]), "dela-cruz-2");
-  assert.equal(generateHostId(["Madonna"], []), "madonna");
+  assert.equal(generateHostId("Gloria, Fiona & Venz"), "gloria-fiona-venz");
+  assert.equal(generateHostId("Jay R Nearents & family"), "jay-r-nearents");
+  assert.equal(generateHostId("Sofía Peña"), "sofia-pena");
+  assert.equal(generateHostId("Madonna"), "madonna");
+  assert.equal(generateHostId(""), "household");
+  // "Theo" is a name, not the article.
+  assert.equal(generateHostId("Theo Cruz"), "theo-cruz");
   assert.equal(
-    generateHostId(
-      ["Ana Dela Cruz", "Bea Dela Cruz"],
-      ["dela-cruz", "dela-cruz-2"],
-    ),
+    generateHostId("The Dela Cruz Family", ["dela-cruz"]),
+    "dela-cruz-2",
+  );
+  assert.equal(
+    generateHostId("The Dela Cruz Family", ["DELA-CRUZ", "dela-cruz-2"]),
     "dela-cruz-3",
   );
   assert.equal(duplicateNameKey("  Ána   Dela Cruz "), "ana dela cruz");

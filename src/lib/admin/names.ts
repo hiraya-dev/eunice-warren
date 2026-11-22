@@ -99,22 +99,19 @@ export function slugifyName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export function generateHostId(names: string[], taken: Iterable<string> = []) {
-  const surnames: string[] = [];
-  for (const name of names) {
-    const surname = name.includes(" ") ? displaySurname(name) : name;
-    if (
-      surname &&
-      !surnames.some(
-        (value) => duplicateNameKey(value) === duplicateNameKey(surname),
-      )
-    )
-      surnames.push(surname);
-  }
-  const base =
-    surnames.slice(0, 2).map(slugifyName).filter(Boolean).join("-") ||
-    "household";
-  const used = new Set(taken);
+// The host ID is a short slug of the invitation name: "The Toledo Family" →
+// "toledo", "Jay R Nearents & family" → "jay-r-nearents". A taken ID (compared
+// without case) gets -2, -3….
+export function generateHostId(
+  invitationName: string,
+  taken: Iterable<string> = [],
+) {
+  const core = normalizeName(invitationName)
+    .replace(/^the\s+/i, "")
+    .replace(/\s*&\s*family$/i, "")
+    .replace(/\s+family$/i, "");
+  const base = slugifyName(core).slice(0, 72).replace(/-+$/, "") || "household";
+  const used = new Set([...taken].map((value) => value.toLowerCase()));
   if (!used.has(base)) return base;
   let suffix = 2;
   while (used.has(`${base}-${suffix}`)) suffix += 1;
