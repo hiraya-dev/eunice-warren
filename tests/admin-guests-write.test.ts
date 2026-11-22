@@ -32,7 +32,7 @@ const seatInput = (overrides: Record<number, Record<string, unknown>> = {}) =>
     ...overrides[id],
   }));
 
-test("validates household name blank, household name length, member blank, and seat bounds", async () => {
+test("validates invitation name blank, invitation name length, member blank, and seat bounds", async () => {
   const database = setup();
   const store = createD1AdminStore(database);
   const base = {
@@ -177,7 +177,7 @@ test("D1 display-name-only save preserves every seat attribution and timestamp",
     {
       id: "alpha",
       updatedAt: now,
-      displayName: "A clearer household name",
+      displayName: "A clearer invitation name",
       notes: null,
       seatCount: 3,
       seats: seatInput({ 3: { name: "Guest Named Plus One" } }),
@@ -262,9 +262,102 @@ test("D1 add validates label length and creates a collision-safe household", asy
   database.close();
 });
 
+test("D1 refuses an already invited full name and accepts it after confirmation", async () => {
+  const database = setup();
+  database.db.exec(`
+    INSERT INTO households (id,label,display_name,ticket_code,status,created_at,updated_at)
+      VALUES ('beta','BETA_01','The Beta Family','BETA1','active','${now}','${now}');
+    INSERT INTO invite_seats (id,household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at)
+      VALUES (4,'beta','member',1,'active','Casey Beta','casey beta','beta','Casey Beta','${now}','${now}');
+  `);
+  const store = createD1AdminStore(database);
+  await assert.rejects(
+    () =>
+      store.addHousehold(
+        {
+          label: "Gamma",
+          displayName: "Gamma",
+          notes: null,
+          seats: [{ name: "Casey Beta" }],
+        },
+        "host@example.com",
+      ),
+    /already invited/,
+  );
+  const added = await store.addHousehold(
+    {
+      label: "Gamma",
+      displayName: "Gamma",
+      notes: null,
+      seats: [{ name: "Casey Beta" }],
+      confirmedNames: ["Casey Beta"],
+    },
+    "host@example.com",
+  );
+  assert.equal(added.id, "gamma");
+  database.close();
+});
+
+test("D1 does not warn on a surname-only match", async () => {
+  const database = setup();
+  const result = await createD1AdminStore(database).addHousehold(
+    {
+      label: "Beta Only",
+      displayName: "Beta Only",
+      notes: null,
+      seats: [{ name: "Beta" }],
+    },
+    "host@example.com",
+  );
+  assert.equal(result.id, "beta-only");
+  database.close();
+});
+
+test("D1 refuses a name typed twice in one draft", async () => {
+  const database = setup();
+  await assert.rejects(
+    () =>
+      createD1AdminStore(database).addHousehold(
+        {
+          label: "Twin",
+          displayName: "Twin",
+          notes: null,
+          seats: [{ name: "Casey Beta" }, { name: "casey  beta" }],
+        },
+        "host@example.com",
+      ),
+    /only be added once/,
+  );
+  database.close();
+});
+
+test("D1 refuses a duplicate host ID on save", async () => {
+  const database = setup();
+  database.db.exec(
+    `INSERT INTO households (id,label,display_name,ticket_code,status,created_at,updated_at) VALUES ('beta','BETA_01','Beta','BETA1','active','${now}','${now}');`,
+  );
+  const result = await createD1AdminStore(database).saveHousehold(
+    {
+      id: "alpha",
+      label: "BETA_01",
+      updatedAt: now,
+      displayName: "Alpha",
+      notes: null,
+      seatCount: 3,
+      seats: seatInput(),
+    },
+    "host@example.com",
+  );
+  assert.deepEqual(result, {
+    ok: false,
+    message: "Host ID is already in use.",
+  });
+  database.close();
+});
+
 for (const scenario of [
   {
-    name: "blank household name",
+    name: "blank invitation name",
     input: {
       label: "NEW_01",
       displayName: "",
@@ -1021,7 +1114,7 @@ test("fake add validates unique slug and creates a twelve-character-compatible t
   const store = createFakeAdminStore();
   const first = await store.addHousehold(
     {
-      label: "Alpha",
+      label: "Alpha 2",
       displayName: "A new family",
       notes: null,
       seats: [{ name: "New Alpha" }],
@@ -1030,7 +1123,7 @@ test("fake add validates unique slug and creates a twelve-character-compatible t
   );
   const second = await store.addHousehold(
     {
-      label: "Alpha",
+      label: "Alpha-2",
       displayName: "Another family",
       notes: null,
       seats: [{ name: "Other Alpha" }],
@@ -1051,6 +1144,50 @@ test("fake add validates unique slug and creates a twelve-character-compatible t
     const index = fakeAdminFixtures.indexOf(row);
     if (index >= 0) fakeAdminFixtures.splice(index, 1);
   }
+});
+
+test("fake add uses the same duplicate and host ID rules", async () => {
+  const store = createFakeAdminStore();
+  const source = fakeAdminFixtures.find((row) => row.id === "hh-santos")!;
+  const duplicate = source.seats.find((seat) => seat.name)!.name!;
+  await assert.rejects(
+    () =>
+      store.addHousehold(
+        {
+          label: "FAKE_DUPLICATE",
+          displayName: "Duplicate",
+          notes: null,
+          seats: [{ name: duplicate }],
+        },
+        "host@example.com",
+      ),
+    /already invited/,
+  );
+  await assert.rejects(
+    () =>
+      store.addHousehold(
+        {
+          label: source.label,
+          displayName: "Another",
+          notes: null,
+          seats: [{ name: "Made Up Guest" }],
+        },
+        "host@example.com",
+      ),
+    /Host ID is already in use/,
+  );
+  const added = await store.addHousehold(
+    {
+      label: "FAKE_CONFIRMED",
+      displayName: "Confirmed",
+      notes: null,
+      seats: [{ name: duplicate }],
+      confirmedNames: [duplicate],
+    },
+    "host@example.com",
+  );
+  const index = fakeAdminFixtures.findIndex((row) => row.id === added.id);
+  if (index >= 0) fakeAdminFixtures.splice(index, 1);
 });
 
 test("archive removes a household from every admin read surface", async () => {

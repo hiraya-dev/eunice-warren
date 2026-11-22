@@ -11,6 +11,13 @@ import { selectAdminStore } from "@/lib/admin/store";
 import { StaleHouseholdError } from "@/lib/admin/store";
 import type { AdminGuestList, AdminHousehold } from "@/lib/admin/store";
 import { MAX_SEATS } from "@/lib/rsvp/limits";
+import {
+  duplicateNameKey,
+  generateHostId,
+  normalizeName,
+  parsePlusOne,
+  suggestInvitationName,
+} from "@/lib/admin/names";
 import GuestHouseholdForm from "@/components/admin/GuestHouseholdForm.astro";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
@@ -27,6 +34,7 @@ type DraftSeat = {
   invitedName: string | null;
   retire?: boolean;
   hasActivity?: boolean;
+  rsvp?: string;
 };
 let editDraft: {
   id: string;
@@ -35,6 +43,7 @@ let editDraft: {
   notes: string;
   seatCount: number;
   seats: DraftSeat[];
+  removedSeatIds?: number[];
 } | null = null;
 let newDraft = {
   displayName: "",
@@ -42,8 +51,33 @@ let newDraft = {
   notes: "",
   memberNames: [""],
   seatCount: 1,
+  confirmedNames: [] as string[],
+  labelEdited: false,
 };
 let writeHouseholdId = Astro.url.searchParams.get("edit");
+let duplicateOpenId = "";
+const namesFromForm = (form: FormData) =>
+  form.getAll("member_name").map(String).map(normalizeName).filter(Boolean);
+const duplicateFromList = (
+  names: string[],
+  rows: AdminHousehold[],
+  currentId?: string,
+) => {
+  for (const name of names) {
+    const key = duplicateNameKey(name);
+    const row = rows.find(
+      (item) =>
+        item.id !== currentId &&
+        item.seats.some((seat) =>
+          [seat.name, seat.invitedName].some(
+            (value) => value && duplicateNameKey(value) === key,
+          ),
+        ),
+    );
+    if (row) return { name, row };
+  }
+  return null;
+};
 if (Astro.request.method === "POST") {
   const origin = Astro.request.headers.get("origin");
   if (origin && origin !== Astro.url.origin) {
@@ -60,129 +94,284 @@ if (Astro.request.method === "POST") {
           host.email,
           String(form.get("updated_at") ?? "") || undefined,
         );
-      } else if (action === "add" && form.get("member_action") === "add") {
-        const memberNames = form.getAll("member_name").map(String);
-        const seatCount = Number(form.get("seat_count") ?? memberNames.length);
-        newDraft = {
-          displayName: String(form.get("display_name") ?? ""),
-          label: String(form.get("label") ?? ""),
-          notes: String(form.get("notes") ?? ""),
-          memberNames: [...memberNames, ""],
-          seatCount: Math.max(seatCount, memberNames.length + 1),
-        };
-      } else if (action === "add" && form.get("seat_action")) {
-        const memberNames = form.getAll("member_name").map(String);
+      } else if (action === "add") {
+        const memberNames = namesFromForm(form);
+        const list = await store.getGuestList();
+        const added = normalizeName(String(form.get("member_input") ?? ""));
+        const plusOnes = parsePlusOne(added);
+        if (form.get("member_action") === "add" && added && !plusOnes)
+          memberNames.push(added);
         const currentCount = Number(
           form.get("seat_count") ?? memberNames.length,
         );
-        const next =
-          form.get("seat_action") === "add"
+        const seatAction = String(form.get("seat_action") ?? "");
+        const nextCount =
+          seatAction === "add"
             ? currentCount + 1
-            : currentCount - 1;
+            : seatAction === "remove"
+              ? currentCount - 1
+              : currentCount;
+        const toggle = String(form.get("plus_one") ?? "");
+        const toggledCount =
+          toggle === "on"
+            ? memberNames.length + 1
+            : toggle === "off"
+              ? memberNames.length
+              : nextCount;
+        const seatCount = Math.max(
+          memberNames.length,
+          Math.min(
+            MAX_SEATS,
+            toggledCount +
+              (plusOnes && form.get("member_action") === "add" ? plusOnes : 0),
+          ),
+        );
         newDraft = {
           displayName: String(form.get("display_name") ?? ""),
           label: String(form.get("label") ?? ""),
           notes: String(form.get("notes") ?? ""),
           memberNames,
-          seatCount: Math.max(memberNames.length, Math.min(MAX_SEATS, next)),
-        };
-      } else if (action === "add") {
-        const names = form.getAll("member_name").map(String);
-        const seatCount = Number(form.get("seat_count") ?? names.length);
-        newDraft = {
-          displayName: String(form.get("display_name") ?? ""),
-          label: String(form.get("label") ?? ""),
-          notes: String(form.get("notes") ?? ""),
-          memberNames: names,
           seatCount,
+          confirmedNames: [
+            ...form.getAll("confirmed_name").map(String),
+            ...(form.get("confirm_duplicate") ? memberNames : []),
+          ],
+          labelEdited:
+            Boolean(form.get("label_edited")) ||
+            String(form.get("label") ?? "") !==
+              String(form.get("generated_label") ?? ""),
         };
-        await store.addHousehold(
-          {
-            label: newDraft.label,
-            displayName: newDraft.displayName,
-            notes: newDraft.notes || null,
-            seats: names.map((name) => ({ name })),
-            seatCount,
-          },
-          host.email,
-        );
+        if (
+          form.get("member_action") === "add" ||
+          form.get("seat_action") ||
+          toggle ||
+          form.get("confirm_duplicate")
+        ) {
+          const duplicate = duplicateFromList(memberNames, list.rows);
+          if (duplicate && !form.get("confirm_duplicate")) {
+            duplicateOpenId = duplicate.row.id;
+            writeError = `${duplicate.name} is already invited with ${duplicate.row.displayName}.`;
+          }
+        } else {
+          const duplicate = duplicateFromList(memberNames, list.rows);
+          if (
+            duplicate &&
+            !newDraft.confirmedNames?.some(
+              (name) =>
+                duplicateNameKey(name) === duplicateNameKey(duplicate.name),
+            )
+          ) {
+            duplicateOpenId = duplicate.row.id;
+            writeError = `${duplicate.name} is already invited with ${duplicate.row.displayName}.`;
+          } else {
+            const displayName =
+              newDraft.displayName || suggestInvitationName(memberNames);
+            await store.addHousehold(
+              {
+                label: newDraft.labelEdited
+                  ? newDraft.label
+                  : generateHostId(
+                      memberNames,
+                      list.rows.flatMap((row) => [row.id, row.label]),
+                    ),
+                displayName,
+                notes: newDraft.notes || null,
+                seats: memberNames.map((name) => ({ name })),
+                seatCount,
+                confirmedNames: newDraft.confirmedNames,
+              },
+              host.email,
+            );
+            const target: Record<string, string> = {};
+            if (form.get("save_and_add")) {
+              target.new = "1";
+              target.added = displayName;
+            }
+            return Astro.redirect(redirectHref(form, target), 303);
+          }
+        }
       } else if (action === "save") {
+        const householdId = String(form.get("id") ?? "");
+        writeHouseholdId = householdId;
+        const list = await store.getGuestList();
+        const storedRow = list.rows.find((row) => row.id === householdId);
         const ids = form
           .getAll("seat_id")
           .map((value) => Number(value) || undefined);
-        const names = form.getAll("seat_name").map(String);
+        const names = form.getAll("seat_name").map(String).map(normalizeName);
         const invited = form.getAll("invited_name").map(String);
-        const currentCount = Number(form.get("seat_count") ?? names.length);
-        const delta =
-          form.get("seat_action") === "add"
-            ? 1
-            : form.get("seat_action") === "remove"
-              ? -1
-              : 0;
-        const seats = names.map((name, index) => ({
-          id: ids[index],
-          name,
-          invitedName: invited[index] || undefined,
-          retire: ids[index]
-            ? Boolean(form.get(`retire_seat_${ids[index]}`))
-            : false,
-        }));
-        const finalCount =
-          currentCount + delta - seats.filter((seat) => seat.retire).length;
-        const householdId = String(form.get("id"));
-        writeHouseholdId = householdId;
-        const storedRow = (await store.getGuestList()).rows.find(
-          (row) => row.id === householdId,
-        );
         const kindsById = new Map(
           storedRow?.seats.map((seat) => [seat.id, seat.kind]) ?? [],
         );
-        editDraft = {
-          id: householdId,
-          updatedAt: String(form.get("updated_at") ?? ""),
-          displayName: String(form.get("display_name") ?? ""),
-          notes: String(form.get("notes") ?? ""),
-          seatCount: Math.max(1, currentCount + delta),
-          seats: seats.map((seat, index) => ({
-            ...seat,
-            slot: index + 1,
-            kind: seat.id ? (kindsById.get(seat.id) ?? "plus_one") : "plus_one",
-            invitedName: seat.invitedName ?? null,
-            hasActivity: seat.id
-              ? storedRow?.seats.find((stored) => stored.id === seat.id)
-                  ?.hasActivity
-              : false,
-          })),
-        };
-        if (delta > 0 && currentCount >= MAX_SEATS) {
-          editDraft.seatCount = currentCount;
-          writeError = "Seats must be between 1 and 12.";
-        } else if (delta < 0) {
-          const trailing = editDraft.seats.at(-1);
-          if (
-            trailing &&
-            (trailing.kind === "member" ||
-              Boolean(trailing.name.trim()) ||
-              trailing.hasActivity)
-          ) {
-            editDraft.seatCount = currentCount;
-            writeError = `Seat ${trailing.slot} has activity. Review or retire this seat first.`;
+        const seats = names.map((name, index) => {
+          const id = ids[index];
+          const fixedInvited = id
+            ? String(form.get(`invited_name_${id}`) ?? invited[index] ?? "")
+            : invited[index];
+          return {
+            id,
+            kind: id
+              ? (kindsById.get(id) ?? "plus_one")
+              : name
+                ? "member"
+                : "plus_one",
+            name,
+            invitedName: fixedInvited || undefined,
+            retire: id ? Boolean(form.get(`retire_seat_${id}`)) : false,
+          } as const;
+        });
+        const confirmedNames = [
+          ...form.getAll("confirmed_name").map(String),
+          ...(form.get("confirm_duplicate")
+            ? seats
+                .filter((seat) => seat.kind === "member")
+                .map((seat) => seat.name)
+            : []),
+        ];
+        const memberInput = normalizeName(
+          String(form.get("member_input") ?? ""),
+        );
+        const plusOnes = parsePlusOne(memberInput);
+        if (form.get("member_action") === "add" && memberInput) {
+          const nextSeats = [...seats];
+          if (plusOnes)
+            for (let index = 0; index < plusOnes; index += 1)
+              nextSeats.push({
+                id: undefined,
+                kind: "plus_one",
+                name: "",
+                invitedName: undefined,
+                retire: false,
+              });
+          else
+            nextSeats.push({
+              id: undefined,
+              kind: "member",
+              name: memberInput,
+              invitedName: memberInput,
+              retire: false,
+            });
+          editDraft = {
+            id: householdId,
+            updatedAt: String(form.get("updated_at") ?? ""),
+            displayName: String(form.get("display_name") ?? ""),
+            notes: String(form.get("notes") ?? ""),
+            seatCount: Math.min(
+              MAX_SEATS,
+              Number(form.get("seat_count") ?? names.length) + (plusOnes || 1),
+            ),
+            seats: nextSeats.map((seat, index) => ({
+              ...seat,
+              slot: index + 1,
+              invitedName: seat.invitedName ?? null,
+              rsvp: storedRow?.rsvp.state,
+            })),
+          };
+        } else {
+          const currentCount = Number(form.get("seat_count") ?? names.length);
+          const delta =
+            form.get("seat_action") === "add"
+              ? 1
+              : form.get("seat_action") === "remove"
+                ? -1
+                : 0;
+          // "Remove open seat" without JS submits remove_seat=<id> and comes
+          // back as a draft without that seat; with JS the row is removed in
+          // place. Both paths carry the ids already removed as removed_seat and
+          // have already taken the seat off seat_count, so the save counts it
+          // once and still runs when removed_seat is present.
+          const removeNow = Number(form.get("remove_seat") ?? 0) || undefined;
+          const removedIds = [
+            ...form
+              .getAll("removed_seat")
+              .map((value) => Number(value))
+              .filter((value) => Number.isInteger(value) && value > 0),
+            ...(removeNow ? [removeNow] : []),
+          ];
+          if (removeNow) {
+            const index = seats.findIndex((seat) => seat.id === removeNow);
+            if (index !== -1) seats.splice(index, 1);
           }
-        }
-        if (!form.get("seat_action")) {
-          const result = await store.saveHousehold(
-            {
-              id: String(form.get("id")),
-              updatedAt: String(form.get("updated_at") ?? "") || undefined,
-              displayName: String(form.get("display_name") ?? ""),
-              notes: String(form.get("notes") ?? "") || null,
-              seatCount: finalCount,
-              seats,
-            },
-            host.email,
+          const draftCount = Math.max(
+            1,
+            currentCount + delta - (removeNow ? 1 : 0),
           );
-          if (!result.ok) writeError = result.message;
-          else return Astro.redirect(redirectHref(form), 303);
+          const retiredCount = seats.filter((seat) => seat.retire).length;
+          const finalCount = Math.max(1, draftCount - retiredCount);
+          editDraft = {
+            id: householdId,
+            updatedAt: String(form.get("updated_at") ?? ""),
+            displayName: String(form.get("display_name") ?? ""),
+            notes: String(form.get("notes") ?? ""),
+            seatCount: draftCount,
+            removedSeatIds: removedIds,
+            seats: seats.map((seat, index) => ({
+              ...seat,
+              slot: index + 1,
+              invitedName: seat.invitedName ?? null,
+              hasActivity: seat.id
+                ? storedRow?.seats.find((stored) => stored.id === seat.id)
+                    ?.hasActivity
+                : false,
+              rsvp: storedRow?.rsvp.state,
+            })),
+          };
+          if (delta > 0 && currentCount >= MAX_SEATS)
+            writeError = "Seats must be between 1 and 12.";
+          if (form.get("plus_one") === "on")
+            editDraft.seatCount = Math.min(
+              MAX_SEATS,
+              names.filter(Boolean).length + 1,
+            );
+          if (form.get("plus_one") === "off")
+            editDraft.seatCount = names.filter(Boolean).length;
+          if (
+            !form.get("seat_action") &&
+            !form.get("plus_one") &&
+            !form.get("remove_seat") &&
+            !form.get("confirm_duplicate")
+          ) {
+            const duplicate = duplicateFromList(
+              seats
+                .filter((seat) => seat.kind === "member")
+                .map((seat) => seat.name),
+              list.rows,
+              householdId,
+            );
+            if (
+              duplicate &&
+              !confirmedNames.some(
+                (name) =>
+                  duplicateNameKey(name) === duplicateNameKey(duplicate.name),
+              )
+            ) {
+              duplicateOpenId = duplicate.row.id;
+              writeError = `${duplicate.name} is already invited with ${duplicate.row.displayName}.`;
+            } else {
+              const result = await store.saveHousehold(
+                {
+                  id: householdId,
+                  label: String(form.get("label") ?? ""),
+                  updatedAt: String(form.get("updated_at") ?? "") || undefined,
+                  displayName:
+                    String(form.get("display_name") ?? "") ||
+                    suggestInvitationName(
+                      seats
+                        .filter((seat) => seat.kind === "member")
+                        .map((seat) => seat.name),
+                    ),
+                  notes: String(form.get("notes") ?? "") || null,
+                  seatCount: finalCount,
+                  seats,
+                  confirmedNames,
+                  removeSeatIds: removedIds.length ? removedIds : undefined,
+                },
+                host.email,
+              );
+              if (!result.ok) writeError = result.message;
+              else return Astro.redirect(redirectHref(form), 303);
+            }
+          }
         }
       }
       if (!writeError && action === "archive")
@@ -247,13 +436,14 @@ const queryHref = (next: Record<string, string | null> = {}) => {
     if (value) params.set(key, value);
   return `${Astro.url.pathname}${params.toString() ? `?${params}` : ""}`;
 };
-function redirectHref(form: FormData) {
+function redirectHref(form: FormData, extra: Record<string, string> = {}) {
   const params = new URLSearchParams();
   const postedFilter = String(form.get("filter") ?? "");
   const postedQ = String(form.get("q") ?? "");
   if (["waiting", "no-name", "coming", "declined"].includes(postedFilter))
     params.set("filter", postedFilter);
   if (postedQ) params.set("q", postedQ);
+  for (const [key, value] of Object.entries(extra)) params.set(key, value);
   return `/admin/guests${params.toString() ? `?${params}` : ""}`;
 }
 const filterCounts = {
@@ -271,6 +461,12 @@ const rsvpText = (rsvp: { state: string; coming?: number }) =>
       : "Waiting";
 const editId = Astro.url.searchParams.get("edit");
 if (!newDraft.memberNames.length) newDraft.memberNames = [""];
+const takenIds = view.rows.flatMap((row) => [row.id, row.label]);
+if (!newDraft.label)
+  newDraft.label = generateHostId(
+    newDraft.memberNames.filter(Boolean),
+    takenIds,
+  );
 const archiveId = Astro.url.searchParams.get("archive");
 const newOpen = Astro.url.searchParams.get("new") === "1";
 const archiveRow = view.rows.find((row) => row.id === archiveId);
@@ -299,6 +495,7 @@ const editSeats = (row: AdminHousehold) => {
         name: seat.name ?? "",
         invitedName: seat.invitedName,
         hasActivity: seat.hasActivity,
+        rsvp: row.rsvp.state,
       }));
   const target = draft?.seatCount ?? row.seatCount;
   while (source.length < target)
@@ -308,6 +505,7 @@ const editSeats = (row: AdminHousehold) => {
       kind: "plus_one",
       name: "",
       invitedName: null,
+      rsvp: row.rsvp.state,
     });
   return source.slice(0, target);
 };
@@ -439,14 +637,6 @@ const editSeats = (row: AdminHousehold) => {
                 </tr>
               </thead>
               <tbody>
-                {newOpen && (
-                  <GuestHouseholdForm
-                    variant="new"
-                    draft={newDraft}
-                    error={errorInRow ? writeError : undefined}
-                    reloadHref={reloadHref}
-                  />
-                )}
                 {filteredRows.map((row) => {
                   const plusOnes = row.seats.filter(
                     (seat) => seat.kind === "plus_one",
@@ -501,33 +691,15 @@ const editSeats = (row: AdminHousehold) => {
                         </td>
                       </tr>
                     );
-                  return editId === row.id ? (
-                    <GuestHouseholdForm
-                      variant="edit"
-                      row={row}
-                      seats={editSeats(row)}
-                      updatedAt={
-                        editDraft?.id === row.id
-                          ? editDraft.updatedAt
-                          : (row.updatedAt ?? "")
-                      }
-                      displayName={
-                        editDraft?.id === row.id
-                          ? editDraft.displayName
-                          : row.displayName
-                      }
-                      notes={
-                        editDraft?.id === row.id
-                          ? editDraft.notes
-                          : (row.notes ?? "")
-                      }
-                      error={errorInRow ? writeError : undefined}
-                      reloadHref={reloadHref}
-                    />
-                  ) : (
+                  return (
                     <tr
                       data-admin-household
                       data-household-id={row.id}
+                      data-household-label={row.label}
+                      data-invited-names={row.seats
+                        .flatMap((seat) => [seat.name, seat.invitedName])
+                        .filter(Boolean)
+                        .join("|")}
                       data-search={[
                         row.displayName,
                         row.label,
@@ -628,212 +800,533 @@ const editSeats = (row: AdminHousehold) => {
               </tbody>
             </table>
           </div>
+          {Astro.url.searchParams.get("added") && (
+            <p class="admin_notice" data-admin-added>
+              Added {Astro.url.searchParams.get("added")}
+            </p>
+          )}
+          {(newOpen ||
+            (editId && view.rows.some((row) => row.id === editId))) &&
+            (newOpen ? (
+              <GuestHouseholdForm
+                variant="new"
+                draft={newDraft}
+                takenIds={takenIds}
+                duplicateOpenId={duplicateOpenId}
+                error={errorInRow ? writeError : undefined}
+                reloadHref={reloadHref}
+              />
+            ) : (
+              (() => {
+                const row = view.rows.find((item) => item.id === editId)!;
+                return (
+                  <GuestHouseholdForm
+                    variant="edit"
+                    row={row}
+                    seats={editSeats(row)}
+                    removedSeatIds={
+                      editDraft?.id === row.id
+                        ? editDraft.removedSeatIds
+                        : undefined
+                    }
+                    takenIds={takenIds}
+                    duplicateOpenId={duplicateOpenId}
+                    updatedAt={
+                      editDraft?.id === row.id
+                        ? editDraft.updatedAt
+                        : (row.updatedAt ?? "")
+                    }
+                    displayName={
+                      editDraft?.id === row.id
+                        ? editDraft.displayName
+                        : row.displayName
+                    }
+                    notes={
+                      editDraft?.id === row.id
+                        ? editDraft.notes
+                        : (row.notes ?? "")
+                    }
+                    error={errorInRow ? writeError : undefined}
+                    reloadHref={reloadHref}
+                  />
+                );
+              })()
+            ))}
         </>
       )
     }
   </section>
 </AdminLayout>
 <script>
+  import {
+    displaySurname,
+    duplicateNameKey,
+    generateHostId,
+    normalizeName,
+    parsePlusOne,
+    suggestInvitationName,
+  } from "@/lib/admin/names";
+
   const input = document.querySelector<HTMLInputElement>("[data-admin-search]");
   const rows = [
     ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
   ];
   const empty = document.querySelector<HTMLElement>("[data-admin-no-match]");
-  const normalize = (value: string) =>
-    value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLocaleLowerCase()
-      .trim();
-  const filterRows = () => {
-    if (!input) return;
-    const query = normalize(input.value);
-    let visible = 0;
-    for (const row of rows) {
-      const match = normalize(row.dataset.search ?? "").includes(query);
-      row.hidden = !match;
-      if (match) visible++;
-    }
-    if (empty) empty.hidden = visible !== 0;
-    const params = new URLSearchParams(window.location.search);
-    if (input.value) params.set("q", input.value);
-    else params.delete("q");
-    history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
-    );
-    // Every link back to this page carries the query (L-050): filters,
-    // stats, Add, Edit, Archive and Cancel.
+  const normalizeSearch = (value: string) => duplicateNameKey(value);
+  const syncLinks = () => {
+    const query = input?.value ?? "";
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      '[data-admin-guests-page] a[href^="/admin/guests"]',
+      "[data-admin-guests-page] a[href*='/admin/guests']",
     )) {
-      const href = new URL(link.href);
-      if (input.value) href.searchParams.set("q", input.value);
-      else href.searchParams.delete("q");
-      // Keep the href relative so the selector above still matches next time.
-      link.setAttribute("href", `${href.pathname}${href.search}`);
+      const url = new URL(link.href, location.origin);
+      if (query) url.searchParams.set("q", query);
+      else url.searchParams.delete("q");
+      link.setAttribute("href", `${url.pathname}${url.search}`);
     }
     for (const field of document.querySelectorAll<HTMLInputElement>(
-      '[data-admin-guests-page] form input[type="hidden"][name="q"]',
-    )) {
-      field.value = input.value;
+      "[data-admin-guests-page] form input[name='q']",
+    ))
+      field.value = query;
+  };
+  const filterRows = () => {
+    if (!input) return;
+    const query = normalizeSearch(input.value);
+    let visible = 0;
+    for (const row of rows) {
+      row.hidden = !normalizeSearch(row.dataset.search ?? "").includes(query);
+      if (!row.hidden) visible += 1;
     }
+    if (empty) empty.hidden = visible !== 0;
+    const url = new URL(location.href);
+    if (input.value) url.searchParams.set("q", input.value);
+    else url.searchParams.delete("q");
+    history.replaceState(null, "", url);
+    syncLinks();
   };
   input?.addEventListener("input", filterRows);
   if (input?.value) filterRows();
 
-  const editForm = document.querySelector<HTMLFormElement>(
-    "[data-edit-household]",
-  );
-  if (editForm) {
-    const list = editForm.querySelector<HTMLElement>("[data-seat-list]");
-    const count = editForm.querySelector<HTMLInputElement>(
+  let opener: HTMLElement | null = null;
+  const setDrawerOpen = (open: boolean) =>
+    document.documentElement.toggleAttribute("data-admin-drawer-open", open);
+  const closeDrawer = () => {
+    const url = new URL(location.href);
+    url.searchParams.delete("new");
+    url.searchParams.delete("edit");
+    history.pushState(null, "", `${url.pathname}${url.search}`);
+    document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+    setDrawerOpen(false);
+    opener?.focus();
+  };
+  const loadDrawer = async (href: string, push = true) => {
+    try {
+      const response = await fetch(href, { headers: { Accept: "text/html" } });
+      if (!response.ok) throw new Error("drawer request failed");
+      const next = new DOMParser()
+        .parseFromString(await response.text(), "text/html")
+        .querySelector<HTMLElement>("[data-admin-drawer]");
+      const page = document.querySelector<HTMLElement>(
+        "[data-admin-guests-page]",
+      );
+      if (!next || !page) throw new Error("drawer missing");
+      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+      page.append(next);
+      if (push) history.pushState(null, "", href);
+      setDrawerOpen(true);
+      hydrateDrawer(next);
+      syncLinks();
+      next.querySelector<HTMLElement>("h2")?.focus();
+    } catch {
+      location.href = href;
+    }
+  };
+  document.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    const mouse = event as MouseEvent;
+    if (
+      mouse.button !== 0 ||
+      mouse.metaKey ||
+      mouse.ctrlKey ||
+      mouse.shiftKey ||
+      mouse.altKey
+    )
+      return;
+    const link = target.closest<HTMLAnchorElement>(
+      "[data-admin-edit], .admin_guests_add",
+    );
+    if (link) {
+      event.preventDefault();
+      opener = link;
+      void loadDrawer(link.href);
+      return;
+    }
+    if (target.closest("[data-admin-drawer-close], .admin-drawer_scrim")) {
+      event.preventDefault();
+      closeDrawer();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    if (!drawer) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDrawer();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [
+      ...drawer.querySelectorAll<HTMLElement>(
+        "a,button,input,textarea,summary,[tabindex]:not([tabindex='-1'])",
+      ),
+    ];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    const active = document.activeElement as HTMLElement | null;
+    if (!drawer.contains(active) || !active || !focusable.includes(active)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+  window.addEventListener("popstate", () => {
+    const url = new URL(location.href);
+    if (url.searchParams.has("new") || url.searchParams.has("edit"))
+      void loadDrawer(url.href, false);
+    else {
+      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+      setDrawerOpen(false);
+    }
+  });
+
+  function hydrateDrawer(drawer: HTMLElement) {
+    const form = drawer.querySelector<HTMLFormElement>(
+      "[data-admin-household-form]",
+    );
+    if (!form) return;
+    // The no-JS "Add" button is hidden once the script owns Enter.
+    form.dataset.js = "true";
+    const addInput = form.querySelector<HTMLInputElement>("[data-add-name]");
+    const list = form.querySelector<HTMLElement>("[data-name-list]");
+    const count = form.querySelector<HTMLInputElement>(
       "[data-seat-count-input]",
     );
-    const output =
-      editForm.querySelector<HTMLOutputElement>("[data-seat-output]");
-    const max = 12;
-    const sync = () => {
-      if (!list || !count || !output) return;
-      const seats = [
-        ...list.querySelectorAll<HTMLElement>(".admin_guests_chip"),
-      ];
-      count.value = String(seats.length);
-      output.value = String(seats.length);
-      const remove = editForm.querySelector<HTMLButtonElement>(
-        'button[name="seat_action"][value="remove"]',
-      );
-      const add = editForm.querySelector<HTMLButtonElement>(
-        'button[name="seat_action"][value="add"]',
-      );
-      if (remove) {
-        const trailing = seats.at(-1);
-        const trailingName = trailing?.querySelector<HTMLInputElement>(
-          'input[name="seat_name"]',
+    const output = form.querySelector<HTMLOutputElement>("[data-seat-output]");
+    const summary = form.querySelector<HTMLElement>("[data-seat-summary]");
+    const invitation = form.querySelector<HTMLInputElement>("#display-name");
+    const preview = form.querySelector<HTMLElement>("[data-preview-name]");
+    const admits = form.querySelector<HTMLElement>("[data-preview-admits]");
+    const toggle = form.querySelector<HTMLButtonElement>(
+      "[data-plus-one-toggle]",
+    );
+    const hint = form.querySelector<HTMLElement>("[data-invitation-hint]");
+    const restore = form.querySelector<HTMLButtonElement>(
+      "[data-restore-suggestion]",
+    );
+    const hostId = form.querySelector<HTMLInputElement>("input[name='label']");
+    const hostIdText = form.querySelector<HTMLElement>("[data-host-id]");
+    const labelEdited = form.querySelector<HTMLInputElement>(
+      "[data-label-edited]",
+    );
+    const warning = form.querySelector<HTMLElement>("[data-duplicate-warning]");
+    const warningMessage = form.querySelector<HTMLElement>(
+      "[data-duplicate-message]",
+    );
+    const openLink = form.querySelector<HTMLAnchorElement>(
+      "[data-duplicate-open]",
+    );
+    const confirmed = new Set<string>();
+    const isEdit = form.dataset.variant === "edit";
+    const currentId =
+      form.querySelector<HTMLInputElement>("input[name='id']")?.value;
+    const allNames = () =>
+      isEdit
+        ? [
+            ...form.querySelectorAll<HTMLInputElement>(
+              "[data-seat-kind='member']:not(.is-retired) input[name='seat_name']",
+            ),
+          ]
+            .map((field) => normalizeName(field.value))
+            .filter(Boolean)
+        : [
+            ...form.querySelectorAll<HTMLInputElement>(
+              "input[name='member_name']",
+            ),
+          ]
+            .map((field) => normalizeName(field.value))
+            .filter(Boolean);
+    const takenNames = () =>
+      [...document.querySelectorAll<HTMLElement>("[data-admin-household]")]
+        .filter((row) => row.dataset.householdId !== currentId)
+        .flatMap((row) =>
+          (row.dataset.invitedNames ?? "").split("|").filter(Boolean),
         );
-        remove.disabled =
-          !trailing ||
-          trailing.dataset.seatKind === "member" ||
-          Boolean(trailingName?.value.trim()) ||
-          Boolean(trailing.dataset.activity);
+    const updateDuplicate = () => {
+      const names = allNames();
+      const duplicate = names.find((name) =>
+        takenNames().some(
+          (taken) => duplicateNameKey(taken) === duplicateNameKey(name),
+        ),
+      );
+      if (!duplicate || confirmed.has(duplicateNameKey(duplicate))) {
+        if (warning) warning.hidden = true;
+        return;
       }
-      if (add) add.disabled = seats.length >= max;
+      const row = [
+        ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
+      ].find((item) =>
+        (item.dataset.invitedNames ?? "")
+          .split("|")
+          .some(
+            (taken) => duplicateNameKey(taken) === duplicateNameKey(duplicate),
+          ),
+      );
+      if (warningMessage)
+        warningMessage.textContent = `${duplicate} is already invited with ${row?.querySelector<HTMLElement>("[data-col='household']")?.firstChild?.textContent?.trim() ?? "another household"}.`;
+      if (openLink && row?.dataset.householdId) {
+        const url = new URL(location.href);
+        url.searchParams.set("edit", row.dataset.householdId);
+        openLink.href = `${url.pathname}${url.search}`;
+        openLink.hidden = false;
+      }
+      if (warning) warning.hidden = false;
     };
-    for (const button of editForm.querySelectorAll<HTMLButtonElement>(
-      'button[name="seat_action"]',
-    )) {
-      button.addEventListener("click", (event) => {
+    const seatNames = () => allNames();
+    const sync = () => {
+      if (!count) return;
+      const names = seatNames();
+      const seats = Math.max(
+        names.length,
+        Math.min(12, Number(count.value) || names.length),
+      );
+      count.value = String(seats);
+      if (output) output.value = String(seats);
+      if (summary) {
+        const open = seats - names.length;
+        const noun = isEdit ? "open seat" : "plus-one";
+        const number = summary.querySelector("[data-seat-number]");
+        const unit = summary.querySelector("[data-seat-unit]");
+        const rest = summary.querySelector("[data-seat-rest]");
+        if (number) number.textContent = String(seats);
+        if (unit) unit.textContent = seats === 1 ? "seat" : "seats";
+        if (rest)
+          rest.textContent = `· ${names.length} names + ${open} ${noun}${open === 1 ? "" : "s"}${isEdit && open > 0 ? " · plus-one allowed" : ""}`;
+      }
+      if (toggle) {
+        toggle.setAttribute(
+          "aria-pressed",
+          seats > names.length ? "true" : "false",
+        );
+        toggle.value = seats > names.length ? "off" : "on";
+      }
+      const nextSuggestion = suggestInvitationName(names);
+      if (hostId && !hostId.dataset.edited && names.length) {
+        const idNames = names.map((name) =>
+          name.includes(" ")
+            ? `${name.split(/\s+/)[0]} ${displaySurname(name)}`
+            : name,
+        );
+        const taken = [
+          ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
+        ]
+          .flatMap((row) => [
+            row.dataset.householdId,
+            row.dataset.householdLabel,
+          ])
+          .filter(Boolean) as string[];
+        hostId.value = generateHostId(idNames, taken);
+        if (hostIdText) hostIdText.textContent = hostId.value;
+      }
+      if (invitation && !invitation.dataset.edited)
+        invitation.value = nextSuggestion;
+      if (preview) preview.textContent = invitation?.value ?? nextSuggestion;
+      if (admits) admits.textContent = `Admits ${seats}`;
+      const hintText = hint?.querySelector<HTMLElement>("[data-hint-text]");
+      if (hintText)
+        hintText.textContent = invitation?.dataset.edited
+          ? "Your own · "
+          : "Suggested from the names · edit freely";
+      if (restore) {
+        restore.hidden = !invitation?.dataset.edited;
+        restore.textContent = `use suggestion: ${nextSuggestion}`;
+      }
+      updateDuplicate();
+    };
+    const addChip = (value: string) => {
+      if (!list) return;
+      const chip = document.createElement("span");
+      chip.className = "admin_guests_name-chip";
+      chip.dataset.nameChip = "true";
+      const text = document.createElement("span");
+      text.textContent = value;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.dataset.removeName = "true";
+      remove.setAttribute("aria-label", `Remove ${value}`);
+      remove.textContent = "×";
+      const hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.name = "member_name";
+      hidden.value = value;
+      chip.append(text, remove, hidden);
+      list.insertBefore(chip, addInput?.closest("label") ?? null);
+    };
+    const addEditRow = (value: string, plusOnes: number) => {
+      if (!list) return;
+      const countToAdd = plusOnes || 1;
+      for (let index = 0; index < countToAdd; index += 1) {
+        const row = document.createElement("div");
+        row.className = "admin_guests_person";
+        row.dataset.seatRow = "true";
+        row.dataset.seatKind = plusOnes ? "plus_one" : "member";
+        const name = value && !plusOnes ? value : "";
+        row.innerHTML = `<input type='hidden' name='seat_id' value=''><input type='hidden' name='seat_name' value=''><input type='hidden' name='invited_name' value=''><div class='admin_guests_person_identity'><strong></strong><small></small></div><div class='admin_guests_person_rsvp'>—</div><div class='admin_guests_person_action'></div>`;
+        const nameField = row.querySelector<HTMLInputElement>(
+          "input[name='seat_name']",
+        )!;
+        nameField.value = name;
+        const strong = row.querySelector("strong")!;
+        strong.textContent = name || "Open seat · no name yet";
+        row.querySelector("small")!.textContent = name
+          ? `Invited as ${name} · lead`
+          : "+1 · They name their guest in the RSVP.";
+        list.insertBefore(row, addInput?.closest("label") ?? null);
+      }
+    };
+    const addValue = () => {
+      const value = normalizeName(addInput?.value ?? "");
+      const plusOnes = parsePlusOne(value);
+      if (!value || !list) return;
+      if (isEdit) addEditRow(plusOnes ? "" : value, plusOnes);
+      else if (plusOnes)
+        count!.value = String(Math.min(12, Number(count!.value) + plusOnes));
+      else addChip(value);
+      if (addInput) addInput.value = "";
+      if (isEdit)
+        count!.value = String(
+          Math.min(12, Number(count!.value) + (plusOnes || 1)),
+        );
+      sync();
+    };
+    form.addEventListener("submit", (event) => {
+      const submitter = (event as SubmitEvent).submitter as HTMLElement | null;
+      if (!submitter) return;
+      if (submitter.matches("[data-no-js-add]")) {
         event.preventDefault();
-        const seats = list
-          ? [...list.querySelectorAll<HTMLElement>(".admin_guests_chip")]
-          : [];
-        if (button.value === "remove" && seats.length > 0) {
-          const last = seats.at(-1)!;
-          const name = last.querySelector<HTMLInputElement>(
-            'input[name="seat_name"]',
-          );
-          const activity = last.dataset.activity;
-          if (
-            last.dataset.seatKind === "member" ||
-            name?.value.trim() ||
-            activity
-          )
-            return;
-          last.remove();
-        } else if (button.value === "add" && seats.length < max && list) {
-          const wrapper = document.createElement("label");
-          wrapper.className = "admin_guests_chip";
-          const slot = seats.length + 1;
-          wrapper.innerHTML = `<span>Open seat · add a name</span><input type="hidden" name="seat_id" value=""><input name="seat_name" placeholder="Open seat · add a name"><input type="hidden" name="invited_name" value="">`;
-          list.append(wrapper);
-          const hidden = wrapper.querySelector<HTMLInputElement>(
-            'input[name="seat_id"]',
-          );
-          if (hidden) hidden.value = "";
-          void slot;
-        }
+        addValue();
+      } else if (submitter.matches("[data-seat-plus], [data-seat-minus]")) {
+        event.preventDefault();
+        const names = seatNames().length;
+        const next =
+          Number(count?.value) +
+          (submitter.matches("[data-seat-plus]") ? 1 : -1);
+        if (count) count.value = String(Math.max(names, Math.min(12, next)));
         sync();
-      });
-    }
+      } else if (submitter.matches("[data-plus-one-toggle]")) {
+        event.preventDefault();
+        const names = seatNames().length;
+        const buttonValue = (submitter as HTMLButtonElement).value;
+        if (count)
+          count.value =
+            buttonValue === "on"
+              ? String(Math.min(12, names + 1))
+              : String(names);
+        sync();
+      } else if (submitter.matches("[data-remove-open-seat]")) {
+        event.preventDefault();
+        const row = submitter.closest<HTMLElement>("[data-seat-row]");
+        const id = submitter.getAttribute("value");
+        if (id) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "removed_seat";
+          hidden.value = id;
+          form.append(hidden);
+        }
+        row?.remove();
+        if (count)
+          count.value = String(
+            Math.max(seatNames().length, Number(count.value) - 1),
+          );
+        sync();
+      }
+    });
+    addInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addValue();
+      }
+    });
+    form.addEventListener("click", (event) => {
+      const target = event.target as Element;
+      if (target.closest("[data-remove-name]")) {
+        target.closest("[data-name-chip]")?.remove();
+        sync();
+      }
+      if (target.closest("[data-confirm-duplicate]")) {
+        // With JS the confirmation stays in the draft; the submit is the no-JS path.
+        event.preventDefault();
+        const names = allNames();
+        const duplicate = names.find((name) =>
+          takenNames().some(
+            (taken) => duplicateNameKey(taken) === duplicateNameKey(name),
+          ),
+        );
+        if (duplicate) {
+          confirmed.add(duplicateNameKey(duplicate));
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "confirmed_name";
+          hidden.value = duplicate;
+          form.append(hidden);
+        }
+        updateDuplicate();
+      }
+    });
+    form.addEventListener("change", (event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.matches("[data-archive-seat]")) {
+        target
+          .closest("[data-seat-row]")
+          ?.classList.toggle("is-retired", target.checked);
+        const label = target.parentElement?.querySelector<HTMLElement>(
+          "[data-archive-label]",
+        );
+        if (label) label.textContent = target.checked ? "Undo" : "Archive";
+      }
+    });
+    invitation?.addEventListener("input", () => {
+      invitation.dataset.edited =
+        invitation.value !== suggestInvitationName(seatNames()) ? "true" : "";
+      sync();
+    });
+    hostId?.addEventListener("input", () => {
+      hostId.dataset.edited = "true";
+      if (labelEdited) labelEdited.value = "1";
+      if (hostIdText) hostIdText.textContent = hostId.value;
+    });
+    restore?.addEventListener("click", () => {
+      if (invitation) {
+        delete invitation.dataset.edited;
+        invitation.value = suggestInvitationName(seatNames());
+      }
+      sync();
+    });
     sync();
-    for (const checkbox of editForm.querySelectorAll<HTMLInputElement>(
-      'input[type="checkbox"][name^="retire_seat_"]',
-    ))
-      checkbox.addEventListener("change", () => {
-        const chip = checkbox.closest(".admin_guests_chip");
-        chip?.classList.toggle("is-retired", checkbox.checked);
-        const label = chip?.querySelector<HTMLElement>("[data-retire-label]");
-        if (label) label.textContent = checkbox.checked ? "Undo" : "× Retire";
-      });
   }
 
-  const newForm = document.querySelector<HTMLFormElement>(
-    "[data-new-household]",
-  );
-  if (newForm) {
-    const members = newForm.querySelector<HTMLElement>("[data-new-members]");
-    const addMember = newForm.querySelector<HTMLButtonElement>(
-      'button[name="member_action"]',
-    );
-    const syncNew = () => {
-      const count = newForm.querySelector<HTMLInputElement>(
-        "[data-new-seat-count]",
-      );
-      const output = newForm.querySelector<HTMLOutputElement>(
-        "[data-new-seat-output]",
-      );
-      const memberCount = newForm.querySelectorAll(
-        'input[name="member_name"]',
-      ).length;
-      if (!count || !output) return;
-      const next = Math.max(memberCount, Math.min(12, Number(count.value)));
-      count.value = String(next);
-      output.value = String(next);
-      const remove = newForm.querySelector<HTMLButtonElement>(
-        'button[name="seat_action"][value="remove"]',
-      );
-      const add = newForm.querySelector<HTMLButtonElement>(
-        'button[name="seat_action"][value="add"]',
-      );
-      if (remove) remove.disabled = next <= memberCount;
-      if (add) add.disabled = next >= 12;
-    };
-    addMember?.addEventListener("click", (event) => {
-      event.preventDefault();
-      if (!members) return;
-      const label = document.createElement("label");
-      label.textContent = `Member name ${members.children.length + 1}`;
-      const field = document.createElement("input");
-      field.name = "member_name";
-      label.append(field);
-      members.append(label);
-      syncNew();
-      field.focus();
-    });
-    for (const button of newForm.querySelectorAll<HTMLButtonElement>(
-      'button[name="seat_action"]',
-    ))
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        const count = newForm.querySelector<HTMLInputElement>(
-          "[data-new-seat-count]",
-        );
-        const output = newForm.querySelector<HTMLOutputElement>(
-          "[data-new-seat-output]",
-        );
-        const membersCount = newForm.querySelectorAll(
-          'input[name="member_name"]',
-        ).length;
-        if (!count || !output) return;
-        const next =
-          button.value === "add"
-            ? Math.min(12, Number(count.value) + 1)
-            : Math.max(membersCount, Number(count.value) - 1);
-        count.value = String(next);
-        output.value = String(next);
-        syncNew();
-      });
-    syncNew();
+  function hydrateInitialDrawer() {
+    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    if (!drawer) return;
+    setDrawerOpen(true);
+    hydrateDrawer(drawer);
+    syncLinks();
+    drawer.querySelector<HTMLElement>("h2")?.focus();
   }
+  hydrateInitialDrawer();
 </script>

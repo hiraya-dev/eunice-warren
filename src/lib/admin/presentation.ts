@@ -132,26 +132,34 @@ export function manilaDateTime(value: string) {
 }
 export function memberLine(names: string[]) {
   if (!names.length) return "";
-  if (names.length === 1) return names[0].trim();
-  const words = names.map((name) => name.trim().split(/\s+/));
-  const twoWordSurname =
-    words[0].length > 2 ? words[0].slice(-2).join(" ") : "";
-  const last =
-    twoWordSurname &&
-    words.every((name) => name.slice(-2).join(" ") === twoWordSurname)
-      ? twoWordSurname
-      : words[0].at(-1);
-  const surnameWords = last?.split(" ").length ?? 0;
-  if (
-    last &&
-    words.every((name) => name.slice(-surnameWords).join(" ") === last)
-  ) {
-    const firsts = words.map((name) => name.slice(0, -surnameWords).join(" "));
-    return `${firsts.slice(0, -1).join(", ")}${firsts.length > 1 ? ` & ${firsts.at(-1)}` : firsts[0]} ${last}`;
+  const groups = new Map<string, { surname: string; given: string[] }>();
+  for (const raw of names) {
+    const name = raw.trim();
+    if (!name.includes(" ")) {
+      const key = duplicateNameKey(name);
+      const group = groups.get(key) ?? { surname: "", given: [] };
+      group.given.push(name);
+      groups.set(key, group);
+      continue;
+    }
+    const surname = displaySurname(name);
+    const key = duplicateNameKey(surname);
+    const group = groups.get(key) ?? { surname, given: [] };
+    group.given.push(
+      surname ? name.slice(0, name.length - surname.length).trim() : name,
+    );
+    groups.set(key, group);
   }
-  return names.length > 1
-    ? `${names.slice(0, -1).join(", ")} & ${names.at(-1)}`
-    : names[0];
+  return [...groups.values()]
+    .map(({ surname, given }) => {
+      if (!surname || given.some((value) => !value)) return given.join(" & ");
+      const lead =
+        given.length > 1
+          ? `${given.slice(0, -1).join(", ")} & ${given.at(-1)}`
+          : given[0];
+      return `${lead} ${surname}`;
+    })
+    .join(", ");
 }
 
 export interface PlusOnePresentation {
@@ -337,3 +345,4 @@ export function rsvpHistoryBody(
   if (current.note) return `“${current.note}”`;
   return current.attending ? "No changes" : "Not coming";
 }
+import { displaySurname, duplicateNameKey } from "./names.ts";

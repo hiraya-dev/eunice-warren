@@ -24,6 +24,7 @@ import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 import { songKey } from "./presentation.ts";
 import { normalizeGuestName } from "../rsvp/store.ts";
 import { MAX_SEATS } from "../rsvp/limits.ts";
+import { displaySurname, duplicateNameKey } from "./names.ts";
 
 const TICKET_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -458,104 +459,420 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     );
   }
   async function getSlipperOrder(): Promise<AdminSlipperOrder> {
-    const rows = await query<{ size: string | null; count: number }>(`WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT rs.slipper_size size, count(*) count FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id AND s.status='active' JOIN households h ON h.id=s.household_id AND h.status='active' WHERE r.attending=1 AND rs.attending=1 GROUP BY rs.slipper_size`);
-    const counts = new Map(rows.map((row) => [row.size ?? "", Number(row.count)]));
-    const women = SLIPPER_SIZES.filter((size) => size.startsWith("W ")).map((size) => ({ size, count: counts.get(size) ?? 0 }));
-    const men = SLIPPER_SIZES.filter((size) => size.startsWith("M ")).map((size) => ({ size, count: counts.get(size) ?? 0 }));
-    const common = (items: Array<{ size: string; count: number }>) => { const best = items.reduce<{ size: string; count: number } | null>((value, item) => !value || item.count > value.count ? item : value, null); return best && best.count > 0 ? best.size : null; };
+    const rows = await query<{ size: string | null; count: number }>(
+      `WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT rs.slipper_size size, count(*) count FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id AND s.status='active' JOIN households h ON h.id=s.household_id AND h.status='active' WHERE r.attending=1 AND rs.attending=1 GROUP BY rs.slipper_size`,
+    );
+    const counts = new Map(
+      rows.map((row) => [row.size ?? "", Number(row.count)]),
+    );
+    const women = SLIPPER_SIZES.filter((size) => size.startsWith("W ")).map(
+      (size) => ({ size, count: counts.get(size) ?? 0 }),
+    );
+    const men = SLIPPER_SIZES.filter((size) => size.startsWith("M ")).map(
+      (size) => ({ size, count: counts.get(size) ?? 0 }),
+    );
+    const common = (items: Array<{ size: string; count: number }>) => {
+      const best = items.reduce<{ size: string; count: number } | null>(
+        (value, item) => (!value || item.count > value.count ? item : value),
+        null,
+      );
+      return best && best.count > 0 ? best.size : null;
+    };
     const womenTotal = women.reduce((sum, row) => sum + row.count, 0);
     const menTotal = men.reduce((sum, row) => sum + row.count, 0);
-    return { women, men, womenTotal, menTotal, pairs: womenTotal + menTotal, missing: rows.filter((row) => !row.size || !SLIPPER_SIZES.includes(row.size as never)).reduce((sum, row) => sum + Number(row.count), 0), mostCommonWomen: common(women), mostCommonMen: common(men) };
+    return {
+      women,
+      men,
+      womenTotal,
+      menTotal,
+      pairs: womenTotal + menTotal,
+      missing: rows
+        .filter(
+          (row) => !row.size || !SLIPPER_SIZES.includes(row.size as never),
+        )
+        .reduce((sum, row) => sum + Number(row.count), 0),
+      mostCommonWomen: common(women),
+      mostCommonMen: common(men),
+    };
   }
   async function getSongRequests(): Promise<AdminSongRequests> {
-    const source = await query<{ id: number; song: string; artist: string | null; name: string; dedication: string | null; created_at: string }>(`SELECT id,song,artist,name,dedication,created_at FROM songs ORDER BY created_at DESC,id DESC`);
+    const source = await query<{
+      id: number;
+      song: string;
+      artist: string | null;
+      name: string;
+      dedication: string | null;
+      created_at: string;
+    }>(
+      `SELECT id,song,artist,name,dedication,created_at FROM songs ORDER BY created_at DESC,id DESC`,
+    );
     const counts = new Map<string, number>();
-    for (const row of source) { const key = songKey(row.song, row.artist); counts.set(key, (counts.get(key) ?? 0) + 1); }
-    const chronological = [...source].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id);
-    const numbers = new Map(chronological.map((row, index) => [row.id, index + 1]));
-    return { rows: source.map((row) => ({ id: Number(row.id), no: numbers.get(row.id) ?? 0, song: row.song, artist: row.artist, name: row.name, dedication: row.dedication, createdAt: row.created_at, requestCount: counts.get(songKey(row.song, row.artist)) ?? 1 })), requests: source.length, songs: counts.size };
+    for (const row of source) {
+      const key = songKey(row.song, row.artist);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const chronological = [...source].sort(
+      (a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id,
+    );
+    const numbers = new Map(
+      chronological.map((row, index) => [row.id, index + 1]),
+    );
+    return {
+      rows: source.map((row) => ({
+        id: Number(row.id),
+        no: numbers.get(row.id) ?? 0,
+        song: row.song,
+        artist: row.artist,
+        name: row.name,
+        dedication: row.dedication,
+        createdAt: row.created_at,
+        requestCount: counts.get(songKey(row.song, row.artist)) ?? 1,
+      })),
+      requests: source.length,
+      songs: counts.size,
+    };
   }
   async function getNavCounts(): Promise<AdminNavCounts> {
     const allowedSizes = SLIPPER_SIZES.map((size) => `'${size}'`).join(",");
-    const [row] = await query<{ households: number; slipper_pairs: number; song_requests: number; rsvp_replies: number }>(`WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT (SELECT count(DISTINCT h.id) FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active') households, (SELECT count(*) FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active' AND r.attending=1 AND rs.attending=1 AND rs.slipper_size IN (${allowedSizes})) slipper_pairs, (SELECT count(*) FROM songs) song_requests, (SELECT count(DISTINCT r.household_id) FROM responses r JOIN households h ON h.id=r.household_id AND h.status='active' WHERE EXISTS (SELECT 1 FROM invite_seats s WHERE s.household_id=h.id AND s.status='active')) rsvp_replies`);
-    return { households: Number(row?.households ?? 0), rsvpReplies: Number(row?.rsvp_replies ?? 0), slipperPairs: Number(row?.slipper_pairs ?? 0), songRequests: Number(row?.song_requests ?? 0) };
+    const [row] = await query<{
+      households: number;
+      slipper_pairs: number;
+      song_requests: number;
+      rsvp_replies: number;
+    }>(
+      `WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT (SELECT count(DISTINCT h.id) FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active') households, (SELECT count(*) FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active' AND r.attending=1 AND rs.attending=1 AND rs.slipper_size IN (${allowedSizes})) slipper_pairs, (SELECT count(*) FROM songs) song_requests, (SELECT count(DISTINCT r.household_id) FROM responses r JOIN households h ON h.id=r.household_id AND h.status='active' WHERE EXISTS (SELECT 1 FROM invite_seats s WHERE s.household_id=h.id AND s.status='active')) rsvp_replies`,
+    );
+    return {
+      households: Number(row?.households ?? 0),
+      rsvpReplies: Number(row?.rsvp_replies ?? 0),
+      slipperPairs: Number(row?.slipper_pairs ?? 0),
+      songRequests: Number(row?.song_requests ?? 0),
+    };
   }
-  const validationError = (message: string) => ({ ok: false as const, message });
+  const validationError = (message: string) => ({
+    ok: false as const,
+    message,
+  });
   async function saveHousehold(input: SaveHouseholdInput, actor: string) {
     const displayName = input.displayName.trim();
-    if (!displayName || displayName.length > 40) return validationError("Household name is required and must be 40 characters or fewer.");
-    if (!Number.isInteger(input.seatCount) || input.seatCount < 1 || input.seatCount > MAX_SEATS) return validationError("Seats must be between 1 and 12.");
-    const current = await database.prepare(`SELECT updated_at FROM households WHERE id=? AND status='active'`).bind(input.id).first<{ updated_at: string }>();
+    const label = input.label?.trim();
+    if (label !== undefined && (!label || label.length > 80))
+      return validationError(
+        "Host label is required and must be 80 characters or fewer.",
+      );
+    if (label !== undefined) {
+      const duplicateLabel = await database
+        .prepare(
+          `SELECT id FROM households WHERE status='active' AND lower(label)=lower(?) AND id<>?`,
+        )
+        .bind(label, input.id)
+        .first();
+      if (duplicateLabel) return validationError("Host ID is already in use.");
+    }
+    if (!displayName || displayName.length > 40)
+      return validationError(
+        "Invitation name is required and must be 40 characters or fewer.",
+      );
+    if (
+      !Number.isInteger(input.seatCount) ||
+      input.seatCount < 1 ||
+      input.seatCount > MAX_SEATS
+    )
+      return validationError("Seats must be between 1 and 12.");
+    const current = await database
+      .prepare(
+        `SELECT updated_at FROM households WHERE id=? AND status='active'`,
+      )
+      .bind(input.id)
+      .first<{ updated_at: string }>();
     if (!current) return validationError("Household not found.");
-    const currentSeats = (await database.prepare(`SELECT id,slot,kind,invited_name,name FROM invite_seats WHERE household_id=? AND status='active' ORDER BY slot`).bind(input.id).all<{ id: number; slot: number; kind: "member" | "plus_one"; invited_name: string | null; name: string | null }>()).results;
+    const currentSeats = (
+      await database
+        .prepare(
+          `SELECT id,slot,kind,invited_name,name FROM invite_seats WHERE household_id=? AND status='active' ORDER BY slot`,
+        )
+        .bind(input.id)
+        .all<{
+          id: number;
+          slot: number;
+          kind: "member" | "plus_one";
+          invited_name: string | null;
+          name: string | null;
+        }>()
+    ).results;
     const byId = new Map(currentSeats.map((seat) => [seat.id, seat]));
-    const retiredIds = new Set(input.seats.filter((seat) => seat.retire && seat.id).map((seat) => seat.id!));
-    const resultingMembers = currentSeats.filter((seat) => seat.kind === "member" && !retiredIds.has(seat.id));
-    if (resultingMembers.length < 1) return validationError("A household needs at least one member. Archive the household instead.");
-    if (input.seatCount < resultingMembers.length) return validationError("Seats cannot be fewer than the active member count.");
+    const retiredIds = new Set(
+      input.seats
+        .filter((seat) => seat.retire && seat.id)
+        .map((seat) => seat.id!),
+    );
+    const removedIds = new Set(input.removeSeatIds ?? []);
+    for (const removedId of removedIds) {
+      const removed = byId.get(removedId);
+      if (!removed || removed.kind !== "plus_one" || removed.name) {
+        return validationError(
+          "Only an unnamed open seat with no activity can be removed.",
+        );
+      }
+      const activity = await database
+        .prepare(
+          `SELECT EXISTS (SELECT 1 FROM response_seats WHERE seat_id=?) OR EXISTS (SELECT 1 FROM seat_assignments WHERE seat_id=?) AS active`,
+        )
+        .bind(removedId, removedId)
+        .first<{ active: number }>();
+      if (activity?.active)
+        return validationError(
+          "Only an unnamed open seat with no activity can be removed.",
+        );
+    }
+    const resultingMembers = currentSeats.filter(
+      (seat) => seat.kind === "member" && !retiredIds.has(seat.id),
+    );
+    if (resultingMembers.length < 1)
+      return validationError(
+        "A household needs at least one member. Archive the household instead.",
+      );
+    if (input.seatCount < resultingMembers.length)
+      return validationError(
+        "Seats cannot be fewer than the active member count.",
+      );
     for (const seat of input.seats) {
       if (!seat.id || seat.retire) continue;
       const currentSeat = byId.get(seat.id);
-      if (!currentSeat) return validationError("Household changed. Reload to see the latest.");
-      if (currentSeat.kind === "member" && !seat.name.trim()) return validationError("Member seat names cannot be blank.");
+      if (!currentSeat)
+        return validationError("Household changed. Reload to see the latest.");
+      if (currentSeat.kind === "member" && !seat.name.trim())
+        return validationError("Member seat names cannot be blank.");
     }
-    const activeAfterRetire = currentSeats.filter((seat) => !retiredIds.has(seat.id));
+    const activeAfterRetire = currentSeats.filter(
+      (seat) => !retiredIds.has(seat.id) && !removedIds.has(seat.id),
+    );
+    const duplicateCandidates = input.seats
+      .filter(
+        (seat) => !seat.retire && seat.kind !== "plus_one" && seat.name.trim(),
+      )
+      .map((seat) => ({ id: seat.id, key: duplicateNameKey(seat.name) }));
+    const draftKeys = new Set<string>();
+    for (const candidate of duplicateCandidates) {
+      if (draftKeys.has(candidate.key))
+        return validationError(
+          `The name “${candidate.key}” is already in this draft.`,
+        );
+      draftKeys.add(candidate.key);
+    }
+    if (duplicateCandidates.length) {
+      const existing = (
+        await database
+          .prepare(
+            `SELECT s.id,s.household_id,s.name,s.invited_name,h.display_name FROM invite_seats s JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active' AND (s.name IS NOT NULL OR s.invited_name IS NOT NULL)`,
+          )
+          .all<{
+            id: number;
+            household_id: string;
+            name: string | null;
+            invited_name: string | null;
+            display_name: string;
+          }>()
+      ).results;
+      const confirmed = new Set(
+        (input.confirmedNames ?? []).map(duplicateNameKey),
+      );
+      for (const candidate of duplicateCandidates) {
+        const match = existing.find(
+          (seat) =>
+            seat.household_id !== input.id &&
+            [seat.name, seat.invited_name].some(
+              (value) => value && duplicateNameKey(value) === candidate.key,
+            ),
+        );
+        if (match && !confirmed.has(candidate.key))
+          return validationError(
+            `${candidate.key} is already invited with ${match.display_name}.`,
+          );
+      }
+    }
     const target = input.seatCount;
     if (target < activeAfterRetire.length) {
       const trailing = activeAfterRetire.at(-1)!;
-      if (trailing.name) return validationError(`Seat ${trailing.slot} has activity. Review or retire this seat first.`);
-      const activity = await database.prepare(`SELECT EXISTS (SELECT 1 FROM response_seats WHERE seat_id=?) OR EXISTS (SELECT 1 FROM seat_assignments WHERE seat_id=?) AS active`).bind(trailing.id, trailing.id).first<{ active: number }>();
-      if (activity?.active) return validationError(`Seat ${trailing.slot} has activity. Review or retire this seat first.`);
+      if (trailing.name)
+        return validationError(
+          `Seat ${trailing.slot} has activity. Review or retire this seat first.`,
+        );
+      const activity = await database
+        .prepare(
+          `SELECT EXISTS (SELECT 1 FROM response_seats WHERE seat_id=?) OR EXISTS (SELECT 1 FROM seat_assignments WHERE seat_id=?) AS active`,
+        )
+        .bind(trailing.id, trailing.id)
+        .first<{ active: number }>();
+      if (activity?.active)
+        return validationError(
+          `Seat ${trailing.slot} has activity. Review or retire this seat first.`,
+        );
     }
     const now = new Date().toISOString();
     const token = input.updatedAt ?? "";
     // This must remain the first statement. SQLite rolls back the whole D1 batch when
     // a stale token sets the NOT NULL updated_at column to NULL.
-    const statements: D1PreparedStatement[] = [database.prepare(`UPDATE households SET updated_at=CASE WHEN updated_at=? THEN ? ELSE NULL END,updated_by=? WHERE id=? AND status='active'`).bind(token, now, actor, input.id)];
-    statements.push(database.prepare(`UPDATE households SET display_name=?,notes=? WHERE id=?`).bind(displayName, input.notes?.trim() || null, input.id));
+    const statements: D1PreparedStatement[] = [
+      database
+        .prepare(
+          `UPDATE households SET updated_at=CASE WHEN updated_at=? THEN ? ELSE NULL END,updated_by=? WHERE id=? AND status='active'`,
+        )
+        .bind(token, now, actor, input.id),
+    ];
+    statements.push(
+      label === undefined
+        ? database
+            .prepare(`UPDATE households SET display_name=?,notes=? WHERE id=?`)
+            .bind(displayName, input.notes?.trim() || null, input.id)
+        : database
+            .prepare(
+              `UPDATE households SET label=?,display_name=?,notes=? WHERE id=?`,
+            )
+            .bind(label, displayName, input.notes?.trim() || null, input.id),
+    );
     for (const seat of input.seats) {
       if (!seat.id) continue;
       const currentSeat = byId.get(seat.id);
       if (!currentSeat) continue;
       if (seat.retire) {
-        const assigned = await database.prepare(`SELECT id FROM seat_assignments WHERE seat_id=? LIMIT 1`).bind(seat.id).first();
-        if (assigned) return validationError("Seat is assigned to a table. Review the seating plan first.");
-        statements.push(database.prepare(`UPDATE invite_seats SET status='retired',slot=NULL,retired_at=?,retired_by=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`).bind(now, actor, now, actor, seat.id, input.id));
+        const assigned = await database
+          .prepare(`SELECT id FROM seat_assignments WHERE seat_id=? LIMIT 1`)
+          .bind(seat.id)
+          .first();
+        if (assigned)
+          return validationError(
+            "Seat is assigned to a table. Review the seating plan first.",
+          );
+        statements.push(
+          database
+            .prepare(
+              `UPDATE invite_seats SET status='retired',slot=NULL,retired_at=?,retired_by=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`,
+            )
+            .bind(now, actor, now, actor, seat.id, input.id),
+        );
         continue;
       }
       const clean = seat.name.trim();
-      const invited = currentSeat.kind === "member" ? (seat.invitedName?.trim() || currentSeat.invited_name || clean) : null;
-      const invitedChanged = currentSeat.kind === "member" && invited !== currentSeat.invited_name;
-      const nextName = invitedChanged && clean === (currentSeat.invited_name ?? "") ? invited : clean || null;
+      const invited =
+        currentSeat.kind === "member"
+          ? seat.invitedName?.trim() || currentSeat.invited_name || clean
+          : null;
+      const invitedChanged =
+        currentSeat.kind === "member" && invited !== currentSeat.invited_name;
+      const nextName =
+        invitedChanged && clean === (currentSeat.invited_name ?? "")
+          ? invited
+          : clean || null;
       const nameChanged = nextName !== currentSeat.name;
       if (nameChanged && invitedChanged) {
         const key = normalizeGuestName(invited!);
-        statements.push(database.prepare(`UPDATE invite_seats SET name=?,invited_name=?,name_key=?,surname_key=?,named_by_kind='host',named_by=?,named_at=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`).bind(nextName, invited, key, key.split(" ").at(-1) || null, actor, now, now, actor, seat.id, input.id));
+        statements.push(
+          database
+            .prepare(
+              `UPDATE invite_seats SET name=?,invited_name=?,name_key=?,surname_key=?,named_by_kind='host',named_by=?,named_at=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`,
+            )
+            .bind(
+              nextName,
+              invited,
+              key,
+              duplicateNameKey(displaySurname(invited!)) || null,
+              actor,
+              now,
+              now,
+              actor,
+              seat.id,
+              input.id,
+            ),
+        );
       } else if (nameChanged) {
-        statements.push(database.prepare(`UPDATE invite_seats SET name=?,named_by_kind='host',named_by=?,named_at=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`).bind(nextName, actor, now, now, actor, seat.id, input.id));
+        statements.push(
+          database
+            .prepare(
+              `UPDATE invite_seats SET name=?,named_by_kind='host',named_by=?,named_at=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`,
+            )
+            .bind(nextName, actor, now, now, actor, seat.id, input.id),
+        );
       } else if (invitedChanged) {
         const key = normalizeGuestName(invited!);
-        statements.push(database.prepare(`UPDATE invite_seats SET invited_name=?,name_key=?,surname_key=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`).bind(invited, key, key.split(" ").at(-1) || null, now, actor, seat.id, input.id));
+        statements.push(
+          database
+            .prepare(
+              `UPDATE invite_seats SET invited_name=?,name_key=?,surname_key=?,updated_at=?,updated_by=? WHERE id=? AND household_id=? AND status='active'`,
+            )
+            .bind(
+              invited,
+              key,
+              duplicateNameKey(displaySurname(invited!)) || null,
+              now,
+              actor,
+              seat.id,
+              input.id,
+            ),
+        );
       }
     }
     const currentSlots = new Set(activeAfterRetire.map((seat) => seat.slot));
+    for (const removedId of removedIds)
+      statements.push(
+        database
+          .prepare(
+            `DELETE FROM invite_seats WHERE id=? AND household_id=? AND status='active'`,
+          )
+          .bind(removedId, input.id),
+      );
     if (target < activeAfterRetire.length) {
       const removals = activeAfterRetire.slice(target).reverse();
-      for (const seat of removals) statements.push(database.prepare(`DELETE FROM invite_seats WHERE id=? AND household_id=? AND status='active' AND name IS NULL AND NOT EXISTS (SELECT 1 FROM response_seats WHERE seat_id=?) AND NOT EXISTS (SELECT 1 FROM seat_assignments WHERE seat_id=?)`).bind(seat.id, input.id, seat.id, seat.id));
+      for (const seat of removals)
+        statements.push(
+          database
+            .prepare(
+              `DELETE FROM invite_seats WHERE id=? AND household_id=? AND status='active' AND name IS NULL AND NOT EXISTS (SELECT 1 FROM response_seats WHERE seat_id=?) AND NOT EXISTS (SELECT 1 FROM seat_assignments WHERE seat_id=?)`,
+            )
+            .bind(seat.id, input.id, seat.id, seat.id),
+        );
     }
-    const pendingPlusOnes = input.seats.filter((seat) => !seat.id && !seat.retire);
+    const pendingPlusOnes = input.seats.filter(
+      (seat) => !seat.id && !seat.retire,
+    );
     for (let count = activeAfterRetire.length; count < target; count += 1) {
       let slot = 1;
       while (currentSlots.has(slot)) slot += 1;
       currentSlots.add(slot);
       const pending = pendingPlusOnes[count - activeAfterRetire.length];
       const name = pending?.name.trim() || null;
-      statements.push(database.prepare(`INSERT INTO invite_seats (household_id,kind,slot,status,name,named_by_kind,named_by,named_at,created_at,updated_at,updated_by) VALUES (?,'plus_one',?,'active',?,?,?, ?,?,?,?)`).bind(input.id, slot, name, name ? "host" : null, name ? actor : null, name ? now : null, now, now, actor));
+      const kind = pending?.kind ?? "plus_one";
+      const key = kind === "member" && name ? normalizeGuestName(name) : null;
+      statements.push(
+        database
+          .prepare(
+            `INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,named_by_kind,named_by,named_at,created_at,updated_at,updated_by) VALUES (?, ?, ?,'active',?,?,?,?,?,?,?,?,?,?)`,
+          )
+          .bind(
+            input.id,
+            kind,
+            slot,
+            kind === "member" ? name : null,
+            key,
+            key ? duplicateNameKey(displaySurname(name!)) : null,
+            name,
+            name ? "host" : null,
+            name ? actor : null,
+            name ? now : null,
+            now,
+            now,
+            actor,
+          ),
+      );
     }
     try {
       await database.batch(statements);
     } catch (error) {
-      if (String(error).toLowerCase().includes("not null constraint") && String(error).toLowerCase().includes("updated_at")) throw new StaleHouseholdError();
+      if (
+        String(error).toLowerCase().includes("not null constraint") &&
+        String(error).toLowerCase().includes("updated_at")
+      )
+        throw new StaleHouseholdError();
       throw error;
     }
     return { ok: true as const };
@@ -565,36 +882,157 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     const displayName = input.displayName.trim();
     const names = input.seats.map((seat) => seat.name.trim());
     const seatCount = input.seatCount ?? names.length;
-    if (!label || label.length > 80) throw new Error("Host label is required and must be 80 characters or fewer.");
-    if (!displayName || displayName.length > 40) throw new Error("Household name is required and must be 40 characters or fewer.");
-    if (!names.length || names.some((name) => !name)) throw new Error("At least one member name is required.");
-    if (!Number.isInteger(seatCount) || seatCount < names.length || seatCount > MAX_SEATS) throw new Error("Seats must be between the member count and 12.");
-    const base = input.label.trim().toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "household";
-    let id = base; let n = 2;
-    while (await database.prepare(`SELECT id FROM households WHERE id=?`).bind(id).first()) id = `${base}-${n++}`;
-    const existing = await database.prepare(`SELECT ticket_code FROM households`).all<{ ticket_code: string }>();
-    const used = new Set(existing.results.map((row) => row.ticket_code));
+    if (!label || label.length > 80)
+      throw new Error(
+        "Host label is required and must be 80 characters or fewer.",
+      );
+    const duplicateLabel = await database
+      .prepare(
+        `SELECT id FROM households WHERE status='active' AND lower(label)=lower(?)`,
+      )
+      .bind(label)
+      .first();
+    if (duplicateLabel) throw new Error("Host ID is already in use.");
+    if (!displayName || displayName.length > 40)
+      throw new Error(
+        "Invitation name is required and must be 40 characters or fewer.",
+      );
+    if (!names.length || names.some((name) => !name))
+      throw new Error("At least one member name is required.");
+    if (
+      !Number.isInteger(seatCount) ||
+      seatCount < names.length ||
+      seatCount > MAX_SEATS
+    )
+      throw new Error("Seats must be between the member count and 12.");
+    const normalizedNames = names.map(duplicateNameKey);
+    if (new Set(normalizedNames).size !== normalizedNames.length)
+      throw new Error("A guest name can only be added once.");
+    const existing = (
+      await database
+        .prepare(
+          `SELECT s.name,s.invited_name,h.display_name FROM invite_seats s JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active'`,
+        )
+        .all<{
+          name: string | null;
+          invited_name: string | null;
+          display_name: string;
+        }>()
+    ).results;
+    const confirmed = new Set(
+      (input.confirmedNames ?? []).map(duplicateNameKey),
+    );
+    for (const name of names) {
+      const key = duplicateNameKey(name);
+      const match = existing.find((seat) =>
+        [seat.name, seat.invited_name].some(
+          (value) => value && duplicateNameKey(value) === key,
+        ),
+      );
+      if (match && !confirmed.has(key))
+        throw new Error(
+          `${name} is already invited with ${match.display_name}.`,
+        );
+    }
+    const base =
+      input.label
+        .trim()
+        .toLocaleLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "household";
+    let id = base;
+    let n = 2;
+    while (
+      await database
+        .prepare(`SELECT id FROM households WHERE id=?`)
+        .bind(id)
+        .first()
+    )
+      id = `${base}-${n++}`;
+    const existingTickets = await database
+      .prepare(`SELECT ticket_code FROM households`)
+      .all<{ ticket_code: string }>();
+    const used = new Set(existingTickets.results.map((row) => row.ticket_code));
     const ticket = randomTicket(used);
     const now = new Date().toISOString();
-    const statements: D1PreparedStatement[] = [database.prepare(`INSERT INTO households (id,label,display_name,ticket_code,status,notes,created_at,updated_at,updated_by) VALUES (?,?,?,?,'active',?,?,?,?)`).bind(id, label, displayName, ticket, input.notes?.trim() || null, now, now, actor)];
+    const statements: D1PreparedStatement[] = [
+      database
+        .prepare(
+          `INSERT INTO households (id,label,display_name,ticket_code,status,notes,created_at,updated_at,updated_by) VALUES (?,?,?,?,'active',?,?,?,?)`,
+        )
+        .bind(
+          id,
+          label,
+          displayName,
+          ticket,
+          input.notes?.trim() || null,
+          now,
+          now,
+          actor,
+        ),
+    ];
     for (let index = 0; index < seatCount; index += 1) {
       const clean = names[index] ?? null;
       const key = clean ? normalizeGuestName(clean) : null;
-      statements.push(database.prepare(`INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at,updated_by) VALUES (?, ?, ?,'active',?,?,?,?,?,?,?)`).bind(id, clean ? "member" : "plus_one", index + 1, clean, key, key?.split(" ").at(-1) || null, clean, now, now, actor));
+      statements.push(
+        database
+          .prepare(
+            `INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at,updated_by) VALUES (?, ?, ?,'active',?,?,?,?,?,?,?)`,
+          )
+          .bind(
+            id,
+            clean ? "member" : "plus_one",
+            index + 1,
+            clean,
+            key,
+            key ? duplicateNameKey(displaySurname(clean)) : null,
+            clean,
+            now,
+            now,
+            actor,
+          ),
+      );
     }
     await database.batch(statements);
     return { id };
   }
-  async function archiveHousehold(id: string, actor: string, updatedAt?: string) {
-    const current = await database.prepare(`SELECT updated_at FROM households WHERE id=? AND status='active'`).bind(id).first<{ updated_at: string }>();
+  async function archiveHousehold(
+    id: string,
+    actor: string,
+    updatedAt?: string,
+  ) {
+    const current = await database
+      .prepare(
+        `SELECT updated_at FROM households WHERE id=? AND status='active'`,
+      )
+      .bind(id)
+      .first<{ updated_at: string }>();
     if (!current) return;
     const now = new Date().toISOString();
     const statements = [
-      database.prepare(`UPDATE households SET updated_at=CASE WHEN updated_at=? THEN ? ELSE NULL END,updated_by=? WHERE id=? AND status='active'`).bind(updatedAt ?? current.updated_at, now, actor, id),
-      database.prepare(`UPDATE households SET status='archived',archived_at=?,archived_by=? WHERE id=? AND status='active'`).bind(now, actor, id),
+      database
+        .prepare(
+          `UPDATE households SET updated_at=CASE WHEN updated_at=? THEN ? ELSE NULL END,updated_by=? WHERE id=? AND status='active'`,
+        )
+        .bind(updatedAt ?? current.updated_at, now, actor, id),
+      database
+        .prepare(
+          `UPDATE households SET status='archived',archived_at=?,archived_by=? WHERE id=? AND status='active'`,
+        )
+        .bind(now, actor, id),
     ];
-    try { await database.batch(statements); }
-    catch (error) { if (String(error).toLowerCase().includes("not null constraint") && String(error).toLowerCase().includes("updated_at")) throw new StaleHouseholdError(); throw error; }
+    try {
+      await database.batch(statements);
+    } catch (error) {
+      if (
+        String(error).toLowerCase().includes("not null constraint") &&
+        String(error).toLowerCase().includes("updated_at")
+      )
+        throw new StaleHouseholdError();
+      throw error;
+    }
   }
   return {
     getOverview,
