@@ -421,7 +421,11 @@ const editSeats = (row: AdminHousehold) => {
               </div>
             </div>
           </div>
-          <p class="admin-guests_no-match" data-admin-no-match hidden>
+          <p
+            class="admin-guests_no-match"
+            data-admin-no-match
+            hidden={filteredRows.length > 0}
+          >
             No households match
           </p>
           <div class="admin-guests_card">
@@ -662,12 +666,18 @@ const editSeats = (row: AdminHousehold) => {
     // Every link back to this page carries the query (L-050): filters,
     // stats, Add, Edit, Archive and Cancel.
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      'a[href^="/admin/guests"]',
+      '[data-admin-guests-page] a[href^="/admin/guests"]',
     )) {
       const href = new URL(link.href);
       if (input.value) href.searchParams.set("q", input.value);
       else href.searchParams.delete("q");
-      link.href = href.toString();
+      // Keep the href relative so the selector above still matches next time.
+      link.setAttribute("href", `${href.pathname}${href.search}`);
+    }
+    for (const field of document.querySelectorAll<HTMLInputElement>(
+      '[data-admin-guests-page] form input[type="hidden"][name="q"]',
+    )) {
+      field.value = input.value;
     }
   };
   input?.addEventListener("input", filterRows);

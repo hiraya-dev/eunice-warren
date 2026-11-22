@@ -2139,6 +2139,7 @@ label.admin_guests_host {
   > * {
     min-width: 0;
     overflow-wrap: anywhere;
+
   }
   [data-song-no] {
     justify-self: end;
@@ -2199,6 +2200,7 @@ label.admin_guests_host {
     color: var(--dark-700);
   }
   [data-song-from] {
+
     @media (min-width: 84rem) {
       font-family: var(--admin-sans);
       font-size: 0.875rem;

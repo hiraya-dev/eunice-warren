@@ -361,7 +361,7 @@ const returnHref = `${Astro.url.pathname}${returnParams.toString() ? `?${returnP
               type are pre-filled in {firstMember}'s RSVP.
             </p>
             <div class="admin_guests_form-actions">
-              <a class="admin_guests_btn" href="/admin/guests">
+              <a class="admin_guests_btn" href={returnHref}>
                 Cancel
               </a>
               <button class="admin_guests_btn primary" type="submit">

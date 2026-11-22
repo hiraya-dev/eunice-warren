@@ -17,6 +17,8 @@ const expectedIds = (filter: string) =>
     .map((row) => row.id);
 
 test.describe("guest list filters", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("filters households from fixture state and carries search", async ({
     page,
   }) => {
@@ -55,6 +57,26 @@ test.describe("guest list filters", () => {
     expect(new URL(editHref!, "http://localhost").searchParams.get("q")).toBe(
       searchTerm,
     );
+    const archiveHref = await page
+      .locator("[data-admin-household]:not([hidden])")
+      .first()
+      .locator('a[href*="archive="]')
+      .getAttribute("href");
+    const archiveParams = new URL(archiveHref!, "http://localhost")
+      .searchParams;
+    expect(archiveParams.get("filter")).toBe("waiting");
+    expect(archiveParams.get("q")).toBe(searchTerm);
+
+    // The search never leaks into the sidebar or tab bar links.
+    const navHrefs = await page
+      .locator('a[href^="/admin/guests"]')
+      .evaluateAll((links) =>
+        links
+          .filter((link) => !link.closest("[data-admin-guests-page]"))
+          .map((link) => link.getAttribute("href")),
+      );
+    expect(navHrefs.length).toBeGreaterThan(0);
+    for (const href of navHrefs) expect(href).not.toMatch(/q=/);
 
     // A query typed after load reaches the filter links too (L-050).
     await page.locator('[data-admin-filter="all"]').click();
@@ -115,7 +137,7 @@ test.describe("guest list editor", () => {
     page,
   }) => {
     await withAdminLock(async () => {
-      await page.goto("/admin/guests");
+      await page.goto("/admin/guests?filter=waiting&q=editor");
       const row = rowById(page, fixture.id);
       await row.locator("summary").click();
       await row.getByRole("link", { name: "Edit" }).click();
@@ -135,10 +157,24 @@ test.describe("guest list editor", () => {
         .first()
         .fill(`Editor Parent ${run}`);
       await form.getByRole("button", { name: "Save" }).click();
+      await expect(page).toHaveURL(/filter=waiting.*q=editor/);
       await expect(rowById(page, fixture.id)).toContainText(
         `Editor Parent ${run}`,
       );
     });
+  });
+
+  test("keeps filter and search when editing is cancelled", async ({
+    page,
+  }) => {
+    await page.goto(`/admin/guests?edit=${fixture.id}&filter=waiting&q=before`);
+    const form = page.locator("[data-edit-household]");
+    await page.locator("[data-admin-search]").fill("after");
+    await expect(form.locator('input[type="hidden"][name="q"]')).toHaveValue(
+      "after",
+    );
+    await form.getByRole("link", { name: "Cancel" }).click();
+    await expect(page).toHaveURL(/filter=waiting.*q=after/);
   });
 
   test("pressing Enter in the household name saves without changing seats", async ({
@@ -267,8 +303,10 @@ test.describe("guest list editor", () => {
       const first = await browser.newPage();
       const second = await browser.newPage();
       await Promise.all([
-        first.goto("/admin/guests?edit=hh-admin-editor"),
-        second.goto("/admin/guests?edit=hh-admin-editor"),
+        first.goto("/admin/guests?edit=hh-admin-editor&filter=waiting&q=stale"),
+        second.goto(
+          "/admin/guests?edit=hh-admin-editor&filter=waiting&q=stale",
+        ),
       ]);
       await first
         .locator('[data-edit-household] input[name="display_name"]')
@@ -290,7 +328,10 @@ test.describe("guest list editor", () => {
       );
       await expect(
         second.getByRole("link", { name: "Reload" }),
-      ).toHaveAttribute("href", "/admin/guests?edit=hh-admin-editor");
+      ).toHaveAttribute(
+        "href",
+        "/admin/guests?filter=waiting&q=stale&edit=hh-admin-editor",
+      );
       await first.close();
       await second.close();
     });
@@ -334,7 +375,9 @@ test.describe("guest list editor", () => {
     await withAdminLock(async () => {
       const label = `Ed ${run}`;
       const householdId = label.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-");
-      await page.goto("/admin/guests?new=1");
+      await page.goto(
+        `/admin/guests?new=1&filter=waiting&q=${encodeURIComponent(label)}`,
+      );
       const form = page.locator("[data-new-household]");
       await form
         .locator('input[name="display_name"]')
@@ -345,10 +388,17 @@ test.describe("guest list editor", () => {
         .first()
         .fill(`New Member ${run}`);
       await form.getByRole("button", { name: "Save household" }).click();
+      await expect(page).toHaveURL(/filter=waiting.*q=/);
       const added = rowById(page, householdId);
       await expect(added).toBeVisible();
       await added.locator("summary").click();
       await added.getByRole("link", { name: "Archive household" }).click();
+      await expect(
+        page.locator("[data-admin-archive-confirm] form input[name=filter]"),
+      ).toHaveValue("waiting");
+      await expect(
+        page.locator("[data-admin-archive-confirm] form input[name=q]"),
+      ).toHaveValue(label);
       await expect(page.locator("[data-admin-archive-confirm]")).toContainText(
         `Archive The ${label} Family?`,
       );
@@ -356,6 +406,7 @@ test.describe("guest list editor", () => {
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
         .click();
+      await expect(page).toHaveURL(/filter=waiting.*q=/);
       await expect(rowById(page, householdId)).toHaveCount(0);
     });
   });
