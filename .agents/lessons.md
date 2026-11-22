@@ -513,7 +513,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-055 — Focus-trap specs wait for the opened drawer
 - **Date:** 2026-11-22
-- **Trigger:** this PR, flaky test
+- **Trigger:** #102, flaky test
 - **Symptom:** the focus-trap spec pressed Tab before the asynchronously swapped drawer had focused its heading, so the first assertion sometimes observed focus outside the dialog.
 - **Root cause:** the test began keyboard navigation immediately after the click instead of synchronizing on the drawer's opened and focused state.
 - **Rule:** wait for the drawer to be visible and its programmatic heading focus to be established before the first Tab or Shift+Tab assertion.
