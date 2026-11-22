@@ -55,12 +55,18 @@ const openSeats =
         props.draft.seatCount - props.draft.memberNames.filter(Boolean).length,
       )
     : 0;
+const returnParams = new URLSearchParams();
+for (const key of ["filter", "q"]) {
+  const value = Astro.url.searchParams.get(key);
+  if (value) returnParams.set(key, value);
+}
+const returnHref = `${Astro.url.pathname}${returnParams.toString() ? `?${returnParams}` : ""}`;
 ---
 
 {
   render && props.variant === "new" && (
     <tr class="admin-guests_edit-row admin-guests_new-row">
-      <td colspan={5}>
+      <td colspan={4}>
         <form
           class="admin_guests_form"
           method="post"
@@ -68,6 +74,16 @@ const openSeats =
           style="--idcol: 8.75rem"
         >
           <input type="hidden" name="action" value="add" />
+          <input
+            type="hidden"
+            name="filter"
+            value={Astro.url.searchParams.get("filter") ?? ""}
+          />
+          <input
+            type="hidden"
+            name="q"
+            value={Astro.url.searchParams.get("q") ?? ""}
+          />
           <button
             class="sr-only"
             type="submit"
@@ -171,7 +187,7 @@ const openSeats =
               {openSeats} open {openSeats === 1 ? "seat" : "seats"}
             </p>
             <div class="admin_guests_form-actions">
-              <a class="admin_guests_btn" href="/admin/guests">
+              <a class="admin_guests_btn" href={returnHref}>
                 Cancel
               </a>
               <button class="admin_guests_btn primary" type="submit">
@@ -188,7 +204,7 @@ const openSeats =
 {
   render && props.variant === "edit" && (
     <tr class="admin-guests_edit-row" data-household-id={props.row.id}>
-      <td colspan={5}>
+      <td colspan={4}>
         <form
           class="admin_guests_form"
           method="post"
@@ -196,6 +212,16 @@ const openSeats =
           data-seat-count={props.seats.length}
         >
           <input type="hidden" name="action" value="save" />
+          <input
+            type="hidden"
+            name="filter"
+            value={Astro.url.searchParams.get("filter") ?? ""}
+          />
+          <input
+            type="hidden"
+            name="q"
+            value={Astro.url.searchParams.get("q") ?? ""}
+          />
           <button
             class="sr-only"
             type="submit"
@@ -335,7 +361,7 @@ const openSeats =
               type are pre-filled in {firstMember}'s RSVP.
             </p>
             <div class="admin_guests_form-actions">
-              <a class="admin_guests_btn" href="/admin/guests">
+              <a class="admin_guests_btn" href={returnHref}>
                 Cancel
               </a>
               <button class="admin_guests_btn primary" type="submit">

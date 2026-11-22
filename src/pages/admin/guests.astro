@@ -182,11 +182,11 @@ if (Astro.request.method === "POST") {
             host.email,
           );
           if (!result.ok) writeError = result.message;
-          else return Astro.redirect("/admin/guests", 303);
+          else return Astro.redirect(redirectHref(form), 303);
         }
       }
       if (!writeError && action === "archive")
-        return Astro.redirect("/admin/guests", 303);
+        return Astro.redirect(redirectHref(form), 303);
     } catch (error) {
       writeError =
         error instanceof StaleHouseholdError
@@ -218,6 +218,51 @@ const view =
     totals: { households: 0, seatsOffered: 0, unnamedPlusOnes: 0 },
     rows: [],
   } satisfies AdminGuestList);
+const requestedFilter = Astro.url.searchParams.get("filter");
+const filter = ["all", "waiting", "no-name", "coming", "declined"].includes(
+  requestedFilter ?? "",
+)
+  ? requestedFilter!
+  : "all";
+const q = Astro.url.searchParams.get("q") ?? "";
+const hasUnnamedSeat = (row: AdminHousehold) =>
+  row.seats.some(
+    (seat) => !seat.name?.trim() && (seat.state ?? "open") === "open",
+  );
+const filterRows = (value: string) =>
+  value === "waiting"
+    ? view.rows.filter((row) => row.rsvp.state === "waiting")
+    : value === "no-name"
+      ? view.rows.filter(hasUnnamedSeat)
+      : value === "coming"
+        ? view.rows.filter((row) => row.rsvp.state === "coming")
+        : value === "declined"
+          ? view.rows.filter((row) => row.rsvp.state === "declined")
+          : view.rows;
+const filteredRows = filterRows(filter);
+const queryHref = (next: Record<string, string | null> = {}) => {
+  const params = new URLSearchParams();
+  const values = { filter: filter === "all" ? null : filter, q, ...next };
+  for (const [key, value] of Object.entries(values))
+    if (value) params.set(key, value);
+  return `${Astro.url.pathname}${params.toString() ? `?${params}` : ""}`;
+};
+function redirectHref(form: FormData) {
+  const params = new URLSearchParams();
+  const postedFilter = String(form.get("filter") ?? "");
+  const postedQ = String(form.get("q") ?? "");
+  if (["waiting", "no-name", "coming", "declined"].includes(postedFilter))
+    params.set("filter", postedFilter);
+  if (postedQ) params.set("q", postedQ);
+  return `/admin/guests${params.toString() ? `?${params}` : ""}`;
+}
+const filterCounts = {
+  all: view.rows.length,
+  waiting: filterRows("waiting").length,
+  "no-name": filterRows("no-name").length,
+  coming: filterRows("coming").length,
+  declined: filterRows("declined").length,
+};
 const rsvpText = (rsvp: { state: string; coming?: number }) =>
   rsvp.state === "coming"
     ? `${rsvp.coming} coming`
@@ -234,8 +279,14 @@ const archiveRow = view.rows.find((row) => row.id === archiveId);
 const errorInRow =
   Boolean(writeError) &&
   (newOpen || view.rows.some((row) => row.id === editId));
+const reloadParams = new URLSearchParams();
+for (const key of ["filter", "q"]) {
+  const value = Astro.url.searchParams.get(key);
+  if (value) reloadParams.set(key, value);
+}
+if (writeHouseholdId) reloadParams.set("edit", writeHouseholdId);
 const reloadHref = writeError.startsWith("This household")
-  ? `/admin/guests?edit=${writeHouseholdId}`
+  ? `/admin/guests?${reloadParams}`
   : undefined;
 const editSeats = (row: AdminHousehold) => {
   const draft = editDraft?.id === row.id ? editDraft : null;
@@ -291,7 +342,7 @@ const editSeats = (row: AdminHousehold) => {
             </p>
             <div class="admin-guests_title">
               <h1>Guest list</h1>
-              <a class="admin_guests_add" href="/admin/guests?new=1">
+              <a class="admin_guests_add" href={queryHref({ new: "1" })}>
                 + Add household
               </a>
             </div>
@@ -312,32 +363,75 @@ const editSeats = (row: AdminHousehold) => {
                 <dd>{view.totals.seatsOffered}</dd>
               </div>
               <div class="quiet">
-                <dt>Plus-ones not named yet</dt>
-                <dd>{view.totals.unnamedPlusOnes}</dd>
+                <dt>
+                  <a href={queryHref({ filter: "no-name" })}>
+                    Plus-ones not named yet
+                  </a>
+                </dt>
+                <dd>
+                  <a href={queryHref({ filter: "no-name" })}>
+                    {view.totals.unnamedPlusOnes}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <a href={queryHref({ filter: "waiting" })}>Waiting</a>
+                </dt>
+                <dd>
+                  <a href={queryHref({ filter: "waiting" })}>
+                    {filterCounts.waiting}
+                  </a>
+                </dd>
               </div>
             </dl>
-            <div class="admin-guests_search">
-              <label class="sr-only" for="admin-search">
-                Search households or members
-              </label>
-              <input
-                id="admin-search"
-                data-admin-search
-                type="search"
-                placeholder="Search households or members"
-                autocomplete="off"
-                value={Astro.url.searchParams.get("q") ?? ""}
-              />
+            <div class="admin-guests_tools">
+              <nav aria-label="Guest list filters" data-admin-filters>
+                {(
+                  [
+                    ["all", "All"],
+                    ["waiting", "Waiting"],
+                    ["no-name", "No name yet"],
+                    ["coming", "Coming"],
+                    ["declined", "Declined"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <a
+                    href={queryHref({ filter: key === "all" ? null : key })}
+                    aria-current={filter === key ? "page" : undefined}
+                    data-admin-filter={key}
+                  >
+                    <span>{label}</span>{" "}
+                    <span class="admin-rsvps_count">{filterCounts[key]}</span>
+                  </a>
+                ))}
+              </nav>
+              <div class="admin-guests_search">
+                <label class="sr-only" for="admin-search">
+                  Search households or guests
+                </label>
+                <input
+                  id="admin-search"
+                  data-admin-search
+                  type="search"
+                  placeholder="Search households or guests"
+                  autocomplete="off"
+                  value={q}
+                />
+              </div>
             </div>
           </div>
-          <p class="admin-guests_no-match" data-admin-no-match hidden>
+          <p
+            class="admin-guests_no-match"
+            data-admin-no-match
+            hidden={filteredRows.length > 0}
+          >
             No households match
           </p>
           <div class="admin-guests_card">
             <table class="admin-guests_table" data-admin-guests>
               <thead>
                 <tr>
-                  <th data-col="id">ID</th>
                   <th data-col="household">Household</th>
                   <th data-col="members">Members · Notes</th>
                   <th data-col="seats">Seats</th>
@@ -353,7 +447,7 @@ const editSeats = (row: AdminHousehold) => {
                     reloadHref={reloadHref}
                   />
                 )}
-                {view.rows.map((row) => {
+                {filteredRows.map((row) => {
                   const plusOnes = row.seats.filter(
                     (seat) => seat.kind === "plus_one",
                   );
@@ -363,7 +457,7 @@ const editSeats = (row: AdminHousehold) => {
                         class="admin-guests_archive-row"
                         data-admin-archive-confirm
                       >
-                        <td colspan={5}>
+                        <td colspan={4}>
                           <div class="admin_guests_confirm">
                             <p>Archive {archiveRow.displayName}?</p>
                             <form method="post">
@@ -382,6 +476,12 @@ const editSeats = (row: AdminHousehold) => {
                                 name="updated_at"
                                 value={archiveRow.updatedAt ?? ""}
                               />
+                              <input
+                                type="hidden"
+                                name="filter"
+                                value={filter === "all" ? "" : filter}
+                              />
+                              <input type="hidden" name="q" value={q} />
                               <div class="admin_guests_form-actions">
                                 <button
                                   class="admin_guests_btn accent"
@@ -391,7 +491,7 @@ const editSeats = (row: AdminHousehold) => {
                                 </button>
                                 <a
                                   class="admin_guests_btn"
-                                  href="/admin/guests"
+                                  href={queryHref({ archive: null })}
                                 >
                                   Cancel
                                 </a>
@@ -436,9 +536,9 @@ const editSeats = (row: AdminHousehold) => {
                         .join(" ")
                         .toLocaleLowerCase()}
                     >
-                      <td data-col="id">{row.label}</td>
                       <th data-col="household" scope="row">
                         {row.displayName}
+                        <small class="admin-guests_id">{row.label}</small>
                       </th>
                       <td data-col="members">
                         <div class="admin-guests_detail">
@@ -512,11 +612,11 @@ const editSeats = (row: AdminHousehold) => {
                           <div class="admin_guests_popover">
                             <a
                               data-admin-edit
-                              href={`/admin/guests?edit=${row.id}`}
+                              href={queryHref({ edit: row.id })}
                             >
                               Edit
                             </a>
-                            <a href={`/admin/guests?archive=${row.id}`}>
+                            <a href={queryHref({ archive: row.id })}>
                               Archive household
                             </a>
                           </div>
@@ -563,13 +663,21 @@ const editSeats = (row: AdminHousehold) => {
       "",
       `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
     );
+    // Every link back to this page carries the query (L-050): filters,
+    // stats, Add, Edit, Archive and Cancel.
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      "[data-admin-edit]",
+      '[data-admin-guests-page] a[href^="/admin/guests"]',
     )) {
       const href = new URL(link.href);
       if (input.value) href.searchParams.set("q", input.value);
       else href.searchParams.delete("q");
-      link.href = href.toString();
+      // Keep the href relative so the selector above still matches next time.
+      link.setAttribute("href", `${href.pathname}${href.search}`);
+    }
+    for (const field of document.querySelectorAll<HTMLInputElement>(
+      '[data-admin-guests-page] form input[type="hidden"][name="q"]',
+    )) {
+      field.value = input.value;
     }
   };
   input?.addEventListener("input", filterRows);

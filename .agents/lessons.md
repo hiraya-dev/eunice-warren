@@ -431,10 +431,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-050 — State a script keeps in the URL must reach every link and the focus trap
 - **Date:** 2026-11-21
-- **Trigger:** PR #98, CHANGES_REQUIRED (typed search lost on a filter or row click; Tab escaped the open drawer)
+- **Trigger:** PR #98, CHANGES_REQUIRED (typed search lost on a filter or row click; Tab escaped the open drawer); PR #100, CHANGES_REQUIRED (Guest list: edit Cancel and hidden form `q` dropped the state, a page-wide `a[href^=…]` rewrite leaked `q` into the nav and stopped matching once it wrote absolute hrefs)
 - **Symptom:** the RSVPs page filtered rows in place and `replaceState`d `q`, but every pill, row and close link still carried the server's `q`, so a click dropped the search and `pushState` overwrote it; the drawer focused a `tabindex="-1"` heading the trap's list skipped, so Tab left the dialog.
 - **Root cause:** progressive enhancement updated the address bar but not the server-built hrefs that also encode the state, and the focus trap only wrapped at its first and last element, assuming focus starts inside that list.
-- **Rule:** when a client script changes URL state, rebuild it into every link that carries it (or build the href at click time), and skip modified clicks (cmd, ctrl, shift, middle). A focus trap handles focus on any element inside the dialog, including the programmatic focus target, and its spec presses Tab and Shift+Tab from the opened state.
+- **Rule:** when a client script changes URL state, rebuild it into every link that carries it (or build the href at click time), and skip modified clicks (cmd, ctrl, shift, middle). That includes every Cancel, every redirect after a POST, and the hidden fields of open forms. Scope the rewrite to the page's own container, never the layout nav, and write hrefs back in the same (relative) form the selector matches. A focus trap handles focus on any element inside the dialog, including the programmatic focus target, and its spec presses Tab and Shift+Tab from the opened state.
 - **Check:** the spec types a query, clicks a filter and a row, and expects `q` in the URL and the input; the drawer spec tabs forward and back from the opened state and expects focus inside the dialog.
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`, `src/scripts/**`
