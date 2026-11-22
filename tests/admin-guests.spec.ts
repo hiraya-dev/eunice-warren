@@ -152,6 +152,347 @@ test.describe("guest list drawer", () => {
     await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
   });
 
+  test("guards dirty guest drawer exits and keeps dismissed edits", async ({
+    page,
+  }) => {
+    const message = "Discard your changes to this household?";
+    await page.goto(`/admin/guests?edit=${editor.id}`);
+    const edit = page.locator("[data-edit-household]");
+    const name = edit.locator("[name='display_name']");
+    await name.fill("Changed for the guest guard test");
+    const dialogs: string[] = [];
+    const dismiss = async (dialog: import("@playwright/test").Dialog) => {
+      dialogs.push(dialog.message());
+      await dialog.dismiss();
+    };
+    page.on("dialog", dismiss);
+    await page.keyboard.press("Escape");
+    await expect(edit).toBeVisible();
+    await expect(name).toHaveValue("Changed for the guest guard test");
+    await expect(page).toHaveURL(new RegExp(`edit=${editor.id}`));
+    expect(dialogs).toEqual([message]);
+    page.off("dialog", dismiss);
+
+    page.once("dialog", (dialog) => {
+      expect(dialog.message()).toBe(message);
+      void dialog.dismiss();
+    });
+    await edit.locator(".admin-drawer_top [data-admin-drawer-close]").click();
+    await expect(edit).toBeVisible();
+    await expect(name).toHaveValue("Changed for the guest guard test");
+
+    await page.goto("/admin/guests");
+    const row = rowById(page, editor.id);
+    await row.locator("summary").click();
+    await row.getByRole("link", { name: "Edit" }).click();
+    await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
+    const backEdit = page.locator("[data-edit-household]");
+    const backName = backEdit.locator("[name='display_name']");
+    await backName.fill("Kept after guest Back");
+    page.once("dialog", (dialog) => {
+      expect(dialog.message()).toBe(message);
+      void dialog.dismiss();
+    });
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`edit=${editor.id}`));
+    await expect(backEdit).toBeVisible();
+    await expect(backName).toHaveValue("Kept after guest Back");
+    page.once("dialog", (dialog) => {
+      expect(dialog.message()).toBe(message);
+      void dialog.accept();
+    });
+    await page.goBack();
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+  });
+
+  test("guards a dirty add scrim and allows clean direct and swapped drawers", async ({
+    page,
+  }) => {
+    await page.goto("/admin/guests?new=1");
+    const add = page.locator("[data-new-household]");
+    await add.locator("[data-add-name]").fill("Chip Guard");
+    await add.locator("[data-add-name]").press("Enter");
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toBe("Discard your changes to this household?");
+      await dialog.dismiss();
+    });
+    await page
+      .locator(".admin-drawer_scrim")
+      .click({ position: { x: 4, y: 4 } });
+    await expect(add).toBeVisible();
+    await expect(add.locator("[data-name-chip]")).toContainText("Chip Guard");
+
+    page.once("dialog", (dialog) => void dialog.accept());
+    await page
+      .locator(".admin-drawer_scrim")
+      .click({ position: { x: 4, y: 4 } });
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+
+    let unexpected = 0;
+    const recordUnexpected = async (
+      dialog: import("@playwright/test").Dialog,
+    ) => {
+      unexpected += 1;
+      await dialog.dismiss();
+    };
+    page.on("dialog", recordUnexpected);
+    await page.goto("/admin/guests?new=1");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+    await page.goto("/admin/guests");
+    await page.locator(".admin_guests_add").click();
+    await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+    const row = rowById(page, editor.id);
+    await row.locator("summary").click();
+    await row.getByRole("link", { name: "Edit" }).click();
+    await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+    expect(unexpected).toBe(0);
+    page.off("dialog", recordUnexpected);
+  });
+
+  test("asks once before a dirty dashboard navigation", async ({ page }) => {
+    await page.goto(`/admin/guests?edit=${editor.id}`);
+    await page
+      .locator("[data-edit-household] [name='notes']")
+      .fill("Leave guard");
+    const types: string[] = [];
+    const accept = async (dialog: import("@playwright/test").Dialog) => {
+      types.push(dialog.type());
+      await dialog.accept();
+    };
+    page.on("dialog", accept);
+    try {
+      await page
+        .locator('[data-admin-nav] a[href="/admin"]')
+        .evaluate((link: HTMLAnchorElement) => link.click());
+      await expect(page).toHaveURL(/\/admin$/);
+      expect(types).toEqual(["confirm"]);
+    } finally {
+      page.off("dialog", accept);
+    }
+  });
+
+  test("secondary guest actions do not prompt", async ({ page, browser }) => {
+    let dialogs = 0;
+    const unexpected = async (dialog: import("@playwright/test").Dialog) => {
+      dialogs += 1;
+      await dialog.dismiss();
+    };
+    page.on("dialog", unexpected);
+
+    await page.goto("/admin/guests?new=1");
+    const add = page.locator("[data-new-household]");
+    await add.locator("[data-add-name]").fill("Secondary Guest");
+    await add.locator("[data-add-name]").press("Enter");
+    await add.locator("[data-plus-one-toggle]").click();
+    await add.locator("summary").filter({ hasText: "More seats" }).click();
+    await add.locator("[data-seat-plus]").click();
+    await add.locator("[data-add-name]").fill("Antonio Santos");
+    await add.locator("[data-add-name]").press("Enter");
+    await expect(add.locator("[data-duplicate-warning]")).toBeVisible();
+    await add.locator("[data-confirm-duplicate]").click();
+    await expect(add.locator("[data-duplicate-warning]")).toBeHidden();
+
+    const editPage = await browser.newPage();
+    editPage.on("dialog", unexpected);
+    await editPage.goto(`/admin/guests?edit=${openSeatFixture.id}`);
+    const edit = editPage.locator("[data-edit-household]");
+    await edit.getByRole("button", { name: "Remove open seat" }).click();
+    // The edit form is dirty now, so leaving this page would rightly warn
+    // (beforeunload). Tick Archive on a fresh page instead.
+    const archivePage = await browser.newPage();
+    archivePage.on("dialog", unexpected);
+    await archivePage.goto(`/admin/guests?edit=${editor.id}`);
+    await archivePage
+      .locator("[data-edit-household] [data-archive-seat]")
+      .first()
+      .check();
+    expect(dialogs).toBe(0);
+    editPage.off("dialog", unexpected);
+    archivePage.off("dialog", unexpected);
+    await archivePage.close();
+    await editPage.close({ runBeforeUnload: false });
+    page.off("dialog", unexpected);
+  });
+
+  test("shows Saving without a guard and restores on bfcache", async ({
+    page,
+  }) => {
+    await page.goto("/admin/guests?new=1");
+    const form = page.locator("[data-new-household]");
+    await form.locator("[data-add-name]").fill("Pending Save Guest");
+    await page.evaluate(() => {
+      document
+        .querySelector("[data-admin-household-form]")
+        ?.addEventListener("submit", (event) => event.preventDefault());
+    });
+    let dialogs = 0;
+    page.on("dialog", async (dialog) => {
+      dialogs += 1;
+      await dialog.dismiss();
+    });
+    const save = form.locator("button.primary");
+    const saveAndAdd = form.locator("button[name='save_and_add']");
+    await save.click();
+    await expect(save).toHaveText("Saving…");
+    await expect(save).toBeDisabled();
+    await expect(saveAndAdd).toBeDisabled();
+    await expect(form.locator("button[name='save']")).toHaveCount(2);
+    await expect(form.locator("[data-admin-submit-mirror]")).toHaveCount(1);
+    expect(dialogs).toBe(0);
+
+    await page.evaluate(() => {
+      const event = new Event("pageshow");
+      Object.defineProperty(event, "persisted", { value: true });
+      window.dispatchEvent(event);
+    });
+    await expect(save).toHaveText("Save");
+    await expect(save).toBeEnabled();
+    await expect(saveAndAdd).toHaveText("Save and add another");
+    await expect(saveAndAdd).toBeEnabled();
+    await expect(form.locator("[data-admin-submit-mirror]")).toHaveCount(0);
+  });
+
+  test("refused guest saves leave the re-rendered drawer guarded", async ({
+    browser,
+  }, testInfo) => {
+    await withAdminLock(async () => {
+      const page = await browser.newPage();
+      const other = await browser.newPage();
+      const surname = uniqueSurname(testInfo);
+      const name = `Guarded ${surname}`;
+      await page.goto(`/admin/guests?new=1&q=${surname}`);
+      await page.locator("[data-new-household] [data-add-name]").fill(name);
+      await page
+        .locator("[data-new-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      const created = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await expect(created).toHaveCount(1);
+      const id = await created.getAttribute("data-household-id");
+      await page.goto(`/admin/guests?edit=${id}&q=guarded-stale`);
+      await other.goto(`/admin/guests?edit=${id}&q=guarded-stale`);
+      await other
+        .locator("[data-edit-household] [name='notes']")
+        .fill("Fresh lock");
+      await other
+        .locator("[data-edit-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(other).toHaveURL(/q=guarded-stale/);
+      const form = page.locator("[data-edit-household]");
+      await form.locator("[name='display_name']").fill("Refused draft");
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(form.locator("[data-admin-write-error]")).toBeVisible();
+      let dialogs = 0;
+      page.once("dialog", async (dialog) => {
+        dialogs += 1;
+        expect(dialog.message()).toBe(
+          "Discard your changes to this household?",
+        );
+        await dialog.dismiss();
+      });
+      await page.keyboard.press("Escape");
+      await expect(form).toBeVisible();
+      expect(dialogs).toBe(1);
+      page.once("dialog", (dialog) => void dialog.accept());
+      await page.goto("/admin/guests");
+      const saved = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await saved.locator("summary").click();
+      await saved.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await other.close();
+      await page.close();
+    });
+  });
+
+  test("updates archived-seat feedback and saves the matching count", async ({
+    page,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    const first = `First ${surname}`;
+    const second = `Second ${surname}`;
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests?new=1");
+      const add = page.locator("[data-new-household]");
+      await add.locator("[data-add-name]").fill(first);
+      await add.locator("[data-add-name]").press("Enter");
+      await add.locator("[data-add-name]").fill(second);
+      await add.locator("[data-add-name]").press("Enter");
+      await add.getByRole("button", { name: "Save", exact: true }).click();
+      const row = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await expect(row).toHaveCount(1);
+      const id = await row.getAttribute("data-household-id");
+      await page.goto(`/admin/guests?edit=${id}`);
+      const edit = page.locator("[data-edit-household]");
+      await edit.locator("[data-archive-seat]").last().check();
+      // The summary is separate spans, so textContent reads "1seat· 1 name…".
+      await expect(edit.locator("[data-seat-summary]")).toHaveText(
+        /^\s*1\s*seat\b/,
+      );
+      await expect(edit.locator("[data-preview-admits]")).toHaveText(
+        "Admits 1",
+      );
+      await expect(edit.locator("[name='display_name']")).toHaveValue(first);
+      await edit.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(row.locator("[data-col='seats']")).toContainText("1 seat");
+
+      await page.goto("/admin/guests");
+      const saved = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await saved.locator("summary").click();
+      await saved.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(
+        page.locator("[data-admin-household]").filter({ hasText: surname }),
+      ).toHaveCount(0);
+    });
+  });
+
+  test("saves a pending typed guest name with Save", async ({
+    page,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    const name = `Pending ${surname}`;
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests?new=1");
+      const form = page.locator("[data-new-household]");
+      await form.locator("[data-add-name]").fill(name);
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      const row = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: surname });
+      await expect(row).toHaveCount(1);
+      await expect(row.locator("[data-col='members']")).toContainText(name);
+      await row.locator("summary").click();
+      await row.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(
+        page.locator("[data-admin-household]").filter({ hasText: surname }),
+      ).toHaveCount(0);
+    });
+  });
+
   test("supports chips, plus-one parsing, switch, seats, suggestion and save-and-add", async ({
     page,
   }, testInfo) => {
