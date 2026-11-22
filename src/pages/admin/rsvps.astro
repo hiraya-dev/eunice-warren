@@ -15,6 +15,7 @@ import { selectAdminStore } from "@/lib/admin/store";
 import { StaleHouseholdError } from "@/lib/admin/store";
 import { isRsvpClosed, submissionProblems } from "@/lib/rsvp/logic";
 import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
+import { normalizeName } from "@/lib/admin/names";
 import { loadAdminRsvps } from "@/lib/admin/rsvps";
 import type {
   AdminRsvpDetail,
@@ -34,6 +35,7 @@ let data: AdminRsvpList | null = null;
 let detail: AdminRsvpDetail | null = null;
 let failed = false;
 let editDraft: {
+  updatedAt: string;
   attending: boolean | null;
   note: string;
   seats: Array<{
@@ -121,6 +123,11 @@ const redirectHref = (form: FormData, extra: Record<string, string> = {}) => {
   for (const [key, value] of Object.entries(extra)) params.set(key, value);
   return `/admin/rsvps${params.toString() ? `?${params}` : ""}`;
 };
+const savedCookieName = "admin_rsvp_saved";
+const savedCookie = `${savedCookieName}=1`;
+const hasSavedCookie = (Astro.request.headers.get("cookie") ?? "")
+  .split(";")
+  .some((cookie) => cookie.trim() === savedCookie);
 if (Astro.request.method === "POST") {
   const origin = Astro.request.headers.get("origin");
   if (origin && origin !== Astro.url.origin) {
@@ -130,6 +137,7 @@ if (Astro.request.method === "POST") {
     const form = await Astro.request.formData();
     if (String(form.get("action") ?? "") === "save") {
       const householdId = String(form.get("id") ?? "");
+      const postedUpdatedAt = String(form.get("updated_at") ?? "");
       const postedDetail = detail ?? (await store.getRsvpDetail(householdId));
       if (postedDetail) {
         detail = postedDetail;
@@ -138,7 +146,7 @@ if (Astro.request.method === "POST") {
         const seats = postedDetail.seats.map((seat) => ({
           seatId: seat.seatId!,
           shownName: String(form.get(`shown_name_${seat.seatId}`) ?? seat.name ?? ""),
-          name: String(form.get(`seat_name_${seat.seatId}`) ?? seat.name ?? ""),
+          name: normalizeName(String(form.get(`seat_name_${seat.seatId}`) ?? seat.name ?? "")),
           attending: form.get(`seat_attending_${seat.seatId}`) === "on",
           slipperSize: String(form.get(`slipper_size_${seat.seatId}`) ?? ""),
         }));
@@ -152,48 +160,58 @@ if (Astro.request.method === "POST") {
             seat.slipperSize = "";
           }
         }
-        editDraft = { attending, note, seats };
-        const invite = {
-          id: postedDetail.id,
-          householdName: postedDetail.displayName,
-          ticketCode: postedDetail.id,
-          members: postedDetail.seats
-            .filter((seat) => seat.kind === "member")
-            .map((seat) => seat.invitedName ?? ""),
-          seats: postedDetail.seats.length,
-          seatList: postedDetail.seats.map((seat) => ({
-            seatId: seat.seatId!,
-            kind: seat.kind,
-            invitedName: seat.invitedName,
-            name: seat.name,
-          })),
-        };
-        validationErrors = submissionProblems({
-          attending,
-          seats: seats.map((seat) => ({ ...seat, slipperSize: seat.slipperSize || undefined })),
-          invite,
-          note,
-          requireMemberNames: true,
-        });
-        if (!validationErrors.length && attending !== null) {
-          try {
-            await store.saveRsvp(
-              {
-                id: householdId,
-                updatedAt: String(form.get("updated_at") ?? ""),
-                attending,
-                seats,
-                note: note.trim() || null,
-              },
-              { email: host.email, firstName: host.firstName },
-            );
-            return Astro.redirect(
-              redirectHref(form, { household: householdId, saved: "1" }),
-              303,
-            );
-          } catch (error) {
-            if (error instanceof StaleHouseholdError) staleError = true;
-            else validationErrors = [{ field: "form", message: "Could not save the reply." }];
+        editDraft = { updatedAt: postedUpdatedAt, attending, note, seats };
+        if (postedDetail.id !== householdId) {
+          staleError = true;
+          validationErrors = [];
+        } else {
+          const invite = {
+            id: postedDetail.id,
+            householdName: postedDetail.displayName,
+            ticketCode: postedDetail.id,
+            members: postedDetail.seats
+              .filter((seat) => seat.kind === "member")
+              .map((seat) => seat.invitedName ?? ""),
+            seats: postedDetail.seats.length,
+            seatList: postedDetail.seats.map((seat) => ({
+              seatId: seat.seatId!,
+              kind: seat.kind,
+              invitedName: seat.invitedName,
+              name: seat.name,
+            })),
+          };
+          validationErrors = submissionProblems({
+            attending,
+            seats: seats.map((seat) => ({ ...seat, slipperSize: seat.slipperSize || undefined })),
+            invite,
+            note,
+            requireMemberNames: true,
+          });
+          if (!validationErrors.length && attending !== null) {
+            try {
+              await store.saveRsvp(
+                {
+                  id: postedDetail.id,
+                  updatedAt: postedUpdatedAt,
+                  attending,
+                  seats,
+                  note: note.trim() || null,
+                },
+                { email: host.email, firstName: host.firstName },
+              );
+              const response = Astro.redirect(
+                redirectHref(form, { household: postedDetail.id, saved: "1" }),
+                303,
+              );
+              response.headers.append(
+                "Set-Cookie",
+                `${savedCookie}; HttpOnly; SameSite=Lax; Path=/admin/rsvps; Max-Age=60`,
+              );
+              return response;
+            } catch (error) {
+              if (error instanceof StaleHouseholdError) staleError = true;
+              else validationErrors = [{ field: "form", message: "Could not save the reply." }];
+            }
           }
         }
       }
@@ -221,7 +239,13 @@ const problemFor = (seatId: number, field: string) =>
   validationErrors.find((problem) => problem.seatId === seatId && problem.field === field);
 const formProblem = (field: string) =>
   validationErrors.find((problem) => !problem.seatId && problem.field === field);
-const savedNotice = Astro.url.searchParams.get("saved") === "1";
+const savedNotice = hasSavedCookie;
+if (savedNotice && !editMode) {
+  Astro.response.headers.append(
+    "Set-Cookie",
+    `${savedCookieName}=; HttpOnly; SameSite=Lax; Path=/admin/rsvps; Max-Age=0`,
+  );
+}
 ---
 
 <AdminLayout
@@ -529,7 +553,7 @@ const savedNotice = Astro.url.searchParams.get("saved") === "1";
                   <form class="admin-drawer_edit-form" method="post">
                     <input type="hidden" name="action" value="save" />
                     <input type="hidden" name="id" value={detail.id} />
-                    <input type="hidden" name="updated_at" value={detail.updatedAt ?? ""} />
+                    <input type="hidden" name="updated_at" value={editDraft?.updatedAt ?? detail.updatedAt ?? ""} />
                     <input type="hidden" name="filter" value={filter} />
                     <input type="hidden" name="q" value={q} />
                     <div class="admin-drawer_edit-scroll">

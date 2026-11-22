@@ -520,3 +520,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the spec awaits drawer visibility and heading focus before tabbing in both directions.
 - **Guard:** none
 - **Paths:** `tests/admin-rsvps.spec.ts`
+
+### L-056 — A refused form re-emits the token it was posted with
+- **Date:** 2026-11-22
+- **Trigger:** #102, CHANGES_REQUIRED
+- **Symptom:** after a stale refusal, the re-rendered RSVP edit form carried the household's new `updated_at`, so pressing Save a second time passed the stale check and wrote the host's old draft over the newer reply.
+- **Root cause:** the page reloaded the record on the POST and rendered the hidden token from that fresh read instead of from the posted form.
+- **Rule:** any form that re-renders after a refusal (stale or validation) keeps the posted concurrency token in its draft and emits that, never a value read during the POST. Only an explicit Reload (a GET) may pick up the new token.
+- **Check:** the stale spec saves twice after the refusal and both are refused (`tests/admin-rsvps.spec.ts` "refuses a stale host edit and keeps the draft").
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`

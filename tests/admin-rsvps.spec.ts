@@ -178,23 +178,46 @@ test.describe("admin RSVPs", () => {
   }) => {
     await page.goto("/admin/rsvps");
     await page.locator("[data-admin-rsvp-link]").first().click();
-    await page.locator("[data-admin-drawer-nav]").click();
     const drawer = page.locator("[data-admin-drawer]");
     await expect(drawer).toBeVisible();
     await expect(drawer.locator("h2")).toBeFocused();
-    for (const modifiers of [[], ["Shift"]]) {
-      if (modifiers.length) await page.keyboard.down("Shift");
-      for (let index = 0; index < 10; index++) {
-        await page.keyboard.press("Tab");
-        expect(
-          await page.evaluate(
-            () =>
-              document.activeElement?.closest("[data-admin-drawer]") !== null,
-          ),
-        ).toBe(true);
+    const focusable =
+      "a,button:not([disabled]),input:not([type='hidden']):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])";
+    // Tab until focus comes back to the first element it reached: that is the
+    // wrap. Every step must stay inside the dialog (L-050). The bound is the
+    // number of candidates, hidden ones included, plus one.
+    const assertWrap = async (direction: "forward" | "backward") => {
+      const key = direction === "forward" ? "Tab" : "Shift+Tab";
+      const count = await drawer.locator(focusable).count();
+      expect(count).toBeGreaterThan(0);
+      await drawer.locator("h2").focus();
+      await page.keyboard.press(key);
+      await page.evaluate(() =>
+        document.activeElement?.setAttribute("data-wrap-start", ""),
+      );
+      let wrapped = false;
+      for (let index = 0; index <= count && !wrapped; index += 1) {
+        await page.keyboard.press(key);
+        const state = await page.evaluate(() => ({
+          inside: document.activeElement?.closest("[data-admin-drawer]") !== null,
+          back: document.activeElement?.hasAttribute("data-wrap-start") ?? false,
+        }));
+        expect(state.inside).toBe(true);
+        wrapped = state.back;
       }
-      if (modifiers.length) await page.keyboard.up("Shift");
-    }
+      await page.evaluate(() =>
+        document.querySelector("[data-wrap-start]")?.removeAttribute("data-wrap-start"),
+      );
+      expect(wrapped).toBe(true);
+    };
+    await assertWrap("forward");
+    await assertWrap("backward");
+
+    await page.locator("[data-admin-drawer-nav]").click();
+    await expect(drawer).toBeVisible();
+    await expect(drawer.locator("h2")).toBeFocused();
+    await assertWrap("forward");
+    await assertWrap("backward");
   });
 
   test("leaves modified row clicks to the browser", async ({ page }) => {
@@ -315,13 +338,15 @@ test.describe("admin RSVPs", () => {
       await expect(page.locator(".admin-drawer_edit-form")).toBeVisible();
       await page.locator('input[name="attending"][value="yes"]').check();
       const firstName = page.locator('input[name="seat_name_1"]');
-      await firstName.fill(`Renamed ${prefix}`);
+      await firstName.fill(`  Renamed   ${prefix}  `);
       await expect(page.locator("[data-admin-was]")).toBeVisible();
       await page.locator('input[name="seat_attending_1"]').check();
       await page.locator('select[name="slipper_size_1"]').selectOption("");
+      const postedToken = await page.locator('input[name="updated_at"]').inputValue();
       await page.getByRole("button", { name: "Save reply" }).click();
       await expect(page.locator(".admin-drawer_error").filter({ hasText: "Pick a slipper size" })).toBeVisible();
       await expect(firstName).toHaveValue(`Renamed ${prefix}`);
+      await expect(page.locator('input[name="updated_at"]')).toHaveValue(postedToken);
       await page.locator('select[name="slipper_size_1"]').selectOption("W 7");
       await expect(page.locator(".admin-drawer_size-error")).toBeHidden();
     });
@@ -409,12 +434,37 @@ test.describe("admin RSVPs", () => {
         await expect(page.locator(".admin-drawer_stale")).toContainText("This reply changed while you were editing");
         await expect(page.locator(".admin-drawer_stale a", { hasText: "Reload" })).toHaveAttribute("href", /household=.*edit=1/);
         await expect(page.locator('input[name="seat_name_1"]')).toHaveValue(`Stale draft ${prefix}`);
+        await page.getByRole("button", { name: "Save reply" }).click();
+        await expect(page.locator(".admin-drawer_stale")).toBeVisible();
         // Nothing was written: the read view still holds only the other host's version.
         await page.goto(`/admin/rsvps?household=${id}`);
         await expect(page.locator("[data-admin-host-edit]")).toHaveCount(1);
       } finally {
         await other.close();
       }
+    });
+  });
+
+  test("refuses a post whose household id differs from the loaded drawer", async ({ page }) => {
+    await withAdminLock(async () => {
+      await page.goto("/admin/rsvps?household=hh-admin-editor&edit=1");
+      const targetToken = await page.locator('input[name="updated_at"]').inputValue();
+      await page.goto("/admin/rsvps?household=hh-rsvp-editor&edit=1");
+      await page.locator('input[name="attending"][value="yes"]').check();
+      for (const seatId of [1, 2]) {
+        await page.locator(`input[name="seat_attending_${seatId}"]`).check();
+        await page.locator(`select[name="slipper_size_${seatId}"]`).selectOption("W 7");
+      }
+      // Hidden inputs can't be filled; set them the way a crafted POST would.
+      await page.evaluate((token) => {
+        const form = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form")!;
+        form.querySelector<HTMLInputElement>('input[name="id"]')!.value = "hh-admin-editor";
+        form.querySelector<HTMLInputElement>('input[name="updated_at"]')!.value = token;
+      }, targetToken);
+      await page.getByRole("button", { name: "Save reply" }).click();
+      await expect(page.locator(".admin-drawer_stale")).toBeVisible();
+      await page.goto("/admin/rsvps?household=hh-admin-editor");
+      await expect(page.locator("[data-admin-host-edit]")).toHaveCount(0);
     });
   });
 });
@@ -447,6 +497,8 @@ test.describe("admin RSVPs without JavaScript", () => {
         await expect(page).toHaveURL(/household=.*saved=1/);
         await expect(page.locator("[data-admin-saved]")).toBeVisible();
         await expect(page.locator("[data-admin-host-edit]").first()).toContainText("by host");
+        await page.reload();
+        await expect(page.locator("[data-admin-saved]")).toHaveCount(0);
       });
     },
   );

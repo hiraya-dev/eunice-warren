@@ -918,7 +918,7 @@ export function createFakeAdminStore(): AdminStore {
   }
   async function saveRsvp(input: SaveRsvpInput, actor: AdminHostActor) {
     const row = activeFixtures().find((item) => item.id === input.id);
-    if (!row || (input.updatedAt || row.updatedAt) !== row.updatedAt)
+    if (!row || input.updatedAt !== (row.updatedAt ?? ""))
       throw new StaleHouseholdError();
     const active = activeSeats(row);
     const activeIds = active.map((item) => item.id ?? item.slot).sort((a, b) => a - b);
