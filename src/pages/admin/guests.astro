@@ -123,6 +123,7 @@ if (Astro.request.method === "POST") {
               ? memberNames.length
               : nextCount;
         const seatCount = Math.max(
+          1,
           memberNames.length,
           Math.min(
             MAX_SEATS,
@@ -131,7 +132,9 @@ if (Astro.request.method === "POST") {
           ),
         );
         const postedDisplayName = String(form.get("display_name") ?? "");
-        const suggestedDisplayName = suggestInvitationName(memberNames);
+        // The posted name was suggested from the names that were posted, not
+        // from the name this request adds; compare with that suggestion.
+        const postedSuggestion = suggestInvitationName(namesFromForm(form));
         newDraft = {
           displayName: postedDisplayName,
           label: String(form.get("label") ?? ""),
@@ -145,7 +148,7 @@ if (Astro.request.method === "POST") {
           invitationEdited:
             Boolean(form.get("invitation_edited")) ||
             (Boolean(postedDisplayName) &&
-              postedDisplayName !== suggestedDisplayName),
+              postedDisplayName !== postedSuggestion),
           labelEdited:
             Boolean(form.get("label_edited")) ||
             String(form.get("label") ?? "") !==
@@ -391,13 +394,10 @@ if (Astro.request.method === "POST") {
               MAX_SEATS,
               names.filter(Boolean).length + 1,
             );
-          if (form.get("plus_one") === "off")
+          if (form.get("plus_one") === "off") {
             finalCount = Math.max(1, draftCount - removablePlusOnes);
-          if (form.get("plus_one") === "off")
-            editDraft.seatCount = Math.max(
-              1,
-              draftCount - removablePlusOnes,
-            );
+            editDraft.seatCount = finalCount;
+          }
           if (
             !form.get("seat_action") &&
             !form.get("plus_one") &&
@@ -759,11 +759,6 @@ const editSeats = (row: AdminHousehold) => {
                                 value={filter === "all" ? "" : filter}
                               />
                               <input type="hidden" name="q" value={q} />
-                              <input
-                                type="hidden"
-                                name="edit"
-                                value={archiveRow.id}
-                              />
                               <div class="admin_guests_form-actions">
                                 <button
                                   class="admin_guests_btn accent"

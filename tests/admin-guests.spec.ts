@@ -199,9 +199,10 @@ test.describe("guest list drawer", () => {
 
       // Archive what the test added: other specs count the active households.
       await page.goto(`/admin/guests?filter=waiting&q=${surname}`);
+      // The suggestion follows the names, so find the row by its surname.
       const added = page
         .locator("[data-admin-household]")
-        .filter({ hasText: first });
+        .filter({ hasText: surname });
       await added.locator("summary").click();
       await added.getByRole("link", { name: "Archive household" }).click();
       await page
@@ -209,7 +210,7 @@ test.describe("guest list drawer", () => {
         .getByRole("button", { name: "Archive" })
         .click();
       await expect(
-        page.locator("[data-admin-household]").filter({ hasText: first }),
+        page.locator("[data-admin-household]").filter({ hasText: surname }),
       ).toHaveCount(0);
     });
   });
@@ -565,7 +566,9 @@ test.describe("guest list drawer", () => {
       // The round trip keeps the confirmed name in the draft; Save then adds it.
       const draft = page.locator("[data-new-household]");
       await expect(draft.locator("[data-duplicate-warning]")).toBeHidden();
-      await expect(draft.locator("input[name='confirmed_name']")).toHaveCount(1);
+      await expect(draft.locator("input[name='confirmed_name']")).toHaveCount(
+        1,
+      );
       await draft.getByRole("button", { name: "Save", exact: true }).click();
       const added = page.locator("[data-admin-household]").filter({
         has: page.locator("[data-col='household']", {
@@ -580,6 +583,213 @@ test.describe("guest list drawer", () => {
         .getByRole("button", { name: "Archive" })
         .click();
       await page.close();
+    });
+  });
+});
+
+// L-053: every secondary submit without JavaScript ends in a real save, and
+// the JS plus-one "off" drops open and draft-only seats. Each test adds its own
+// household (unique surname) and archives it, so fixtures stay untouched.
+test.describe("guest drawer round trips without JavaScript", () => {
+  test.describe.configure({ mode: "serial" });
+
+  const rowFor = (page: Page, text: string) =>
+    page.locator("[data-admin-household]").filter({ hasText: text });
+
+  const archiveRow = async (page: Page, text: string) => {
+    await page.goto("/admin/guests");
+    const row = rowFor(page, text);
+    await row.locator("summary").click();
+    await row.getByRole("link", { name: "Archive household" }).click();
+    await page
+      .locator("[data-admin-archive-confirm]")
+      .getByRole("button", { name: "Archive" })
+      .click();
+    await expect(rowFor(page, text)).toHaveCount(0);
+  };
+
+  const addName = async (page: Page, name: string) => {
+    const form = page.locator("[data-admin-household-form]");
+    await form.locator("[name='member_input']").fill(name);
+    await form.getByRole("button", { name: "Add", exact: true }).click();
+  };
+
+  test("plus-one switch and stepper floor save the seat count", async ({
+    browser,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    const first = `Ilse ${surname}`;
+    await withAdminLock(async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.goto("/admin/guests?new=1");
+      const form = page.locator("[data-new-household]");
+      // The stepper never goes below one seat, even with no names yet.
+      await form.locator("summary").filter({ hasText: "More seats" }).click();
+      await form.locator("[data-seat-minus]").click();
+      await expect(
+        page.locator("[data-new-household] [data-seat-number]"),
+      ).toHaveText("1");
+      await addName(page, first);
+      const plusOne = () =>
+        page.locator("[data-new-household] button[name='plus_one']");
+      await plusOne().click();
+      await expect(
+        page.locator("[data-new-household] [data-seat-number]"),
+      ).toHaveText("2");
+      await plusOne().click();
+      await expect(
+        page.locator("[data-new-household] [data-seat-number]"),
+      ).toHaveText("1");
+      await plusOne().click();
+      await page
+        .locator("[data-new-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(
+        rowFor(page, surname).locator("[data-col='seats']"),
+      ).toContainText("2 seats");
+
+      // Edit: the stepper's "−" takes the open seat off and Save stores it.
+      const id = await rowFor(page, surname).getAttribute("data-household-id");
+      await page.goto(`/admin/guests?edit=${id}`);
+      const edit = page.locator("[data-edit-household]");
+      await edit.locator("summary").filter({ hasText: "More seats" }).click();
+      await edit.locator("[data-seat-minus]").click();
+      await expect(
+        page.locator("[data-edit-household] [data-seat-number]"),
+      ).toHaveText("1");
+      await page
+        .locator("[data-edit-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(
+        rowFor(page, surname).locator("[data-col='seats']"),
+      ).toContainText("1 seat");
+      await archiveRow(page, surname);
+      await page.close();
+    });
+  });
+
+  test("adding names keeps the invitation name on the suggestion", async ({
+    browser,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    await withAdminLock(async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.goto("/admin/guests?new=1");
+      await addName(page, `Ilse ${surname}`);
+      await addName(page, `Otto ${surname}`);
+      const form = page.locator("[data-new-household]");
+      const suggestion = `The ${surname} Family`;
+      await expect(form.locator("[name='display_name']")).toHaveValue(
+        suggestion,
+      );
+      await expect(form.locator("[data-restore-suggestion]")).toBeHidden();
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(
+        rowFor(page, surname).locator("[data-col='household']"),
+      ).toContainText(suggestion);
+      await archiveRow(page, surname);
+      await page.close();
+    });
+  });
+
+  test("archiving the last member then pressing − still saves the archive", async ({
+    browser,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    const kept = `Ilse ${surname}`;
+    const archived = `Otto ${surname}`;
+    await withAdminLock(async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.goto("/admin/guests?new=1");
+      await addName(page, kept);
+      await addName(page, archived);
+      await page
+        .locator("[data-new-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      const id = await rowFor(page, surname).getAttribute("data-household-id");
+      await page.goto(`/admin/guests?edit=${id}`);
+      const edit = page.locator("[data-edit-household]");
+      await edit.locator("[data-archive-seat]").last().check();
+      await edit.locator("summary").filter({ hasText: "More seats" }).click();
+      await edit.locator("[data-seat-minus]").click();
+      // The round trip keeps the archive mark on the last member.
+      await expect(
+        page.locator("[data-edit-household] [data-archive-seat]").last(),
+      ).toBeChecked();
+      await page
+        .locator("[data-edit-household]")
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(page.locator("[data-admin-write-error]")).toHaveCount(0);
+      const row = rowFor(page, surname);
+      await expect(row.locator("[data-col='seats']")).toContainText("1 seat");
+      await expect(row.locator("[data-col='members']")).not.toContainText(
+        "Otto",
+      );
+      await archiveRow(page, surname);
+      await page.close();
+    });
+  });
+});
+
+test.describe("guest drawer plus-one off with JavaScript", () => {
+  test("drops a saved open seat and a draft-only seat", async ({
+    page,
+  }, testInfo) => {
+    const surname = uniqueSurname(testInfo);
+    const first = `Ilse ${surname}`;
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests?new=1");
+      const form = page.locator("[data-new-household]");
+      await form.locator("[data-add-name]").fill(first);
+      await form.locator("[data-add-name]").press("Enter");
+      await form.locator("[data-add-name]").fill("+1");
+      await form.locator("[data-add-name]").press("Enter");
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      const row = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: first });
+      await expect(row.locator("[data-col='seats']")).toContainText("2 seats");
+
+      const id = await row.getAttribute("data-household-id");
+      await page.goto(`/admin/guests?edit=${id}`);
+      const edit = page.locator("[data-edit-household]");
+      await expect(
+        edit.locator("[data-seat-kind='plus_one'][data-seat-row]"),
+      ).toHaveCount(1);
+      // A draft-only seat from the stepper, then the switch off: both go.
+      await edit.locator("summary").filter({ hasText: "More seats" }).click();
+      await edit.locator("[data-seat-plus]").click();
+      await expect(edit.locator("[data-seat-number]")).toHaveText("3");
+      await edit
+        .locator("[data-plus-one-toggle]")
+        .evaluate((button: HTMLButtonElement) => button.click());
+      await expect(edit.locator("[data-seat-number]")).toHaveText("1");
+      await expect(edit.locator("input[name='removed_seat']")).toHaveCount(1);
+      await edit.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(
+        page
+          .locator("[data-admin-household]")
+          .filter({ hasText: first })
+          .locator("[data-col='seats']"),
+      ).toContainText("1 seat");
+
+      await page.goto("/admin/guests");
+      const saved = page
+        .locator("[data-admin-household]")
+        .filter({ hasText: first });
+      await saved.locator("summary").click();
+      await saved.getByRole("link", { name: "Archive household" }).click();
+      await page
+        .locator("[data-admin-archive-confirm]")
+        .getByRole("button", { name: "Archive" })
+        .click();
+      await expect(
+        page.locator("[data-admin-household]").filter({ hasText: first }),
+      ).toHaveCount(0);
     });
   });
 });
