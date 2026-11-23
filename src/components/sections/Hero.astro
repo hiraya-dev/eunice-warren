@@ -10,6 +10,7 @@ import palm from "@/assets/images/stamps/palm.jpg";
 import postmark from "@/assets/images/hero/postmark-received.png";
 import Button from "@/components/Button.astro";
 import { BACKGROUND_MUSIC } from "@/consts";
+import MusicTicker from "@/components/global/MusicTicker.astro";
 
 interface Props extends HTMLAttributes<"section"> {
   /** RSVP destination. */
@@ -40,7 +41,7 @@ const { rsvpHref = "#rsvp", weekendHref = "#wedding", class: className, ...rest 
         <div class="music-polaroid_strip">
           <div class="music-polaroid_info">
             <span class="music-polaroid_label">our song ♪</span>
-            <span class="music-polaroid_title">{BACKGROUND_MUSIC.title}</span>
+            <MusicTicker class="music-polaroid_title" text={BACKGROUND_MUSIC.title} />
           </div>
           <div class="music-polaroid_controls">
             <button type="button" data-music-mute aria-pressed="false" aria-label={`Mute ${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`}>
@@ -181,7 +182,7 @@ const { rsvpHref = "#rsvp", weekendHref = "#wedding", class: className, ...rest 
     .music-polaroid_strip { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; padding-inline: 0.139cqw; }
     .music-polaroid_info { display: flex; min-width: 0; flex-direction: column; gap: 0.139cqw; }
     .music-polaroid_label { color: var(--accent-500); font: 400 clamp(1rem, 1.667cqw, 1.5rem) / 1 var(--hand-family); white-space: nowrap; }
-    .music-polaroid_title { overflow: hidden; color: var(--dark-700); font: var(--primary-regular) clamp(0.5rem, 0.764cqw, 0.6875rem) / 1.273 var(--mono-family); letter-spacing: 0.12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .music-polaroid_info :global(.music-polaroid_title) { overflow: hidden; color: var(--dark-700); font: var(--primary-regular) clamp(0.5rem, 0.764cqw, 0.6875rem) / 1.273 var(--mono-family); letter-spacing: 0.12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
     .music-polaroid_controls { display: flex; flex: none; align-items: center; gap: clamp(0.25rem, 0.417cqw, 0.375rem); }
     .music-polaroid_controls button { display: grid; width: clamp(2rem, 2.361cqw, 2.125rem); height: clamp(2rem, 2.361cqw, 2.125rem); padding: 0; place-items: center; border: 0.0625rem solid var(--border); border-radius: 50%; background: transparent; color: var(--dark-900); cursor: pointer; transition: border-color 0.2s, background-color 0.2s, opacity 0.2s; }
     .music-polaroid_controls button + button { border-color: var(--dark-900); background: var(--dark-900); color: var(--light-100); }

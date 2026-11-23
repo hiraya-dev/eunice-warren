@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import { BACKGROUND_MUSIC } from "@/consts";
 import discImage from "@/assets/images/now-playing-disc.png";
+import MusicTicker from "@/components/global/MusicTicker.astro";
 
 const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
 ---
@@ -12,7 +13,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     <div class="music-player_tag" data-music data-music-tag data-music-surface data-state="idle" data-music-visible>
       <span class="music-player_hole" aria-hidden="true"></span>
       <Image class="music-player_cover" src={BACKGROUND_MUSIC.cover} alt="" width={46} height={46} widths={[46, 92]} sizes="46px" loading="lazy" />
-      <span class="music-player_info"><span class="music-player_label">our song ♪</span><span class="music-player_title">{BACKGROUND_MUSIC.title}</span></span>
+      <span class="music-player_info"><span class="music-player_label">our song ♪</span><MusicTicker class="music-player_title" text={BACKGROUND_MUSIC.title} /></span>
       <button type="button" data-music-toggle aria-pressed="false" aria-label={`Play ${songName}`}>
         <svg data-music-play-icon viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 1.8v10.4L12 7z" fill="currentColor" /></svg>
         <svg data-music-pause-icon viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="1.5" width="3" height="11" fill="currentColor" /><rect x="8.5" y="1.5" width="3" height="11" fill="currentColor" /></svg>
@@ -107,6 +108,30 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     updateProgress();
     setState("idle");
 
+    // A title that overflows its box scrolls as a ticker (CSS reads data-ticker); one that fits stays still.
+    // The speed is constant, so the duration follows the measured loop length. Re-measured on resize and font load.
+    const TICKER_PX_PER_SECOND = 30;
+    const titles = [...document.querySelectorAll<HTMLElement>("[data-music-ticker]")];
+    const measureTitle = (title: HTMLElement) => {
+      const text = title.querySelector<HTMLElement>(".music-ticker_text");
+      const track = text?.parentElement;
+      if (!text || !track) return;
+      // Both reads leave out the padding the running ticker adds, so the verdict is the same either way.
+      const room = title.clientWidth - parseFloat(getComputedStyle(title).paddingLeft);
+      const natural = text.offsetWidth - parseFloat(getComputedStyle(text).paddingRight);
+      const overflows = room > 0 && natural > room + 0.5;
+      if (title.hasAttribute("data-ticker") !== overflows) title.toggleAttribute("data-ticker", overflows);
+      if (!overflows) return;
+      const duration = `${(track.offsetWidth / 2 / TICKER_PX_PER_SECOND).toFixed(2)}s`;
+      if (title.style.getPropertyValue("--ticker-duration") !== duration) title.style.setProperty("--ticker-duration", duration);
+    };
+    const measureTitles = () => titles.forEach(measureTitle);
+    const titleResize = new ResizeObserver(measureTitles);
+    titles.forEach((title) => titleResize.observe(title));
+    document.fonts.addEventListener("loadingdone", measureTitles);
+    void document.fonts.ready.then(measureTitles);
+    measureTitles();
+
     const pending = document.documentElement.classList.contains("ew-preloader-pending");
     if (pending) surfaces.forEach((surface) => surface.removeAttribute("data-music-visible"));
     document.addEventListener("ew:preloader-close", () => surfaces.forEach((surface) => surface.setAttribute("data-music-visible", "")), { once: true });
@@ -127,7 +152,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     document.addEventListener("focusin", (event) => { if (isField(event.target)) { fieldFocused = true; syncFieldHide(); } }, { signal: listeners.signal });
     document.addEventListener("focusout", (event) => { if (isField(event.target)) { fieldFocused = false; syncFieldHide(); } }, { signal: listeners.signal });
     const teardown = initMusicTeleport(container);
-    document.addEventListener("astro:before-swap", () => { teardown(); listeners.abort(); document.removeEventListener("ew:music-start", start); }, { once: true });
+    document.addEventListener("astro:before-swap", () => { teardown(); listeners.abort(); titleResize.disconnect(); document.fonts.removeEventListener("loadingdone", measureTitles); document.removeEventListener("ew:music-start", start); }, { once: true });
   }
 </script>}
 
@@ -214,10 +239,37 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
         .music-player_disc img { animation: none; }
       }
     }
+    /* The title ticker: two copies of the title side by side, the track slides left by exactly one copy and
+       repeats. Only transform animates. The script sets data-ticker while the title overflows and
+       --ticker-duration from its length, so the speed is the same for any title. Reduced motion keeps the ellipsis. */
+    .music-ticker_text { display: inline; }
+    .music-ticker_text + .music-ticker_text { display: none; }
+    @keyframes music-ticker { to { transform: translateX(-50%); } }
+    @media (prefers-reduced-motion: no-preference) {
+      [data-music-ticker][data-ticker] {
+        --ticker-fade: 0.625rem;
+        /* The padding and the matching negative margin put the text's first letter where it rests today,
+           so the left fade sits beside it and only dims letters as they leave. */
+        margin-left: calc(-1 * var(--ticker-fade));
+        padding-left: var(--ticker-fade);
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--ticker-fade), #000 calc(100% - var(--ticker-fade)), transparent);
+        mask-image: linear-gradient(to right, transparent, #000 var(--ticker-fade), #000 calc(100% - var(--ticker-fade)), transparent);
+        text-overflow: clip;
+      }
+      [data-music-ticker][data-ticker] .music-ticker_track { display: flex; width: max-content; animation: music-ticker var(--ticker-duration, 10s) linear infinite paused; will-change: transform; }
+      [data-music-ticker][data-ticker] .music-ticker_text { flex: none; padding-right: 2.5em; }
+      [data-music-ticker][data-ticker] .music-ticker_text + .music-ticker_text { display: block; }
+      [data-music-surface][data-state="playing"] [data-music-ticker][data-ticker] .music-ticker_track { animation-play-state: running; }
+      :root:has([data-music-mute][aria-pressed="true"]) [data-music-surface] [data-music-ticker][data-ticker] .music-ticker_track { animation-play-state: paused; }
+    }
     @media (min-width: 64rem) {
       /* The polaroid in the hero is the player until the page scrolls past it. */
       .music-player_root:not([data-music-docked]):not([data-music-flying]) :is(.music-player_tag, .music-player_string) { visibility: hidden; }
       :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap { visibility: hidden; pointer-events: none; }
+      /* A surface that is not on screen holds its title still. */
+      .music-player_root:not([data-music-docked]):not([data-music-flying]) .music-player_tag [data-music-ticker] .music-ticker_track,
+      .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) .music-player_tag [data-music-ticker] .music-ticker_track,
+      :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap [data-music-ticker] .music-ticker_track { animation-play-state: paused !important; }
     }
   }
 </style>
