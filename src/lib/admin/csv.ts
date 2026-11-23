@@ -54,6 +54,7 @@ export async function buildSongCsv(store: AdminStore, now = new Date()) {
         "Dedication",
         "Sent",
         "Times requested",
+        "spotify_url",
       ],
       ...data.rows.map((row) => [
         row.no,
@@ -63,6 +64,7 @@ export async function buildSongCsv(store: AdminStore, now = new Date()) {
         row.dedication ?? "",
         manilaDateTime(row.createdAt),
         row.requestCount,
+        row.spotifyTrackId ? `https://open.spotify.com/track/${row.spotifyTrackId}` : "",
       ]),
     ];
     return new Response(csv(rows), {

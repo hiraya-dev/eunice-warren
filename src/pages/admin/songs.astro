@@ -111,6 +111,7 @@ const text = djText(view.rows);
                           {duplicateLabel(row.requestCount)}
                         </small>
                       )}
+                      {row.spotifyTrackId && <a href={`https://open.spotify.com/track/${row.spotifyTrackId}`} target="_blank" rel="noopener">Spotify</a>}
                     </span>
                     <span data-song-artist>{row.artist ?? ""}</span>
                   </div>

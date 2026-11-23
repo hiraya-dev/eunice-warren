@@ -207,6 +207,7 @@ export interface AdminSongRequest {
   artist: string | null;
   name: string;
   dedication: string | null;
+  spotifyTrackId: string | null;
   createdAt: string;
   requestCount: number;
 }

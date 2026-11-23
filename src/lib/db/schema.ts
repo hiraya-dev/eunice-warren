@@ -90,6 +90,8 @@ export const songs = sqliteTable("songs", {
   song: text("song").notNull(),
   artist: text("artist"),
   dedication: text("dedication"),
+  spotifyTrackId: text("spotify_track_id"),
+  coverUrl: text("cover_url"),
   createdAt: text("created_at").notNull(),
 }, (table) => [index("songs_name_key_idx").on(table.nameKey)]);
 

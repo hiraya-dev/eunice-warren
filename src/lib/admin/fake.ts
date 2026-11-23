@@ -1088,6 +1088,7 @@ export function createFakeAdminStore(): AdminStore {
       artist: row.artist,
       name: row.name,
       dedication: row.dedication,
+      spotifyTrackId: null,
       createdAt: row.submittedAt,
     }));
     const counts = new Map<string, number>();
