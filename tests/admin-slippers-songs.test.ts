@@ -15,6 +15,7 @@ import {
   pairsCaption,
   songKey,
   songsEyebrow,
+  spotifyTrackUrl,
 } from "../src/lib/admin/presentation.ts";
 import type { AdminStore } from "../src/lib/admin/store.ts";
 import { SLIPPER_SIZES } from "../src/lib/rsvp/slippers.ts";
@@ -255,7 +256,7 @@ test("admin CSV builders set deterministic Manila headers and error responses", 
   );
   assert.match(
     songText,
-    /No\.,Song,Artist,Requested by,Dedication,Sent,Times requested/,
+    /No\.,Song,Artist,Requested by,Dedication,Sent,Times requested,Spotify link/,
   );
   assert.match(songText, /2026-11-18 09:00/);
   const failing = {
@@ -276,6 +277,21 @@ test("admin CSV builders set deterministic Manila headers and error responses", 
     failedSongs.headers.get("Content-Type"),
     "text/plain; charset=utf-8",
   );
+});
+
+test("song CSV and admin presentation include Spotify links only when a track ID exists", async () => {
+  const rows = [
+    { no: 1, song: "Dancing Queen", artist: "ABBA", name: "A", dedication: null, createdAt: "2026-11-20T00:00:00Z", requestCount: 1, id: 1, spotifyTrackId: "A".repeat(22) },
+    { no: 2, song: "Free text", artist: null, name: "B", dedication: null, createdAt: "2026-11-20T00:00:00Z", requestCount: 1, id: 2, spotifyTrackId: null },
+  ];
+  const store = { getSongRequests: async () => ({ rows, requests: 2, songs: 2 }) } as AdminStore;
+  const text = await (await buildSongCsv(store)).text();
+  assert.match(text, new RegExp(`https://open\\.spotify\\.com/track/${rows[0]!.spotifyTrackId}`));
+  assert.match(text, /Free text,,B,,2026-11-20 08:00,1,\r\n/);
+  assert.equal(spotifyTrackUrl(rows[0]!.spotifyTrackId), `https://open.spotify.com/track/${rows[0]!.spotifyTrackId}`);
+  assert.equal(spotifyTrackUrl(rows[1]!.spotifyTrackId), null);
+  const page = readFileSync("src/pages/admin/songs.astro", "utf8");
+  assert.match(page, /spotifyTrackUrl\(row\.spotifyTrackId\)/);
 });
 
 test("DJ text groups duplicates without leaking host-only fields", () => {

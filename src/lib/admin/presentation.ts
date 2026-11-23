@@ -71,6 +71,9 @@ export function songKey(song: string, artist: string | null | undefined) {
       .trim();
   return `${normalize(song)}\u0000${artist?.trim() ? normalize(artist) : ""}`;
 }
+export function spotifyTrackUrl(trackId: string | null | undefined) {
+  return trackId ? `https://open.spotify.com/track/${trackId}` : null;
+}
 export function mostCommonCaption(size: string | null, count: number) {
   return size
     ? `Most common · ${size} (${count} ${count === 1 ? "pair" : "pairs"})`

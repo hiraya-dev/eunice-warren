@@ -247,7 +247,8 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     const pickSuggestion = (item: Suggestion) => { if (!songInput || !artistInput) return; cancelSearch(); songInput.value = item.title; artistInput.value = item.artist; if (spotifyTrackId) spotifyTrackId.value = item.id; if (coverUrl) coverUrl.value = item.cover ?? ""; closeSuggestions(); };
     songInput?.addEventListener("input", () => { clearPicked(); cancelSearch(); const query = songInput.value.trim(); if (query.length < 2) { suggestions = []; renderSuggestions(); return; } const current = sequence; timer = window.setTimeout(async () => { const requestController = new AbortController(); searchController = requestController; try { const response = await fetch(`/api/songs/search?q=${encodeURIComponent(query)}`, { signal: requestController.signal }); if (!response.ok) throw new Error("search failed"); const data = await response.json() as { results?: Suggestion[] }; if (current !== sequence) return; suggestions = (data.results ?? []).slice(0, 5); highlighted = -1; renderSuggestions(); } catch { if (current === sequence) { suggestions = []; renderSuggestions(); } } }, 250); });
     songInput?.addEventListener("keydown", (event) => { if (event.key === "Escape") { if (!popup?.hidden) event.preventDefault(); dismissSuggestions(); return; } if (!suggestions.length || popup?.hidden) return; if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); highlighted = highlighted < 0 ? (event.key === "ArrowDown" ? 0 : suggestions.length - 1) : (highlighted + (event.key === "ArrowDown" ? 1 : -1) + suggestions.length) % suggestions.length; songInput.setAttribute("aria-activedescendant", `song-search-option-${highlighted}`); renderSuggestions(); } else if (event.key === "Enter" && highlighted >= 0) { event.preventDefault(); pickSuggestion(suggestions[highlighted]); } });
-    popup?.addEventListener("pointerdown", (event) => { const option = (event.target as HTMLElement).closest<HTMLElement>("[data-index]"); if (!option) return; event.preventDefault(); pickSuggestion(suggestions[Number(option.dataset.index)]!); });
+    // Every press inside the popup keeps focus on Song: Safari does not focus a tapped link, so a blur would close the list before the credit's click lands. The click itself still fires.
+    popup?.addEventListener("pointerdown", (event) => { event.preventDefault(); const option = (event.target as HTMLElement).closest<HTMLElement>("[data-index]"); if (!option) return; pickSuggestion(suggestions[Number(option.dataset.index)]!); });
     const leavesSearch = (next: EventTarget | null) => !(next instanceof Node && (popup?.contains(next) || next === songInput));
     songInput?.addEventListener("blur", (event) => { if (leavesSearch(event.relatedTarget)) dismissSuggestions(); });
     popup?.addEventListener("focusout", (event) => { if (leavesSearch(event.relatedTarget)) dismissSuggestions(); }); artistInput?.addEventListener("input", clearPicked); document.addEventListener("pointerdown", (event) => { if (!form?.contains(event.target as Node)) dismissSuggestions(); });
@@ -256,6 +257,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     if (nameInput && remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
+      dismissSuggestions();
       if (!form.checkValidity() || !submit) return;
       submit.disabled = true;
       if (wrap) wrap.dataset.state = "sending";

@@ -54,7 +54,7 @@ export async function buildSongCsv(store: AdminStore, now = new Date()) {
         "Dedication",
         "Sent",
         "Times requested",
-        "spotify_url",
+        "Spotify link",
       ],
       ...data.rows.map((row) => [
         row.no,

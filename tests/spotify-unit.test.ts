@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fakeSongSearch, fakeSongSuggestions } from "../src/lib/songs/fake.ts";
 import { clearSpotifyToken, searchSpotifyTracks, validSongSearchQuery } from "../src/lib/songs/spotify.ts";
+import { handleSongSearch } from "../src/lib/songs/search.ts";
+
+const searchRequest = (query: string) => new Request(`https://example.test/api/songs/search?q=${encodeURIComponent(query)}`);
 
 const response = (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
 
@@ -18,6 +21,52 @@ test("song search query validation enforces the route bounds", () => {
   assert.equal(validSongSearchQuery("d"), false);
   assert.equal(validSongSearchQuery("a".repeat(101)), false);
   assert.equal(validSongSearchQuery("da"), true);
+});
+
+test("song search route rejects queries outside its bounds", async () => {
+  const one = await handleSongSearch(searchRequest("d"), {});
+  const long = await handleSongSearch(searchRequest("a".repeat(101)), {});
+  assert.equal(one.status, 400);
+  assert.deepEqual(await one.json(), { results: [] });
+  assert.equal(long.status, 400);
+  assert.deepEqual(await long.json(), { results: [] });
+  assert.equal(one.headers.get("cache-control"), "no-store");
+  assert.equal(long.headers.get("cache-control"), "no-store");
+});
+
+test("song search route returns 429 when its limiter rejects", async () => {
+  let calls = 0;
+  const result = await handleSongSearch(searchRequest("danc"), {
+    SONG_SEARCH_LIMITER: { limit: async () => { calls += 1; return { success: false }; } },
+  }, async () => { throw new Error("fetch should not run"); });
+  assert.equal(calls, 1);
+  assert.equal(result.status, 429);
+  assert.deepEqual(await result.json(), { results: [] });
+  assert.equal(result.headers.get("cache-control"), "no-store");
+});
+
+test("song search route handles missing secrets without fetching", async () => {
+  let calls = 0;
+  const result = await handleSongSearch(searchRequest("danc"), {}, async () => { calls += 1; throw new Error("fetch should not run"); });
+  assert.equal(calls, 0);
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { results: [] });
+  assert.equal(result.headers.get("cache-control"), "no-store");
+});
+
+test("song search route uses canned fake results without fetching", async () => {
+  let calls = 0;
+  const result = await handleSongSearch(searchRequest("danc"), { RSVP_STORE: "fake" }, async () => { calls += 1; throw new Error("fetch should not run"); });
+  assert.equal(calls, 0);
+  assert.equal(result.status, 200);
+  assert.equal((await result.json() as { results: unknown[] }).results.length, 2);
+  assert.equal(result.headers.get("cache-control"), "no-store");
+});
+
+test("Spotify search returns empty without secrets and never fetches", async () => {
+  let calls = 0;
+  assert.deepEqual(await searchSpotifyTracks("danc", { requestFetch: async () => { calls += 1; throw new Error("fetch should not run"); } }), []);
+  assert.equal(calls, 0);
 });
 
 test("Spotify token is cached and tracks are mapped and capped", async () => {

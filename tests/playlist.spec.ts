@@ -71,6 +71,41 @@ test.describe("Playlist section", () => {
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
   });
 
+  test("drops the picked track ID when the song is edited", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Song Edit Tester");
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.press("ArrowDown");
+    await song.press("Enter");
+    await song.fill(`${await song.inputValue()} live`);
+    const sent = page.waitForRequest((request) => request.url().includes("songs.submit"));
+    await form.locator("button[type=submit]").click();
+    expect((await sent).postData() ?? "").not.toContain("spotifyTrackId");
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
+  test("drops the picked track ID when the artist is edited", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Artist Edit Tester");
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.press("ArrowDown");
+    await song.press("Enter");
+    const artist = form.locator('input[name="artist"]');
+    await artist.fill(`${await artist.inputValue()} live`);
+    const sent = page.waitForRequest((request) => request.url().includes("songs.submit"));
+    await form.locator("button[type=submit]").click();
+    expect((await sent).postData() ?? "").not.toContain("spotifyTrackId");
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
   test("keeps a closed list closed when a slow search answers", async ({ page }) => {
     let release!: () => void;
     const held = new Promise<void>((resolve) => { release = resolve; });

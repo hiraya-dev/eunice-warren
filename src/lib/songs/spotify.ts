@@ -16,10 +16,10 @@ const mapTrack = (track: any): SongSuggestion => {
   };
 };
 
-async function token(clientId: string, clientSecret: string, requestFetch: FetchLike) {
+async function token(clientId: string, clientSecret: string, requestFetch: FetchLike, signal?: AbortSignal) {
   if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.value;
   const response = await requestFetch("https://accounts.spotify.com/api/token", {
-    method: "POST", headers: { Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`, "content-type": "application/x-www-form-urlencoded" }, body: "grant_type=client_credentials",
+    method: "POST", headers: { Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`, "content-type": "application/x-www-form-urlencoded" }, body: "grant_type=client_credentials", signal,
   });
   if (!response.ok) throw new Error("spotify token error");
   const data = await response.json() as { access_token?: string; expires_in?: number };
@@ -36,9 +36,9 @@ export async function searchSpotifyTracks(query: string, options: { clientId?: s
   const requestFetch = options.requestFetch ?? fetch;
   const request = async (accessToken: string) => requestFetch(`https://api.spotify.com/v1/search?type=track&limit=5&market=PH&q=${encodeURIComponent(query)}`, { headers: { Authorization: `Bearer ${accessToken}` }, signal: options.signal });
   try {
-    let accessToken = await token(options.clientId, options.clientSecret, requestFetch);
+    let accessToken = await token(options.clientId, options.clientSecret, requestFetch, options.signal);
     let response = await request(accessToken);
-    if (response.status === 401) { clearSpotifyToken(); accessToken = await token(options.clientId, options.clientSecret, requestFetch); response = await request(accessToken); }
+    if (response.status === 401) { clearSpotifyToken(); accessToken = await token(options.clientId, options.clientSecret, requestFetch, options.signal); response = await request(accessToken); }
     if (!response.ok) return [];
     const data = await response.json() as { tracks?: { items?: unknown[] } };
     return (data.tracks?.items ?? []).slice(0, 5).map(mapTrack);
