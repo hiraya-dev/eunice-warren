@@ -192,9 +192,14 @@ test.describe("guest preloader", () => {
   test("reduced motion does not animate the envelope transform", { tag: ["@single"] }, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.reload();
-    const envelope = preloader(page).locator(".preloader_stage");
-    await page.keyboard.press("Escape");
-    await expect(envelope).toHaveCSS("animation-name", "none");
+    await expect(preloader(page).locator("[data-preloader-name]")).toBeFocused();
+    const animationName = await page.evaluate(() => {
+      const envelope = document.querySelector<HTMLElement>("[data-preloader] .preloader_stage");
+      if (!envelope) throw new Error("Preloader envelope was not found");
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      return getComputedStyle(envelope).animationName;
+    });
+    expect(animationName).toBe("none");
   });
 
   // The envelope picks its layout by its own width, so a window just above the phone breakpoint
