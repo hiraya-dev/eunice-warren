@@ -570,3 +570,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the spec passes `--repeat-each 20 --workers 8` and fails when the CSS rule it guards is removed.
 - **Guard:** none
 - **Paths:** `tests/**`
+
+### L-062 — Closing a search-as-you-type list cancels the search behind it
+- **Date:** 2026-11-23
+- **Trigger:** #109, CHANGES_REQUIRED (Codex second opinion)
+- **Symptom:** on the song request form, pressing Escape or clicking away while a Spotify search was still in flight closed the list, then the late response reopened it. Escape did nothing at all before the first results arrived, because the key handler returned early while the list was hidden.
+- **Root cause:** dismissing only hid the popup; the pending timer, fetch and sequence number stayed live, so the response still counted as current.
+- **Rule:** every way a suggestion list closes (Escape, blur, outside tap, pick, submit, query too short) goes through one dismiss function that clears the debounce timer, aborts the request and bumps the sequence, and runs whether or not the list is visible yet. Do not block a link inside the popup with `preventDefault` on `pointerdown`; keep the list open by checking the blur's `relatedTarget` instead.
+- **Check:** `tests/playlist.spec.ts` "keeps a closed list closed when a slow search answers" (holds the search response, presses Escape, releases it, expects the listbox hidden) and "opens the highlighted track on Spotify from the credit".
+- **Guard:** none
+- **Paths:** `src/components/sections/Playlist.astro`, `src/scripts/**`

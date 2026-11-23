@@ -71,6 +71,45 @@ test.describe("Playlist section", () => {
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
   });
 
+  test("keeps a closed list closed when a slow search answers", async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let answered = false;
+    await page.route("**/api/songs/search?**", async (route) => {
+      const response = await route.fetch();
+      await held;
+      await route.fulfill({ response });
+      answered = true;
+    });
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await page.waitForRequest("**/api/songs/search?**");
+    await song.press("Escape");
+    release();
+    await expect.poll(() => answered).toBe(true);
+    await page.waitForTimeout(100);
+    await expect(form.locator('[role="listbox"]')).toBeHidden();
+    await expect(song).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("opens the highlighted track on Spotify from the credit", async ({ page, context }) => {
+    await context.route("https://open.spotify.com/**", (route) => route.fulfill({ body: "spotify" }));
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.press("ArrowDown");
+    const opened = context.waitForEvent("page");
+    await form.locator("[data-song-search-credit]").click();
+    const tab = await opened;
+    expect(tab.url()).toBe(`https://open.spotify.com/track/${fakeSongSearch("danc")[0]!.id}`);
+  });
+
   test("submits free text after closing suggestions", async ({ page }) => {
     await page.goto("/");
     const form = page.locator('form[name="song-request"]');
