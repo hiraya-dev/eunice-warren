@@ -560,3 +560,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** `grep -rn networkidle tests` finds nothing.
 - **Guard:** none
 - **Paths:** `tests/**`
+
+### L-060 — Read a closing element's style in the same turn that closes it
+- **Date:** 2026-11-23
+- **Trigger:** #106, flaky test
+- **Symptom:** `tests/preloader.spec.ts` "reduced motion does not animate the envelope transform" failed under `--repeat-each 20 --workers 8` with `element(s) not found`: Escape removed the overlay (160 ms under reduced motion) before `toHaveCSS` polled.
+- **Root cause:** the spec pressed a key that starts a timed removal, then asserted on the element with a polling matcher, racing the removal timer.
+- **Rule:** to assert the style of an element that a close or dismiss removes on a timer, wait for the component to be ready, then dispatch the trigger and read `getComputedStyle` in one synchronous `page.evaluate`.
+- **Check:** the spec passes `--repeat-each 20 --workers 8` and fails when the CSS rule it guards is removed.
+- **Guard:** none
+- **Paths:** `tests/**`

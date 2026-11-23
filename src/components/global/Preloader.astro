@@ -81,7 +81,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
 <script>
   import { actions } from "astro:actions";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
-  import { setGuest } from "@/lib/guest";
+  import { getGuest, setGuest, type RememberedGuest } from "@/lib/guest";
   import { lenis } from "@/scripts/scroll.ts";
 
   const initPreloader = () => {
@@ -146,6 +146,27 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       submit.disabled = false;
       input.focus();
     };
+    const setFoundState = (guest: RememberedGuest, returning = false) => {
+      state = "found";
+      title.textContent = `${returning ? "Welcome back" : "Welcome"}, ${guest.householdName ?? guest.name}.`;
+      label.textContent = "To";
+      input.value = guest.householdName ?? guest.name;
+      input.readOnly = true;
+      input.classList.add("is-found");
+      hint.textContent = "";
+      mobileHint.textContent = "";
+      hint.classList.remove("is-error");
+      mobileHint.classList.remove("is-error");
+      notYou.hidden = false;
+      message.hidden = true;
+      if (guest.seats !== undefined) admits.querySelector("span")!.textContent = String(guest.seats);
+      admits.hidden = returning;
+      submitLabel.textContent = "Open my letter →";
+      submit.disabled = false;
+      input.focus();
+    };
+    const remembered = getGuest();
+    if (remembered && "name" in remembered) setFoundState(remembered, true);
     const close = () => {
       if (closing) return;
       if (state !== "found") setGuest({ skipped: true, at: new Date().toISOString() });
@@ -231,24 +252,9 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
           submit.disabled = false;
           return;
         }
-        state = "found";
         const guest = { name: result.data.matchedName, householdName: result.data.invite.householdName, seats: result.data.invite.seats, at: new Date().toISOString() };
         setGuest(guest);
-        title.textContent = `Welcome, ${guest.householdName}.`;
-        label.textContent = "To";
-        input.value = guest.householdName;
-        input.readOnly = true;
-        input.classList.add("is-found");
-        hint.textContent = "";
-        mobileHint.textContent = "";
-        hint.classList.remove("is-error");
-        mobileHint.classList.remove("is-error");
-        notYou.hidden = false;
-        message.hidden = true;
-        admits.querySelector("span")!.textContent = String(guest.seats);
-        admits.hidden = false;
-        submitLabel.textContent = "Open my letter →";
-        submit.disabled = false;
+        setFoundState(guest);
         document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
       } catch (error) {
         suggestion = "";
@@ -451,11 +457,8 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       .preloader_ribbon, .preloader_couple, .preloader_ticket, .preloader_sunset, .preloader_shell { display: block; }
     }
     @media (max-width: 30rem) {
-      .preloader_layout { align-content: start; gap: 1.75rem; padding: 2rem 1.25rem 3rem; }
+      .preloader_layout { gap: 1.75rem; padding: 2.5rem 1.25rem; }
       .preloader_title { margin-top: -.75rem; font-size: 2rem; line-height: 2.25rem; }
-    }
-    @media (max-width: 30rem) and (min-height: 50rem) {
-      .preloader_layout { align-content: center; }
     }
     /* The envelope picks its layout by its own width: the desktop face (absolute stamps, postmark and button)
        needs about 44rem, so anything narrower stacks the button under a compact envelope. */

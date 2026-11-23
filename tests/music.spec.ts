@@ -114,7 +114,7 @@ test.describe("background music returning guest", () => {
     const size = page.viewportSize();
     if (size && size.width >= 1024) await page.setViewportSize({ width: size.width, height: DESKTOP.height });
     page.on("request", (request) => { if (request.url().includes("/audio/")) requests.push(request.url()); });
-    await page.addInitScript(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
+    await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
     await page.goto("/");
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
     await heroSettled(page);
@@ -135,6 +135,9 @@ test.describe("background music returning guest", () => {
 
 test.describe("background music teleport, desktop", { tag: ["@single"] }, () => {
   test.use({ viewport: DESKTOP });
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
+  });
 
   test("flies from the hero polaroid to the tag and back on the same audio node", async ({ page }) => {
     await page.goto("/");
@@ -403,6 +406,9 @@ test.describe("background music title ticker, phone", { tag: ["@single"] }, () =
 
 test.describe("background music teleport, reduced motion", { tag: ["@single"] }, () => {
   test.use({ viewport: DESKTOP, reducedMotion: "reduce" });
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
+  });
 
   test("keeps the ellipsis and scrolls nothing, even while the song plays", async ({ page }) => {
     await page.goto("/");
@@ -558,7 +564,7 @@ test.describe("background music disc, phone", { tag: ["@single"] }, () => {
     await expect.poll(() => page.evaluate(() => Boolean((window as unknown as { musicOpened?: boolean }).musicOpened)), { timeout: 15_000 }).toBe(true);
     await expect(containerOf(page)).not.toHaveAttribute(PILL_OPEN, "", { timeout: 15_000 });
 
-    await page.addInitScript(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: new Date().toISOString() })));
+    await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
     await page.reload();
     await expect(page.locator("[data-preloader]")).toHaveCount(0);
     await expect(discOf(page)).toBeVisible();
@@ -754,6 +760,9 @@ test.describe("background music disc, short phone", { tag: ["@single"] }, () => 
 
 test.describe("background music disc, phone sizes", { tag: ["@single"] }, () => {
   test.use({ reducedMotion: "reduce", hasTouch: true, isMobile: true });
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
+  });
 
   test("never covers the hero or nav actions while it is shown", async ({ page }) => {
     test.setTimeout(120_000);
