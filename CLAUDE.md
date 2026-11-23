@@ -191,8 +191,8 @@ deploy/delete/rollback/secret/kv`, `gh repo delete/edit`, `gh` API deletes and
 
 - Hooks block: `--merge`, `--rebase`, `--delete-branch` (L-001); checking out `main`
   (L-002); `git worktree add` (L-003); co-author trailers (L-004); any push to
-  `main` (L-005); a commit chained after a pipe (`local-checks`; a piped push is
-  not caught, so chain `prepush && git push` without a pipe); a Codex
+  `main` (L-005); a commit chained after a pipe (`local-checks`) or a push
+  chained after one (L-058); a Codex
   handoff without `node_modules` (L-006).
 - `git status -sb` before each handoff, commit and push; others' hunks are not
   "stray" (L-007).

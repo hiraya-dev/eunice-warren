@@ -19,9 +19,11 @@ Codex cannot run any of this (it cannot bind a port).
   `scripts/ci` and hook tests, the RSVP and With Love unit tests, markdownlint, and
   `astro check`. It binds no port and opens no browser.
 - Chain the commit or push on the check with `&&`, never after a pipe
-  (`npm run prepush | tail && git push` sees `tail`'s exit status). Trim output with
-  `set -o pipefail;` first. The hook `scripts/hooks/guard-git.mjs` rule pipe-commit
-  blocks the piped form before a commit.
+  (`npm run prepush | tail && git push` sees `tail`'s exit status). To trim output,
+  redirect it to a log and read that (`npm run prepush > .context/<task>/prepush.log
+  2>&1 && git push`), or put `set -o pipefail;` first. The hook
+  `scripts/hooks/guard-git.mjs` rule pipe-commit blocks the piped form before a
+  commit, and rule pipe-push (L-058) before a push.
 - No full Playwright run gates a commit. Commit, then push; CI runs the suite.
 - **Push once per round.** Every push to an open PR starts a CI run, and a
   superseded run is cancelled half done. Commit each step locally and push when the
