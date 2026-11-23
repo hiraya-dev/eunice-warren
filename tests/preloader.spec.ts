@@ -15,6 +15,51 @@ test.describe("guest preloader", () => {
     await expect(preloader(page).locator("[data-preloader-name]")).toBeFocused();
   });
 
+  test("shows the blank envelope again after a skipped visit", { tag: ["@single"] }, async ({ page }) => {
+    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
+    await page.reload();
+    await expect(preloader(page)).toBeVisible();
+    await expect(preloader(page).getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(preloader(page).locator("[data-preloader-name]")).toHaveValue("");
+  });
+
+  test("welcomes a remembered guest without looking them up", { tag: ["@single"] }, async ({ page }) => {
+    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "The Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
+    const requests: string[] = [];
+    page.on("request", (request) => { if (request.url().includes("rsvp.find")) requests.push(request.url()); });
+    await page.reload();
+    const overlay = preloader(page);
+    await expect(overlay.getByRole("heading", { name: "Welcome back, The Cruz Family." })).toBeVisible();
+    await expect(overlay.locator("[data-preloader-name]")).toHaveValue("The Cruz Family");
+    await expect(overlay.locator("[data-preloader-name]")).toHaveAttribute("readonly", "");
+    await expect(overlay.locator("[data-preloader-name]")).toHaveClass(/is-found/);
+    await expect(overlay.locator("[data-preloader-not-you]")).toBeVisible();
+    await expect(overlay.locator("[data-preloader-admits]")).toBeHidden();
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(overlay).toHaveCount(0);
+    expect(requests).toHaveLength(0);
+  });
+
+  test("lets a remembered guest choose a different name", { tag: ["@single"] }, async ({ page }) => {
+    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "The Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
+    await page.reload();
+    const overlay = preloader(page);
+    await overlay.getByRole("button", { name: "Write your own name" }).click();
+    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(overlay.locator("[data-preloader-name]")).toHaveValue("");
+    await expect(overlay.locator("[data-preloader-name]")).not.toHaveAttribute("readonly", "");
+    await expect(overlay.locator("[data-preloader-name]")).not.toHaveClass(/is-found/);
+  });
+
+  test("keeps the remembered guest after opening the letter", { tag: ["@single"] }, async ({ page }) => {
+    const guest = { name: "Mateo Cruz", householdName: "The Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" };
+    await page.evaluate((value) => localStorage.setItem("ew-guest-v2", JSON.stringify(value)), guest);
+    await page.reload();
+    await preloader(page).getByRole("button", { name: "Open my letter" }).click();
+    await expect(preloader(page)).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ew-guest-v2") || "null"))).toEqual(guest);
+  });
+
   test("finds a guest, remembers them, and pre-fills RSVP", { tag: ["@smoke"] }, async ({ page }) => {
     await preloader(page).locator("[data-preloader-name]").fill("Mateo Cruz");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
@@ -117,7 +162,7 @@ test.describe("guest preloader", () => {
     await expect(preloader(page)).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
     await page.reload();
-    await expect(preloader(page)).toHaveCount(0);
+    await expect(preloader(page)).toBeVisible();
   });
 
   test("reveals the hero when just browsing closes the preloader", { tag: ["@single"] }, async ({ page }) => {
