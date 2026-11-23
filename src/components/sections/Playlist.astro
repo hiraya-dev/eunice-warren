@@ -172,13 +172,19 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
           name="name"
           placeholder=""
           required
-        /><Input
+        /><div class="song-search_field"><Input
           appearance="postcard"
           label="Song"
           name="song"
+          id="song-request-song"
           required
           placeholder="Song title"
-        /><Input
+          autocomplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="song-request-suggestions"
+        /><div class="song-search_popup" data-song-search-popup hidden><div id="song-request-suggestions" class="song-search_list" role="listbox" aria-label="Song suggestions"></div><div class="song-search_footer"><span>Not listed? Just keep typing.</span><a class="song-search_credit" href="https://open.spotify.com/" target="_blank" rel="noopener" aria-label="Open on Spotify" data-song-search-credit><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 9.5c3.8-1 7.1-.5 10 1M7.5 13c3.1-.7 5.8-.3 8.4 1M8.5 16c2.2-.3 4.1.1 5.9 1"/></svg><span>SPOTIFY</span></a></div></div><div class="sr-only" aria-live="polite" data-song-search-live></div></div><input type="hidden" name="spotifyTrackId" /><input type="hidden" name="coverUrl" /><Input
           appearance="postcard"
           label="Artist (optional)"
           name="artist"
@@ -210,21 +216,58 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     const wrap = section.querySelector<HTMLElement>(".form_wrap");
     const submit = form?.querySelector<HTMLButtonElement>("button[type='submit']");
     const failed = wrap?.querySelector<HTMLElement>(".form_note-failed");
+    const songInput = form?.querySelector<HTMLInputElement>('input[name="song"]');
+    const artistInput = form?.querySelector<HTMLInputElement>('input[name="artist"]');
+    const list = form?.querySelector<HTMLElement>("[role='listbox']");
+    const live = form?.querySelector<HTMLElement>("[data-song-search-live]");
+    const popup = form?.querySelector<HTMLElement>("[data-song-search-popup]");
+    const credit = form?.querySelector<HTMLAnchorElement>("[data-song-search-credit]");
+    const spotifyTrackId = form?.querySelector<HTMLInputElement>('input[name="spotifyTrackId"]');
+    const coverUrl = form?.querySelector<HTMLInputElement>('input[name="coverUrl"]');
+    type Suggestion = { id: string; title: string; artist: string; album: string; cover: string | null };
+    let suggestions: Suggestion[] = [], highlighted = -1, timer: number | undefined, sequence = 0, searchController: AbortController | undefined;
+    const closeSuggestions = () => { if (!list || !songInput) return; if (popup) popup.hidden = true; songInput.setAttribute("aria-expanded", "false"); songInput.removeAttribute("aria-activedescendant"); highlighted = -1; };
+    const clearPicked = () => { if (spotifyTrackId) spotifyTrackId.value = ""; if (coverUrl) coverUrl.value = ""; };
+    const renderSuggestions = () => {
+      if (!list || !songInput) return;
+      list.replaceChildren();
+      suggestions.forEach((item, index) => {
+        const option = document.createElement("div"); option.className = "song-search_option"; option.id = `song-search-option-${index}`; option.setAttribute("role", "option"); option.setAttribute("aria-selected", String(index === highlighted)); option.dataset.index = String(index);
+        const cover = document.createElement(item.cover ? "img" : "span"); cover.className = "song-search_cover"; if (item.cover) { (cover as HTMLImageElement).src = item.cover; (cover as HTMLImageElement).alt = ""; (cover as HTMLImageElement).loading = "lazy"; } else cover.setAttribute("aria-hidden", "true");
+        const text = document.createElement("span"); text.className = "song-search_text"; const title = document.createElement("span"); title.className = "song-search_title"; title.textContent = item.title; const meta = document.createElement("span"); meta.className = "song-search_meta"; meta.textContent = `${item.artist} · ${item.album}`; text.append(title, meta); option.append(cover, text); list.append(option);
+      });
+      if (suggestions.length) {
+        if (credit) credit.href = `https://open.spotify.com/track/${suggestions[highlighted >= 0 ? highlighted : 0].id}`;
+        if (popup) popup.hidden = false; songInput.setAttribute("aria-expanded", "true"); if (highlighted >= 0) songInput.setAttribute("aria-activedescendant", `song-search-option-${highlighted}`); live && (live.textContent = `${suggestions.length} suggestions`);
+      } else { closeSuggestions(); if (live) live.textContent = ""; }
+    };
+    // Bumping the sequence makes any pending search response stale, so a closed list never reopens.
+    const cancelSearch = () => { sequence++; if (timer) window.clearTimeout(timer); searchController?.abort(); };
+    const dismissSuggestions = () => { cancelSearch(); closeSuggestions(); };
+    const pickSuggestion = (item: Suggestion) => { if (!songInput || !artistInput) return; cancelSearch(); songInput.value = item.title; artistInput.value = item.artist; if (spotifyTrackId) spotifyTrackId.value = item.id; if (coverUrl) coverUrl.value = item.cover ?? ""; closeSuggestions(); };
+    songInput?.addEventListener("input", () => { clearPicked(); cancelSearch(); const query = songInput.value.trim(); if (query.length < 2) { suggestions = []; renderSuggestions(); return; } const current = sequence; timer = window.setTimeout(async () => { const requestController = new AbortController(); searchController = requestController; try { const response = await fetch(`/api/songs/search?q=${encodeURIComponent(query)}`, { signal: requestController.signal }); if (!response.ok) throw new Error("search failed"); const data = await response.json() as { results?: Suggestion[] }; if (current !== sequence) return; suggestions = (data.results ?? []).slice(0, 5); highlighted = -1; renderSuggestions(); } catch { if (current === sequence) { suggestions = []; renderSuggestions(); } } }, 250); });
+    songInput?.addEventListener("keydown", (event) => { if (event.key === "Escape") { if (!popup?.hidden) event.preventDefault(); dismissSuggestions(); return; } if (!suggestions.length || popup?.hidden) return; if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); highlighted = highlighted < 0 ? (event.key === "ArrowDown" ? 0 : suggestions.length - 1) : (highlighted + (event.key === "ArrowDown" ? 1 : -1) + suggestions.length) % suggestions.length; songInput.setAttribute("aria-activedescendant", `song-search-option-${highlighted}`); renderSuggestions(); } else if (event.key === "Enter" && highlighted >= 0) { event.preventDefault(); pickSuggestion(suggestions[highlighted]); } });
+    // Every press inside the popup keeps focus on Song: Safari does not focus a tapped link, so a blur would close the list before the credit's click lands. The click itself still fires.
+    popup?.addEventListener("pointerdown", (event) => { event.preventDefault(); const option = (event.target as HTMLElement).closest<HTMLElement>("[data-index]"); if (!option) return; pickSuggestion(suggestions[Number(option.dataset.index)]!); });
+    const leavesSearch = (next: EventTarget | null) => !(next instanceof Node && (popup?.contains(next) || next === songInput));
+    songInput?.addEventListener("blur", (event) => { if (leavesSearch(event.relatedTarget)) dismissSuggestions(); });
+    popup?.addEventListener("focusout", (event) => { if (leavesSearch(event.relatedTarget)) dismissSuggestions(); }); artistInput?.addEventListener("input", clearPicked); document.addEventListener("pointerdown", (event) => { if (!form?.contains(event.target as Node)) dismissSuggestions(); });
     const turnstile = createTurnstileController(isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV));
     const remembered = getGuest();
     if (nameInput && remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
+      dismissSuggestions();
       if (!form.checkValidity() || !submit) return;
       submit.disabled = true;
       if (wrap) wrap.dataset.state = "sending";
       if (failed) failed.hidden = true;
       try {
         const value = (field: string) => (form.elements.namedItem(field) as HTMLInputElement | HTMLTextAreaElement).value;
-        const result = await actions.songs.submit({ name: value("name"), song: value("song"), artist: value("artist") || undefined, dedication: value("dedication") || undefined, turnstileToken: await turnstile.getToken(section.querySelector<HTMLElement>("[data-playlist-turnstile]")!) });
+        const result = await actions.songs.submit({ name: value("name"), song: value("song"), artist: value("artist") || undefined, dedication: value("dedication") || undefined, spotifyTrackId: value("spotifyTrackId") || undefined, coverUrl: value("coverUrl") || undefined, turnstileToken: await turnstile.getToken(section.querySelector<HTMLElement>("[data-playlist-turnstile]")!) });
         if (result.error) throw new Error(result.error.message);
         if (wrap) wrap.dataset.state = "sent";
-        form.reset();
+        form.reset(); clearPicked(); dismissSuggestions();
       } catch (error) {
         if (wrap) wrap.dataset.state = "failed";
         if (failed) { failed.textContent = error instanceof Error ? error.message : "Something went wrong. Please try again."; failed.hidden = false; }
@@ -622,6 +665,124 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     .playlist_form-wrap {
       min-width: 0;
     }
+    .song-search_field {
+      position: relative;
+    }
+    .song-search_popup {
+      position: absolute;
+      z-index: 3;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      left: 0;
+      border: 0.09375rem solid var(--dark-900);
+      background: var(--light-200);
+      box-shadow:
+        4px 4px 0 var(--brand-500),
+        0 14px 30px rgb(31 47 92 / 0.14);
+      animation: song-search_in 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .song-search_popup[hidden] {
+      display: none;
+    }
+    @keyframes song-search_in {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+    }
+    .song-search_option {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) 24px;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--light-300);
+      cursor: pointer;
+    }
+    .song-search_option:last-child {
+      border-bottom: 0;
+    }
+    .song-search_option[aria-selected="true"] {
+      background: color-mix(in srgb, var(--brand-500) 55%, transparent);
+    }
+    .song-search_cover {
+      display: block;
+      width: 40px;
+      height: 40px;
+      background: var(--brand-500);
+      box-shadow: inset 0 0 0 1px rgb(31 47 92 / 0.12);
+      object-fit: contain;
+    }
+    .song-search_text {
+      display: grid;
+      min-width: 0;
+    }
+    .song-search_title,
+    .song-search_meta {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .song-search_title {
+      color: var(--dark-900);
+      font: 400 1rem/1.25 var(--primary-family);
+    }
+    .song-search_option[aria-selected="true"] .song-search_title {
+      font-weight: 500;
+    }
+    .song-search_meta {
+      color: var(--dark-700);
+      font: 0.75rem/1.3333 var(--mono-family);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .song-search_option:hover {
+        background: color-mix(in srgb, var(--brand-500) 55%, transparent);
+      }
+      .song-search_option[aria-selected="true"]::after {
+        content: "↵" / "";
+        color: var(--dark-900);
+        font: 0.875rem/1 var(--mono-family);
+        text-align: right;
+      }
+    }
+    .song-search_footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 10px 14px;
+      border-top: 0.09375rem dashed var(--light-300);
+      background: var(--light-100);
+    }
+    .song-search_footer > span {
+      min-width: 0;
+      color: var(--dark-700);
+      font: 0.8125rem/1.3846 var(--primary-family);
+    }
+    .song-search_credit {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      gap: 6px;
+      color: var(--dark-900);
+      font: 0.6875rem/1.2727 var(--mono-family);
+      letter-spacing: 0.08em;
+      text-decoration: none;
+    }
+    .song-search_credit:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
+    }
+    .song-search_credit svg {
+      width: 1rem;
+      height: 1rem;
+      fill: var(--dark-900);
+      stroke: var(--light-100);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+    }
     .playlist_postcard {
       position: relative;
       display: flex;
@@ -755,6 +916,9 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       }
     }
     @media (prefers-reduced-motion: reduce) {
+      .song-search_popup {
+        animation: none;
+      }
       .playlist_embed iframe {
         transition: none;
       }

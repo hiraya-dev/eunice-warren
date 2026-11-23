@@ -3,7 +3,7 @@ import { getDb } from "../db/client.ts";
 import type { D1Database } from "../db/types.ts";
 import { normalizeGuestName } from "../rsvp/store.ts";
 
-export interface SongInput { name: string; song: string; artist?: string; dedication?: string }
+export interface SongInput { name: string; song: string; artist?: string; dedication?: string; spotifyTrackId?: string; coverUrl?: string }
 export interface SongStore { add(input: SongInput): Promise<void> }
 
 export class SongCapError extends Error {
@@ -24,8 +24,8 @@ export const createD1SongStore = (database: D1Database): SongStore => {
   return { async add(input) {
     const nameKey = normalizeGuestName(input.name);
     // Drizzle cannot express SQLite's conditional INSERT ... SELECT cap atomically.
-    const result = await db.run(sql`insert into songs (name, name_key, song, artist, dedication, created_at)
-      select ${input.name}, ${nameKey}, ${input.song}, ${input.artist ?? null}, ${input.dedication ?? null}, ${new Date().toISOString()}
+    const result = await db.run(sql`insert into songs (name, name_key, song, artist, dedication, spotify_track_id, cover_url, created_at)
+      select ${input.name}, ${nameKey}, ${input.song}, ${input.artist ?? null}, ${input.dedication ?? null}, ${input.spotifyTrackId ?? null}, ${input.coverUrl ?? null}, ${new Date().toISOString()}
       where (select count(*) from songs) < 500 and (select count(*) from songs where name_key = ${nameKey}) < 20`);
     if (Number((result as { changes?: number; meta?: { changes?: number } }).changes ?? (result as { meta?: { changes?: number } }).meta?.changes ?? 0) > 0) return;
     const [total, byName] = await Promise.all([

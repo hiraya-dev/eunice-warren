@@ -15,6 +15,7 @@ import type { D1Database } from "@/lib/db/types";
 import { getLoveStore } from "@/lib/with-love/store";
 import { isJpeg, isTodayInManila, isWithinLength, stripControls } from "@/lib/with-love/validation";
 import { rsvpSubmitInput } from "@/lib/rsvp/input";
+import { songInput } from "@/lib/songs/input";
 
 const TEST_SECRET = "local-rsvp-token-secret";
 const envRecord = env as unknown as Record<string, unknown>;
@@ -101,9 +102,6 @@ const findInput = z.object({
   name: z.string().trim().min(1).max(120),
   turnstileToken: z.string().max(4096),
 });
-const songInput = z.object({
-  name: z.string().trim().min(1).max(120), song: z.string().trim().min(1).max(120), artist: z.string().trim().max(120).optional(), dedication: z.string().trim().max(500).optional(), turnstileToken: z.string().max(4096),
-});
 const loveSubmitInput = z.object({
   photo: z.custom<File>((value) => typeof File !== "undefined" && value instanceof File),
   message: z.string(),
@@ -153,7 +151,7 @@ export const server = {
     input: songInput,
     handler: async (input, context) => {
         await guard(input.turnstileToken, context, true, "SONG_LIMITER", "Easy on the requests. Try again in a minute.");
-      const clean = { name: stripControls(input.name).trim(), song: stripControls(input.song).trim(), artist: input.artist ? stripControls(input.artist).trim() : undefined, dedication: input.dedication ? stripControls(input.dedication).trim() : undefined };
+      const clean = { name: stripControls(input.name).trim(), song: stripControls(input.song).trim(), artist: input.artist ? stripControls(input.artist).trim() : undefined, dedication: input.dedication ? stripControls(input.dedication).trim() : undefined, spotifyTrackId: input.spotifyTrackId, coverUrl: input.coverUrl };
       if (!clean.name || !clean.song) throw new ActionError({ code: "BAD_REQUEST", message: "Please add your name and song." });
       try { return await runSongAction(getSongStore(), clean); }
       catch (error) {

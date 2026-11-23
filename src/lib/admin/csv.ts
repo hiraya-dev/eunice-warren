@@ -1,4 +1,4 @@
-import { csv, manilaDateTime, manilaParts } from "./presentation.ts";
+import { csv, manilaDateTime, manilaParts, spotifyTrackUrl } from "./presentation.ts";
 import type { AdminRsvpList, AdminStore } from "./store.ts";
 import { SLIPPER_SIZES } from "../rsvp/slippers.ts";
 
@@ -54,6 +54,7 @@ export async function buildSongCsv(store: AdminStore, now = new Date()) {
         "Dedication",
         "Sent",
         "Times requested",
+        "Spotify link",
       ],
       ...data.rows.map((row) => [
         row.no,
@@ -63,6 +64,7 @@ export async function buildSongCsv(store: AdminStore, now = new Date()) {
         row.dedication ?? "",
         manilaDateTime(row.createdAt),
         row.requestCount,
+        spotifyTrackUrl(row.spotifyTrackId) ?? "",
       ]),
     ];
     return new Response(csv(rows), {

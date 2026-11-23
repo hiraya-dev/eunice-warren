@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { Miniflare } from "miniflare";
 import { createD1RsvpStore } from "../src/lib/rsvp/d1.ts";
 import { createD1SongStore } from "../src/lib/songs/store.ts";
@@ -66,9 +66,11 @@ test("D1 query budgets with Miniflare", async (t) => {
   }
 
   try {
-    const migration = readFileSync("migrations/0000_init.sql", "utf8");
-    for (const statement of migration.split(/--> statement-breakpoint\s*/).map((part) => part.trim()).filter(Boolean))
-      await db.prepare(statement).run();
+    for (const file of readdirSync("migrations").filter((name) => name.endsWith(".sql")).sort()) {
+      const migration = readFileSync(`migrations/${file}`, "utf8");
+      for (const statement of migration.split(/--> statement-breakpoint\s*/).map((part) => part.trim()).filter(Boolean))
+        await db.prepare(statement).run();
+    }
 
     const now = "2026-11-21T00:00:00.000Z";
     const inserts: D1PreparedStatement[] = [];

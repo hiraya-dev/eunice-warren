@@ -227,10 +227,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-032 — Every new validation rule gets a test that fails without it
 - **Date:** 2026-11-17
-- **Trigger:** PR #82, CHANGES_REQUIRED
+- **Trigger:** PR #82, CHANGES_REQUIRED; #109, CHANGES_REQUIRED (spotifyTrackId and coverUrl rules, the search route's 400/429/missing-secrets paths and the "edit after a pick drops the track ID" rule shipped with no test that fails without them)
 - **Symptom:** a new server rule (reject a slipper size on a seat that is not attending) and the inline error's clear-on-change had no assertion; deleting either left the suite green. A `toHaveRole("alert")` check passed whether the error was visible or not.
 - **Root cause:** the brief listed the tests by area ("validation accept/reject") rather than one assertion per acceptance criterion, so tests covered the happy and obvious-reject paths only.
-- **Rule:** a brief that adds a validation branch or an error state names one assertion per branch: each reject rule, the accept case, the decline path, and for an inline error both its visibility after the failed submit and its clearing after the fix. Assert visibility with `toBeVisible`/`toBeHidden`, never with a role or attribute alone.
+- **Rule:** a brief that adds a validation branch or an error state names one assertion per branch: each reject rule, the accept case, the decline path, and for an inline error both its visibility after the failed submit and its clearing after the fix. Assert visibility with `toBeVisible`/`toBeHidden`, never with a role or attribute alone. When the work comes back, Claude maps each named assertion to a test in the diff before the first commit; a report line "unit tests: PASS" is not that map.
 - **Check:** for each new `return false` (or thrown error) in the diff, a test exists that fails when that line is removed.
 - **Guard:** none
 - **Paths:** `src/lib/**`, `src/actions/**`, `tests/**`, `.agents/skills/codex-handoff/**`
@@ -570,3 +570,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** the spec passes `--repeat-each 20 --workers 8` and fails when the CSS rule it guards is removed.
 - **Guard:** none
 - **Paths:** `tests/**`
+
+### L-062 — Closing a search-as-you-type list cancels the search behind it
+- **Date:** 2026-11-23
+- **Trigger:** #109, CHANGES_REQUIRED (Codex second opinion)
+- **Symptom:** on the song request form, pressing Escape or clicking away while a Spotify search was still in flight closed the list, then the late response reopened it. Escape did nothing at all before the first results arrived, because the key handler returned early while the list was hidden.
+- **Root cause:** dismissing only hid the popup; the pending timer, fetch and sequence number stayed live, so the response still counted as current.
+- **Rule:** every way a suggestion list closes (Escape, blur, outside tap, pick, submit, query too short) goes through one dismiss function that clears the debounce timer, aborts the request and bumps the sequence, and runs whether or not the list is visible yet. Every `pointerdown` inside the popup calls `preventDefault` so focus stays on the input: Safari does not focus a tapped link, so a blur `relatedTarget` check alone closes the list before the link's click lands. `preventDefault` on `pointerdown` does not cancel the click, and the credit spec guards that.
+- **Check:** `tests/playlist.spec.ts` "keeps a closed list closed when a slow search answers" (holds the search response, presses Escape, releases it, expects the listbox hidden) and "opens the highlighted track on Spotify from the credit".
+- **Guard:** none
+- **Paths:** `src/components/sections/Playlist.astro`, `src/scripts/**`

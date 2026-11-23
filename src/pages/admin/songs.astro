@@ -6,6 +6,7 @@ import {
   duplicateLabel,
   relativeTime,
   songsEyebrow,
+  spotifyTrackUrl,
 } from "@/lib/admin/presentation";
 import { selectAdminStore, type AdminSongRequests } from "@/lib/admin/store";
 export const prerender = false;
@@ -111,6 +112,7 @@ const text = djText(view.rows);
                           {duplicateLabel(row.requestCount)}
                         </small>
                       )}
+                      {spotifyTrackUrl(row.spotifyTrackId) && <a href={spotifyTrackUrl(row.spotifyTrackId)!} target="_blank" rel="noopener">Spotify</a>}
                     </span>
                     <span data-song-artist>{row.artist ?? ""}</span>
                   </div>

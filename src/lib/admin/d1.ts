@@ -509,9 +509,10 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       artist: string | null;
       name: string;
       dedication: string | null;
+      spotify_track_id: string | null;
       created_at: string;
     }>(
-      `SELECT id,song,artist,name,dedication,created_at FROM songs ORDER BY created_at DESC,id DESC`,
+      `SELECT id,song,artist,name,dedication,spotify_track_id,created_at FROM songs ORDER BY created_at DESC,id DESC`,
     );
     const counts = new Map<string, number>();
     for (const row of source) {
@@ -532,6 +533,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
         artist: row.artist,
         name: row.name,
         dedication: row.dedication,
+        spotifyTrackId: row.spotify_track_id,
         createdAt: row.created_at,
         requestCount: counts.get(songKey(row.song, row.artist)) ?? 1,
       })),

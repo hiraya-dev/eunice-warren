@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { reveal } from "./helpers/reveal";
+import { fakeSongSearch } from "../src/lib/songs/fake";
 
 const fakeSpotify = `
   window.__playlistController = { listeners: [], addListener(name, callback) { this.listeners.push([name, callback]); } };
@@ -48,6 +49,119 @@ const readRecordAngle = (record: import("@playwright/test").Locator) =>
   );
 
 test.describe("Playlist section", () => {
+  test("searches and picks a song without submitting on Enter", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Playlist Tester");
+    const song = form.locator('input[name="song"]');
+    const artist = form.locator('input[name="artist"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    const picked = fakeSongSearch("danc")[0]!;
+    await song.press("ArrowDown");
+    await song.press("Enter");
+    expect(await song.inputValue()).toBe(picked.title);
+    expect(await artist.inputValue()).toBe(picked.artist);
+    await expect(form.locator('[role="listbox"]')).toBeHidden();
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeHidden();
+    const sent = page.waitForRequest((request) => request.url().includes("songs.submit"));
+    await form.locator("button[type=submit]").click();
+    expect((await sent).postData() ?? "").toContain(picked.id);
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
+  test("drops the picked track ID when the song is edited", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Song Edit Tester");
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.press("ArrowDown");
+    await song.press("Enter");
+    await song.fill(`${await song.inputValue()} live`);
+    const sent = page.waitForRequest((request) => request.url().includes("songs.submit"));
+    await form.locator("button[type=submit]").click();
+    expect((await sent).postData() ?? "").not.toContain("spotifyTrackId");
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
+  test("drops the picked track ID when the artist is edited", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Artist Edit Tester");
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.press("ArrowDown");
+    await song.press("Enter");
+    const artist = form.locator('input[name="artist"]');
+    await artist.fill(`${await artist.inputValue()} live`);
+    const sent = page.waitForRequest((request) => request.url().includes("songs.submit"));
+    await form.locator("button[type=submit]").click();
+    expect((await sent).postData() ?? "").not.toContain("spotifyTrackId");
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
+  test("keeps a closed list closed when a slow search answers", async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let answered = false;
+    await page.route("**/api/songs/search?**", async (route) => {
+      const response = await route.fetch();
+      await held;
+      await route.fulfill({ response });
+      answered = true;
+    });
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await page.waitForRequest("**/api/songs/search?**");
+    await song.press("Escape");
+    release();
+    await expect.poll(() => answered).toBe(true);
+    await page.waitForTimeout(100);
+    await expect(form.locator('[role="listbox"]')).toBeHidden();
+    await expect(song).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("opens the highlighted track on Spotify from the credit", async ({ page, context }) => {
+    await context.route("https://open.spotify.com/**", (route) => route.fulfill({ body: "spotify" }));
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.press("ArrowDown");
+    const opened = context.waitForEvent("page");
+    await form.locator("[data-song-search-credit]").click();
+    const tab = await opened;
+    expect(tab.url()).toBe(`https://open.spotify.com/track/${fakeSongSearch("danc")[0]!.id}`);
+  });
+
+  test("submits free text after closing suggestions", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Free Text Tester");
+    const song = form.locator('input[name="song"]');
+    await song.fill("danc");
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.fill("Dancing at our own pace");
+    await song.press("Escape");
+    await expect(form.locator('[role="listbox"]')).toBeHidden();
+    const sent = page.waitForRequest((request) => request.url().includes("songs.submit"));
+    await form.locator("button[type=submit]").click();
+    expect((await sent).postData() ?? "").not.toContain("spotifyTrackId");
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
   test("renders a passive turntable and a dark Spotify controller", { tag: ["@single"] }, async ({
     page,
   }) => {
@@ -394,4 +508,61 @@ test.describe("Playlist section", () => {
       ),
     ).toBe(true);
   });
+
+  for (const [label, width, height] of [["390", 390, 844], ["1440", 1440, 900]] as const) {
+    test(`spans the postcard fields and opens the song list under the Song line at ${label}`, { tag: ["@sweep"] }, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      const form = page.locator('form[name="song-request"]');
+      await reveal(form);
+      const song = form.locator('input[name="song"]');
+      await song.fill("danc");
+      await expect(form.locator('[role="listbox"]')).toBeVisible();
+      await song.press("ArrowDown");
+      await expect(form.locator('[role="option"][aria-selected="true"]')).toHaveCount(1);
+      const popup = form.locator("[data-song-search-popup]");
+      // Let the 150ms rise settle before measuring.
+      await expect(popup).toHaveCSS("opacity", "1");
+      // The old postcard inputs were capped at 200px; they now span the card's content box.
+      const geometry = await page.evaluate(() => {
+        const card = document.querySelector(".playlist_postcard") as HTMLElement;
+        // The postcard is rotated, so read untransformed layout offsets relative to it.
+        const rect = (element: Element) => {
+          let left = 0;
+          let top = 0;
+          for (let node = element as HTMLElement | null; node && node !== card; node = node.offsetParent as HTMLElement | null) {
+            left += node.offsetLeft;
+            top += node.offsetTop;
+          }
+          const { offsetWidth: width, offsetHeight: height } = element as HTMLElement;
+          return { left, right: left + width, top, bottom: top + height, width };
+        };
+        const style = getComputedStyle(card);
+        const inputs = ["name", "song", "artist"].map((name) =>
+          rect(card.querySelector(`input[name="${name}"]`)!),
+        );
+        return {
+          inputs,
+          popup: rect(card.querySelector("[data-song-search-popup]")!),
+          content:
+            card.clientWidth -
+            parseFloat(style.paddingLeft) -
+            parseFloat(style.paddingRight),
+          scrollFits: document.documentElement.scrollWidth <= window.innerWidth,
+        };
+      });
+      const songRect = geometry.inputs[1]!;
+      expect(Math.abs(geometry.popup.left - songRect.left)).toBeLessThanOrEqual(6);
+      expect(Math.abs(geometry.popup.right - songRect.right)).toBeLessThanOrEqual(6);
+      expect(geometry.popup.top - songRect.bottom).toBeGreaterThanOrEqual(4);
+      expect(geometry.popup.top - songRect.bottom).toBeLessThanOrEqual(14);
+      for (const input of geometry.inputs) {
+        expect(Math.abs(input.width - geometry.inputs[0]!.width)).toBeLessThanOrEqual(6);
+        expect(Math.abs(input.width - geometry.content)).toBeLessThanOrEqual(6);
+      }
+      expect(geometry.scrollFits).toBe(true);
+    });
+  }
 });
