@@ -109,6 +109,36 @@ test.describe("background music", () => {
 test.describe("background music returning guest", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
+  test("waits for a found guest to open the letter before starting", async ({ page }) => {
+    const requests: string[] = [];
+    page.on("request", (request) => { if (request.url().includes("/audio/")) requests.push(request.url()); });
+    await page.goto("/");
+    const audio = audioOf(page);
+    const overlay = page.locator("[data-preloader]");
+    await overlay.locator("[data-preloader-name]").fill("Mateo Cruz");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(overlay.getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
+    await expect.poll(() => isPaused(audio)).toBe(true);
+    expect(requests).toHaveLength(0);
+
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect.poll(() => requests.length).toBeGreaterThan(0);
+    await expect.poll(() => isPaused(audio)).toBe(false);
+  });
+
+  test("does not start for a not-found lookup", async ({ page }) => {
+    const requests: string[] = [];
+    page.on("request", (request) => { if (request.url().includes("/audio/")) requests.push(request.url()); });
+    await page.goto("/");
+    const audio = audioOf(page);
+    const overlay = page.locator("[data-preloader]");
+    await overlay.locator("[data-preloader-name]").fill("Nobody Example");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(overlay.getByText("Hmm, we can't find that name.")).toBeVisible();
+    await expect.poll(() => isPaused(audio)).toBe(true);
+    expect(requests).toHaveLength(0);
+  });
+
   test("does not request audio until the visible player is pressed", async ({ page }) => {
     const requests: string[] = [];
     const size = page.viewportSize();

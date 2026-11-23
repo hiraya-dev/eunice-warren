@@ -245,6 +245,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`
 
+### L-061 — Sound starts on the guest's chosen action, not on the first gesture
+- **Date:** 2026-11-23
+- **Trigger:** #108 Local-review round; escape: runtime #92
+- **Symptom:** the background song started while the guest was still searching for their name in the preloader, before they pressed "Open my letter" or "Just browsing".
+- **Root cause:** `Preloader.astro` dispatched `ew:music-start` on the lookup submit to borrow its user gesture for autoplay, and no spec asserted the audio stayed paused through the lookup.
+- **Rule:** start audio only from the control whose meaning is "enter the site" ("Open my letter", "Just browsing"). Any earlier gesture (typing, a lookup, a suggestion reply) leaves it silent, and each start point gets a spec that also asserts the steps before it stay silent.
+- **Check:** `tests/music.spec.ts` "waits for a found guest to open the letter before starting" passes and fails when an `ew:music-start` dispatch is added before the lookup.
+- **Guard:** none
+- **Paths:** `src/components/global/Preloader.astro`, `src/components/global/BackgroundMusic.astro`, `tests/music.spec.ts`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building

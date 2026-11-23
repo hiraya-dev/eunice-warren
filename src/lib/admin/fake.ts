@@ -57,7 +57,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-dela-cruz",
     label: "DC-01",
-    displayName: "The Dela Cruz Family",
+    displayName: "Dela Cruz Family",
     notes: "Beach transfer",
     seats: [
       seat(1, "Maria Dela Cruz", "Maria Dela Cruz"),
@@ -75,7 +75,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-santos",
     label: "SA-02",
-    displayName: "The Santos Family",
+    displayName: "Santos Family",
     notes: null,
     seats: [
       seat(1, "Antonio Santos", "Antonio Santos"),
@@ -111,7 +111,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-villanueva",
     label: "VF-05",
-    displayName: "The Villanueva Family",
+    displayName: "Villanueva Family",
     notes: "Three seats confirmed",
     seats: [
       seat(1, "Rico Villanueva", "Rico Villanueva"),
@@ -155,7 +155,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-ramos",
     label: "LR-08",
-    displayName: "The Ramos Family",
+    displayName: "Ramos Family",
     notes: null,
     seats: [
       seat(1, "Liza Ramos", "Liza Ramos"),
@@ -171,7 +171,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-admin-editor",
     label: "ADMIN_EDITOR_FIXTURE",
-    displayName: "The Admin Editor Family",
+    displayName: "Admin Editor Family",
     notes: "Dedicated browser fixture",
     updatedAt: "2026-11-21T10:00:00.000Z",
     seats: [
@@ -185,7 +185,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     // Owned by the host RSVP edit specs in admin-rsvps.spec.ts (L-022).
     id: "hh-rsvp-editor",
     label: "RSVP_EDITOR_FIXTURE",
-    displayName: "The Reply Editor Family",
+    displayName: "Reply Editor Family",
     notes: "Dedicated host RSVP edit fixture",
     updatedAt: "2026-11-21T10:00:00.000Z",
     seats: [
@@ -198,7 +198,7 @@ export const fakeAdminFixtures: AdminHousehold[] = [
   {
     id: "hh-admin-activity",
     label: "ADMIN_ACTIVITY_FIXTURE",
-    displayName: "The Admin Activity Family",
+    displayName: "Admin Activity Family",
     notes: "Dedicated no-JS activity fixture",
     updatedAt: "2026-11-21T10:00:00.000Z",
     seats: [

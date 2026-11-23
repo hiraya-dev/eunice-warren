@@ -24,13 +24,13 @@ test.describe("guest preloader", () => {
   });
 
   test("welcomes a remembered guest without looking them up", { tag: ["@single"] }, async ({ page }) => {
-    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "The Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
+    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
     const requests: string[] = [];
     page.on("request", (request) => { if (request.url().includes("rsvp.find")) requests.push(request.url()); });
     await page.reload();
     const overlay = preloader(page);
-    await expect(overlay.getByRole("heading", { name: "Welcome back, The Cruz Family." })).toBeVisible();
-    await expect(overlay.locator("[data-preloader-name]")).toHaveValue("The Cruz Family");
+    await expect(overlay.getByRole("heading", { name: "Welcome back, Cruz Family." })).toBeVisible();
+    await expect(overlay.locator("[data-preloader-name]")).toHaveValue("Cruz Family");
     await expect(overlay.locator("[data-preloader-name]")).toHaveAttribute("readonly", "");
     await expect(overlay.locator("[data-preloader-name]")).toHaveClass(/is-found/);
     await expect(overlay.locator("[data-preloader-not-you]")).toBeVisible();
@@ -41,7 +41,7 @@ test.describe("guest preloader", () => {
   });
 
   test("lets a remembered guest choose a different name", { tag: ["@single"] }, async ({ page }) => {
-    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "The Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
+    await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
     await page.reload();
     const overlay = preloader(page);
     await overlay.getByRole("button", { name: "Write your own name" }).click();
@@ -52,7 +52,7 @@ test.describe("guest preloader", () => {
   });
 
   test("keeps the remembered guest after opening the letter", { tag: ["@single"] }, async ({ page }) => {
-    const guest = { name: "Mateo Cruz", householdName: "The Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" };
+    const guest = { name: "Mateo Cruz", householdName: "Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" };
     await page.evaluate((value) => localStorage.setItem("ew-guest-v2", JSON.stringify(value)), guest);
     await page.reload();
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
@@ -63,13 +63,13 @@ test.describe("guest preloader", () => {
   test("finds a guest, remembers them, and pre-fills RSVP", { tag: ["@smoke"] }, async ({ page }) => {
     await preloader(page).locator("[data-preloader-name]").fill("Mateo Cruz");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
-    await expect(preloader(page).getByRole("heading", { name: "Welcome, The Cruz Family." })).toBeVisible();
+    await expect(preloader(page).getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
     await expect(preloader(page)).toContainText("Your invitation admits 4");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page)).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ew-guest-v2") || "null"))).toMatchObject({
       name: "Mateo Cruz",
-      householdName: "The Cruz Family",
+      householdName: "Cruz Family",
       seats: 4,
     });
     await expect(page.locator("[data-rsvp-name]")).toHaveValue("Mateo Cruz");
@@ -80,12 +80,12 @@ test.describe("guest preloader", () => {
     await page.reload();
     await preloader(page).locator("[data-preloader-name]").fill("Liza Santos");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
-    await expect(preloader(page).getByRole("heading", { name: "Welcome, The Santos Family." })).toBeVisible();
-    await expect(preloader(page).locator("[data-preloader-name]")).toHaveValue("The Santos Family");
+    await expect(preloader(page).getByRole("heading", { name: "Welcome, Santos Family." })).toBeVisible();
+    await expect(preloader(page).locator("[data-preloader-name]")).toHaveValue("Santos Family");
     await expect(preloader(page)).not.toContainText("Santos_Manila");
     await expect(preloader(page)).not.toContainText("Manila");
     await expect(preloader(page)).not.toContainText("santos");
-    await expect.poll(() => page.evaluate(() => ({ guest: JSON.parse(localStorage.getItem("ew-guest-v2") || "null"), raw: localStorage.getItem("ew-guest-v2"), legacy: localStorage.getItem("ew-guest-v1") }))).toMatchObject({ guest: { householdName: "The Santos Family", seats: 2 }, legacy: null });
+    await expect.poll(() => page.evaluate(() => ({ guest: JSON.parse(localStorage.getItem("ew-guest-v2") || "null"), raw: localStorage.getItem("ew-guest-v2"), legacy: localStorage.getItem("ew-guest-v1") }))).toMatchObject({ guest: { householdName: "Santos Family", seats: 2 }, legacy: null });
     const raw = await page.evaluate(() => localStorage.getItem("ew-guest-v2") ?? "");
     expect(raw).not.toContain("Santos_Manila");
     expect(raw).not.toContain("Manila");
@@ -121,7 +121,7 @@ test.describe("guest preloader", () => {
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page)).toContainText("Hmm, we can't find that name.");
     await expect(preloader(page)).toContainText("Check the spelling, or try the name on your invitation.");
-    await expect(preloader(page)).not.toContainText("The Cruz Family");
+    await expect(preloader(page)).not.toContainText("Cruz Family");
     await expect(preloader(page)).not.toContainText("Mateo Cruz");
   });
 
@@ -130,9 +130,9 @@ test.describe("guest preloader", () => {
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page).getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
     await expect(preloader(page)).toContainText("Tap yes if that's the name on your invitation.");
-    await expect(preloader(page)).not.toContainText("The Cruz Family");
+    await expect(preloader(page)).not.toContainText("Cruz Family");
     await preloader(page).getByRole("button", { name: "Yes, that's me" }).click();
-    await expect(preloader(page).getByRole("heading", { name: "Welcome, The Cruz Family." })).toBeVisible();
+    await expect(preloader(page).getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
   });
 
   test("can reject a suggested name and try again", { tag: ["@single"] }, async ({ page }) => {

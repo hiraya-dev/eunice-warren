@@ -19,10 +19,10 @@ test("imports names, placeholders, defaults, display-name rules, slugs, and uniq
     ["", "", "Fatima Marie Oba", "1", ""],
   ]);
   assert.equal(report.households[0].id, "liza-santos");
-  assert.equal(report.households[0].displayName, "The Santos Family");
+  assert.equal(report.households[0].displayName, "Santos Family");
   assert.equal(report.households[0].seats, 2);
   assert.equal(report.households[0].placeholders, 1);
-  assert.equal(report.households[1].displayName, "The Foster Family");
+  assert.equal(report.households[1].displayName, "Foster Family");
   assert.equal(report.households[2].displayName, "Ana Toledo");
   assert.equal(report.households[3].id, "dup-2");
   assert.equal(report.households[4].id, "fatima-marie-oba");
@@ -53,12 +53,45 @@ test("skips sample and test rows and reports every invalid rule", () => {
 test("marks risky surname particles and emits replace-safe seed SQL", () => {
   const report = importRows([["id", "household", "members", "seats", "notes"], ["one", "", "Obi Delos Reyes, Emma De Ocampo", "2", ""]]);
   assert.equal(report.warnings.length, 1);
-  assert.equal(report.households[0].displayName, "The Delos Reyes Family");
+  assert.equal(report.households[0].displayName, "Delos Reyes Family");
   assert.equal(displaySurname("Emma De Ocampo"), "De Ocampo");
   const sql = seedSql(report, true);
   assert.match(sql, /DELETE FROM invite_seats;/);
   assert.match(sql, /INSERT INTO households/);
   assert.doesNotMatch(sql, /PRAGMA|BEGIN;|COMMIT;/);
+});
+
+test("imports numbered duplicate ids using the next free padded number", () => {
+  const report = importRows([
+    ["id", "household", "members", "seats", "notes"],
+    ["Malaluan-01", "One", "Ana Malaluan", "2", ""],
+    ["Malaluan-01", "Two", "Bea Malaluan", "2", ""],
+    ["Malaluan-02", "Three", "Cia Malaluan", "2", ""],
+  ]);
+  assert.deepEqual(report.households.map(({ id }) => id), [
+    "malaluan-01",
+    "malaluan-03",
+    "malaluan-02",
+  ]);
+  assert.match(report.warnings[0].message, /duplicate id malaluan-01; imported as malaluan-03/);
+});
+
+test("keeps non-numbered duplicate ids on the existing suffix behavior", () => {
+  const report = importRows([
+    ["id", "household", "members", "seats", "notes"],
+    ["dup", "One", "Ana Dup", "1", ""],
+    ["dup", "Two", "Bea Dup", "1", ""],
+  ]);
+  assert.deepEqual(report.households.map(({ id }) => id), ["dup", "dup-2"]);
+});
+
+test("keeps generated slug duplicates on the existing suffix behavior", () => {
+  const report = importRows([
+    ["id", "household", "members", "seats", "notes"],
+    ["", "One", "Ana Dup", "1", ""],
+    ["", "Two", "Ana Dup", "1", ""],
+  ]);
+  assert.deepEqual(report.households.map(({ id }) => id), ["ana-dup", "ana-dup-2"]);
 });
 
 test("reports a label over 80 characters before seed execution", () => {

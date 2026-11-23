@@ -75,7 +75,7 @@ test("D1 query budgets with Miniflare", async (t) => {
     const household = db.prepare("INSERT INTO households (id,label,display_name,ticket_code,created_at,updated_at) VALUES (?,?,?,?,?,?)");
     const member = db.prepare("INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES (?,'member',1,'active',?,?,?,?,?,?)");
     const plusOne = db.prepare("INSERT INTO invite_seats (household_id,kind,slot,status,created_at,updated_at) VALUES (?,'plus_one',2,'active',?,?)");
-    inserts.push(household.bind("target", "Target_Test", "The Target Family", "TARGET", now, now));
+    inserts.push(household.bind("target", "Target_Test", "Target Family", "TARGET", now, now));
     inserts.push(member.bind("target", "Lucia Target", "lucia target", "target", "Lucia Target", now, now));
     inserts.push(plusOne.bind("target", now, now));
     for (let index = 0; index < 500; index += 1) {

@@ -1129,7 +1129,7 @@ test.describe("guest drawer round trips without JavaScript", () => {
       await addName(page, `Ilse ${surname}`);
       await addName(page, `Otto ${surname}`);
       const form = page.locator("[data-new-household]");
-      const suggestion = `The ${surname} Family`;
+      const suggestion = `${surname} Family`;
       await expect(form.locator("[name='display_name']")).toHaveValue(
         suggestion,
       );
@@ -1197,7 +1197,7 @@ test.describe("host ID from the invitation name", () => {
         await form.locator("[data-add-name]").fill(name);
         await form.locator("[data-add-name]").press("Enter");
       }
-      // "The <S> Family" → "<s>"
+      // "<S> Family" → "<s>"
       await expect(form.locator("[data-host-id]")).toHaveText(slug);
       await form.locator("[name='display_name']").fill(`Casa ${surname}`);
       await expect(form.locator("[data-host-id]")).toHaveText(`casa-${slug}`);

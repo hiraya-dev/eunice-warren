@@ -243,7 +243,7 @@ test("keeps the deadline boundary exact", () => {
 
 test("parses guest rows and detects duplicate ids and names", () => {
   const result = parseGuestRows([
-    ["santos", "The Santos Family", "Liza Santos", ""],
+    ["santos", "Santos Family", "Liza Santos", ""],
     ["", "Ignored", "Nobody", "4"],
     ["santos", "Duplicate", "Ana Reyes", "1"],
     ["reyes", "Another", "liza santos", "1"],

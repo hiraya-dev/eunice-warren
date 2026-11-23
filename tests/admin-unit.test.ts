@@ -880,7 +880,7 @@ test("suggestion returns empty, one-name, and same-surname cases", () => {
   );
   assert.equal(
     suggestInvitationName(["Ana Dela Cruz", "Bea Dela Cruz"]),
-    "The Dela Cruz Family",
+    "Dela Cruz Family",
   );
 });
 
@@ -898,11 +898,11 @@ test("suggestion handles different surnames, long names, and majority groups", (
   );
   assert.equal(
     suggestInvitationName(["Mara Dela Cruz", "Nico Dela Cruz", "Pia Santos"]),
-    "The Dela Cruz Family",
+    "Dela Cruz Family",
   );
   assert.equal(
     suggestInvitationName(["Ma. Luz Reyes", "Ma. Pia Reyes"]),
-    "The Reyes Family",
+    "Reyes Family",
   );
   assert.equal(suggestInvitationName(["Ari", "Bea"]), "Ari & Bea");
   assert.ok(
@@ -931,6 +931,8 @@ test("plus-one parsing covers every placeholder spelling", () => {
 });
 
 test("host IDs are a short slug of the invitation name and avoid collisions", () => {
+  assert.equal(generateHostId("Toledo Family"), "toledo");
+  assert.equal(generateHostId("The Toledo Family"), "toledo");
   assert.equal(generateHostId("The Dela Cruz Family"), "dela-cruz");
   assert.equal(generateHostId("the olave-garcia family"), "olave-garcia");
   assert.equal(

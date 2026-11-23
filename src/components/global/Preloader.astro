@@ -211,7 +211,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       event.preventDefault();
       if (state === "found") { document.dispatchEvent(new CustomEvent("ew:music-start")); finishClose(); return; }
       if (!input.value.trim()) { input.focus(); return; }
-      document.dispatchEvent(new CustomEvent("ew:music-start"));
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
       const submittedValue = input.value;
