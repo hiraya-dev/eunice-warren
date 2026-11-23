@@ -78,7 +78,7 @@ export function suggestInvitationName(names: string[]) {
     commonCount === values.length ||
     (values.length >= 3 && commonCount > values.length / 2)
   )
-    return `The ${common} Family`.slice(0, 40);
+    return `${common} Family`.slice(0, 40);
   if (values.length === 2) {
     const full = `${values[0]} & ${values[1]}`;
     if (full.length <= 40) return full;

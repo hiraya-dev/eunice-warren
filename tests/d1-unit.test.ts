@@ -18,7 +18,7 @@ const now = "2026-11-21T00:00:00.000Z";
 const setup = () => {
   const database = new SqliteD1();
   database.applyMigration();
-  database.db.exec(`INSERT INTO households (id,label,display_name,ticket_code,created_at,updated_at) VALUES ('toledo','Toledo_Sabang','The Toledo Family','TOLEDO','${now}','${now}');
+  database.db.exec(`INSERT INTO households (id,label,display_name,ticket_code,created_at,updated_at) VALUES ('toledo','Toledo_Sabang','Toledo Family','TOLEDO','${now}','${now}');
     INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES
     ('toledo','member',1,'active','Luna Toledo','luna toledo','toledo','Luna Toledo','${now}','${now}'),
     ('toledo','member',2,'active','Mara Toledo','mara toledo','toledo','Mara Toledo','${now}','${now}'),
@@ -38,7 +38,7 @@ test("D1 lookup returns only the public invite shape and restores previous value
   assert.deepEqual(Object.keys(result.invite).sort(), ["householdName", "members", "seatList", "seats", "ticketCode"]);
   assert.equal("id" in result.invite, false);
   assert.equal("label" in result.invite, false);
-  assert.equal(result.invite.householdName, "The Toledo Family");
+  assert.equal(result.invite.householdName, "Toledo Family");
   assert.equal(result.invite.seatList?.[0].seatId, 1);
   database.db.exec(`INSERT INTO responses (household_id,submitted_at,respondent_name,attending,guest_count,email,note) VALUES ('toledo','2026-11-20T00:00:00.000Z','Luna Toledo',1,1,'luna@example.com','private');
     INSERT INTO response_seats (response_id,seat_id,kind,name,attending,slipper_size) VALUES (1,2,'member','Mara Toledo',0,NULL),(1,1,'member','Luna Toledo',1,'W 7');`);

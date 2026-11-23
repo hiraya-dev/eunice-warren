@@ -16,7 +16,7 @@ function setup() {
   database.applyMigration();
   database.db.exec(`
     INSERT INTO households (id,label,display_name,ticket_code,status,created_at,updated_at,updated_by)
-      VALUES ('alpha','ALPHA_01','The Alpha Family','ALPHA1','active','${now}','${now}',NULL);
+      VALUES ('alpha','ALPHA_01','Alpha Family','ALPHA1','active','${now}','${now}',NULL);
     INSERT INTO invite_seats (id,household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at)
       VALUES (1,'alpha','member',1,'active','Alice Alpha','alice alpha','alpha','Alice Alpha','${now}','${now}'),
              (2,'alpha','member',2,'active','Bob Alpha','bob alpha','alpha','Bob Alpha','${now}','${now}'),
@@ -125,7 +125,7 @@ test("D1 keeps typed renames and only follows an invited-name fix when the old n
       {
         id: "alpha",
         updatedAt: now,
-        displayName: "The Alpha Family",
+        displayName: "Alpha Family",
         notes: "Updated",
         seatCount: 3,
         seats: seatInput({
@@ -284,7 +284,7 @@ test("D1 refuses an already invited full name and accepts it after confirmation"
   const database = setup();
   database.db.exec(`
     INSERT INTO households (id,label,display_name,ticket_code,status,created_at,updated_at)
-      VALUES ('beta','BETA_01','The Beta Family','BETA1','active','${now}','${now}');
+      VALUES ('beta','BETA_01','Beta Family','BETA1','active','${now}','${now}');
     INSERT INTO invite_seats (id,household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at)
       VALUES (4,'beta','member',1,'active','Casey Beta','casey beta','beta','Casey Beta','${now}','${now}');
   `);
@@ -424,7 +424,7 @@ test("edit refuses an already invited name until it is confirmed in both stores"
   const database = setup();
   database.db.exec(`
     INSERT INTO households (id,label,display_name,ticket_code,status,created_at,updated_at)
-      VALUES ('beta','BETA_01','The Beta Family','BETA1','active','${now}','${now}');
+      VALUES ('beta','BETA_01','Beta Family','BETA1','active','${now}','${now}');
     INSERT INTO invite_seats (id,household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at)
       VALUES (4,'beta','member',1,'active','Casey Beta','casey beta','beta','Casey Beta','${now}','${now}');
   `);
@@ -439,7 +439,7 @@ test("edit refuses an already invited name until it is confirmed in both stores"
   };
   assert.deepEqual(await d1Store.saveHousehold(input, "host@example.com"), {
     ok: false,
-    message: "casey beta is already invited with The Beta Family.",
+    message: "casey beta is already invited with Beta Family.",
   });
   assert.equal(
     (await d1Store.saveHousehold({ ...input, confirmedNames: ["Casey Beta"] }, "host@example.com")).ok,

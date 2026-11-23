@@ -61,6 +61,11 @@ export function importRows(rows) {
   if (!rows.length || rows[0].length !== 5 || rows[0].join(",") !== "id,household,members,seats,notes") throw new Error("Invalid header: expected id,household,members,seats,notes");
   const households = [];
   const usedIds = new Map();
+  const requestedIds = new Set(
+    rows.slice(1)
+      .map(([rawId = ""]) => normalizeImportName(rawId).toLowerCase())
+      .filter(Boolean),
+  );
   const usedTickets = new Set();
   const errors = [];
   const warnings = [];
@@ -100,8 +105,19 @@ export function importRows(rows) {
     const requestedId = normalizeImportName(rawId).toLowerCase();
     const baseId = requestedId || slugify(members[0]);
     let id = baseId;
-    let suffix = 1;
-    while (usedIds.has(id)) id = `${baseId}-${++suffix}`;
+    const numberedBase = baseId.match(/^(.*)-(\d+)$/);
+    if (requestedId && numberedBase && usedIds.has(id)) {
+      const prefix = numberedBase[1];
+      const width = numberedBase[2].length;
+      let nextNumber = Number(numberedBase[2]) + 1;
+      do {
+        id = `${prefix}-${String(nextNumber).padStart(width, "0")}`;
+        nextNumber += 1;
+      } while (requestedIds.has(id) || usedIds.has(id));
+    } else {
+      let suffix = 1;
+      while (usedIds.has(id)) id = `${baseId}-${++suffix}`;
+    }
     if (id !== baseId) warnings.push({ row: index + 1, message: `duplicate id ${baseId}; imported as ${id}` });
     usedIds.set(id, true);
     if (!requestedId) generatedIds.push({ row: index + 1, id });
@@ -109,7 +125,7 @@ export function importRows(rows) {
     if (label.length > 80) errors.push({ row: index + 1, message: `label exceeds 80 characters: ${label}` });
     const familyPlace = label.match(/^([^_]+)_[^_]+$/);
     const lead = members[0];
-    const displayName = seats === 1 ? lead : familyPlace ? `The ${normalizeImportName(familyPlace[1])} Family` : `The ${displaySurname(lead)} Family`;
+    const displayName = seats === 1 ? lead : familyPlace ? `${normalizeImportName(familyPlace[1])} Family` : `${displaySurname(lead)} Family`;
     const differentSurnames = new Set(members.map((member) => member.split(" ").at(-1)?.toLowerCase())).size > 1;
     const risky = differentSurnames || members.some((member) => /\b(?:de|del|dela|delos|de los|della|san|sta|sto|van|von|da|di)\b/i.test(member));
     if (risky) warnings.push({ row: index + 1, message: `risky display name derived for ${label} (lead: ${lead})` });
