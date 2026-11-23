@@ -1,0 +1,6 @@
+---
+interface Props { class: string; text: string }
+const { class: className, text } = Astro.props;
+---
+
+<span class:list={[className]} data-music-ticker><span class="music-ticker_track"><span class="music-ticker_text">{text}</span><span class="music-ticker_text" aria-hidden="true">{text}</span></span></span>

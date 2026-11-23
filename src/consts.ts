@@ -20,8 +20,8 @@ export const NOINDEX_ROUTES: string[] = ["/404", "/style-guide"];
 export const BACKGROUND_MUSIC = {
   enabled: true,
   src: "/audio/our-song.mp3",
-  title: "Man I Need",
-  artist: "Olivia Dean",
+  title: "Islands in the Stream",
+  artist: "Music Travel Love & Marsha Milan",
   cover: musicCover,
 } as const;
 /** RSVP deadline shown in the invitation and confirmation flow. */

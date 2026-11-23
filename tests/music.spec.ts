@@ -196,6 +196,8 @@ test.describe("background music teleport, desktop", { tag: ["@single"] }, () => 
       await page.setViewportSize({ width, height: 800 });
       await page.goto("/");
       await expect(cardOf(page)).toBeVisible(SLOW);
+      // The ticker is switched on by a measure after layout and fonts; give it a frame to settle.
+      await expect.poll(() => page.locator("[data-music-polaroid] [data-music-ticker]").evaluate((title) => title.scrollWidth <= title.clientWidth || title.hasAttribute("data-ticker"))).toBe(true);
       // Layout sizes, not bounding boxes: the card is rotated, and a rotated box measures taller.
       const fit = await page.locator("[data-music-polaroid]").evaluate((surface) => {
         const part = (selector: string) => surface.querySelector<HTMLElement>(selector)!;
@@ -204,11 +206,13 @@ test.describe("background music teleport, desktop", { tag: ["@single"] }, () => 
         const columns = [part(".music-polaroid_info"), part(".music-polaroid_controls")];
         return {
           stripOverflows: strip.scrollWidth > strip.clientWidth,
-          titleClipped: title.scrollWidth > title.clientWidth,
+          // A title wider than its box is allowed only while it scrolls as a ticker.
+          titleClipped: title.scrollWidth > title.clientWidth && !title.hasAttribute("data-ticker"),
           // One line: the strip is as tall as its tallest column.
           tallest: Math.max(...columns.map((column) => column.offsetHeight)),
           stripHeight: strip.offsetHeight,
-          inside: [part(".music-polaroid_label"), title, ...columns].every((el) => el.offsetLeft >= strip.offsetLeft && el.offsetLeft + el.offsetWidth <= strip.offsetLeft + strip.offsetWidth),
+          // A scrolling title reaches 0.625rem left of its text for the edge fade; the text itself starts inside.
+          inside: [part(".music-polaroid_label"), title, ...columns].every((el) => el.offsetLeft + parseFloat(getComputedStyle(el).paddingLeft) >= strip.offsetLeft && el.offsetLeft + el.offsetWidth <= strip.offsetLeft + strip.offsetWidth),
           smallestButton: Math.min(...[...surface.querySelectorAll<HTMLElement>("button")].map((button) => Math.min(button.offsetWidth, button.offsetHeight))),
         };
       });
@@ -226,8 +230,207 @@ test.describe("background music teleport, desktop", { tag: ["@single"] }, () => 
   });
 });
 
+/** The title ticker's track and its loop animation on one surface, read live. */
+const TICKER = "[data-music-ticker]";
+const trackOf = (surface: Locator) => surface.locator(`${TICKER} .music-ticker_track`);
+const tickerState = (track: Locator) =>
+  track.evaluate((element) => {
+    const animation = element.getAnimations().find((candidate) => candidate instanceof CSSAnimation && candidate.animationName === "music-ticker");
+    const timing = animation?.effect?.getComputedTiming();
+    const frames = animation ? (animation.effect as KeyframeEffect).getKeyframes() : [];
+    return {
+      exists: Boolean(animation),
+      playState: animation?.playState ?? "none",
+      // A pause or a play is applied on the next frame; until then the clock still reads as it did.
+      pending: animation?.pending ?? false,
+      css: getComputedStyle(element).animationPlayState,
+      time: animation ? Number(animation.currentTime) : -1,
+      duration: Number(timing?.duration ?? 0),
+      iterations: timing?.iterations ?? 0,
+      easing: (animation?.effect as KeyframeEffect | undefined)?.getComputedTiming().easing ?? "",
+      properties: [...new Set(frames.flatMap((frame) => Object.keys(frame)).filter((key) => !["offset", "easing", "composite", "computedOffset"].includes(key)))],
+      loopPx: (element as HTMLElement).offsetWidth / 2,
+    };
+  });
+/** Waits until the loop is paused for good (the pause has been applied on a frame), then returns its state. */
+const tickerHeld = async (track: Locator) => {
+  await expect.poll(async () => { const state = await tickerState(track); return state.playState === "paused" && !state.pending; }).toBe(true);
+  return tickerState(track);
+};
+/** Wall-clock sample of the loop's own time: how far it moved while `wait` ms of the clock went by. */
+const tickerAdvance = async (page: Page, track: Locator, wait = 600) => {
+  const before = await tickerState(track);
+  const start = Date.now();
+  await page.waitForTimeout(wait);
+  const after = await tickerState(track);
+  return { moved: after.time - before.time, elapsed: Date.now() - start };
+};
+
+test.describe("background music title ticker, desktop", { tag: ["@single"] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("scrolls an overflowing title at a steady 30px/s, only while the song plays and is not muted", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    await heroSettled(page);
+    const polaroid = page.locator("[data-music-polaroid]");
+    await expect(cardOf(page)).toBeVisible();
+    const title = polaroid.locator(TICKER);
+    // The new title does not fit the polaroid at 1440 (166px of text in a 124px box), so it ticks.
+    await expect(title).toHaveAttribute("data-ticker", "");
+    const track = trackOf(polaroid);
+
+    // Before the first play it rests at the start, so the title reads from its first letter.
+    const idle = await tickerState(track);
+    expect(idle.exists).toBe(true);
+    expect(idle.playState).toBe("paused");
+    expect(idle.time).toBe(0);
+    // Linear, endless, transform only; the loop is one copy plus the gap, at about 30px/s.
+    expect(idle.easing).toBe("linear");
+    expect(idle.iterations).toBe(Infinity);
+    expect(idle.properties).toEqual(["transform"]);
+    expect(Math.abs(idle.loopPx / (idle.duration / 1000) - 30)).toBeLessThanOrEqual(1);
+
+    await polaroid.locator("[data-music-toggle]").click();
+    await expect(polaroid).toHaveAttribute("data-state", "playing");
+    await expect.poll(async () => (await tickerState(track)).playState).toBe("running");
+    // Clock time, not frames (L-009): the loop's clock moves with the wall clock, within one capped frame.
+    const running = await tickerAdvance(page, track);
+    expect(running.moved).toBeGreaterThan(running.elapsed * 0.5);
+    expect(running.moved).toBeLessThan(running.elapsed + 250);
+
+    // Muting holds it where it is.
+    await polaroid.locator("[data-music-mute]").click();
+    await expect(polaroid.locator("[data-music-mute]")).toHaveAttribute("aria-pressed", "true");
+    const mutedAt = (await tickerHeld(track)).time;
+    expect(mutedAt).toBeGreaterThan(0);
+    await page.waitForTimeout(400);
+    expect((await tickerState(track)).time).toBe(mutedAt);
+    await polaroid.locator("[data-music-mute]").click();
+    await expect.poll(async () => (await tickerState(track)).playState).toBe("running");
+    expect((await tickerState(track)).time).toBeGreaterThanOrEqual(mutedAt);
+
+    // Pausing the song holds it in place too, and playing again carries on from there.
+    await polaroid.locator("[data-music-toggle]").click();
+    await expect(polaroid).toHaveAttribute("data-state", "paused");
+    const pausedAt = (await tickerHeld(track)).time;
+    await page.waitForTimeout(400);
+    expect((await tickerState(track)).time).toBe(pausedAt);
+    await polaroid.locator("[data-music-toggle]").click();
+    await expect.poll(async () => (await tickerState(track)).time).toBeGreaterThan(pausedAt);
+  });
+
+  test("fades both edges while it scrolls, stays still when the title fits, and reads once to a screen reader", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    await heroSettled(page);
+    const polaroid = page.locator("[data-music-polaroid]");
+    const title = polaroid.locator(TICKER);
+    await expect(title).toHaveAttribute("data-ticker", "");
+    const mask = await title.evaluate((element) => getComputedStyle(element).maskImage);
+    expect(mask).toContain("linear-gradient");
+    expect(mask).toContain("rgba(0, 0, 0, 0)");
+
+    // Two copies are in the markup, and only the first is announced.
+    for (const surface of [polaroid, tagOf(page)]) {
+      const copies = surface.locator(`${TICKER} .music-ticker_text`);
+      await expect(copies).toHaveCount(2);
+      await expect(copies.nth(0)).not.toHaveAttribute("aria-hidden", "true");
+      await expect(copies.nth(1)).toHaveAttribute("aria-hidden", "true");
+      await expect(copies.nth(0)).toHaveText(await copies.nth(1).evaluate((element) => element.textContent ?? ""));
+    }
+
+    // A title that fits stays still: widen its box and the script drops the ticker, mask and duplicate.
+    await title.evaluate((element) => { element.style.width = "600px"; });
+    await expect(title).not.toHaveAttribute("data-ticker", "");
+    const still = await title.evaluate((element) => ({
+      mask: getComputedStyle(element).maskImage,
+      copy: getComputedStyle(element.querySelectorAll(".music-ticker_text")[1]).display,
+      animations: element.getAnimations({ subtree: true }).filter((animation) => animation instanceof CSSAnimation).length,
+    }));
+    expect(still).toEqual({ mask: "none", copy: "none", animations: 0 });
+    // And it ticks again when the box is too small, with no reload (it re-measures on resize).
+    await title.evaluate((element) => { element.style.width = ""; });
+    await expect(title).toHaveAttribute("data-ticker", "");
+  });
+
+  test("the docked tag ticks while the song plays, and the hidden surfaces hold still", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    await heroSettled(page);
+    const polaroid = page.locator("[data-music-polaroid]");
+    const polaroidTrack = trackOf(polaroid);
+    const tagTrack = trackOf(tagOf(page));
+    await polaroid.locator("[data-music-toggle]").click();
+    await expect(polaroid).toHaveAttribute("data-state", "playing");
+    await expect.poll(async () => (await tickerState(polaroidTrack)).playState).toBe("running");
+    // The tag is out of sight until the page scrolls past the polaroid, so it does not run yet.
+    await expect(trackOf(tagOf(page))).toHaveCount(1);
+    expect((await tickerState(tagTrack)).css).toBe("paused");
+
+    const heroHeight = await page.locator("#hero").evaluate((hero) => hero.getBoundingClientRect().height);
+    await page.evaluate((y) => window.scrollTo(0, y), heroHeight + 120);
+    await expect(tagOf(page)).toBeVisible(SLOW);
+    await expect(containerOf(page)).not.toHaveAttribute("data-music-flying", "");
+    await expect(tagOf(page).locator(TICKER)).toHaveAttribute("data-ticker", "");
+    await expect.poll(async () => (await tickerState(tagTrack)).playState).toBe("running");
+    const running = await tickerAdvance(page, tagTrack);
+    expect(running.moved).toBeGreaterThan(running.elapsed * 0.5);
+    expect(running.moved).toBeLessThan(running.elapsed + 250);
+    expect((await tickerState(polaroidTrack)).css).toBe("paused");
+    const tagState = await tickerState(tagTrack);
+    expect(tagState.properties).toEqual(["transform"]);
+    expect(Math.abs(tagState.loopPx / (tagState.duration / 1000) - 30)).toBeLessThanOrEqual(1);
+
+    await tagOf(page).locator("[data-music-toggle]").click();
+    await expect(tagOf(page)).toHaveAttribute("data-state", "paused");
+    await tickerHeld(tagTrack);
+  });
+});
+
+test.describe("background music title ticker, phone", { tag: ["@single"] }, () => {
+  test.use({ storageState: { cookies: [], origins: [] }, viewport: PHONE, hasTouch: true, isMobile: true });
+
+  test("leaves the pill's title as it was", async ({ page }) => {
+    await page.goto("/");
+    await tapIntoSite(page);
+    const title = pillOf(page).locator(".music-player_title");
+    await expect(title).toHaveCount(1);
+    expect(await title.evaluate((element) => ({ ticker: element.hasAttribute("data-music-ticker"), tracks: element.querySelectorAll(".music-ticker_track").length, fits: element.scrollWidth <= element.clientWidth }))).toEqual({ ticker: false, tracks: 0, fits: true });
+    expect(await page.evaluate(() => document.getAnimations().filter((animation) => animation instanceof CSSAnimation && animation.animationName === "music-ticker").length)).toBe(0);
+  });
+});
+
 test.describe("background music teleport, reduced motion", { tag: ["@single"] }, () => {
   test.use({ viewport: DESKTOP, reducedMotion: "reduce" });
+
+  test("keeps the ellipsis and scrolls nothing, even while the song plays", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-preloader]")).toHaveCount(0);
+    await heroSettled(page);
+    const polaroid = page.locator("[data-music-polaroid]");
+    await polaroid.locator("[data-music-toggle]").click();
+    await expect(polaroid).toHaveAttribute("data-state", "playing");
+    // The site-wide rule shortens transitions to 0.01ms instead of removing them (L-026): only a
+    // perceptible animation counts.
+    const settled = await page.evaluate(() => {
+      const title = document.querySelector<HTMLElement>("[data-music-polaroid] [data-music-ticker]")!;
+      const perceptible = document
+        .getAnimations()
+        .filter((animation) => animation.effect instanceof KeyframeEffect && animation.effect.target && (animation.effect.target === title || title.contains(animation.effect.target)))
+        .filter((animation) => Number(animation.effect!.getComputedTiming().duration) + Number(animation.effect!.getComputedTiming().delay) > 1);
+      const style = getComputedStyle(title);
+      return {
+        perceptible: perceptible.length,
+        overflow: style.overflow,
+        ellipsis: style.textOverflow,
+        mask: style.maskImage,
+        copy: getComputedStyle(title.querySelectorAll(".music-ticker_text")[1]).display,
+        clipped: title.scrollWidth > title.clientWidth,
+      };
+    });
+    expect(settled).toEqual({ perceptible: 0, overflow: "hidden", ellipsis: "ellipsis", mask: "none", copy: "none", clipped: true });
+  });
 
   test("swaps the polaroid and the tag without a flight", async ({ page }) => {
     await page.goto("/");
