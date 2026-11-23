@@ -73,6 +73,17 @@ const blocked = [
   ["set -o pipefail; set +o pipefail; cmd | tail && git commit -m m", "pipe-commit"],
   ["setopt pipefail; unsetopt pipe_fail; cmd | tail && git commit -m m", "pipe-commit"],
   ['bash +o pipefail -c "cmd | tail && git commit -m m"', "pipe-commit"],
+  // pipe-push
+  ["npm run prepush 2>&1 | tail -1 && git push", "pipe-push"],
+  ["npm run prepush | tail && git push -u origin HEAD", "pipe-push"],
+  ["cmd | tee log && git -C dir push", "pipe-push"],
+  ["cmd |& tail && git push", "pipe-push"],
+  ["cmd | tail || git push", "pipe-push"],
+  ["cmd | tail && echo ok && git push", "pipe-push"],
+  ["(cmd | tail) && git push", "pipe-push"],
+  ['bash -c "npm run prepush | tail && git push"', "pipe-push"],
+  ["set -o pipefail; set +o pipefail; cmd | tail && git push", "pipe-push"],
+  ["npm run prepush | tail && git push origin main", "pipe-push"],
   ["echo $(git push origin main)", "push-protected"],
   // wrappers
   ['bash -c "git push origin main"', "push-protected"],
@@ -142,6 +153,14 @@ const allowed = [
   "git commit -m 'a | b && c'",
   "cat <<EOF\ncmd | tail && git commit -m x\nEOF",
   "node --test scripts/hooks/guard-git.test.mjs",
+  "npm run prepush > .context/x/prepush.log 2>&1 && git push",
+  "npm run prepush && git push -u origin HEAD",
+  "set -o pipefail; npm run prepush | tail && git push",
+  'bash -o pipefail -c "npm run prepush | tail && git push"',
+  "cmd | tail; git push",
+  "cmd | tail\ngit push",
+  "git push 2>&1 | tail -5",
+  'grep "| tail && git push" CLAUDE.md',
 ];
 
 for (const [command, rule] of blocked) {
@@ -216,4 +235,11 @@ test("the pipe-commit block names the local-checks skill", () => {
   const result = runHook({ tool_name: "Bash", tool_input: { command: "npm run prepush | tail && git commit -m m" } });
   assert.equal(result.status, 2);
   assert.match(result.stderr, /pipe-commit, \.agents\/skills\/local-checks\/SKILL\.md/);
+});
+
+test("the pipe-push block names L-058 and the log-file pattern", () => {
+  const result = runHook({ tool_name: "Bash", tool_input: { command: "npm run prepush | tail -1 && git push" } });
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /pipe-push, L-058 in \.agents\/lessons-archive\.md/);
+  assert.match(result.stderr, /prepush\.log 2>&1 && git push/);
 });

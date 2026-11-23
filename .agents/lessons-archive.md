@@ -78,6 +78,16 @@ The entry below is guarded by a hook on T3's delegation tool.
 - **Guard:** hook `scripts/hooks/guard-deps.mjs` (`PreToolUse` on `mcp__t3-code__delegate_task`), tests in `scripts/hooks/guard-deps.test.mjs` (CI `workflow` job)
 - **Paths:** `**`
 
+### L-058 — Never pipe the gate in front of a push
+- **Date:** 2026-11-22
+- **Trigger:** #102, a failing head pushed (a730968)
+- **Symptom:** `npm run prepush 2>&1 | tail -1 && git push` printed "prepush failed at test:unit" and pushed anyway, because the `&&` saw `tail`'s exit status. The failure was a real same-millisecond ordering bug in the D1 host save.
+- **Root cause:** the pipe-commit hook rule covers commits only; the same pipe before `git push` is not caught, and trimming output with a pipe felt harmless.
+- **Rule:** run the gate unpiped and redirect its output to a file instead: `npm run prepush > .context/<task>/prepush.log 2>&1 && git push`, then read the log. Never put `| tail`, `| head` or `| grep` between a check and `&&`.
+- **Check:** every push in the thread follows an unpiped `prepush` whose exit status gates it.
+- **Guard:** hook `scripts/hooks/guard-git.mjs` rule pipe-push
+- **Paths:** `.agents/skills/local-checks/**`, `scripts/hooks/**`
+
 ### L-030 — A full-bleed decoration must escape the global `svg` max-width
 - **Date:** 2026-11-17
 - **Trigger:** #83, the user's correction; escape: runtime #79 (the attire clothesline string stopped at the content edges on a wide screen)

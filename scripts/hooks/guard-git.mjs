@@ -2,9 +2,11 @@
 // Claude Code PreToolUse hook for the Bash tool. It blocks the Git and GitHub
 // commands CLAUDE.md forbids, so those rules no longer rely on prose alone.
 // Each Git rule names the lesson in .agents/lessons-archive.md that records why.
-// It also blocks a commit chained after a pipeline (`cmd | tail && git commit`)
-// unless pipefail is on, since the chain then sees the pipe's last exit status;
-// that rule cites the local-checks skill, which owns the "run, then commit" rule.
+// It also blocks a commit or push chained after a pipeline
+// (`cmd | tail && git commit`, `npm run prepush | tail && git push`) unless
+// pipefail is on, since the chain then sees the pipe's last exit status. The
+// commit rule cites the local-checks skill, which owns "run, then commit"; the
+// push rule cites L-058, the push that went out on a failing check.
 //
 // Input: the hook payload on stdin ({ tool_name, tool_input: { command } }).
 // Exit 2 with a reason on stderr blocks the call; exit 0 allows it.
@@ -47,6 +49,11 @@ export const RULES = {
     skill: ".agents/skills/local-checks/SKILL.md",
     reason:
       "a pipeline's exit status is its last command's, so the commit runs even if the test fails; fix with `set -o pipefail; …` or drop the pipe.",
+  },
+  "pipe-push": {
+    lesson: "L-058",
+    reason:
+      "a pipeline's exit status is its last command's, so the push runs even if the check fails. Run the gate unpiped into a log instead: `npm run prepush > .context/<task>/prepush.log 2>&1 && git push`, then read the log.",
   },
 };
 
@@ -350,9 +357,9 @@ function checkPipeCommit(commands, inheritedPipefail) {
     if (change !== null) pipefail = change;
     if (command[0] === "git") {
       const { name } = gitSubcommand(command.slice(1));
-      if (name === "commit" && uncheckedPipelineInList && (i === 0 || ["&&", "||"].includes(commands[i - 1].operator))) {
-        return "pipe-commit";
-      }
+      const chained = uncheckedPipelineInList && (i === 0 || ["&&", "||"].includes(commands[i - 1].operator));
+      if (chained && name === "commit") return "pipe-commit";
+      if (chained && name === "push") return "pipe-push";
     }
 
     if (operator === "|" || operator === "|&") {
@@ -375,8 +382,8 @@ export function checkCommand(source, depth = 0) {
 function checkCommandInternal(source, depth, inheritedPipefail) {
   if (typeof source !== "string" || depth > 3) return null;
   const commands = lexCommands(source);
-  const pipeCommitRule = checkPipeCommit(commands, inheritedPipefail);
-  if (pipeCommitRule) return pipeCommitRule;
+  const pipeRule = checkPipeCommit(commands, inheritedPipefail);
+  if (pipeRule) return pipeRule;
   for (const { words: raw } of commands) {
     const words = stripAssignments(raw);
     if (!words.length) continue;

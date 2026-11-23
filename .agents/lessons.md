@@ -541,16 +541,6 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`
 
-### L-058 — Never pipe the gate in front of a push
-- **Date:** 2026-11-22
-- **Trigger:** #102, a failing head pushed (a730968)
-- **Symptom:** `npm run prepush 2>&1 | tail -1 && git push` printed "prepush failed at test:unit" and pushed anyway, because the `&&` saw `tail`'s exit status. The failure was a real same-millisecond ordering bug in the D1 host save.
-- **Root cause:** the pipe-commit hook rule covers commits only; the same pipe before `git push` is not caught, and trimming output with a pipe felt harmless.
-- **Rule:** run the gate unpiped and redirect its output to a file instead: `npm run prepush > .context/<task>/prepush.log 2>&1 && git push`, then read the log. Never put `| tail`, `| head` or `| grep` between a check and `&&`.
-- **Check:** every push in the thread follows an unpiped `prepush` whose exit status gates it.
-- **Guard:** none yet; a guard-git rule that blocks a pipe before `git push` is proposed as its own workflow PR (it would have saved a CI run here).
-- **Paths:** `.agents/skills/local-checks/**`, `scripts/hooks/**`
-
 ### L-059 — Wait for traffic the spec controls
 - **Date:** 2026-11-22
 - **Trigger:** #102, flaky test; #104
