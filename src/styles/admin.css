@@ -2826,8 +2826,9 @@ html[data-admin-drawer-open] {
 
 /*
  * Guest list add/edit drawer (Paper Admin 11 and 12). The panel and scrim come
- * from the RSVP drawer above; this block docks it at 37.5rem from 40rem, pins
- * the footer and lets only the middle scroll.
+ * from the RSVP drawer above; this block docks it at 37.5rem from 64rem, pins
+ * the footer and lets only the middle scroll. Under 64rem it is the full-screen
+ * phone sheet (Paper Admin 13a and 13b), styled at the end of the block.
  */
 .admin_guests_panel {
   --drawer-pad: 1.25rem;
@@ -2836,7 +2837,7 @@ html[data-admin-drawer-open] {
   overflow: hidden;
   padding: 1.5rem var(--drawer-pad) 0;
 
-  @media (min-width: 40rem) {
+  @media (min-width: 64rem) {
     --drawer-pad: 3rem;
     --drawer-gap: 2.25rem;
     inset: 0 0 0 auto;
@@ -2853,7 +2854,7 @@ html[data-admin-drawer-open] {
 }
 /* Above .admin-drawer_panel header h2, which comes later in the file. */
 .admin_guests_panel .admin_guests_drawer_header h2 {
-  @media (min-width: 40rem) {
+  @media (min-width: 64rem) {
     font-size: 3.5rem;
   }
   em {
@@ -2905,7 +2906,7 @@ html[data-admin-drawer-open] {
     background: none;
 
     a {
-      @media (min-width: 40rem) {
+      @media (min-width: 64rem) {
         width: 2.5rem;
         height: 2.5rem;
       }
@@ -3031,7 +3032,7 @@ html[data-admin-drawer-open] {
     line-height: 1.25rem;
     color: var(--dark-900);
 
-    @media (max-width: 39.99rem) {
+    @media (max-width: 63.99rem) {
       font-size: 1rem;
     }
     &::placeholder {
@@ -3399,7 +3400,7 @@ html[data-admin-drawer-open] {
     line-height: 1.25rem;
     color: var(--dark-900);
 
-    @media (max-width: 39.99rem) {
+    @media (max-width: 63.99rem) {
       font-size: 1rem;
     }
   }
@@ -3505,7 +3506,7 @@ html[data-admin-drawer-open] {
   padding: 1.25rem 0 calc(1rem + var(--admin-inset));
   border-top: var(--border-width) solid var(--light-300);
 
-  @media (min-width: 40rem) {
+  @media (min-width: 64rem) {
     padding-bottom: 2.5rem;
   }
   > :is(a, button) {
@@ -3551,7 +3552,7 @@ html[data-admin-drawer-open] {
   line-height: 1rem;
   color: var(--dark-700);
 
-  @media (max-width: 39.99rem) {
+  @media (max-width: 63.99rem) {
     display: none;
   }
 }
@@ -3631,6 +3632,273 @@ html[data-admin-drawer-open] {
     line-height: 1.25rem;
     color: var(--dark-700);
     overflow-wrap: anywhere;
+  }
+}
+
+/* Body copies of the footer's Save and add another and Archive household, and
+   the names hint: phone sheet only. */
+.admin_guests_sheet_actions,
+.admin_guests_name_tip {
+  display: none;
+}
+
+/*
+ * Guest list phone sheet (Paper Admin 13a, and 13b with the keyboard up).
+ * Under 64rem the drawer fills the screen: the eyebrow and title stay pinned
+ * above the scrolling body, the footer is pinned below it. The keyboard script
+ * in guests.astro sets --guest-sheet-keyboard and [data-keyboard-open] on the
+ * panel; without it the CSS alone keeps the footer on the bottom edge.
+ */
+@media (max-width: 63.99rem) {
+  .admin_guests_panel {
+    &[data-keyboard-open] {
+      /* The footer sits on the keyboard; the body above it shrinks. */
+      bottom: var(--guest-sheet-keyboard, 0px);
+
+      .admin_guests_drawer_footer {
+        padding-bottom: 0.75rem;
+      }
+    }
+
+    /* Header: eyebrow, then the title, over a full-width rule. */
+    > .admin_guests_drawer .admin-drawer_top {
+      margin: 0;
+
+      a {
+        display: none;
+      }
+      .admin_label {
+        font-size: 0.6875rem;
+        line-height: 0.875rem;
+      }
+    }
+    .admin_guests_drawer_scroll {
+      /* Keeps a focused field clear of the pinned title. */
+      scroll-padding-top: 6.5rem;
+    }
+    .admin_guests_drawer_header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      margin: 0 calc(var(--drawer-pad) * -1) -0.25rem;
+      padding: 0.625rem var(--drawer-pad) 1rem;
+      border-bottom: var(--border-width) solid var(--light-300);
+      background-color: var(--light-100);
+
+      h2 {
+        font-size: 2.25rem;
+        line-height: 2.375rem;
+      }
+    }
+
+    /* Body */
+    .admin_guests_drawer_section {
+      gap: 0.5rem;
+    }
+    .admin_guests_label {
+      font-size: 0.6875rem;
+      line-height: 0.875rem;
+    }
+    .admin_guests_hint,
+    .admin_guests_hostid,
+    .admin_guests_name_tip {
+      font-size: 0.8125rem;
+      line-height: 1.125rem;
+    }
+    .admin_guests_hint_desktop {
+      display: none;
+    }
+    .admin_guests_name_tip {
+      color: var(--dark-700);
+      /* It leaves a beat after the box loses focus, so the tap that blurred
+         it still lands on the control below before the page moves up. */
+      transition: display 0s linear 0.25s allow-discrete;
+    }
+    .admin_guests_names:focus-within + .admin_guests_name_tip {
+      display: block;
+      transition-delay: 0s;
+    }
+    /* A warning below the box takes the place of the hint. */
+    .admin_guests_drawer_section:has(
+        [data-duplicate-warning]:not([hidden])
+      )
+      .admin_guests_name_tip {
+      display: none;
+    }
+    .admin_guests_names {
+      gap: 0.375rem;
+      padding: 0.625rem;
+      border-color: var(--light-300);
+
+      &:focus-within {
+        border-color: var(--dark-900);
+        box-shadow: none;
+      }
+    }
+    .admin_guests_name-chip {
+      padding: 0.375rem 0.625rem;
+      font-size: 0.875rem;
+      line-height: 1.125rem;
+
+      button {
+        font-size: 0.875rem;
+        line-height: 1.125rem;
+      }
+    }
+    .admin_guests_names .admin_guests_add_guest input,
+    .admin_guests_add_guest input {
+      font-size: 1rem;
+      line-height: 1.25rem;
+    }
+    .admin_guests_drawer
+      :is(#display-name, .admin_guests_hostid input, textarea) {
+      padding-inline: 0.875rem;
+      font-size: 1rem;
+      line-height: 1.25rem;
+    }
+
+    /* "Allow a plus-one" on the left, "N seats · More" on the right. */
+    .admin_guests_plus {
+      flex-flow: row wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem 0.75rem;
+    }
+    .admin_guests_switch {
+      flex: 1 1 auto;
+      width: auto;
+      gap: 0.75rem;
+    }
+    .admin_guests_switch_text {
+      span:first-child {
+        font-size: 0.9375rem;
+      }
+      span:last-child {
+        display: none;
+      }
+    }
+    .admin_guests_seatline {
+      flex: none;
+      flex-wrap: nowrap;
+      align-items: baseline;
+      gap: 0.25rem;
+      /* Centres the 18px line on the 24px switch. */
+      padding-top: 0.1875rem;
+
+      p {
+        flex: 0 1 auto;
+        font-size: 0.875rem;
+        line-height: 1.125rem;
+      }
+      b {
+        margin: 0;
+        font: inherit;
+        color: inherit;
+      }
+      [data-seat-unit] {
+        color: inherit;
+      }
+    }
+    .admin_guests_more {
+      margin-inline-start: 0;
+
+      summary {
+        font-size: 0.875rem;
+        line-height: 1.125rem;
+        color: var(--dark-700);
+
+        &::before {
+          content: "·";
+          display: inline-block;
+          margin-inline-end: 0.25rem;
+          text-decoration: none;
+        }
+      }
+    }
+    &[data-variant="new"] [data-seat-rest] {
+      display: none;
+    }
+    &[data-variant="edit"] {
+      .admin_guests_seatline {
+        flex: 1 1 auto;
+        padding-top: 0;
+
+        p {
+          flex: 1 1 auto;
+        }
+      }
+      .admin_guests_more {
+        margin-inline-start: auto;
+
+        summary::before {
+          content: none;
+        }
+      }
+    }
+
+    /* Footer: Cancel and Save, pinned to the bottom edge. */
+    .admin_guests_drawer_footer {
+      position: relative;
+      z-index: 2;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: stretch;
+      gap: 0.625rem;
+      margin-inline: calc(var(--drawer-pad) * -1);
+      padding: 0.75rem var(--drawer-pad) calc(0.75rem + var(--admin-inset));
+      background-color: var(--light-100);
+      box-shadow: 0 -0.75rem 1.5rem #1f2f5c14;
+
+      > .accent,
+      > button[name="save_and_add"],
+      > .admin_guests_footer_hint {
+        display: none;
+      }
+      > :is(a, button) {
+        min-height: 3rem;
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+        line-height: 1.25rem;
+      }
+      > a:not(.accent) {
+        flex: 1 1 0;
+        border: var(--border-width) solid var(--dark-900);
+      }
+      > .primary {
+        flex: 2 1 0;
+        padding: 0.875rem 1rem;
+      }
+    }
+
+    /* End of the scrolling body: the actions the footer drops. */
+    .admin_guests_sheet_actions {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+
+      button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 3rem;
+        padding: 0.875rem 1.25rem;
+        border: var(--border-width) solid var(--dark-900);
+        border-radius: var(--radius-round);
+        font-size: 1rem;
+        line-height: 1.25rem;
+        text-align: center;
+        color: var(--dark-900);
+      }
+      a {
+        align-self: flex-start;
+        padding: 0.75rem 0;
+        font-size: 0.9375rem;
+        line-height: 1.25rem;
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+        color: var(--accent-500);
+      }
+    }
   }
 }
 

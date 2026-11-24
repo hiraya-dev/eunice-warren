@@ -23,6 +23,9 @@ const editor = fakeAdminFixtures.find((row) => row.id === "hh-admin-editor")!;
 const openSeatFixture = fakeAdminFixtures.find(
   (row) => row.id === "hh-mendoza",
 )!;
+const twoMemberFixture = fakeAdminFixtures.find(
+  (row) => row.id === "hh-merly-ben",
+)!;
 
 // The fake store outlives a project run and refuses a repeat name as already
 // invited, so each test saves a surname of its own (letters only).
@@ -74,6 +77,368 @@ test.describe("guest list filters", () => {
 
 test.describe("guest list drawer", () => {
   test.describe.configure({ mode: "serial" });
+
+  test("titles edit drawers from invited members, not named plus-ones", async ({
+    page,
+  }) => {
+    await page.goto("/admin/guests?edit=hh-lim");
+    const limTitle = page.locator("[data-admin-drawer] h2");
+    await expect(limTitle).toHaveText("Kat");
+    await expect(limTitle).not.toContainText("Jonas");
+
+    await page.goto(`/admin/guests?edit=${twoMemberFixture.id}`);
+    const memberNames = twoMemberFixture.seats
+      .filter((seat) => seat.kind === "member" && seat.name)
+      .map((seat) => seat.name!.split(/\s+/)[0]);
+    const twoMemberTitle = page.locator("[data-admin-drawer] h2");
+    await expect(twoMemberTitle).toContainText(
+      `${memberNames[0]} & ${memberNames[1]}`,
+    );
+    await expect(twoMemberTitle.locator("em")).toHaveText(
+      `& ${memberNames[1]}`,
+    );
+
+    await page.goto("/admin/guests?new=1");
+    await expect(page.locator("[data-admin-drawer] h2")).toHaveText(
+      "Who are you inviting?",
+    );
+  });
+
+  test(
+    "tracks the mobile sheet keyboard and cleans up on close",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/admin/guests?edit=${editor.id}`);
+      const panel = page.locator(".admin_guests_panel");
+      const field = page.locator("[data-edit-household] [name='notes']");
+      await page.evaluate(() => {
+        const field = document.querySelector<HTMLElement>(
+          "[data-edit-household] [name='notes']",
+        );
+        if (!field) throw new Error("notes field missing");
+        field.scrollIntoView = () => {
+          field.dataset.scrollCalls = String(
+            Number(field.dataset.scrollCalls ?? "0") + 1,
+          );
+        };
+        field.focus();
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 500,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(panel).toHaveAttribute("data-keyboard-open", "");
+      await expect
+        .poll(() =>
+          panel.evaluate((element) =>
+            element.style.getPropertyValue("--guest-sheet-keyboard"),
+          ),
+        )
+        .toBe("344px");
+      await expect
+        .poll(() => field.getAttribute("data-scroll-calls"))
+        .toBe("1");
+
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 844,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(panel).not.toHaveAttribute("data-keyboard-open");
+      await expect
+        .poll(() =>
+          panel.evaluate((element) =>
+            element.style.getPropertyValue("--guest-sheet-keyboard"),
+          ),
+        )
+        .toBe("0px");
+
+      await page
+        .locator(
+          `[data-household-id="${openSeatFixture.id}"] [data-admin-edit]`,
+        )
+        .first()
+        .evaluate((link: HTMLAnchorElement) => link.click());
+      await expect(
+        page.locator("[data-edit-household] input[name='id']"),
+      ).toHaveValue(openSeatFixture.id);
+      const swappedPanel = page.locator(".admin_guests_panel");
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 500,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(swappedPanel).toHaveAttribute("data-keyboard-open", "");
+
+      const errors: Error[] = [];
+      page.on("pageerror", (error) => errors.push(error));
+      await page
+        .locator(".admin-drawer_scrim")
+        .evaluate((scrim: HTMLElement) => scrim.click());
+      await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      expect(errors).toEqual([]);
+
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 844,
+        });
+      });
+      await page.locator(".admin_guests_add").click();
+      const laterPanel = page.locator(".admin_guests_panel");
+      await expect(laterPanel).not.toHaveAttribute("data-keyboard-open");
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 500,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(laterPanel).toHaveAttribute("data-keyboard-open", "");
+    },
+  );
+
+  test(
+    "does not track the keyboard at desktop widths",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(`/admin/guests?edit=${editor.id}`);
+      const panel = page.locator(".admin_guests_panel");
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 500,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(panel).not.toHaveAttribute("data-keyboard-open");
+    },
+  );
+
+  test(
+    "docks the drawer from 64rem and is a full-width sheet below it",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      for (const [width, height, docked] of [
+        [639, 800, false],
+        [640, 800, false],
+        [768, 1024, false],
+        [1023, 800, false],
+        [1024, 800, true],
+        [1440, 900, true],
+      ] as const) {
+        await page.setViewportSize({ width, height });
+        await page.goto("/admin/guests?new=1");
+        const panel = page.locator(".admin_guests_panel");
+        await expect(panel).toBeVisible();
+        // The slide-in settles before the box is read.
+        await expect
+          .poll(async () => (await panel.boundingBox())?.x, {
+            message: `${width}px panel position`,
+          })
+          .toBe(docked ? width - 600 : 0);
+        const box = (await panel.boundingBox())!;
+        expect(box.width).toBe(docked ? 600 : width);
+        expect(box.x + box.width).toBe(width);
+        const overflow = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+        );
+        expect(overflow).toBe(false);
+      }
+    },
+  );
+
+  test(
+    "the phone sheet pins the header and footer and scrolls only the body",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/admin/guests?new=1");
+      const panel = page.locator(".admin_guests_panel");
+      const scroll = page.locator(".admin_guests_drawer_scroll");
+      const footer = page.locator(".admin_guests_drawer_footer");
+      const names = page.locator("[data-add-name]");
+      for (const name of [
+        "Sheet Guest One",
+        "Sheet Guest Two",
+        "Sheet Guest Three",
+        "Sheet Guest Four",
+        "Sheet Guest Five",
+        "Sheet Guest Six",
+        "Sheet Guest Seven",
+        "Sheet Guest Eight",
+      ]) {
+        await names.fill(name);
+        await names.press("Enter");
+      }
+      await expect(page.locator("[data-name-chip]")).toHaveCount(8);
+      expect(
+        await scroll.evaluate((el) => el.scrollHeight > el.clientHeight),
+      ).toBe(true);
+
+      const inside = async (selector: string) => {
+        const box = (await page.locator(selector).boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(390);
+        expect(box.y + box.height).toBeLessThanOrEqual(844);
+        expect(box.height).toBeGreaterThanOrEqual(48);
+      };
+      await inside(".admin_guests_drawer_footer > a[data-admin-drawer-close]");
+      await inside(".admin_guests_drawer_footer > button.primary");
+      const footerBox = (await footer.boundingBox())!;
+      expect(Math.abs(footerBox.y + footerBox.height - 844)).toBeLessThanOrEqual(
+        6,
+      );
+      // The page behind the sheet does not scroll.
+      expect(
+        await page.evaluate(
+          () => getComputedStyle(document.documentElement).overflow,
+        ),
+      ).toBe("hidden");
+
+      await expect(
+        page.locator(".admin-drawer_top a[data-admin-drawer-close]"),
+      ).toBeHidden();
+      await expect(
+        panel.locator(".admin-drawer_top .admin_label"),
+      ).toBeVisible();
+      const title = page.locator("#admin-drawer-title");
+      expect(await title.evaluate((el) => getComputedStyle(el).fontSize)).toBe(
+        "36px",
+      );
+      const smallInputs = await panel.evaluate((element) =>
+        [...element.querySelectorAll<HTMLElement>("input, textarea")]
+          .filter((el) => (el as HTMLInputElement).type !== "hidden")
+          .map((el) => parseFloat(getComputedStyle(el).fontSize))
+          .filter((size) => size < 16),
+      );
+      expect(smallInputs).toEqual([]);
+
+      // Save and add another ends the body; the footer drops it.
+      await expect(
+        footer.locator("button[name='save_and_add']"),
+      ).toBeHidden();
+      await expect(footer.locator("a.accent")).toHaveCount(0);
+      await expect(
+        page.locator(".admin_guests_footer_hint"),
+      ).toBeHidden();
+      const bodyCopy = scroll.getByRole("button", {
+        name: "Save and add another",
+      });
+      await bodyCopy.scrollIntoViewIfNeeded();
+      await expect(bodyCopy).toBeVisible();
+      const copyBox = (await bodyCopy.boundingBox())!;
+      expect(copyBox.height).toBeGreaterThanOrEqual(48);
+      expect(copyBox.y + copyBox.height).toBeLessThanOrEqual(
+        (await footer.boundingBox())!.y + 1,
+      );
+      // The header stays put while the body scrolls under it.
+      const titleBefore = (await title.boundingBox())!.y;
+      await scroll.evaluate((el) => {
+        el.scrollTop = el.scrollHeight;
+      });
+      expect(Math.abs((await title.boundingBox())!.y - titleBefore)).toBe(0);
+
+      await page.goto(`/admin/guests?edit=${editor.id}`);
+      const editScroll = page.locator(".admin_guests_drawer_scroll");
+      const archive = editScroll.getByRole("link", {
+        name: "Archive household",
+      });
+      await archive.scrollIntoViewIfNeeded();
+      await expect(archive).toBeVisible();
+      await expect(
+        page.locator(".admin_guests_drawer_footer a.accent"),
+      ).toBeHidden();
+      await expect(
+        page.locator(".admin_guests_drawer_footer > button.primary"),
+      ).toBeVisible();
+      await expect(
+        page.locator(".admin_guests_drawer_footer > a[data-admin-drawer-close]"),
+      ).toBeVisible();
+    },
+  );
+
+  test(
+    "the phone sheet footer sits on the keyboard and the header stays",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/admin/guests?new=1");
+      const panel = page.locator(".admin_guests_panel");
+      const footer = page.locator(".admin_guests_drawer_footer");
+      const names = page.locator("[data-add-name]");
+      await names.focus();
+      await expect(page.locator(".admin_guests_name_tip")).toBeVisible();
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 844 - 291,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(panel).toHaveAttribute("data-keyboard-open", "");
+      await expect
+        .poll(async () => {
+          const box = (await footer.boundingBox())!;
+          return Math.abs(box.y + box.height - (844 - 291));
+        })
+        .toBeLessThanOrEqual(6);
+      await expect(page.locator("#admin-drawer-title")).toBeVisible();
+      await expect(
+        panel.locator(".admin-drawer_top .admin_label"),
+      ).toBeVisible();
+      await expect(names).toBeInViewport();
+      const padding = await footer.evaluate(
+        (el) => getComputedStyle(el).paddingBottom,
+      );
+      expect(padding).toBe("12px");
+
+      await page.evaluate(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) throw new Error("visualViewport missing");
+        Object.defineProperty(viewport, "height", {
+          configurable: true,
+          get: () => 844,
+        });
+        viewport.dispatchEvent(new Event("resize"));
+      });
+      await expect(panel).not.toHaveAttribute("data-keyboard-open");
+      await expect
+        .poll(async () => {
+          const box = (await footer.boundingBox())!;
+          return Math.round(box.y + box.height);
+        })
+        .toBe(844);
+    },
+  );
 
   test("opens add and edit drawers without reloading and traps focus", async ({
     page,
@@ -177,7 +542,8 @@ test.describe("guest list drawer", () => {
       expect(dialog.message()).toBe(message);
       void dialog.dismiss();
     });
-    await edit.locator(".admin-drawer_top [data-admin-drawer-close]").click();
+    // The header × on the docked drawer; the phone sheet has Cancel instead.
+    await edit.locator("[data-admin-drawer-close]:visible").first().click();
     await expect(edit).toBeVisible();
     await expect(name).toHaveValue("Changed for the guest guard test");
 
@@ -436,11 +802,19 @@ test.describe("guest list drawer", () => {
       await dialog.dismiss();
     });
     const save = form.locator("button.primary");
-    const saveAndAdd = form.locator("button[name='save_and_add']");
+    // The footer's copy, and the one the phone sheet shows at the end of the
+    // body: Saving… disables both.
+    const saveAndAdd = form.locator(
+      ".admin_guests_drawer_footer button[name='save_and_add']",
+    );
+    const bodySaveAndAdd = form.locator(
+      ".admin_guests_sheet_actions button[name='save_and_add']",
+    );
     await save.click();
     await expect(save).toHaveText("Saving…");
     await expect(save).toBeDisabled();
     await expect(saveAndAdd).toBeDisabled();
+    await expect(bodySaveAndAdd).toBeDisabled();
     await expect(form.locator("button[name='save']")).toHaveCount(2);
     await expect(form.locator("[data-admin-submit-mirror]")).toHaveCount(1);
     expect(dialogs).toBe(0);
@@ -454,6 +828,8 @@ test.describe("guest list drawer", () => {
     await expect(save).toBeEnabled();
     await expect(saveAndAdd).toHaveText("Save and add another");
     await expect(saveAndAdd).toBeEnabled();
+    await expect(bodySaveAndAdd).toHaveText("Save and add another");
+    await expect(bodySaveAndAdd).toBeEnabled();
     await expect(form.locator("[data-admin-submit-mirror]")).toHaveCount(0);
   });
 
