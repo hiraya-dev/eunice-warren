@@ -40,7 +40,7 @@ const stampShort = deadline.closed
   : `to ${stampLabel.split(" · ").at(-1)}`;
 const hello = greeting(new Date(), host.firstName);
 const nameAt = hello.lastIndexOf(", ") + 2;
-const statCaptions = ["yes", "no", "waiting", "songs"];
+const statCaptions = ["households attending", "declined", "waiting"];
 ---
 
 <AdminLayout
@@ -88,7 +88,7 @@ const statCaptions = ["yes", "no", "waiting", "songs"];
           </header>
           <section class="admin-overview_coming" data-admin-coming>
             <div class="admin-overview_total">
-              <h2 class="admin_label">Guests coming</h2>
+              <h2 class="admin_label">Guests confirmed</h2>
               <strong>
                 <span class="admin-overview_number">{view.guestsComing}</span>
                 <span class="admin-overview_seats">
@@ -124,10 +124,9 @@ const statCaptions = ["yes", "no", "waiting", "songs"];
               </div>
               <dl class="admin-overview_stats">
                 {[
-                  ["Attending", view.households.attending],
-                  ["Declined", view.households.declined],
-                  ["Not replied yet", view.households.waiting],
-                  ["Song requests", view.songCount],
+                  ["Households attending", view.households.attending],
+                  ["Households declined", view.households.declined],
+                  ["Households waiting", view.households.waiting],
                 ].map(([label, value], index) => (
                   <div class:list={{ waiting: index === 2 }}>
                     <dt data-short={statCaptions[index]}>
@@ -181,9 +180,9 @@ const statCaptions = ["yes", "no", "waiting", "songs"];
                 </div>
               ))}
               {view.waiting.total > 3 && (
-                <a class="admin-overview_more" href="/admin/guests">
+                <a class="admin-overview_more" href="/admin/guests?filter=waiting">
                   <span class="admin-overview_more-long">
-                    + {view.waiting.total - 3} more · <span>see the guest list</span>
+                    + {view.waiting.total - 3} more · <span>see all waiting</span>
                   </span>
                   <span class="admin-overview_more-short">
                     See all {view.waiting.total} waiting

@@ -26,6 +26,11 @@ test.describe("admin dashboard", () => {
         fakeAdminFixtures.filter((row) => row.rsvp.state === "waiting").length,
       ),
     );
+    await expect(page.locator("[data-admin-coming] dt")).toHaveCount(3);
+    await expect(page.locator(".admin-overview_more")).toHaveAttribute(
+      "href",
+      "/admin/guests?filter=waiting",
+    );
   });
 
   test("lists and searches fixture households @smoke", async ({ page }) => {
