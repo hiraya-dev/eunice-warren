@@ -674,6 +674,132 @@ test.describe("guest list drawer", () => {
     },
   );
 
+  // The panel's perceptible animations by the clock (L-009, L-026): the
+  // entrance of a drawer the page just rendered, or the exit once it closes.
+  const drawerMotion = (page: Page) =>
+    page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
+      const scrim = document.querySelector<HTMLElement>(".admin-drawer_scrim");
+      if (!panel || !scrim) throw new Error("drawer missing");
+      const perceptible = (el: HTMLElement) =>
+        el
+          .getAnimations()
+          .map((animation) => {
+            const timing = (animation.effect as KeyframeEffect).getComputedTiming();
+            return {
+              name: (animation as CSSAnimation).animationName,
+              ms: Number(timing.duration) + Number(timing.delay),
+            };
+          })
+          .filter((animation) => animation.ms > 1);
+      const box = panel.getBoundingClientRect();
+      return {
+        panel: perceptible(panel),
+        scrim: perceptible(scrim),
+        panelName: getComputedStyle(panel).animationName,
+        right: box.right,
+        top: box.top,
+        width: innerWidth,
+      };
+    });
+
+  const closeDrawer = (page: Page) =>
+    page.evaluate(() => {
+      const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+      const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
+      if (!drawer || !panel) throw new Error("drawer missing");
+      drawer.querySelector<HTMLElement>(".admin-drawer_scrim")?.click();
+      return panel
+        .getAnimations()
+        .map((animation) => ({
+          name: (animation as CSSAnimation).animationName,
+          ms: Number(
+            (animation.effect as KeyframeEffect).getComputedTiming().duration,
+          ),
+        }));
+    });
+
+  test(
+    "shows a re-rendered drawer in place and still slides out when it closes",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      page.on("dialog", (dialog) => void dialog.accept());
+      for (const width of [390, 1440]) {
+        const docked = width >= 1024;
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto("/admin/guests");
+
+        // Opened by a click, the drawer still slides in (280ms phone, 240ms docked).
+        const entrance = await page.evaluate(
+          () =>
+            new Promise<{ name: string; ms: number }[]>((resolve) => {
+              document.querySelector<HTMLElement>(".admin_guests_add")?.click();
+              const read = () => {
+                const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
+                if (!panel) return requestAnimationFrame(read);
+                resolve(
+                  panel.getAnimations().map((animation) => ({
+                    name: (animation as CSSAnimation).animationName,
+                    ms: Number(
+                      (animation.effect as KeyframeEffect).getComputedTiming().duration,
+                    ),
+                  })),
+                );
+              };
+              read();
+            }),
+        );
+        expect(entrance).toEqual([
+          { name: docked ? "admin-drawer-in" : "admin-drawer-up", ms: docked ? 240 : 280 },
+        ]);
+        await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(0);
+
+        // An empty invitation name is refused: the server renders the same drawer again.
+        for (const save of ["save_and_add", "save"]) {
+          await page.goto("/admin/guests?new=1");
+          const form = page.locator("[data-new-household]");
+          await (save === "save_and_add"
+            ? form.locator("button[name='save_and_add']:visible")
+            : form.getByRole("button", { name: "Save", exact: true })
+          ).click();
+          await expect(page.locator("[data-admin-write-error]")).toBeVisible();
+          await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(1);
+          const settled = await drawerMotion(page);
+          expect(settled.panel).toEqual([]);
+          expect(settled.scrim).toEqual([]);
+          expect(settled.panelName).toBe("none");
+          if (docked) expect(Math.round(settled.right)).toBe(settled.width);
+          else expect(Math.round(settled.top)).toBe(0);
+        }
+
+        // The same for an edit form refused with an empty invitation name.
+        await page.goto(`/admin/guests?edit=${editor.id}`);
+        await page.locator("[name='display_name']").fill("");
+        await page
+          .locator("[data-edit-household]")
+          .getByRole("button", { name: "Save", exact: true })
+          .click();
+        await expect(page.locator("[data-admin-write-error]")).toBeVisible();
+        const edit = await drawerMotion(page);
+        expect(edit.panel).toEqual([]);
+        expect(edit.scrim).toEqual([]);
+
+        // The redirect after Save and add another continues the open drawer.
+        await page.goto("/admin/guests?new=1&added=Someone");
+        await expect(page.locator("[data-admin-added]")).toBeVisible();
+        const added = await drawerMotion(page);
+        expect(added.panel).toEqual([]);
+        expect(added.scrim).toEqual([]);
+
+        // A settled drawer still plays its 180ms exit.
+        const exit = await closeDrawer(page);
+        expect(exit).toEqual([
+          { name: docked ? "admin-drawer-out" : "admin-drawer-down", ms: 180 },
+        ]);
+      }
+    },
+  );
+
   test(
     "the phone sheet pins the header and footer and scrolls only the body",
     { tag: ["@single"] },

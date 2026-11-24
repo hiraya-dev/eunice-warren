@@ -494,6 +494,9 @@ if (savedNotice && !editMode) {
               aria-modal="true"
               aria-labelledby="admin-drawer-title"
               data-admin-drawer
+              data-admin-drawer-settled={
+                Astro.request.method === "POST" ? "" : undefined
+              }
             >
               <a
                 class="admin-drawer_scrim"

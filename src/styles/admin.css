@@ -2877,6 +2877,13 @@ html[data-admin-drawer-open] {
   }
 }
 
+/* A drawer the server re-renders (a POST answer, Save and add another) is the
+   same drawer the host already had open: it shows in place. Closing still plays. */
+[data-admin-drawer][data-admin-drawer-settled]:not([data-closing])
+  :is(.admin-drawer_scrim, .admin-drawer_panel) {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-drawer_scrim,
   .admin-drawer_panel {

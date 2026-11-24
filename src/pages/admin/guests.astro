@@ -544,6 +544,11 @@ if (!newDraft.label)
   );
 const archiveId = Astro.url.searchParams.get("archive");
 const newOpen = Astro.url.searchParams.get("new") === "1";
+// A POST re-render, or the redirect after Save and add another, continues the
+// drawer the host already had open, so it shows in place without sliding in.
+const drawerSettled =
+  Astro.request.method === "POST" ||
+  (newOpen && Boolean(Astro.url.searchParams.get("added")));
 const archiveRow = view.rows.find((row) => row.id === archiveId);
 const takenHouseholds = view.rows.map((row) => ({
   id: row.id,
@@ -889,6 +894,7 @@ const editSeats = (row: AdminHousehold) => {
             (newOpen ? (
               <GuestHouseholdForm
                 variant="new"
+                settled={drawerSettled}
                 draft={newDraft}
                 takenIds={takenIds}
                 duplicateOpenId={duplicateOpenId}
@@ -902,6 +908,7 @@ const editSeats = (row: AdminHousehold) => {
                 return (
                   <GuestHouseholdForm
                     variant="edit"
+                    settled={drawerSettled}
                     row={row}
                     seats={editSeats(row)}
                     removedSeatIds={

@@ -580,6 +580,44 @@ test.describe("admin RSVPs", () => {
     });
   });
 
+  test("shows a refused Save reply in place and still slides out when it closes", async ({ page }) => {
+    // A refused save writes nothing, so it needs no temporary household.
+    page.on("dialog", (dialog) => void dialog.accept());
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    await page.locator('input[name="attending"][value="yes"]').check();
+    await page.locator('input[name="seat_attending_1"]').check();
+    await page.locator('select[name="slipper_size_1"]').selectOption("");
+    await page.getByRole("button", { name: "Save reply" }).click();
+    await expect(page.locator(".admin-drawer_error").filter({ hasText: "Pick a slipper size" })).toBeVisible();
+    await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(1);
+    // Read by the clock (L-009, L-026): nothing perceptible animates.
+    const settled = await page.evaluate(() => {
+      const perceptible = (selector: string) =>
+        document
+          .querySelector<HTMLElement>(selector)!
+          .getAnimations()
+          .filter((animation) => {
+            const timing = (animation.effect as KeyframeEffect).getComputedTiming();
+            return Number(timing.duration) + Number(timing.delay) > 1;
+          }).length;
+      return {
+        panel: perceptible(".admin-drawer_panel"),
+        scrim: perceptible(".admin-drawer_scrim"),
+        name: getComputedStyle(document.querySelector(".admin-drawer_panel")!).animationName,
+      };
+    });
+    expect(settled).toEqual({ panel: 0, scrim: 0, name: "none" });
+    // The settled drawer still plays its 180ms exit.
+    const exit = await page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>(".admin-drawer_panel")!;
+      document.querySelector<HTMLElement>(".admin-drawer_scrim")!.click();
+      return panel.getAnimations().map((animation) => ({
+        ms: Number((animation.effect as KeyframeEffect).getComputedTiming().duration),
+      }));
+    });
+    expect(exit).toEqual([{ ms: 180 }]);
+  });
+
   test("saves a host edit from Enter and shows the new history version", async ({ page }, testInfo) => {
     await withTemporaryRsvpHousehold(page, testInfo, async ({ id, prefix }) => {
       await page.goto(`/admin/rsvps?household=${id}&edit=1`);
