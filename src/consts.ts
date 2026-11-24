@@ -7,9 +7,9 @@ export const SITE_DESCRIPTION =
   "Warren and Eunice are getting married on 14 January 2027 in Boracay, Philippines.";
 /**
  * Canonical origin. Resolves canonical URLs, social images, and the sitemap.
- * Workers.dev origin until a custom domain is added.
+ * The custom domain; www redirects here (a Cloudflare Redirect Rule).
  */
-export const SITE_URL = "https://eunice-warren.warren-and-eunice.workers.dev";
+export const SITE_URL = "https://thefisheswedding.com";
 /** Single switch to flip when the site should appear in search. */
 export const SITE_INDEXABLE = false;
 /** BCP 47 locale tag used to format dates and numbers. */
