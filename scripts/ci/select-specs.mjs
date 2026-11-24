@@ -115,7 +115,6 @@ export const SPEC_SOURCES = {
     "src/actions/",
     "src/lib/guest.ts",
   ],
-  "tests/pre-wedding.spec.ts": ["src/components/sections/PreWedding.astro"],
   "tests/music.spec.ts": [
     "src/components/global/BackgroundMusic.astro",
     "src/components/global/Preloader.astro",
@@ -164,18 +163,6 @@ export const SPEC_SOURCES = {
     "src/components/sections/Wedding.astro",
     "src/components/interactive/Tabs.astro",
     "src/scripts/tab-system.ts",
-  ],
-  "tests/with-love-uploads.spec.ts": [
-    "src/components/sections/WithLoveUpload.astro",
-    "src/actions/",
-    "src/lib/with-love/",
-    "src/scripts/with-love/",
-  ],
-  "tests/with-love.spec.ts": [
-    "src/components/sections/WithLove.astro",
-    "src/actions/",
-    "src/lib/with-love/",
-    "src/scripts/with-love/",
   ],
 };
 

@@ -9,8 +9,8 @@ where to be, and feels welcome.
 - The wedding of Warren and Eunice: Thursday 14 January 2027, Boracay,
   Philippines. All times are Philippine Time (GMT+8).
 - One page: invitation, schedule, attire, getting there and where to stay,
-  things to do on the island, entourage, FAQ, RSVP, a playlist with song requests,
-  and With Love (guests' photo-and-message polaroids).
+  things to do on the island, entourage, a photo gallery, FAQ, RSVP, and a
+  playlist with song requests.
 - RSVP by name lookup against the guest list; each invitation lists the seats saved
   for that household. The deadline is in December 2026.
 

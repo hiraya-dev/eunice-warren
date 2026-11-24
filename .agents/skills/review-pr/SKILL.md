@@ -59,7 +59,7 @@ The Codex report's `VALIDATION` block is evidence, not a review pass.
 ## Codex second opinion (risky PRs)
 
 A different model family tends to catch different mistakes, so a risky `runtime`
-PR (`CLAUDE.md` **Roles**: the RSVP, song and With Love actions and stores, the API
+PR (`CLAUDE.md` **Roles**: the RSVP and song actions and stores, the API
 routes, dependencies, or root config such as `wrangler.jsonc` and
 `astro.config.mjs`) also gets a read-only Codex review. Every other PR is reviewed by `pr-reviewer` alone. It uses the
 ChatGPT plan, not the Claude plan.
@@ -209,7 +209,7 @@ Where the diff reaches them:
 - performance — image handling, shipped JS, layout shift
 - metadata, and `SITE_INDEXABLE` staying `false` until the user launches
 - guest data: no real guest names or contact details in the repository or the
-  client bundle; the RSVP, song and With Love paths keep the fake store outside
+  client bundle; the RSVP and song paths keep the fake store outside
   production
 - Playwright specs: they assert width-independent invariants and time motion by the
   clock, not frame counts (L-009)
@@ -319,8 +319,8 @@ Never merge a blocked PR.
 
 The user reviews a `runtime` change on the PR's Cloudflare preview while the PR is a
 draft, after CI and this review. Previews build every non-`main` branch with
-`npx wrangler preview`; `wrangler.jsonc` `previews` gives them the fake RSVP, song
-and With Love store, so nothing a reviewer submits reaches the guest sheet.
+`npx wrangler preview`; `wrangler.jsonc` `previews` gives them the fake RSVP and
+song store, so nothing a reviewer submits reaches the guest sheet.
 
 1. **Push a draft.** After the local checks (`local-checks`), commit, push, and
    `gh pr create --draft --base main` (a bug fix pushes to its existing draft).

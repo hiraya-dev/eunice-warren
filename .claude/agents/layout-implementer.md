@@ -48,7 +48,7 @@ Stop after three loops that make no progress on the same failure, and report it.
 - Install, add, or upgrade a package.
 - Edit the Paper file, the Google Sheet, or a workflow file (`CLAUDE.md`,
   `AGENTS.md`, `.agents/**`, `.claude/**`, `.github/**`, `scripts/**`, `t3.json`).
-- Submit an RSVP, song or With Love note anywhere but the local fake-store build,
+- Submit an RSVP or song request anywhere but the local fake-store build,
   or load a hosted deploy.
 - Leave a server running when you finish, or start the user's review server.
 - Weaken, skip, or delete a test to make it pass. If a test is wrong, say so.
