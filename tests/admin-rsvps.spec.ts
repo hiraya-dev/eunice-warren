@@ -249,6 +249,70 @@ test.describe("admin RSVPs", () => {
     },
   );
 
+  test("closes on Back and removes synchronously under reduced motion", async ({
+    page,
+  }) => {
+    await page.goto("/admin/rsvps");
+    const opener = page.locator("[data-admin-rsvp-link]").first();
+    await opener.click();
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    await page.evaluate(() => {
+      window.addEventListener(
+        "popstate",
+        () => {
+          document.documentElement.toggleAttribute(
+            "data-test-closing-seen",
+            Boolean(document.querySelector("[data-admin-drawer][data-closing]")),
+          );
+        },
+        { once: true },
+      );
+    });
+    await page.goBack();
+    await expect
+      .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 1_000 })
+      .toBe(0);
+    const closingSeen = await page.evaluate(() =>
+      document.documentElement.hasAttribute("data-test-closing-seen"),
+    );
+    expect(closingSeen).toBe(true);
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await opener.click();
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    const reduced = await page.evaluate(() => {
+      const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+      drawer?.querySelector<HTMLElement>("[data-admin-drawer-close]")?.click();
+      return {
+        count: document.querySelectorAll("[data-admin-drawer]").length,
+        perceptible: document.getAnimations().filter((animation) => {
+          const effect = animation.effect;
+          if (!(effect instanceof KeyframeEffect)) return false;
+          const timing = effect.getComputedTiming();
+          return Number(timing.duration) + Number(timing.delay) > 1;
+        }).length,
+      };
+    });
+    expect(reduced).toEqual({ count: 0, perceptible: 0 });
+  });
+
+  test("reopening during the exit keeps one open drawer and the page locked", async ({
+    page,
+  }) => {
+    await page.goto("/admin/rsvps");
+    await page.locator("[data-admin-rsvp-link]").first().click();
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>("[data-admin-drawer-close]")?.click();
+      document.querySelectorAll<HTMLElement>("[data-admin-rsvp-link]")[1]?.click();
+    });
+    await expect(page.locator("[data-admin-drawer]:not([data-closing])")).toHaveCount(1);
+    // Past the closing drawer's 300ms fallback (wall clock, L-009).
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(1);
+    await expect(page.locator("html")).toHaveAttribute("data-admin-drawer-open", "");
+  });
+
   test("unknown household is a 404", { tag: "@single" }, async ({ page }) => {
     const response = await page.goto("/admin/rsvps?household=unknown");
     expect(response?.status()).toBe(404);
@@ -448,7 +512,22 @@ test.describe("admin RSVPs", () => {
     expect(colors.actual).toBe(colors.expected);
   });
 
-  test("pins the edit footer to the sheet and keeps Save reply under no other layer", { tag: "@single" }, async ({ page }) => {
+  test("presses Save reply in to 0.97 and back on release", { tag: "@single" }, async ({ page }) => {
+    // Read-only: the pointer leaves the button before release, so nothing saves.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    const save = page.locator(".admin-drawer_edit-footer button");
+    const scale = () => save.evaluate((el) => (getComputedStyle(el).scale === "none" ? "1" : getComputedStyle(el).scale));
+    await save.hover();
+    await page.mouse.down();
+    await expect.poll(scale).toBe("0.97");
+    const footer = (await save.locator("..").boundingBox())!;
+    await page.mouse.move(footer.x + 2, footer.y + 2);
+    await page.mouse.up();
+    await expect.poll(scale).toBe("1");
+  });
+
+  test("pins the edit footer to the sheet and keeps Save reply under no other layer",{ tag: "@single" }, async ({ page }) => {
     // Read-only: opens the form and measures, never saves.
     const measure = () =>
       page.evaluate(() => {
@@ -499,6 +578,44 @@ test.describe("admin RSVPs", () => {
       await page.locator('select[name="slipper_size_1"]').selectOption("W 7");
       await expect(page.locator(".admin-drawer_size-error")).toBeHidden();
     });
+  });
+
+  test("shows a refused Save reply in place and still slides out when it closes", async ({ page }) => {
+    // A refused save writes nothing, so it needs no temporary household.
+    page.on("dialog", (dialog) => void dialog.accept());
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    await page.locator('input[name="attending"][value="yes"]').check();
+    await page.locator('input[name="seat_attending_1"]').check();
+    await page.locator('select[name="slipper_size_1"]').selectOption("");
+    await page.getByRole("button", { name: "Save reply" }).click();
+    await expect(page.locator(".admin-drawer_error").filter({ hasText: "Pick a slipper size" })).toBeVisible();
+    await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(1);
+    // Read by the clock (L-009, L-026): nothing perceptible animates.
+    const settled = await page.evaluate(() => {
+      const perceptible = (selector: string) =>
+        document
+          .querySelector<HTMLElement>(selector)!
+          .getAnimations()
+          .filter((animation) => {
+            const timing = (animation.effect as KeyframeEffect).getComputedTiming();
+            return Number(timing.duration) + Number(timing.delay) > 1;
+          }).length;
+      return {
+        panel: perceptible(".admin-drawer_panel"),
+        scrim: perceptible(".admin-drawer_scrim"),
+        name: getComputedStyle(document.querySelector(".admin-drawer_panel")!).animationName,
+      };
+    });
+    expect(settled).toEqual({ panel: 0, scrim: 0, name: "none" });
+    // The settled drawer still plays its 180ms exit.
+    const exit = await page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>(".admin-drawer_panel")!;
+      document.querySelector<HTMLElement>(".admin-drawer_scrim")!.click();
+      return panel.getAnimations().map((animation) => ({
+        ms: Number((animation.effect as KeyframeEffect).getComputedTiming().duration),
+      }));
+    });
+    expect(exit).toEqual([{ ms: 180 }]);
   });
 
   test("saves a host edit from Enter and shows the new history version", async ({ page }, testInfo) => {

@@ -544,6 +544,11 @@ if (!newDraft.label)
   );
 const archiveId = Astro.url.searchParams.get("archive");
 const newOpen = Astro.url.searchParams.get("new") === "1";
+// A POST re-render, or the redirect after Save and add another, continues the
+// drawer the host already had open, so it shows in place without sliding in.
+const drawerSettled =
+  Astro.request.method === "POST" ||
+  (newOpen && Boolean(Astro.url.searchParams.get("added")));
 const archiveRow = view.rows.find((row) => row.id === archiveId);
 const takenHouseholds = view.rows.map((row) => ({
   id: row.id,
@@ -889,6 +894,7 @@ const editSeats = (row: AdminHousehold) => {
             (newOpen ? (
               <GuestHouseholdForm
                 variant="new"
+                settled={drawerSettled}
                 draft={newDraft}
                 takenIds={takenIds}
                 duplicateOpenId={duplicateOpenId}
@@ -902,6 +908,7 @@ const editSeats = (row: AdminHousehold) => {
                 return (
                   <GuestHouseholdForm
                     variant="edit"
+                    settled={drawerSettled}
                     row={row}
                     seats={editSeats(row)}
                     removedSeatIds={
@@ -981,10 +988,12 @@ const editSeats = (row: AdminHousehold) => {
         if (other !== menu) other.open = false;
 
       if (window.matchMedia("(width < 84rem)").matches) {
-        const popover = menu.querySelector(".admin_guests_popover");
+        const popover = menu.querySelector<HTMLElement>(".admin_guests_popover");
         const tabbar = document.querySelector("[data-admin-tabbar]");
         const bottom = window.innerHeight - (tabbar?.getBoundingClientRect().height ?? 0);
-        if (popover && popover.getBoundingClientRect().bottom > bottom)
+        // Layout height, not the box: the entrance scales the popover from the
+        // top, so its painted bottom is short of where it settles.
+        if (popover && popover.getBoundingClientRect().top + popover.offsetHeight > bottom)
           menu.setAttribute("data-up", "");
       }
     },
@@ -1075,7 +1084,7 @@ const editSeats = (row: AdminHousehold) => {
       guestFormInitialValues.get(form) !== guestFormValues(form));
   const currentGuestFormIsDirty = () => {
     const form = document.querySelector<HTMLFormElement>(
-      "[data-admin-household-form]",
+      "[data-admin-drawer]:not([data-closing]) [data-admin-household-form]",
     );
     return Boolean(form && !form.dataset.submitting && guestFormIsDirty(form));
   };
@@ -1184,7 +1193,7 @@ const editSeats = (row: AdminHousehold) => {
   const currentDrawerUrl = () => {
     const url = new URL(location.href);
     const form = document.querySelector<HTMLFormElement>(
-      "[data-admin-household-form]",
+      "[data-admin-drawer]:not([data-closing]) [data-admin-household-form]",
     );
     url.searchParams.delete("new");
     url.searchParams.delete("edit");
@@ -1196,16 +1205,63 @@ const editSeats = (row: AdminHousehold) => {
     }
     return `${url.pathname}${url.search}`;
   };
+  const removeDrawer = (drawer: HTMLElement) => {
+    clearKeyboardTracking();
+    drawer.remove();
+    setDrawerOpen(false);
+  };
+  const removeAnyDrawers = () => {
+    for (const drawer of document.querySelectorAll<HTMLElement>(
+      "[data-admin-drawer]",
+    ))
+      removeDrawer(drawer);
+  };
+  const closeDrawerElement = (drawer: HTMLElement) => {
+    drawer.setAttribute("data-closing", "");
+    drawer.inert = true;
+    const panel = drawer.querySelector<HTMLElement>(".admin-drawer_panel");
+    let finished = false;
+    const finish = () => {
+      // A reopen mid-exit already removed this drawer; its timer must not
+      // unlock the page or stop tracking under the new one.
+      if (finished || !drawer.isConnected) return;
+      finished = true;
+      panel?.removeEventListener("animationend", onAnimationEnd);
+      removeDrawer(drawer);
+    };
+    const onAnimationEnd = (event: AnimationEvent) => {
+      if (
+        event.target === panel &&
+        (event.animationName === "admin-drawer-down" ||
+          event.animationName === "admin-drawer-out")
+      )
+        finish();
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finish();
+      return;
+    }
+    panel?.addEventListener("animationend", onAnimationEnd);
+    window.setTimeout(finish, 300);
+  };
+  // Callers confirm a dirty discard first; popstate has already asked.
+  const beginDrawerClose = (pushHistory: boolean) => {
+    if (pushHistory) {
+      const url = new URL(location.href);
+      url.searchParams.delete("new");
+      url.searchParams.delete("edit");
+      history.pushState(null, "", `${url.pathname}${url.search}`);
+    }
+    const drawer = document.querySelector<HTMLElement>(
+      "[data-admin-drawer]:not([data-closing])",
+    );
+    if (!drawer) return;
+    opener?.focus();
+    closeDrawerElement(drawer);
+  };
   const closeDrawer = () => {
     if (!confirmDiscard()) return;
-    const url = new URL(location.href);
-    url.searchParams.delete("new");
-    url.searchParams.delete("edit");
-    history.pushState(null, "", `${url.pathname}${url.search}`);
-    clearKeyboardTracking();
-    document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
-    setDrawerOpen(false);
-    opener?.focus();
+    beginDrawerClose(true);
   };
   const loadDrawer = async (href: string, push = true) => {
     closeGuestMenus();
@@ -1219,8 +1275,7 @@ const editSeats = (row: AdminHousehold) => {
         "[data-admin-guests-page]",
       );
       if (!next || !page) throw new Error("drawer missing");
-      clearKeyboardTracking();
-      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+      removeAnyDrawers();
       page.append(next);
       if (push) history.pushState(null, "", href);
       setDrawerOpen(true);
@@ -1277,7 +1332,9 @@ const editSeats = (row: AdminHousehold) => {
       void loadDrawer(duplicateOpen.href);
       return;
     }
-    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    const drawer = document.querySelector<HTMLElement>(
+      "[data-admin-drawer]:not([data-closing])",
+    );
     const clickedLink = target.closest<HTMLAnchorElement>("a");
     if (clickedLink && drawer?.contains(clickedLink)) {
       const url = new URL(clickedLink.href, location.href);
@@ -1308,7 +1365,9 @@ const editSeats = (row: AdminHousehold) => {
     }
   });
   document.addEventListener("keydown", (event) => {
-    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    const drawer = document.querySelector<HTMLElement>(
+      "[data-admin-drawer]:not([data-closing])",
+    );
     if (!drawer) {
       if (event.key !== "Escape") return;
       const menu = guestPage?.querySelector<HTMLDetailsElement>(
@@ -1350,7 +1409,7 @@ const editSeats = (row: AdminHousehold) => {
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
     const form = document.querySelector<HTMLFormElement>(
-      "[data-admin-household-form]",
+      "[data-admin-drawer]:not([data-closing]) [data-admin-household-form]",
     );
     if (form && (url.searchParams.has("new") || url.searchParams.has("edit"))) {
       const current = currentDrawerUrl();
@@ -1365,9 +1424,7 @@ const editSeats = (row: AdminHousehold) => {
     if (url.searchParams.has("new") || url.searchParams.has("edit"))
       void loadDrawer(url.href, false);
     else {
-      clearKeyboardTracking();
-      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
-      setDrawerOpen(false);
+      beginDrawerClose(false);
     }
   });
   window.addEventListener("beforeunload", (event) => {
@@ -1814,7 +1871,9 @@ const editSeats = (row: AdminHousehold) => {
   }
 
   function hydrateInitialDrawer() {
-    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    const drawer = document.querySelector<HTMLElement>(
+      "[data-admin-drawer]:not([data-closing])",
+    );
     if (!drawer) return;
     setDrawerOpen(true);
     hydrateDrawer(drawer);

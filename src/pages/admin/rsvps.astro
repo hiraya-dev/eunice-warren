@@ -494,6 +494,9 @@ if (savedNotice && !editMode) {
               aria-modal="true"
               aria-labelledby="admin-drawer-title"
               data-admin-drawer
+              data-admin-drawer-settled={
+                Astro.request.method === "POST" ? "" : undefined
+              }
             >
               <a
                 class="admin-drawer_scrim"
@@ -867,7 +870,9 @@ if (savedNotice && !editMode) {
     editFormInitialValues.get(form) !== undefined &&
     editFormInitialValues.get(form) !== editFormValues(form);
   const currentEditFormIsDirty = () => {
-    const form = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form");
+    const form = document.querySelector<HTMLFormElement>(
+      "[data-admin-drawer]:not([data-closing]) .admin-drawer_edit-form",
+    );
     return Boolean(form && !form.dataset.submitting && editFormIsDirty(form));
   };
   const discardMessage = "Discard your changes to this reply?";
@@ -933,17 +938,64 @@ if (savedNotice && !editMode) {
   const setOpen = (open: boolean) => {
     document.documentElement.toggleAttribute("data-admin-drawer-open", open);
   };
-  const closeDrawer = () => {
-    if (!confirmDiscard()) return;
-    const url = new URL(location.href);
-    url.searchParams.delete("household");
-    history.pushState(null, "", url);
-    document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+  const removeDrawer = (drawer: HTMLElement) => {
+    drawer.remove();
     setOpen(false);
+  };
+  const removeAnyDrawers = () => {
+    for (const drawer of document.querySelectorAll<HTMLElement>(
+      "[data-admin-drawer]",
+    ))
+      removeDrawer(drawer);
+  };
+  const closeDrawerElement = (drawer: HTMLElement) => {
+    drawer.setAttribute("data-closing", "");
+    drawer.inert = true;
+    const panel = drawer.querySelector<HTMLElement>(".admin-drawer_panel");
+    let finished = false;
+    const finish = () => {
+      // A reopen mid-exit already removed this drawer; its timer must not
+      // unlock the page or stop tracking under the new one.
+      if (finished || !drawer.isConnected) return;
+      finished = true;
+      panel?.removeEventListener("animationend", onAnimationEnd);
+      removeDrawer(drawer);
+    };
+    const onAnimationEnd = (event: AnimationEvent) => {
+      if (
+        event.target === panel &&
+        (event.animationName === "admin-drawer-down" ||
+          event.animationName === "admin-drawer-out")
+      )
+        finish();
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finish();
+      return;
+    }
+    panel?.addEventListener("animationend", onAnimationEnd);
+    window.setTimeout(finish, 300);
+  };
+  // Callers confirm a dirty discard first; popstate has already asked.
+  const beginDrawerClose = (pushHistory: boolean) => {
+    if (pushHistory) {
+      const url = new URL(location.href);
+      url.searchParams.delete("household");
+      history.pushState(null, "", url);
+    }
+    const drawer = document.querySelector<HTMLElement>(
+      "[data-admin-drawer]:not([data-closing])",
+    );
+    if (!drawer) return;
     (
       opener ??
       document.querySelector<HTMLAnchorElement>("[data-admin-rsvp-link]")
     )?.focus();
+    closeDrawerElement(drawer);
+  };
+  const closeDrawer = () => {
+    if (!confirmDiscard()) return;
+    beginDrawerClose(true);
   };
   const loadDrawer = async (url: string, push = true) => {
     try {
@@ -953,7 +1005,7 @@ if (savedNotice && !editMode) {
         .parseFromString(await response.text(), "text/html")
         .querySelector<HTMLElement>("[data-admin-drawer]");
       if (!next) throw new Error("drawer missing");
-      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
+      removeAnyDrawers();
       document
         .querySelector<HTMLElement>("[data-admin-rsvps-page]")
         ?.append(next);
@@ -1007,7 +1059,9 @@ if (savedNotice && !editMode) {
     }
   });
   document.addEventListener("keydown", (event) => {
-    const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+    const drawer = document.querySelector<HTMLElement>(
+      "[data-admin-drawer]:not([data-closing])",
+    );
     if (!drawer) return;
     if (event.key === "Escape") {
       event.preventDefault();
@@ -1046,7 +1100,9 @@ if (savedNotice && !editMode) {
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
     // Back from a dirty edit asks first; keeping the edit puts its URL back.
-    const dirtyForm = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form");
+    const dirtyForm = document.querySelector<HTMLFormElement>(
+      "[data-admin-drawer]:not([data-closing]) .admin-drawer_edit-form",
+    );
     if (dirtyForm && url.searchParams.get("edit") !== "1" && !confirmDiscard()) {
       const editUrl = new URL(location.href);
       const id = dirtyForm.querySelector<HTMLInputElement>('input[name="id"]')?.value;
@@ -1057,14 +1113,15 @@ if (savedNotice && !editMode) {
     }
     if (url.searchParams.has("household")) void loadDrawer(url.href, false);
     else {
-      document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
-      setOpen(false);
+      beginDrawerClose(false);
     }
   });
-  if (document.querySelector("[data-admin-drawer]")) {
+  if (document.querySelector("[data-admin-drawer]:not([data-closing])")) {
     setOpen(true);
     syncLinks();
-    document.querySelector<HTMLElement>("[data-admin-drawer] h2")?.focus();
+    document
+      .querySelector<HTMLElement>("[data-admin-drawer]:not([data-closing]) h2")
+      ?.focus();
   }
   window.addEventListener("beforeunload", (event) => {
     if (discardConfirmed || !currentEditFormIsDirty()) return;

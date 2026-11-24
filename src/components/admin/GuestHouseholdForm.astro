@@ -35,7 +35,7 @@ interface TakenHousehold {
   names: string[];
 }
 
-type Props =
+type Props = (
   | {
       variant: "new";
       draft: NewDraft;
@@ -60,7 +60,12 @@ type Props =
       takenHouseholds: TakenHousehold[];
       invitationEdited?: boolean;
       hostNames: Record<string, string>;
-    };
+    }
+) & {
+  // The page is this drawer's own continuation (a POST re-render, or the
+  // redirect after Save and add another): it appears in place, not sliding in.
+  settled?: boolean;
+};
 
 const props = Astro.props;
 const params = new URLSearchParams();
@@ -158,6 +163,7 @@ const rsvpState = (value: string | undefined) =>
   aria-modal="true"
   aria-labelledby="admin-drawer-title"
   data-admin-drawer
+  data-admin-drawer-settled={props.settled ? "" : undefined}
   data-admin-drawer-kind={props.variant}
   data-admin-households={JSON.stringify(props.takenHouseholds)}
 >

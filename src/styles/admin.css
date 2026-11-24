@@ -1238,9 +1238,14 @@
   line-height: 1.125rem;
   text-align: center;
   white-space: nowrap;
-  transition: opacity var(--hover-duration) var(--hover-ease);
+  transition:
+    opacity var(--hover-duration) var(--hover-ease),
+    scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
   &:hover {
     opacity: 0.85;
+  }
+  &:active:not(:disabled) {
+    scale: 0.97;
   }
 }
 
@@ -1640,13 +1645,18 @@ label.admin_guests_host {
   white-space: nowrap;
   color: var(--dark-700);
   cursor: pointer;
-  transition: opacity var(--hover-duration) var(--hover-ease);
+  transition:
+    opacity var(--hover-duration) var(--hover-ease),
+    scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
 
   @media (max-width: 63.99rem) {
     height: 2.75rem;
   }
   &:hover {
     opacity: 0.8;
+  }
+  &:active:not(:disabled) {
+    scale: 0.97;
   }
   &.primary {
     background-color: var(--dark-900);
@@ -1741,10 +1751,12 @@ label.admin_guests_host {
   position: absolute;
   top: calc(100% + 0.25rem);
   right: 0;
+  transform-origin: top right;
   @media (width < 84rem) {
     .admin_guests_menu[data-up] & {
       top: auto;
       bottom: calc(100% + 0.25rem);
+      transform-origin: bottom right;
     }
   }
   /* Without JS nothing measures, so the last rows open upward to clear the
@@ -1753,12 +1765,34 @@ label.admin_guests_host {
     tr:nth-last-child(-n + 2) & {
       top: auto;
       bottom: calc(100% + 0.25rem);
+      transform-origin: bottom right;
     }
   }
   @media (min-width: 84rem) {
     top: 50%;
     right: calc(100% + 0.25rem);
     translate: 0 -50%;
+    transform-origin: right center;
+  }
+  /* Opening grows out of the button; closing stays instant, since only the
+     open state carries a transition. Scale, not transform, so the centring
+     translate above keeps working. A closed details keeps its content styled
+     (content-visibility), where @starting-style never applies, so the closed
+     state holds the from values too. */
+  @media (prefers-reduced-motion: no-preference) {
+    opacity: 0;
+    scale: 0.96;
+    details[open] & {
+      opacity: 1;
+      scale: 1;
+      transition:
+        opacity 140ms cubic-bezier(0.23, 1, 0.32, 1),
+        scale 140ms cubic-bezier(0.23, 1, 0.32, 1);
+      @starting-style {
+        opacity: 0;
+        scale: 0.96;
+      }
+    }
   }
   display: grid;
   min-width: 11.5rem;
@@ -2816,10 +2850,47 @@ html[data-admin-drawer-open] {
     transform: translateX(100%);
   }
 }
+@keyframes admin-drawer-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes admin-drawer-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes admin-drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+[data-admin-drawer][data-closing] .admin-drawer_scrim {
+  animation: admin-drawer-fade-out 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+[data-admin-drawer][data-closing] .admin-drawer_panel {
+  animation: admin-drawer-down 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+
+  @media (min-width: 64rem) {
+    animation-name: admin-drawer-out;
+  }
+}
+
+/* A drawer the server re-renders (a POST answer, Save and add another) is the
+   same drawer the host already had open: it shows in place. Closing still plays. */
+[data-admin-drawer][data-admin-drawer-settled]:not([data-closing])
+  :is(.admin-drawer_scrim, .admin-drawer_panel) {
+  animation: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .admin-drawer_scrim,
   .admin-drawer_panel {
+    animation: none;
+  }
+  [data-admin-drawer][data-closing] .admin-drawer_scrim,
+  [data-admin-drawer][data-closing] .admin-drawer_panel {
     animation: none;
   }
 }
@@ -3534,6 +3605,10 @@ html[data-admin-drawer-open] {
     background-color: var(--dark-900);
     font-weight: 500;
     color: var(--light-100);
+    transition: scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    &:active:not(:disabled) {
+      scale: 0.97;
+    }
   }
   > .accent {
     margin-inline-end: auto;
@@ -4505,6 +4580,10 @@ small .admin-drawer_error::before {
     background-color: var(--dark-900);
     font-weight: 500;
     color: var(--light-100);
+    transition: scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    &:active:not(:disabled) {
+      scale: 0.97;
+    }
   }
   @media (max-width: 63.99rem) {
     margin-inline: calc(var(--edit-pad) * -1);

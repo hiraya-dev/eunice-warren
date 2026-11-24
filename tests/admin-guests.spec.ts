@@ -235,6 +235,183 @@ test.describe("guest list rows", () => {
     }
   });
 
+  test("opens a row menu with a 140ms opacity and scale entrance from the button", { tag: ["@single"] }, async ({ page }) => {
+    const ease = "cubic-bezier(0.23, 1, 0.32, 1)";
+    // Open in the same turn that reads the transitions (L-060), then read where
+    // the popover scales from once the page script has decided up or down.
+    const open = (last: boolean) =>
+      page.evaluate((useLast) => {
+        const rows = [...document.querySelectorAll<HTMLElement>("[data-admin-household]")].filter(
+          (row) => !row.hidden,
+        );
+        const menu = rows[useLast ? rows.length - 1 : 0].querySelector<HTMLDetailsElement>("details.admin_guests_menu")!;
+        const summary = menu.querySelector("summary")!;
+        if (useLast) {
+          const bar = document.querySelector("[data-admin-tabbar]")!.getBoundingClientRect().y;
+          window.scrollBy(0, summary.getBoundingClientRect().bottom - (bar - 8));
+        }
+        summary.click();
+        const popover = menu.querySelector<HTMLElement>(".admin_guests_popover")!;
+        return popover.getAnimations().map((animation) => {
+          const effect = animation.effect as KeyframeEffect;
+          const frames = effect.getKeyframes();
+          return {
+            property: (animation as CSSTransition).transitionProperty,
+            duration: effect.getComputedTiming().duration,
+            easing: effect.getTiming().easing,
+            from: frames[0][(animation as CSSTransition).transitionProperty as "opacity"],
+            to: frames[frames.length - 1][(animation as CSSTransition).transitionProperty as "opacity"],
+          };
+        });
+      }, last);
+    const origin = (last: boolean) =>
+      page.evaluate((useLast) => {
+        const rows = [...document.querySelectorAll<HTMLElement>("[data-admin-household]")].filter(
+          (row) => !row.hidden,
+        );
+        const menu = rows[useLast ? rows.length - 1 : 0].querySelector("details.admin_guests_menu")!;
+        const popover = menu.querySelector<HTMLElement>(".admin_guests_popover")!;
+        const [x, y] = getComputedStyle(popover).transformOrigin.split(" ").map(parseFloat);
+        return {
+          up: menu.hasAttribute("data-up"),
+          x: x / popover.offsetWidth,
+          y: y / popover.offsetHeight,
+        };
+      }, last);
+    const cases = [
+      { width: 390, last: false, y: 0 },
+      { width: 390, last: true, y: 1 },
+      { width: 1440, last: false, y: 0.5 },
+    ];
+    for (const { width, last, y } of cases) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/admin/guests");
+      const started = await open(last);
+      const label = `${width}${last ? " up" : ""}`;
+      expect(started.map((entry) => entry.property).sort(), label).toEqual(["opacity", "scale"]);
+      for (const entry of started) {
+        expect(entry.duration, label).toBe(140);
+        expect(entry.easing, label).toBe(ease);
+      }
+      expect(started.find((entry) => entry.property === "opacity")).toMatchObject({ from: "0", to: "1" });
+      expect(started.find((entry) => entry.property === "scale")).toMatchObject({ from: "0.96", to: "1" });
+      await expect.poll(() => origin(last), label).toMatchObject({ up: last });
+      const where = await origin(last);
+      expect(where.x, label).toBeCloseTo(1, 1);
+      expect(where.y, label).toBeCloseTo(y, 1);
+      // Settled: the entrance leaves nothing behind.
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const popover = document.querySelector<HTMLElement>("details.admin_guests_menu[open] .admin_guests_popover")!;
+              const style = getComputedStyle(popover);
+              return {
+                running: popover.getAnimations().length,
+                opacity: style.opacity,
+                scale: style.scale === "none" ? "1" : style.scale,
+              };
+            }),
+          label,
+        )
+        .toEqual({ running: 0, opacity: "1", scale: "1" });
+    }
+  });
+
+  test("keeps the desktop popover centred on its button once open", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/admin/guests");
+    const menu = page.locator("[data-admin-household]").first().locator("details.admin_guests_menu");
+    await menu.locator("summary").click();
+    await expect
+      .poll(async () => {
+        const [button, popover] = await Promise.all([
+          menu.locator("summary").boundingBox(),
+          menu.locator(".admin_guests_popover").boundingBox(),
+        ]);
+        return Math.abs(button!.y + button!.height / 2 - (popover!.y + popover!.height / 2));
+      })
+      .toBeLessThanOrEqual(1);
+  });
+
+  test("shows no perceptible row menu entrance under reduced motion", { tag: ["@single"] }, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/admin/guests");
+      const perceptible = await page.evaluate(() => {
+        const menu = document.querySelector<HTMLDetailsElement>("[data-admin-household] details.admin_guests_menu")!;
+        menu.querySelector("summary")!.click();
+        return menu
+          .querySelector(".admin_guests_popover")!
+          .getAnimations()
+          .filter((animation) => {
+            const timing = animation.effect!.getComputedTiming();
+            return Number(timing.duration) + Number(timing.delay) > 1;
+          }).length;
+      });
+      expect(perceptible, `width ${width}`).toBe(0);
+    }
+  });
+
+  test("shows no row menu exit animation when it closes", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/admin/guests");
+    const perceptible = await page.evaluate(async () => {
+      const menu = document.querySelector<HTMLDetailsElement>("[data-admin-household] details.admin_guests_menu")!;
+      menu.open = true;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      menu.open = false;
+      return menu
+        .querySelector(".admin_guests_popover")!
+        .getAnimations()
+        .filter((animation) => {
+          const timing = animation.effect!.getComputedTiming();
+          return Number(timing.duration) + Number(timing.delay) > 1;
+        }).length;
+    });
+    expect(perceptible).toBe(0);
+  });
+
+  test("presses Add household in to 0.97 and back on release", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/admin/guests");
+    const add = page.locator(".admin_guests_add");
+    const scale = () => add.evaluate((el) => (getComputedStyle(el).scale === "none" ? "1" : getComputedStyle(el).scale));
+    await add.hover();
+    await page.mouse.down();
+    await expect.poll(scale).toBe("0.97");
+    // Leave the button before release so the press does not open the drawer.
+    const parent = (await add.locator("..").boundingBox())!;
+    await page.mouse.move(parent.x + 2, parent.y + 2);
+    await page.mouse.up();
+    await expect.poll(scale).toBe("1");
+  });
+
+  test("presses the guest drawer Save in to 0.97 and not when disabled", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/admin/guests?edit=${editor.id}`);
+    const save = page.locator(".admin_guests_drawer_footer > button.primary");
+    const scale = () => save.evaluate((el) => (getComputedStyle(el).scale === "none" ? "1" : getComputedStyle(el).scale));
+    const letGo = async () => {
+      const footer = (await save.locator("..").boundingBox())!;
+      await page.mouse.move(footer.x + 2, footer.y + 2);
+      await page.mouse.up();
+    };
+    await save.hover();
+    await page.mouse.down();
+    await expect.poll(scale).toBe("0.97");
+    await letGo();
+    await expect.poll(scale).toBe("1");
+
+    await save.evaluate((el: HTMLButtonElement) => (el.disabled = true));
+    await save.hover({ force: true });
+    await page.mouse.down();
+    await page.waitForTimeout(300);
+    expect(await scale()).toBe("1");
+    await letGo();
+  });
+
   test("shows coming and seat counts in the combined RSVP pill", async ({
     page,
   }) => {
@@ -446,6 +623,179 @@ test.describe("guest list drawer", () => {
             document.documentElement.clientWidth,
         );
         expect(overflow).toBe(false);
+      }
+    },
+  );
+
+  test(
+    "animates the drawer out and replaces it cleanly while closing",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      for (const width of [390, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto("/admin/guests");
+        await page.locator(".admin_guests_add").click();
+        await expect(page.locator(".admin_guests_panel")).toBeVisible();
+        const state = await page.evaluate(() => {
+          const opener = document.querySelector<HTMLElement>(".admin_guests_add");
+          const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+          if (!opener || !drawer) throw new Error("drawer not ready");
+          drawer
+            .querySelector<HTMLElement>("[data-admin-drawer-close], .admin-drawer_scrim")
+            ?.click();
+          return {
+            closing: drawer.hasAttribute("data-closing"),
+            inert: drawer.inert,
+            focused: document.activeElement === opener,
+          };
+        });
+        expect(state).toEqual({ closing: true, inert: true, focused: true });
+        await expect
+          .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 1_000 })
+          .toBe(0);
+
+        await page.goto("/admin/guests");
+        await page.locator(".admin_guests_add").click();
+        await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+        await page.evaluate(() => {
+          document.querySelector<HTMLElement>("[data-admin-drawer-close]")?.click();
+          document.querySelector<HTMLElement>(".admin_guests_add")?.click();
+        });
+        await expect(page.locator("[data-admin-drawer]")).toHaveCount(1);
+        await expect(
+          page.locator("[data-admin-drawer]:not([data-closing])"),
+        ).toHaveCount(1);
+        // Past the closing drawer's 300ms fallback: its timer must not unlock
+        // the page under the new drawer (wall clock, L-009).
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+        await expect(page.locator("[data-admin-drawer]:not([data-closing])")).toHaveCount(1);
+        await expect(page.locator("html")).toHaveAttribute("data-admin-drawer-open", "");
+      }
+    },
+  );
+
+  // The panel's perceptible animations by the clock (L-009, L-026): the
+  // entrance of a drawer the page just rendered, or the exit once it closes.
+  const drawerMotion = (page: Page) =>
+    page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
+      const scrim = document.querySelector<HTMLElement>(".admin-drawer_scrim");
+      if (!panel || !scrim) throw new Error("drawer missing");
+      const perceptible = (el: HTMLElement) =>
+        el
+          .getAnimations()
+          .map((animation) => {
+            const timing = (animation.effect as KeyframeEffect).getComputedTiming();
+            return {
+              name: (animation as CSSAnimation).animationName,
+              ms: Number(timing.duration) + Number(timing.delay),
+            };
+          })
+          .filter((animation) => animation.ms > 1);
+      const box = panel.getBoundingClientRect();
+      return {
+        panel: perceptible(panel),
+        scrim: perceptible(scrim),
+        panelName: getComputedStyle(panel).animationName,
+        right: box.right,
+        top: box.top,
+        width: innerWidth,
+      };
+    });
+
+  const closeDrawer = (page: Page) =>
+    page.evaluate(() => {
+      const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+      const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
+      if (!drawer || !panel) throw new Error("drawer missing");
+      drawer.querySelector<HTMLElement>(".admin-drawer_scrim")?.click();
+      return panel
+        .getAnimations()
+        .map((animation) => ({
+          name: (animation as CSSAnimation).animationName,
+          ms: Number(
+            (animation.effect as KeyframeEffect).getComputedTiming().duration,
+          ),
+        }));
+    });
+
+  test(
+    "shows a re-rendered drawer in place and still slides out when it closes",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      page.on("dialog", (dialog) => void dialog.accept());
+      for (const width of [390, 1440]) {
+        const docked = width >= 1024;
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto("/admin/guests");
+
+        // Opened by a click, the drawer still slides in (280ms phone, 240ms docked).
+        const entrance = await page.evaluate(
+          () =>
+            new Promise<{ name: string; ms: number }[]>((resolve) => {
+              document.querySelector<HTMLElement>(".admin_guests_add")?.click();
+              const read = () => {
+                const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
+                if (!panel) return requestAnimationFrame(read);
+                resolve(
+                  panel.getAnimations().map((animation) => ({
+                    name: (animation as CSSAnimation).animationName,
+                    ms: Number(
+                      (animation.effect as KeyframeEffect).getComputedTiming().duration,
+                    ),
+                  })),
+                );
+              };
+              read();
+            }),
+        );
+        expect(entrance).toEqual([
+          { name: docked ? "admin-drawer-in" : "admin-drawer-up", ms: docked ? 240 : 280 },
+        ]);
+        await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(0);
+
+        // An empty invitation name is refused: the server renders the same drawer again.
+        for (const save of ["save_and_add", "save"]) {
+          await page.goto("/admin/guests?new=1");
+          const form = page.locator("[data-new-household]");
+          await (save === "save_and_add"
+            ? form.locator("button[name='save_and_add']:visible")
+            : form.getByRole("button", { name: "Save", exact: true })
+          ).click();
+          await expect(page.locator("[data-admin-write-error]")).toBeVisible();
+          await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(1);
+          const settled = await drawerMotion(page);
+          expect(settled.panel).toEqual([]);
+          expect(settled.scrim).toEqual([]);
+          expect(settled.panelName).toBe("none");
+          if (docked) expect(Math.round(settled.right)).toBe(settled.width);
+          else expect(Math.round(settled.top)).toBe(0);
+        }
+
+        // The same for an edit form refused with an empty invitation name.
+        await page.goto(`/admin/guests?edit=${editor.id}`);
+        await page.locator("[name='display_name']").fill("");
+        await page
+          .locator("[data-edit-household]")
+          .getByRole("button", { name: "Save", exact: true })
+          .click();
+        await expect(page.locator("[data-admin-write-error]")).toBeVisible();
+        const edit = await drawerMotion(page);
+        expect(edit.panel).toEqual([]);
+        expect(edit.scrim).toEqual([]);
+
+        // The redirect after Save and add another continues the open drawer.
+        await page.goto("/admin/guests?new=1&added=Someone");
+        await expect(page.locator("[data-admin-added]")).toBeVisible();
+        const added = await drawerMotion(page);
+        expect(added.panel).toEqual([]);
+        expect(added.scrim).toEqual([]);
+
+        // A settled drawer still plays its 180ms exit.
+        const exit = await closeDrawer(page);
+        expect(exit).toEqual([
+          { name: docked ? "admin-drawer-out" : "admin-drawer-down", ms: 180 },
+        ]);
       }
     },
   );

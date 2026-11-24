@@ -265,6 +265,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/admin*.spec.ts`
 
+### L-066 — An exit timer checks its element is still there
+- **Date:** 2026-11-24
+- **Trigger:** #116, CHANGES_REQUIRED
+- **Symptom:** reopening an admin drawer during the 180ms close left the page scrollable under the new drawer: the old drawer's 300ms fallback fired after the swap had already removed it, and cleared `data-admin-drawer-open` (and, on guests, the new drawer's keyboard tracking).
+- **Root cause:** the exit's `finish()` guarded only against running twice, not against the element having been removed by another path, so it ran page-wide cleanup that now belonged to the new drawer.
+- **Rule:** an exit animation's completion (animationend or fallback timer) returns early when its element is no longer connected, and only the path that removes the element runs the page-wide cleanup. Its spec reopens mid-exit, waits past the fallback by the clock, and asserts the page-level open state, not just the element count.
+- **Check:** `tests/admin-guests.spec.ts` "animates the drawer out and replaces it cleanly while closing" and `tests/admin-rsvps.spec.ts` "reopening during the exit keeps one open drawer and the page locked" both fail without the `isConnected` guard.
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`, `src/scripts/**`
+
+### L-067 — A server re-render continues the overlay; it does not open it again
+- **Date:** 2026-11-24
+- **Trigger:** #116, Local review fix round (the user's correction)
+- **Symptom:** on the Guest list, "Save and add another" with an empty invitation name reloaded the page and the drawer slid in again before the error showed, so a validation answer looked like a new drawer.
+- **Root cause:** the dashboard forms post for real (no-JS safe, L-053), so every server answer is a fresh page, and the drawer's entrance keyframes run on every page that renders it open.
+- **Rule:** an overlay whose entrance runs on load marks the server's continuations (a POST re-render, the redirect after a save-and-continue) and shows them in place with no entrance; only a first visit or a click-open animates in, and the exit still plays from either state.
+- **Check:** `tests/admin-guests.spec.ts` "shows a re-rendered drawer in place and still slides out when it closes" and `tests/admin-rsvps.spec.ts` "shows a refused Save reply in place and still slides out when it closes" (both fail without `data-admin-drawer-settled`).
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`, `src/components/admin/**`, `src/styles/admin.css`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building
