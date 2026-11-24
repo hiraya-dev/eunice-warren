@@ -16,6 +16,7 @@ import { getLoveStore } from "@/lib/with-love/store";
 import { isJpeg, isTodayInManila, isWithinLength, stripControls } from "@/lib/with-love/validation";
 import { rsvpSubmitInput } from "@/lib/rsvp/input";
 import { songInput } from "@/lib/songs/input";
+import { scheduleRsvpNotification } from "@/lib/rsvp/notify";
 
 const TEST_SECRET = "local-rsvp-token-secret";
 const envRecord = env as unknown as Record<string, unknown>;
@@ -137,7 +138,15 @@ export const server = {
         closed();
         await guard(input.turnstileToken, context, true, "RSVP_SUBMIT_LIMITER");
         try {
-          return await runSubmitAction(getStore(), input, tokenSecret);
+          return await runSubmitAction(getStore(), input, tokenSecret, (data) => {
+            const locals = context.locals as typeof context.locals & {
+              cfContext?: { waitUntil(promise: Promise<unknown>): void };
+            };
+            const waitUntil = locals.cfContext?.waitUntil
+              ? locals.cfContext.waitUntil.bind(locals.cfContext)
+              : undefined;
+            scheduleRsvpNotification(data, envRecord, waitUntil);
+          });
         } catch (error) {
           if (error instanceof ActionError) throw error;
           if (error instanceof GuestActionFailure) throw new ActionError({ code: error.code, message: error.message });

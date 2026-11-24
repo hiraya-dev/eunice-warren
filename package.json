@@ -13,7 +13,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "format": "prettier --write .",
-    "test:unit": "node --test tests/rsvp-unit.test.ts tests/with-love-unit.test.ts tests/workers-build-unit.test.ts tests/d1-unit.test.ts tests/d1-budget.test.ts tests/admin-unit.test.ts tests/admin-slippers-songs.test.ts tests/admin-guests-write.test.ts tests/spotify-unit.test.ts tests/songs-unit.test.ts scripts/db/import-guests.test.mjs",
+    "test:unit": "node --test tests/rsvp-unit.test.ts tests/rsvp-notify-unit.test.ts tests/with-love-unit.test.ts tests/workers-build-unit.test.ts tests/d1-unit.test.ts tests/d1-budget.test.ts tests/admin-unit.test.ts tests/admin-slippers-songs.test.ts tests/admin-guests-write.test.ts tests/spotify-unit.test.ts tests/songs-unit.test.ts scripts/db/import-guests.test.mjs",
     "test:routing": "node --test scripts/ci/classify-paths.test.mjs",
     "test:ci-scripts": "node --test scripts/ci/classify-paths.test.mjs scripts/ci/flaky-summary.test.mjs scripts/ci/ci-triggers.test.mjs scripts/ci/select-specs.test.mjs scripts/ci/already-tested.test.mjs scripts/ci/check-sweep-tags.test.mjs",
     "check:sweep-tags": "node scripts/ci/sweep-tags.mjs",

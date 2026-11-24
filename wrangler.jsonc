@@ -12,6 +12,9 @@
     "ACCESS_AUD": "7622f360d30408b0c41a184357254a5a548fd6e31b8cf433ecf6483cb1719202",
   },
 
+  // Sends only to verified Email Routing destinations on the free plan; recipients come from the NOTIFY_TO secret.
+  "send_email": [{ "name": "RSVP_EMAIL" }],
+
   "d1_databases": [{
     "binding": "DB",
     "database_name": "eunice-warren",
