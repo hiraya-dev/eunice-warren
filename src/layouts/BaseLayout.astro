@@ -46,6 +46,7 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
   import { initFadeIn } from "@/scripts/fade-in.ts";
   import { initTabSystem } from "@/scripts/tab-system.ts";
   import { initStayCompass } from "@/scripts/stay-compass.ts";
+  import { initStayTimeline } from "@/scripts/stay-timeline.ts";
 
   initScroll();
   initGlobalParallax();
@@ -53,8 +54,10 @@ const { theme = "inherit", overlap = false, ...seo } = Astro.props;
   initTabSystem();
   initFadeIn();
   initStayCompass();
+  initStayTimeline();
   document.addEventListener("astro:page-load", initDrawPathOnScroll);
   document.addEventListener("astro:page-load", initTabSystem);
   document.addEventListener("astro:page-load", initFadeIn);
   document.addEventListener("astro:page-load", initStayCompass);
+  document.addEventListener("astro:page-load", initStayTimeline);
 </script>

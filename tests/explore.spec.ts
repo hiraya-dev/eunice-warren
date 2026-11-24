@@ -221,4 +221,35 @@ test.describe("explore section", () => {
       expect(cardWidth).toBeCloseTo(expected, 0);
     }
   });
+
+  test("keeps every sticker off every card's text below the desktop layout", { tag: ["@sweep", "@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    // The tilt turns card and sticker together, so compare in the card's own frame.
+    await page.addStyleTag({ content: ".explore_card { rotate: none !important; }" });
+    for (const width of [320, 375, 390, 481, 768, 991]) {
+      await page.setViewportSize({ width, height: 844 });
+      const overlaps = await page.evaluate(() => {
+        const found: string[] = [];
+        const textBoxes = (element: Element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return Array.from(range.getClientRects()).filter((box) => box.width > 0 && box.height > 0);
+        };
+        document.querySelectorAll<HTMLElement>(".explore_card").forEach((card, index) => {
+          const sticker = card.querySelector<HTMLElement>(".explore_sticker")!.getBoundingClientRect();
+          const text = [
+            ...textBoxes(card.querySelector("h3")!).map((box) => ["title", box] as const),
+            ["tag", card.querySelector(".explore_tag")!.getBoundingClientRect()] as const,
+            ...textBoxes(card.querySelector("p")!).map((box) => ["note", box] as const),
+          ];
+          for (const [name, box] of text) {
+            if (sticker.left < box.right && sticker.right > box.left && sticker.top < box.bottom && sticker.bottom > box.top) found.push(`card ${index} ${name}`);
+          }
+        });
+        return found;
+      });
+      expect(overlaps, `${width}px`).toEqual([]);
+    }
+  });
 });

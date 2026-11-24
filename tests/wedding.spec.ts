@@ -113,4 +113,39 @@ test.describe("wedding schedule tabs", () => {
     await page.locator("#wedding-tab-3").click();
     await expect(page.locator("#wedding-tab-3")).toHaveAttribute("aria-selected", "true");
   });
+
+  test("gives the meta column room: locations wrap to two lines and titles never overflow", { tag: ["@sweep", "@single"] }, async ({ page }) => {
+    for (const width of [320, 375, 390, 481, 768, 991]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+      const rows = await page.locator("#wedding .wedding_row").evaluateAll((items) => items.map((row) => {
+        const lines = (element: Element) => element.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(element).lineHeight);
+        const meta = row.querySelector(".wedding_meta")!.getBoundingClientRect();
+        const tab = row.querySelector(".wedding_tab")!.getBoundingClientRect();
+        const title = row.querySelector(".wedding_tab-title")!;
+        const overflow = Array.from(title.children).map((child) => {
+          const range = document.createRange();
+          range.selectNodeContents(child);
+          return range.getBoundingClientRect().right - title.getBoundingClientRect().right;
+        });
+        return {
+          location: Math.round(lines(row.querySelector(".wedding_location")!)),
+          time: Math.round(lines(row.querySelector(".wedding_time")!)),
+          metaRight: meta.right,
+          rowRight: row.getBoundingClientRect().right,
+          clear: meta.left - tab.right,
+          overflow: Math.max(...overflow),
+          align: getComputedStyle(row.querySelector(".wedding_meta")!).textAlign,
+        };
+      }));
+      for (const row of rows) {
+        expect(row.location, `${width}px location lines`).toBeLessThanOrEqual(2);
+        expect(row.time).toBe(1);
+        expect(row.align).toBe("right");
+        expect(Math.abs(row.metaRight - row.rowRight)).toBeLessThanOrEqual(1);
+        expect(row.clear).toBeGreaterThanOrEqual(0);
+        expect(row.overflow, `${width}px title overflow`).toBeLessThanOrEqual(1);
+      }
+    }
+  });
 });

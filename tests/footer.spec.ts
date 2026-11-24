@@ -95,4 +95,53 @@ test.describe("Paper footer", () => {
     await expect(page.locator("[data-footer-parallax-inner]")).toHaveCSS("transform", "none");
     await expect(page.locator("[data-footer-parallax-dark]")).toHaveCSS("opacity", "0");
   });
+
+  test("stacks the contacts on three left-aligned lines on mobile and keeps one line on desktop", { tag: ["@single"] }, async ({ page }) => {
+    const measure = () => page.evaluate(() => {
+      const contact = document.querySelector<HTMLElement>(".footer_contact")!;
+      const parts = Array.from(contact.querySelectorAll<HTMLElement>(".footer_contact-lead, .footer_contact-person")).map((part) => {
+        const box = part.getBoundingClientRect();
+        const link = part.querySelector("a")?.getBoundingClientRect();
+        return { left: box.left, top: box.top, bottom: box.bottom, linkTop: link?.top ?? null, linkBottom: link?.bottom ?? null };
+      });
+      const separator = contact.querySelector<HTMLElement>(".footer_contact-separator")!;
+      const hashtag = document.querySelector(".footer_hashtag")!.getBoundingClientRect();
+      const top = document.querySelector(".footer_top-link")!.getBoundingClientRect();
+      return {
+        parts,
+        separatorDisplay: getComputedStyle(separator).display,
+        separatorHidden: separator.getAttribute("aria-hidden"),
+        hashtag: { left: hashtag.left, right: hashtag.right, center: (hashtag.top + hashtag.bottom) / 2 },
+        top: { left: top.left, right: top.right, center: (top.top + top.bottom) / 2 },
+        scrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    for (const width of [320, 390, 481, 767]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/404");
+      const mobile = await measure();
+      expect(mobile.parts).toHaveLength(3);
+      expect(mobile.separatorDisplay).toBe("none");
+      expect(mobile.separatorHidden).toBe("true");
+      for (const part of mobile.parts) expect(Math.abs(part.left - mobile.parts[0].left)).toBeLessThanOrEqual(1);
+      for (let index = 1; index < mobile.parts.length; index += 1) expect(mobile.parts[index].top).toBeGreaterThanOrEqual(mobile.parts[index - 1].bottom - 1);
+      for (const part of mobile.parts.slice(1)) {
+        expect(part.linkTop).toBeGreaterThanOrEqual(part.top - 1);
+        expect(part.linkBottom).toBeLessThanOrEqual(part.bottom + 1);
+      }
+      expect(Math.abs(mobile.hashtag.center - mobile.top.center)).toBeLessThanOrEqual(4);
+      expect(mobile.hashtag.right).toBeLessThan(mobile.top.left);
+      expect(mobile.top.right).toBeLessThanOrEqual(width);
+      expect(mobile.scrollWidth).toBeLessThanOrEqual(width);
+    }
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/404");
+    const desktop = await measure();
+    expect(desktop.separatorDisplay).not.toBe("none");
+    expect(desktop.parts[1].left).toBeGreaterThan(desktop.parts[0].left);
+    expect(desktop.parts[2].left).toBeGreaterThan(desktop.parts[1].left);
+    for (const part of desktop.parts) expect(Math.abs(part.top - desktop.parts[0].top)).toBeLessThanOrEqual(2);
+  });
 });
