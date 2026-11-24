@@ -255,6 +255,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/global/Preloader.astro`, `src/components/global/BackgroundMusic.astro`, `tests/music.spec.ts`
 
+### L-065 — Geometry waits for the entrance animation to settle
+- **Date:** 2026-11-24
+- **Trigger:** PR #114 flaky test (`tests/admin-guests.spec.ts` "the phone sheet pins the header and footer…", from #113; failed ~1 in 3 in a one-worker sequence on main and the branch)
+- **Symptom:** footer button bottom read 844.45px against a ≤ 844 limit.
+- **Root cause:** the phone sheet slides up from `translateY(100%)` over 280ms; the spec read boxes once the name chips existed, which can be before the slide ends.
+- **Rule:** before reading any box inside an animated drawer, sheet or overlay, `expect.poll` the container's settled position (as the docked-panel spec does for `x`); a ready DOM is not a settled layout.
+- **Check:** the spec polls the panel `y` to 0 before `boundingBox()` reads; it passes `--repeat-each 20 --workers 6` and `flake-check.yml`.
+- **Guard:** none
+- **Paths:** `tests/admin*.spec.ts`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building
@@ -406,6 +416,26 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** a spec reads the last visible row's `border-bottom-width` at rest and after a search hides rows (`tests/admin-rsvps.spec.ts` "drops the divider under the last visible row", `tests/admin.spec.ts` "admin list cards").
 - **Guard:** none
 - **Paths:** `src/styles/admin.css`, `src/pages/admin/**`, `src/components/**`
+
+### L-063 — Every short label carries the unit its criterion names
+- **Date:** 2026-11-24
+- **Trigger:** PR #114 CHANGES_REQUIRED
+- **Symptom:** the criterion said the overview stat labels name households "phone short labels too", but only the first phone caption did ("households attending / declined / waiting").
+- **Root cause:** the author treated the first caption as context for its neighbours, a reading the approved criterion did not allow.
+- **Rule:** when a criterion names a unit or wording for a set of labels, every label in the set (long and short, every breakpoint) carries it; a shortcut is a criteria change the user approves first.
+- **Check:** read each `data-short` / short-label array against the criterion before review.
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`
+
+### L-064 — A disclosure menu closes itself
+- **Date:** 2026-11-24
+- **Trigger:** PR #114 Local review round; escape: runtime #96 (Guest list row menus never closed: they stacked, and one stayed open behind the Add household drawer); PR #114 Local review round 2 (the outside-click listener sat on the page section, so a click on the margin or sidebar left the menu open); PR #114 Local review round 3 (the desktop popover covered the next row's ⋯; upward opening counted DOM rows, not visible ones)
+- **Symptom:** several row ⋯ menus open at once; a menu left open over the dimmed page behind the drawer.
+- **Root cause:** the menu was a bare `<details>`; nothing closed it on another menu, an outside click, Escape, or a drawer opening.
+- **Rule:** any `<details>` used as a menu ships with: one open at a time, a click anywhere in the document outside it closes it (listen on `document`, not the page section), Escape closes it (focus back to its summary), and every overlay or drawer open closes it first. Its spec clicks a point outside the page's own container, found with `elementFromPoint`, at the widths where the layout differs. Place the popover so it never covers another row's trigger (beside the trigger on wide tables), and decide upward opening by measuring on open against the visible tab bar and viewport, not by DOM position, with a `(scripting: none)` fallback. When a row loses height or its trailing column widens, re-check both.
+- **Check:** `tests/admin-guests.spec.ts` "keeps row menus exclusive and closes them for drawer actions", "keeps every row menu button clear of its RSVP pill", "keeps desktop popovers inside the card and clear of every other menu" and "keeps the last visible menu above the phone tab bar after search".
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`, `src/components/admin/**`, `src/styles/admin.css`
 
 ## Data and backend
 

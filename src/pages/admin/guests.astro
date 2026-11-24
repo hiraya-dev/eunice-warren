@@ -5,7 +5,6 @@ import AdminLayout from "@/layouts/AdminLayout.astro";
 import {
   memberLine,
   plusOneChipText,
-  renameNote,
 } from "@/lib/admin/presentation";
 import { selectAdminStore } from "@/lib/admin/store";
 import { StaleHouseholdError } from "@/lib/admin/store";
@@ -37,6 +36,7 @@ type DraftSeat = {
   rsvp?: string;
   namedBy?: string | null;
   namedByKind?: "guest" | "host" | null;
+  namedAt?: string | null;
 };
 let editDraft: {
   id: string;
@@ -383,6 +383,10 @@ if (Astro.request.method === "POST") {
                 ? storedRow?.seats.find((stored) => stored.id === seat.id)
                     ?.namedByKind
                 : null,
+              namedAt: seat.id
+                ? storedRow?.seats.find((stored) => stored.id === seat.id)
+                    ?.namedAt
+                : null,
               rsvp: storedRow?.rsvp.state,
             })),
             invitationEdited: invitationWasEdited,
@@ -522,12 +526,12 @@ const filterCounts = {
   coming: filterRows("coming").length,
   declined: filterRows("declined").length,
 };
-const rsvpText = (rsvp: { state: string; coming?: number }) =>
+const rsvpText = (rsvp: { state: string; coming?: number }, seatCount: number) =>
   rsvp.state === "coming"
-    ? `${rsvp.coming} coming`
+    ? `${rsvp.coming} of ${seatCount} coming`
     : rsvp.state === "declined"
-      ? "Declined"
-      : "Waiting";
+      ? `Declined · ${seatCount} ${seatCount === 1 ? "seat" : "seats"}`
+      : `Waiting · ${seatCount} ${seatCount === 1 ? "seat" : "seats"}`;
 const editId = Astro.url.searchParams.get("edit");
 if (!newDraft.memberNames.length) newDraft.memberNames = [""];
 const takenIds = view.rows.flatMap((row) => [row.id, row.label]);
@@ -577,6 +581,7 @@ const editSeats = (row: AdminHousehold) => {
         rsvp: row.rsvp.state,
         namedBy: seat.namedBy,
         namedByKind: seat.namedByKind,
+        namedAt: seat.namedAt,
       }));
   const retiredCount = source.filter((seat) => seat.retire).length;
   const target = draft
@@ -721,7 +726,6 @@ const editSeats = (row: AdminHousehold) => {
                 <tr>
                   <th data-col="household">Household</th>
                   <th data-col="members">Members · Notes</th>
-                  <th data-col="seats">Seats</th>
                   <th data-col="rsvp">RSVP</th>
                 </tr>
               </thead>
@@ -809,6 +813,15 @@ const editSeats = (row: AdminHousehold) => {
                                 .filter((seat) => seat.kind === "member")
                                 .map((seat) => seat.name ?? ""),
                             )}
+                            {row.seats.some(
+                              (seat) =>
+                                seat.kind === "member" &&
+                                seat.name &&
+                                seat.invitedName &&
+                                seat.name !== seat.invitedName,
+                            ) && (
+                              <small class="admin_guests_renamed">renamed</small>
+                            )}
                           </div>
                           {plusOnes.length > 0 && (
                             <div class="admin-guests_chips">
@@ -828,33 +841,10 @@ const editSeats = (row: AdminHousehold) => {
                               ))}
                             </div>
                           )}
-                          {row.notes && <small>{row.notes}</small>}
-                          {row.seats
-                            .filter(
-                              (seat) =>
-                                seat.name &&
-                                seat.invitedName &&
-                                seat.name !== seat.invitedName,
-                            )
-                            .map((seat) => (
-                              <small class="rename">
-                                {renameNote(
-                                  seat.name!,
-                                  seat.invitedName!,
-                                  seat.namedBy,
-                                  seat.namedAt,
-                                  hostNames,
-                                )}
-                              </small>
-                            ))}
+                          {row.notes && (
+                            <small class="admin_guests_note">{row.notes}</small>
+                          )}
                         </div>
-                      </td>
-                      <td data-col="seats">
-                        {row.seatCount}
-                        <span class="admin-guests_unit">
-                          {" "}
-                          {row.seatCount === 1 ? "seat" : "seats"}
-                        </span>
                       </td>
                       <td data-col="rsvp">
                         <span
@@ -862,7 +852,7 @@ const editSeats = (row: AdminHousehold) => {
                           data-admin-rsvp
                           data-state={row.rsvp.state}
                         >
-                          {rsvpText(row.rsvp)}
+                          {rsvpText(row.rsvp, row.seatCount)}
                         </span>
                         <details class="admin_guests_menu">
                           <summary
@@ -944,6 +934,7 @@ const editSeats = (row: AdminHousehold) => {
                         ? editDraft.invitationEdited
                         : undefined
                     }
+                    hostNames={hostNames}
                   />
                 );
               })()
@@ -966,6 +957,52 @@ const editSeats = (row: AdminHousehold) => {
   const rows = [
     ...document.querySelectorAll<HTMLElement>("[data-admin-household]"),
   ];
+  const guestPage = document.querySelector<HTMLElement>(
+    "[data-admin-guests-page]",
+  );
+  const closeGuestMenus = () => {
+    for (const menu of guestPage?.querySelectorAll<HTMLDetailsElement>(
+      "details.admin_guests_menu[open]",
+    ) ?? [])
+      menu.open = false;
+  };
+  guestPage?.addEventListener(
+    "toggle",
+    (event) => {
+      const menu = event.target;
+      if (!(menu instanceof HTMLDetailsElement) || !menu.matches(".admin_guests_menu"))
+        return;
+      menu.removeAttribute("data-up");
+      if (!menu.open) return;
+
+      for (const other of guestPage.querySelectorAll<HTMLDetailsElement>(
+        "details.admin_guests_menu[open]",
+      ))
+        if (other !== menu) other.open = false;
+
+      if (window.matchMedia("(width < 84rem)").matches) {
+        const popover = menu.querySelector(".admin_guests_popover");
+        const tabbar = document.querySelector("[data-admin-tabbar]");
+        const bottom = window.innerHeight - (tabbar?.getBoundingClientRect().height ?? 0);
+        if (popover && popover.getBoundingClientRect().bottom > bottom)
+          menu.setAttribute("data-up", "");
+      }
+    },
+    true,
+  );
+  document.addEventListener("click", (event) => {
+    const mouse = event as MouseEvent;
+    if (
+      mouse.button !== 0 ||
+      mouse.metaKey ||
+      mouse.ctrlKey ||
+      mouse.shiftKey ||
+      mouse.altKey
+    )
+      return;
+    const target = event.target as Element;
+    if (!target.closest(".admin_guests_menu")) closeGuestMenus();
+  });
   const empty = document.querySelector<HTMLElement>("[data-admin-no-match]");
   const normalizeSearch = (value: string) => duplicateNameKey(value);
   const syncLinks = () => {
@@ -1140,8 +1177,10 @@ const editSeats = (row: AdminHousehold) => {
       update();
     }
   };
-  const setDrawerOpen = (open: boolean) =>
+  const setDrawerOpen = (open: boolean) => {
+    if (open) closeGuestMenus();
     document.documentElement.toggleAttribute("data-admin-drawer-open", open);
+  };
   const currentDrawerUrl = () => {
     const url = new URL(location.href);
     const form = document.querySelector<HTMLFormElement>(
@@ -1169,6 +1208,7 @@ const editSeats = (row: AdminHousehold) => {
     opener?.focus();
   };
   const loadDrawer = async (href: string, push = true) => {
+    closeGuestMenus();
     try {
       const response = await fetch(href, { headers: { Accept: "text/html" } });
       if (!response.ok) throw new Error("drawer request failed");
@@ -1210,6 +1250,7 @@ const editSeats = (row: AdminHousehold) => {
       "[data-admin-edit], .admin_guests_add",
     );
     if (link) {
+      closeGuestMenus();
       const dirty = currentGuestFormIsDirty();
       if (!confirmDiscard()) {
         event.preventDefault();
@@ -1225,6 +1266,7 @@ const editSeats = (row: AdminHousehold) => {
       "[data-duplicate-open]",
     );
     if (duplicateOpen) {
+      closeGuestMenus();
       const dirty = currentGuestFormIsDirty();
       if (!confirmDiscard()) {
         event.preventDefault();
@@ -1267,7 +1309,18 @@ const editSeats = (row: AdminHousehold) => {
   });
   document.addEventListener("keydown", (event) => {
     const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
-    if (!drawer) return;
+    if (!drawer) {
+      if (event.key !== "Escape") return;
+      const menu = guestPage?.querySelector<HTMLDetailsElement>(
+        "details.admin_guests_menu[open]",
+      );
+      if (!menu) return;
+      event.preventDefault();
+      const summary = menu.querySelector<HTMLElement>("summary");
+      closeGuestMenus();
+      summary?.focus();
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       closeDrawer();

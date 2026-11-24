@@ -1,6 +1,7 @@
 ---
 import type { AdminHousehold } from "@/lib/admin/store";
 import { suggestInvitationName, generateHostId } from "@/lib/admin/names";
+import { renamedDetails } from "./renamed-details";
 
 interface DraftSeat {
   id?: number;
@@ -13,6 +14,7 @@ interface DraftSeat {
   rsvp?: string;
   namedBy?: string | null;
   namedByKind?: "guest" | "host" | null;
+  namedAt?: string | null;
 }
 
 interface NewDraft {
@@ -57,6 +59,7 @@ type Props =
       reloadHref?: string;
       takenHouseholds: TakenHousehold[];
       invitationEdited?: boolean;
+      hostNames: Record<string, string>;
     };
 
 const props = Astro.props;
@@ -390,7 +393,7 @@ const rsvpState = (value: string | undefined) =>
                         <strong>{seat.name}</strong>
                         <small>
                           {seat.invitedName && seat.invitedName !== seat.name
-                            ? `Invited as ${seat.invitedName} · renamed`
+                            ? `Invited as ${seat.invitedName} · ${renamedDetails(seat, props.hostNames)}`
                             : `Invited as ${seat.invitedName ?? seat.name} · lead`}
                         </small>
                         <details class="admin_guests_fix">
