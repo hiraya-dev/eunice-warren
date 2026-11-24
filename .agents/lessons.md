@@ -173,7 +173,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Rule:** a spec that writes to the fake store must pass on a store that already holds its own earlier write (branch on the current state, write a value unique to the run) and must hold a cross-process lock around write and read-back when other workers or projects can write the same record. Give each such spec its own fixture record.
 - **Check:** the spec passes `--repeat-each 20 --workers 8` locally and on `flake-check.yml`.
 - **Guard:** none
-- **Paths:** `tests/rsvp*.spec.ts`, `tests/with-love*.spec.ts`, `src/lib/rsvp/**`
+- **Paths:** `tests/rsvp*.spec.ts`, `src/lib/rsvp/**`
 
 ### L-023 — WebKit on the CI runner needs a container to itself
 - **Date:** 2026-11-14
@@ -333,7 +333,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Symptom:** a content PR filled in facts but left em dashes in the sections it touched and long two-clause sentences in the new copy, so the user had to ask for a copy pass.
 - **Root cause:** the facts were checked against the source, but the voice rules in `.agents/product-marketing.md` (no em dashes in sections that are touched, short sentences, "we" to "you") weren't run before the review pack.
 - **Rule:** any PR that adds or changes guest-facing copy runs the `copy-editing` AI-tell and voice checks on that copy, and clears the em dashes in every section it touches, before the first review pack.
-- **Check:** `grep -rn "—" src/components src/content` shows no hits in the touched sections, apart from code comments and the hidden With Love attribution marks.
+- **Check:** `grep -rn "—" src/components src/content` shows no hits in the touched sections, apart from code comments.
 - **Guard:** none
 - **Paths:** `src/components/**`, `src/content/**`
 

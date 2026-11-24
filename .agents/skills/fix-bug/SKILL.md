@@ -91,7 +91,7 @@ cannot run any of the commands below.
   `.dev.vars.example`, so RSVP uses the fake store); the T3 `preview` script
   (`t3.json`: a fake-store build served with `env -u CLAUDECODE`) when the bug may
   only exist in the production build (bundling, image optimisation, hydration).
-  Never reproduce RSVP, song or With Love submissions against the live store.
+  Never reproduce RSVP or song submissions against the live store.
 - Use browser tooling to inspect the failing element, console errors, network, and
   computed layout at the reported breakpoint.
 - **A backgrounded browser tab cannot measure animation** — `requestAnimationFrame`

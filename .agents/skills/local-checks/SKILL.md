@@ -16,7 +16,7 @@ Codex cannot run any of this (it cannot bind a port).
   unrelated changes.
 - **`npm run prepush`**, before every push, on every route and round:
   `npm run prepush && git push …`. It runs the lessons ledger check, the
-  `scripts/ci` and hook tests, the RSVP and With Love unit tests, markdownlint, and
+  `scripts/ci` and hook tests, the RSVP, song, admin and D1 unit tests, markdownlint, and
   `astro check`. It binds no port and opens no browser.
 - Chain the commit or push on the check with `&&`, never after a pipe
   (`npm run prepush | tail && git push` sees `tail`'s exit status). To trim output,
