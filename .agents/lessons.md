@@ -409,11 +409,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-043 — A fixed overlay must never return under a pressed pointer
 - **Date:** 2026-11-20
-- **Trigger:** PR #92, red CI (`webkit` and `e2e (full)`: RSVP specs that pass on main)
+- **Trigger:** PR #92, red CI (`webkit` and `e2e (full)`: RSVP specs that pass on main); escape: runtime #117 (the user found the mobile disc covering the Spotify embed's Play/Pause and the footer's Back to top)
 - **Symptom:** after `fill()` then a click on Find my invite or Send RSVP, the next step never appeared; Playwright reported a timeout, not "intercepts pointer events".
 - **Root cause:** the docked music tag hid while a field had focus. Pressing a button blurs the field on mousedown, the tag came back at once under the pointer, and the release (and click) went to the tag instead of the button. Playwright checks the hit target only on the first event of a click, so it stayed silent.
-- **Rule:** a fixed or sticky element that hides for a reason (focus, a form or CTA in its zone) sets `pointer-events: none` the moment it hides and shows again only once no pointer is down. Any fixed element in a corner also hides while a form or CTA occupies its band, at every width.
-- **Check:** a spec scrolls the control to the fixed element's corner (`scrollIntoView({block: "end"})`), fills a field, presses and holds the control, asserts `document.elementFromPoint` at its centre is the control, releases, and expects the next state (`tests/music.spec.ts`).
+- **Rule:** a fixed or sticky element that hides for a reason (focus, a form or CTA in its zone) sets `pointer-events: none` the moment it hides and shows again only once no pointer is down. Any fixed element in a corner also hides while a form, CTA or other control occupies its band, at every width. Inventory every control that can scroll into the corner, including third-party iframes (an embed's play button sits at its right edge) and the last links on the page.
+- **Check:** a spec scrolls the control to the fixed element's corner (`scrollIntoView({block: "end"})`), fills a field, presses and holds the control, asserts `document.elementFromPoint` at its centre is the control, releases, and expects the next state (`tests/music.spec.ts`); "background music hit targets" pins the Spotify embed and Back to top at 390 and 1440.
 - **Guard:** none
 - **Paths:** `src/components/global/**`, `src/scripts/**`, `tests/**`
 
