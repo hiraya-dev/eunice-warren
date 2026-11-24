@@ -1,6 +1,7 @@
 import { isD1LimitError } from "./db/errors.ts";
 import { InviteChangedError } from "./rsvp/d1.ts";
 import { signRsvpToken, validateSubmission, verifyRsvpToken } from "./rsvp/logic.ts";
+import type { RsvpNotificationData } from "./rsvp/notify.ts";
 import type { InviteLookup, RsvpSeat, RsvpStore } from "./rsvp/store.ts";
 import { SongCapError, SongRateLimitError, type SongInput, type SongStore } from "./songs/store.ts";
 
@@ -64,7 +65,12 @@ export interface SubmitActionInput {
   note?: string;
 }
 
-export async function runSubmitAction(store: RsvpStore, input: SubmitActionInput, tokenSecret: string) {
+export async function runSubmitAction(
+  store: RsvpStore,
+  input: SubmitActionInput,
+  tokenSecret: string,
+  onSuccess?: (data: RsvpNotificationData) => void,
+) {
   const tokenData = await verifyRsvpToken(input.token, tokenSecret);
   if (!tokenData) throw new GuestActionFailure("UNAUTHORIZED", generic);
   try {
@@ -78,7 +84,7 @@ export async function runSubmitAction(store: RsvpStore, input: SubmitActionInput
       expectedSeatIds.length !== submittedSeatIds.length || expectedSeatIds.some((id, index) => submittedSeatIds[index] !== id) ||
       !validateSubmission({ attending: input.attending, seats: input.seats, invite: result.invite })
     ) throw new GuestActionFailure("CONFLICT", inviteChanged);
-    await store.submit({
+    const submission = {
       inviteId: result.householdId,
       name: result.matchedName,
       attending: input.attending,
@@ -86,6 +92,14 @@ export async function runSubmitAction(store: RsvpStore, input: SubmitActionInput
       seats: input.seats,
       email: input.email,
       note: input.note,
+    };
+    await store.submit(submission);
+    onSuccess?.({
+      householdId: result.householdId,
+      householdName: result.invite.householdName,
+      respondentName: result.matchedName,
+      isUpdate: result.previous !== null,
+      submission,
     });
     return { ok: true as const };
   } catch (error) {

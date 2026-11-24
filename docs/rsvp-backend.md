@@ -50,12 +50,18 @@ The old Google Sheets implementation is dormant under
    key deliberately blocks replacement after an RSVP has been recorded.
 4. Create a Cloudflare Turnstile widget for the production hostname and note its
    public site key.
-5. Add `RSVP_TOKEN_SECRET` and `TURNSTILE_SECRET_KEY` with `wrangler secret put`.
+5. Add `RSVP_TOKEN_SECRET`, `TURNSTILE_SECRET_KEY`, and the comma-separated
+   `NOTIFY_TO` recipient list with `wrangler secret put`; each `NOTIFY_TO` address
+   must be a verified Email Routing destination and Email Routing must be enabled
+   on `thefisheswedding.com`.
+6. The top-level `send_email` binding in `wrangler.jsonc` exposes `RSVP_EMAIL` to
+   the Worker; it sends only to verified Email Routing destinations on the free
+   plan.
    No Workers Builds variables are needed for production. The production
    Turnstile site key (`0x4AAAAAAGLQ97oeYHLG-p4Y`, public) is the fallback in
    `src/scripts/turnstile.ts`; set `PUBLIC_TURNSTILE_SITE_KEY` at build time only
    to use a different widget.
-6. Build and deploy with `npm run build` followed by `npx wrangler deploy`. With
+7. Build and deploy with `npm run build` followed by `npx wrangler deploy`. With
    the Astro Cloudflare adapter, Wrangler uses the generated server entrypoint and
    asset configuration. A Workers Builds deploy command may remain
    `npx wrangler deploy`, but its build step must still run `npm run build` first.

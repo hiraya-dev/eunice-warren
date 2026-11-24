@@ -1,4 +1,5 @@
 import musicCover from "@/assets/images/gallery/img-2509.jpg";
+export { RSVP_NOTIFY_FROM } from "./site-consts.ts";
 
 /** Site name. Appended to every page title and used as `og:site_name`. */
 export const SITE_NAME = "Warren & Eunice";
@@ -9,7 +10,7 @@ export const SITE_DESCRIPTION =
  * Canonical origin. Resolves canonical URLs, social images, and the sitemap.
  * The custom domain; www redirects here (a Cloudflare Redirect Rule).
  */
-export const SITE_URL = "https://thefisheswedding.com";
+export { SITE_URL } from "./site-consts.ts";
 /** Single switch to flip when the site should appear in search. */
 export const SITE_INDEXABLE = false;
 /** BCP 47 locale tag used to format dates and numbers. */
