@@ -1,7 +1,7 @@
 # Claude Code notes — Eunice Warren
 
-The Eunice Warren wedding site: Lumos for Astro on Cloudflare Workers, with an RSVP,
-song and With Love backend on a Google Sheet. Designs live in Paper; the repository
+The Eunice Warren wedding site: Lumos for Astro on Cloudflare Workers, with an RSVP
+and song backend on a Google Sheet. Designs live in Paper; the repository
 owns everything that ships. Read `AGENTS.md` **Development**, **Building** and
 **Skills** (the rest is for Codex) and `LUMOS.md` before UI work. The workflow is
 adapted from adc-website; `SETUP.md` says what was kept and what was left out.
@@ -21,7 +21,7 @@ Three change classes, read from the diff (`local-checks` **CI routes**):
   `pr-reviewer`, merge on PASS. No Local review.
 - **Normal**: `runtime`. A draft PR, `pr-reviewer` in parallel with CI, the user's
   preview review, "ship it".
-- **Risky**: `runtime` touching the RSVP, song or With Love actions and stores
+- **Risky**: `runtime` touching the RSVP or song actions and stores
   (`src/actions/**`, `src/lib/**`, `src/pages/api/**`), dependencies, or root config
   (`wrangler.jsonc`, `astro.config.mjs`). The review adds the Codex second opinion.
 
@@ -54,7 +54,7 @@ launch inherits the parent's model otherwise), except for the one truly hard ses
 
 Classify before implementing. Needs no logic and no understanding of the code around
 it → Claude makes it directly. Otherwise mainly layout, CSS or animation →
-`layout-implementer`. Otherwise (the RSVP, song and With Love actions and stores,
+`layout-implementer`. Otherwise (the RSVP and song actions and stores,
 client-script behavior, content schemas, scripts, tests, CI) → Codex. Judgment, Git
 and gates stay with Claude. A task with both halves runs them one after the other.
 
@@ -153,7 +153,7 @@ Every other branch builds a preview for **Local review**. Never deploy by hand, 
 back, or change Workers routes, settings or secrets unless asked.
 
 - Previews run the fake store (`wrangler.jsonc` `previews`), so a reviewer can try
-  the RSVP, song and With Love forms there. Never submit any of them on production.
+  the RSVP and song forms there. Never submit any of them on production.
 - `SITE_INDEXABLE` in `src/consts.ts` stays `false` until the user says to launch.
 
 ## Skills

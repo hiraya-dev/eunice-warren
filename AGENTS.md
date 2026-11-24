@@ -16,8 +16,8 @@ astro dev --background
 ```
 
 Use `astro dev stop`, `astro dev status`, and `astro dev logs` to manage it. Copy
-`.dev.vars.example` to `.dev.vars` first (T3's `setup` script does it) so the RSVP,
-song and With Love actions use the fake store. The user can also start `dev` (hot
+`.dev.vars.example` to `.dev.vars` first (T3's `setup` script does it) so the RSVP
+and song actions use the fake store. The user can also start `dev` (hot
 reload) or `preview` (a fake-store production build) from T3 Code's scripts menu
 (`t3.json`, Astro's default port or the next free one). The user's review of a
 `runtime` change happens on the PR's Cloudflare preview (`CLAUDE.md` **Local
@@ -41,7 +41,7 @@ Read [LUMOS.md](LUMOS.md) before adding a page, component, or style: compose the
 page from the existing components in `src/components/`, and add CSS only through
 the checklist there. Every section gets an `id`.
 
-The RSVP, song and With Love features run as Astro actions in the Cloudflare
+The RSVP and song features run as Astro actions in the Cloudflare
 Worker, against a Google Sheet in production and a fake store everywhere else
 (`docs/rsvp-backend.md`). Keep guest data out of the repository and the client
 bundle; fixtures are fictional.
@@ -84,7 +84,7 @@ Claude: classify → approve → delegate → wait → validate → commit → d
 Codex:  inspect → implement → add tests → report
 ```
 
-You implement repository code with logic in it: the RSVP, song and With Love
+You implement repository code with logic in it: the RSVP and song
 actions and stores, API routes, client-script behavior, content schemas, utilities,
 tests, build config, scripts and CI, refactors, and bug fixes that need a root
 cause. Work that is mainly layout, CSS, or animation goes to the
