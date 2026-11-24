@@ -972,11 +972,21 @@ const editSeats = (row: AdminHousehold) => {
       const menu = event.target;
       if (!(menu instanceof HTMLDetailsElement) || !menu.matches(".admin_guests_menu"))
         return;
-      if (menu.open)
-        for (const other of guestPage.querySelectorAll<HTMLDetailsElement>(
-          "details.admin_guests_menu[open]",
-        ))
-          if (other !== menu) other.open = false;
+      menu.removeAttribute("data-up");
+      if (!menu.open) return;
+
+      for (const other of guestPage.querySelectorAll<HTMLDetailsElement>(
+        "details.admin_guests_menu[open]",
+      ))
+        if (other !== menu) other.open = false;
+
+      if (window.matchMedia("(width < 84rem)").matches) {
+        const popover = menu.querySelector(".admin_guests_popover");
+        const tabbar = document.querySelector("[data-admin-tabbar]");
+        const bottom = window.innerHeight - (tabbar?.getBoundingClientRect().height ?? 0);
+        if (popover && popover.getBoundingClientRect().bottom > bottom)
+          menu.setAttribute("data-up", "");
+      }
     },
     true,
   );

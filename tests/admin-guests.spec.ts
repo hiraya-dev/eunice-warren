@@ -95,8 +95,7 @@ test.describe("guest list rows", () => {
       await page.goto("/admin/guests");
       const rows = page.locator("[data-admin-household]");
       const firstMenu = rows.nth(0).locator("details.admin_guests_menu");
-      // Row 2, not row 1: at 1440 the open popover hangs over the next row's ⋯.
-      const secondMenu = rows.nth(2).locator("details.admin_guests_menu");
+      const secondMenu = rows.nth(testInfo.project.name === "mobile" ? 2 : 1).locator("details.admin_guests_menu");
 
       await firstMenu.locator("summary").click();
       await expect(firstMenu).toHaveAttribute("open", "");
@@ -141,6 +140,57 @@ test.describe("guest list rows", () => {
         page.locator("details.admin_guests_menu[open]"),
       ).toHaveCount(0);
     });
+  });
+
+  test("keeps desktop popovers inside the card and clear of every other menu @single", async ({ page }) => {
+    await page.goto("/admin/guests");
+    for (const width of [1344, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const collisions = await page.locator(".admin-guests_card").evaluate((card) => {
+        const bounds = card.getBoundingClientRect();
+        const menus = [...card.querySelectorAll<HTMLDetailsElement>(".admin_guests_menu")];
+        return menus.flatMap((menu) => {
+          menu.open = true;
+          const box = menu.querySelector(".admin_guests_popover")!.getBoundingClientRect();
+          const overlaps = menus.some((other) => {
+            if (other === menu) return false;
+            const button = other.querySelector("summary")!.getBoundingClientRect();
+            return box.left < button.right && box.right > button.left &&
+              box.top < button.bottom && box.bottom > button.top;
+          });
+          menu.open = false;
+          return overlaps || box.left < bounds.left || box.right > bounds.right
+            ? [menu.closest("tr")!.dataset.householdId]
+            : [];
+        });
+      });
+      expect(collisions, `width ${width}`).toEqual([]);
+    }
+  });
+
+  test("keeps the last visible menu above the phone tab bar after search", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/admin/guests");
+    const tabbar = page.locator("[data-admin-tabbar]");
+    const menu = page.locator("[data-admin-household]:visible").last().locator("details");
+    // The numbered fixture labels end before the three editor/activity fixtures.
+    for (const query of ["", "-0"]) {
+      await page.locator("[data-admin-search]").fill(query);
+      if (query) {
+        await expect(page.locator("tr:nth-last-child(-n + 2)[data-admin-household]:visible")).toHaveCount(0);
+      }
+      const bottom = (await tabbar.boundingBox())!.y;
+      const summary = menu.locator("summary");
+      await summary.evaluate((button, limit) => {
+        window.scrollBy(0, button.getBoundingClientRect().bottom - (limit - 8));
+      }, bottom);
+      await summary.click();
+      await expect.poll(async () => {
+        const box = await menu.locator(".admin_guests_popover").boundingBox();
+        return box ? box.y + box.height : Infinity;
+      }).toBeLessThanOrEqual(bottom);
+      await page.keyboard.press("Escape");
+    }
   });
 
   test("keeps renamed members quiet in rows and detailed in the drawer", async ({

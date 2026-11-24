@@ -1737,15 +1737,29 @@ label.admin_guests_host {
     z-index: 3;
   }
 }
-/* The last rows open their menu upward so it clears the phone tab bar. */
-tr:nth-last-child(-n + 2) .admin_guests_popover {
-  top: auto;
-  bottom: calc(100% + 0.25rem);
-}
 .admin_guests_popover {
   position: absolute;
   top: calc(100% + 0.25rem);
   right: 0;
+  @media (width < 84rem) {
+    .admin_guests_menu[data-up] & {
+      top: auto;
+      bottom: calc(100% + 0.25rem);
+    }
+  }
+  /* Without JS nothing measures, so the last rows open upward to clear the
+     phone tab bar. */
+  @media (width < 84rem) and (scripting: none) {
+    tr:nth-last-child(-n + 2) & {
+      top: auto;
+      bottom: calc(100% + 0.25rem);
+    }
+  }
+  @media (min-width: 84rem) {
+    top: 50%;
+    right: calc(100% + 0.25rem);
+    translate: 0 -50%;
+  }
   display: grid;
   min-width: 11.5rem;
   padding: 0.25rem;

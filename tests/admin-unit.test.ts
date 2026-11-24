@@ -1,3 +1,4 @@
+import { renamedDetails } from "../src/components/admin/renamed-details.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -50,6 +51,16 @@ import {
   fakeAdminResponses,
 } from "../src/lib/admin/fake.ts";
 import { StaleHouseholdError } from "../src/lib/admin/store.ts";
+
+test("drawer rename details preserve attribution when names contain commas", () => {
+  assert.equal(
+    renamedDetails(
+      { name: "Juan, Jr.", invitedName: "Cruz, Juan", namedBy: "host", namedAt: "2026-11-19T12:00:00Z" },
+      { host: "Warren, Sr." },
+    ),
+    "renamed by Warren, Sr. · Nov 19",
+  );
+});
 
 test("fake host RSVP save appends history, clears declines, and refuses stale drafts", async () => {
   const fixture = fakeAdminFixtures.find((row) => row.id === "hh-rsvp-editor")!;

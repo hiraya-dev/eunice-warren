@@ -1,7 +1,7 @@
 ---
 import type { AdminHousehold } from "@/lib/admin/store";
 import { suggestInvitationName, generateHostId } from "@/lib/admin/names";
-import { renameNote } from "@/lib/admin/presentation";
+import { renamedDetails } from "./renamed-details";
 
 interface DraftSeat {
   id?: number;
@@ -63,16 +63,6 @@ type Props =
     };
 
 const props = Astro.props;
-const renamedDetails = (seat: DraftSeat) => {
-  if (!seat.namedBy || !seat.namedAt) return "renamed";
-  return renameNote(
-    seat.name,
-    seat.invitedName ?? seat.name,
-    seat.namedBy,
-    seat.namedAt,
-    props.variant === "edit" ? props.hostNames : {},
-  ).replace(/^.*?,\s*/, "");
-};
 const params = new URLSearchParams();
 for (const key of ["filter", "q"]) {
   const value = Astro.url.searchParams.get(key);
@@ -403,7 +393,7 @@ const rsvpState = (value: string | undefined) =>
                         <strong>{seat.name}</strong>
                         <small>
                           {seat.invitedName && seat.invitedName !== seat.name
-                            ? `Invited as ${seat.invitedName} · ${renamedDetails(seat)}`
+                            ? `Invited as ${seat.invitedName} · ${renamedDetails(seat, props.hostNames)}`
                             : `Invited as ${seat.invitedName ?? seat.name} · lead`}
                         </small>
                         <details class="admin_guests_fix">
