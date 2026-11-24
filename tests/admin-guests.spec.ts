@@ -398,6 +398,12 @@ test.describe("guest list drawer", () => {
         await names.press("Enter");
       }
       await expect(page.locator("[data-name-chip]")).toHaveCount(8);
+      // The chips can be ready while the sheet is still sliding up.
+      await expect
+        .poll(async () => (await panel.boundingBox())?.y, {
+          message: "phone sheet reaches the top of the viewport",
+        })
+        .toBe(0);
       expect(
         await scroll.evaluate((el) => el.scrollHeight > el.clientHeight),
       ).toBe(true);

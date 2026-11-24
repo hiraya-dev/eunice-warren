@@ -255,6 +255,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/components/global/Preloader.astro`, `src/components/global/BackgroundMusic.astro`, `tests/music.spec.ts`
 
+### L-065 — Geometry waits for the entrance animation to settle
+- **Date:** 2026-11-24
+- **Trigger:** PR #114 flaky test (`tests/admin-guests.spec.ts` "the phone sheet pins the header and footer…", from #113; failed ~1 in 3 in a one-worker sequence on main and the branch)
+- **Symptom:** footer button bottom read 844.45px against a ≤ 844 limit.
+- **Root cause:** the phone sheet slides up from `translateY(100%)` over 280ms; the spec read boxes once the name chips existed, which can be before the slide ends.
+- **Rule:** before reading any box inside an animated drawer, sheet or overlay, `expect.poll` the container's settled position (as the docked-panel spec does for `x`); a ready DOM is not a settled layout.
+- **Check:** the spec polls the panel `y` to 0 before `boundingBox()` reads; it passes `--repeat-each 20 --workers 6` and `flake-check.yml`.
+- **Guard:** none
+- **Paths:** `tests/admin*.spec.ts`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building
