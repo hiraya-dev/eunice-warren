@@ -59,9 +59,10 @@ const steps = [
     <div class="stay_directions" data-fade-in>
       <h2 class="stay_directions-title" data-fade-in-item>Getting there</h2>
       <ol class="stay_steps">
-        {steps.map((step) => (
+        {steps.map((step, index) => (
           <li class="stay_step" data-fade-in-item>
             <span class="stay_step-number" aria-hidden="true">{step.number}</span>
+            {index < steps.length - 1 && <span class="stay_step-line" aria-hidden="true"></span>}
             <div class="stay_step-content">
               <h3>{step.title}</h3>
               <p>{step.body}</p>
@@ -94,6 +95,7 @@ const steps = [
     .stay_steps::before { position: absolute; top: 1.125rem; right: 2.25rem; left: 2.25rem; border-top: 0.09375rem dashed var(--brand-500); content: ""; }
     .stay_step { position: relative; display: flex; min-width: 0; flex: 1 1 0; flex-direction: column; gap: var(--space-3); }
     .stay_step-number { z-index: 1; display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; place-items: center; border: 0.09375rem solid var(--light-100); border-radius: 50%; background: var(--dark-900); color: var(--light-100); font: var(--primary-regular) 1rem / 1.25 var(--mono-family); }
+    .stay_step-line { display: none; }
     .stay_step-content { display: flex; flex-direction: column; gap: var(--space-3); }
     .stay_step h3 { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--light-100); font: var(--secondary-regular) 1.5rem / 1.75rem var(--secondary-family); }
     .stay_step p { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--brand-500); font: var(--primary-regular) var(--text-main) / 1.5 var(--primary-family); }
@@ -113,6 +115,9 @@ const steps = [
     .stay_steps::before { display: none; }
     .stay_step { flex: none; flex-direction: row; gap: var(--space-4); }
     .stay_step:not(:last-child)::after { position: absolute; top: 2.25rem; bottom: calc(var(--space-6) * -1); left: 1.125rem; border-left: 0.09375rem dashed var(--brand-500); content: ""; }
+    .stay_step-number { transition: background-color 250ms ease-out, color 250ms ease-out; }
+    .stay_step.is-reached .stay_step-number { background: var(--light-100); color: var(--dark-900); }
+    .stay_step-line { position: absolute; top: 2.25rem; bottom: calc(var(--space-6) * -1); left: 1.125rem; display: block; width: 0.09375rem; background: var(--light-100); transform: scaleY(0); transform-origin: top; }
     .stay_step-content { min-width: 0; padding-top: var(--space-1); }
     .stay_step-detail { padding-top: var(--space-3); }
   }
@@ -120,6 +125,11 @@ const steps = [
   @keyframes stay-compass-heart-pulse {
     0%, 100% { transform: scale(1); }
     45% { transform: scale(1.14); }
+  }
+
+  @media (max-width: 61.999rem) and (prefers-reduced-motion: reduce) {
+    .stay_step-line { transform: none; }
+    .stay_step-number { background: var(--light-100); color: var(--dark-900); }
   }
 
   @media (prefers-reduced-motion: reduce) {

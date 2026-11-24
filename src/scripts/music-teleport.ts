@@ -83,6 +83,8 @@ export function initMusicTeleport(container: HTMLElement) {
   const mobile = window.matchMedia("(max-width: 47.999rem)");
   let formGuard = () => {};
   let ctaGuard = () => {};
+  let embedGuard = () => {};
+  let footerGuard = () => {};
   let guardRefresh = 0;
   let introTimer = 0;
   let openedAt = 0;
@@ -97,7 +99,7 @@ export function initMusicTeleport(container: HTMLElement) {
       element?.animate({ opacity: [getComputedStyle(element).opacity, opening ? "1" : "0"] }, { duration: 150, easing: "linear" });
     }
   };
-  const hidden = () => container.querySelector<HTMLElement>("[data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]") !== null;
+  const hidden = () => container.querySelector<HTMLElement>("[data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]") !== null;
   const close = (returnFocus = false) => {
     if (!container.hasAttribute("data-music-open")) return;
     crossfade(false);
@@ -114,7 +116,7 @@ export function initMusicTeleport(container: HTMLElement) {
   // player a frame later. The same band the guards watch, read now, so it simply stays a disc.
   const blocked = () => {
     const shape = pill.getBoundingClientRect();
-    return ([["#rsvp .rsvp_card", false], ["#hero .hero_actions", true]] as const).some(([selector, below]) => {
+    return ([["#rsvp .rsvp_card", false], ["#hero .hero_actions", true], ["[data-playlist-embed]", false], [".footer_top-link", false]] as const).some(([selector, below]) => {
       const box = document.querySelector<HTMLElement>(selector)?.getBoundingClientRect();
       if (!box) return false;
       return box.right > shape.left - 16 && box.bottom > shape.top - 16 && (below || box.top < window.innerHeight);
@@ -139,13 +141,19 @@ export function initMusicTeleport(container: HTMLElement) {
   const rebuildGuards = () => {
     formGuard();
     ctaGuard();
+    embedGuard();
+    footerGuard();
     if (mobile.matches) {
       const onHide = (value: boolean) => { if (value) close(false); };
       const footprint = () => (container.hasAttribute("data-music-open") ? pill : disc);
       formGuard = watchBand(container, pill, document.querySelector<HTMLElement>("#rsvp .rsvp_card"), "data-music-hidden-for-form", false, true, onHide, footprint);
       ctaGuard = watchBand(container, pill, document.querySelector<HTMLElement>("#hero .hero_actions"), "data-music-hidden-for-cta", true, true, onHide, footprint);
+      embedGuard = watchBand(container, pill, document.querySelector<HTMLElement>("[data-playlist-embed]"), "data-music-hidden-for-embed", false, true, onHide, footprint);
+      footerGuard = watchBand(container, pill, document.querySelector<HTMLElement>(".footer_top-link"), "data-music-hidden-for-footer", false, true, onHide, footprint);
     } else {
       formGuard = watchBand(container, tag, document.querySelector<HTMLElement>("#rsvp .rsvp_card"), "data-music-hidden-for-form");
+      embedGuard = watchBand(container, tag, document.querySelector<HTMLElement>("[data-playlist-embed]"), "data-music-hidden-for-embed");
+      footerGuard = watchBand(container, tag, document.querySelector<HTMLElement>(".footer_top-link"), "data-music-hidden-for-footer");
     }
   };
   const onBreakpoint = () => { if (!mobile.matches) close(false); scheduleGuards(); };
@@ -197,7 +205,7 @@ export function initMusicTeleport(container: HTMLElement) {
   };
   if (!polaroid || !card || !hero) {
     setDocked(true);
-    return () => { clearMobile(); formGuard(); ctaGuard(); };
+    return () => { clearMobile(); formGuard(); ctaGuard(); embedGuard(); footerGuard(); };
   }
 
   const root = document.documentElement;
@@ -305,6 +313,8 @@ export function initMusicTeleport(container: HTMLElement) {
     cancelAnimationFrame(guardRefresh);
     formGuard();
     ctaGuard();
+    embedGuard();
+    footerGuard();
     mm.revert();
     settle(true);
   };

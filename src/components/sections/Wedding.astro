@@ -131,9 +131,9 @@ const schedule = [
     .wedding_caption { display: block; font: 400 1.375rem / 1.1 var(--hand-family); }
     .wedding_schedule { width: 100%; }
     .wedding_tablist { border-top: 0.09375rem solid var(--dark-900); }
-    .wedding_row { display: grid; grid-template-columns: minmax(0, 1fr) 6rem; align-items: start; column-gap: var(--space-3); position: relative; padding-block: var(--space-4); border-bottom: var(--border-width) solid var(--_muted); color: var(--_muted); transition: color 0.25s ease; }
+    .wedding_row { display: grid; grid-template-columns: minmax(min-content, 1fr) fit-content(9.5rem); align-items: start; column-gap: var(--space-3); position: relative; padding-block: var(--space-4); border-bottom: var(--border-width) solid var(--_muted); color: var(--_muted); transition: color 0.25s ease; }
     .wedding_row.is-active { color: var(--dark-900); }
-    .wedding_tab { display: grid; grid-column: 1; grid-template-columns: 2.125rem minmax(0, 1fr); align-items: start; gap: var(--space-3); width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+    .wedding_tab { display: grid; grid-column: 1; grid-template-columns: 2.125rem minmax(min-content, 1fr); align-items: start; gap: var(--space-3); width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
     .wedding_tab:focus-visible, .wedding_meta a:focus-visible, .wedding_footer a:focus-visible { outline-color: var(--dark-900); outline-offset: var(--focus-offset); }
     .wedding_number { padding-top: 0.75rem; font: var(--primary-regular) 0.75rem / 1rem var(--mono-family); letter-spacing: 0.04em; }
     .wedding_tab-title { display: flex; flex-direction: column; font: var(--secondary-regular) var(--h4) / 1 var(--secondary-family); letter-spacing: var(--letter-spacing-snug); }

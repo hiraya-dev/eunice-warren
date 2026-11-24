@@ -42,7 +42,10 @@ const { render = true } = Astro.props;
 
         <div class="footer_meta">
           <p class="footer_contact text-style-small">
-            Questions? Warren <a href="tel:+639362300525">0936 230 0525</a> · Eunice <a href="tel:+639362300539">0936 230 0539</a>
+            <span class="footer_contact-lead">Questions?</span>
+            <span class="footer_contact-person">Warren <a href="tel:+639362300525">0936 230 0525</a></span>
+            <span class="footer_contact-separator" aria-hidden="true">·</span>
+            <span class="footer_contact-person">Eunice <a href="tel:+639362300539">0936 230 0539</a></span>
           </p>
           <div class="footer_meta-links">
             <p class="footer_hashtag">#WarrenAndEunice</p>
@@ -284,6 +287,16 @@ const { render = true } = Astro.props;
         gap: var(--space-3);
         margin-top: var(--space-6);
         padding-top: var(--space-5);
+      }
+
+      .footer_contact {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .footer_contact-separator {
+        display: none;
       }
 
       .footer_meta-links {

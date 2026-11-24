@@ -3,7 +3,7 @@ import { reveal } from "./helpers/reveal";
 import { fakeSongSearch } from "../src/lib/songs/fake";
 
 const fakeSpotify = `
-  window.__playlistController = { listeners: [], addListener(name, callback) { this.listeners.push([name, callback]); } };
+  window.__playlistController = { listeners: [], calls: [], addListener(name, callback) { this.listeners.push([name, callback]); }, pause() { this.calls.push('pause'); }, resume() { this.calls.push('resume'); }, play() { this.calls.push('play'); }, togglePlay() { this.calls.push('togglePlay'); } };
   window.onSpotifyIframeApiReady({ createController(element, options, callback) {
     window.__playlistController.options = options;
     const iframe = document.createElement('iframe');
@@ -313,6 +313,27 @@ test.describe("Playlist section", () => {
       );
     });
     expect(later - after.angle).toBeGreaterThan(1);
+  });
+
+  test("pauses the Spotify embed when the page is hidden and never resumes it", async ({ page }) => {
+    await installSpotify(page);
+    await page.goto("/");
+    await loadSpotify(page);
+    const calls = () =>
+      page.evaluate(() => (window as Window & { __playlistController?: { calls: string[] } }).__playlistController?.calls ?? []);
+    expect(await calls()).toEqual([]);
+    const setVisibility = (state: "hidden" | "visible") =>
+      page.evaluate((value) => {
+        Object.defineProperty(document, "visibilityState", { configurable: true, value });
+        document.dispatchEvent(new Event("visibilitychange"));
+      }, state);
+    await setVisibility("hidden");
+    await expect.poll(calls).toEqual(["pause"]);
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true })));
+    await expect.poll(calls).toEqual(["pause", "pause"]);
+    await setVisibility("visible");
+    await page.waitForTimeout(300);
+    expect(await calls()).toEqual(["pause", "pause"]);
   });
 
   test("does not rotate the record when reduced motion is requested", async ({
