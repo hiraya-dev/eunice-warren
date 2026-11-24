@@ -407,6 +407,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/styles/admin.css`, `src/pages/admin/**`, `src/components/**`
 
+### L-063 — Every short label carries the unit its criterion names
+- **Date:** 2026-11-24
+- **Trigger:** PR #114 CHANGES_REQUIRED
+- **Symptom:** the criterion said the overview stat labels name households "phone short labels too", but only the first phone caption did ("households attending / declined / waiting").
+- **Root cause:** the author treated the first caption as context for its neighbours, a reading the approved criterion did not allow.
+- **Rule:** when a criterion names a unit or wording for a set of labels, every label in the set (long and short, every breakpoint) carries it; a shortcut is a criteria change the user approves first.
+- **Check:** read each `data-short` / short-label array against the criterion before review.
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`
+
 ## Data and backend
 
 ### L-045 — External data the user owns is read-only

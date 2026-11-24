@@ -40,7 +40,13 @@ const stampShort = deadline.closed
   : `to ${stampLabel.split(" · ").at(-1)}`;
 const hello = greeting(new Date(), host.firstName);
 const nameAt = hello.lastIndexOf(", ") + 2;
-const statCaptions = ["households attending", "declined", "waiting"];
+const households = (count: number) =>
+  count === 1 ? "household" : "households";
+const statCaptions = [
+  `${households(view.households.attending)} attending`,
+  `${households(view.households.declined)} declined`,
+  `${households(view.households.waiting)} waiting`,
+];
 ---
 
 <AdminLayout
@@ -139,6 +145,28 @@ const statCaptions = ["households attending", "declined", "waiting"];
             </div>
           </section>
           <div class="admin-overview_lists">
+            <section class="admin-overview_waiting" data-admin-waiting>
+              <header class="admin-overview_head">
+                <h2>Still waiting on</h2>
+                <span class="admin_label">{view.waiting.total} households</span>
+              </header>
+              {view.waiting.households.map((row) => (
+                <div class="admin-overview_row" data-admin-waiting-row>
+                  <span>{row.displayName}</span>
+                  <span>{row.seatCount} seats</span>
+                </div>
+              ))}
+              {view.waiting.total > 3 && (
+                <a class="admin-overview_more" href="/admin/guests?filter=waiting">
+                  <span class="admin-overview_more-long">
+                    + {view.waiting.total - 3} more · <span>see all waiting</span>
+                  </span>
+                  <span class="admin-overview_more-short">
+                    See all {view.waiting.total} waiting
+                  </span>
+                </a>
+              )}
+            </section>
             <section class="admin-overview_latest" data-admin-latest>
               <header class="admin-overview_head">
                 <h2>Latest replies</h2>
@@ -167,28 +195,6 @@ const statCaptions = ["households attending", "declined", "waiting"];
                   )}
                 </article>
               ))}
-            </section>
-            <section class="admin-overview_waiting" data-admin-waiting>
-              <header class="admin-overview_head">
-                <h2>Still waiting on</h2>
-                <span class="admin_label">{view.waiting.total} households</span>
-              </header>
-              {view.waiting.households.map((row) => (
-                <div class="admin-overview_row" data-admin-waiting-row>
-                  <span>{row.displayName}</span>
-                  <span>{row.seatCount} seats</span>
-                </div>
-              ))}
-              {view.waiting.total > 3 && (
-                <a class="admin-overview_more" href="/admin/guests?filter=waiting">
-                  <span class="admin-overview_more-long">
-                    + {view.waiting.total - 3} more · <span>see all waiting</span>
-                  </span>
-                  <span class="admin-overview_more-short">
-                    See all {view.waiting.total} waiting
-                  </span>
-                </a>
-              )}
             </section>
           </div>
         </>

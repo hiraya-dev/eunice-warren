@@ -694,7 +694,6 @@
 }
 
 .admin-overview_waiting {
-  order: -1;
   min-width: 0;
 
   @media (min-width: 64rem) {

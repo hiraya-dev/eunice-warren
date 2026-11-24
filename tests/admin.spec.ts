@@ -27,10 +27,27 @@ test.describe("admin dashboard", () => {
       ),
     );
     await expect(page.locator("[data-admin-coming] dt")).toHaveCount(3);
+    for (const caption of await page
+      .locator("[data-admin-coming] dt")
+      .evaluateAll((dts) => dts.map((dt) => dt.getAttribute("data-short")))) {
+      expect(caption).toMatch(/^households? /);
+    }
     await expect(page.locator(".admin-overview_more")).toHaveAttribute(
       "href",
       "/admin/guests?filter=waiting",
     );
+    const waitingFirst = await page
+      .locator("[data-admin-waiting]")
+      .evaluate((waiting) => {
+        const latest = document.querySelector("[data-admin-latest]")!;
+        const a = waiting.getBoundingClientRect();
+        const b = latest.getBoundingClientRect();
+        const before =
+          waiting.compareDocumentPosition(latest) &
+          Node.DOCUMENT_POSITION_FOLLOWING;
+        return Boolean(before) && (a.top < b.top || a.left < b.left);
+      });
+    expect(waitingFirst).toBe(true);
   });
 
   test("lists and searches fixture households @smoke", async ({ page }) => {
