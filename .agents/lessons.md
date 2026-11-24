@@ -429,10 +429,10 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-064 — A disclosure menu closes itself
 - **Date:** 2026-11-24
-- **Trigger:** PR #114 Local review round; escape: runtime #96 (Guest list row menus never closed: they stacked, and one stayed open behind the Add household drawer)
+- **Trigger:** PR #114 Local review round; escape: runtime #96 (Guest list row menus never closed: they stacked, and one stayed open behind the Add household drawer); PR #114 Local review round 2 (the outside-click listener sat on the page section, so a click on the margin or sidebar left the menu open)
 - **Symptom:** several row ⋯ menus open at once; a menu left open over the dimmed page behind the drawer.
 - **Root cause:** the menu was a bare `<details>`; nothing closed it on another menu, an outside click, Escape, or a drawer opening.
-- **Rule:** any `<details>` used as a menu ships with: one open at a time, outside click and Escape close it (focus back to its summary), and every overlay or drawer open closes it first. When a row loses height or its trailing column widens, re-check that its popover clears the phone tab bar and that the trigger is not covered.
+- **Rule:** any `<details>` used as a menu ships with: one open at a time, a click anywhere in the document outside it closes it (listen on `document`, not the page section), Escape closes it (focus back to its summary), and every overlay or drawer open closes it first. Its spec clicks a point outside the page's own container, found with `elementFromPoint`, at the widths where the layout differs. When a row loses height or its trailing column widens, re-check that its popover clears the phone tab bar and that the trigger is not covered.
 - **Check:** `tests/admin-guests.spec.ts` "keeps row menus exclusive and closes them for drawer actions" and "keeps every row menu button clear of its RSVP pill".
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`, `src/components/admin/**`, `src/styles/admin.css`

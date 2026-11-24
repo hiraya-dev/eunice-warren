@@ -85,12 +85,18 @@ test.describe("guest list filters", () => {
 test.describe("guest list rows", () => {
   test("keeps row menus exclusive and closes them for drawer actions", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await withAdminLock(async () => {
+      await page.setViewportSize(
+        testInfo.project.name === "mobile"
+          ? { width: 390, height: 844 }
+          : { width: 1440, height: 900 },
+      );
       await page.goto("/admin/guests");
       const rows = page.locator("[data-admin-household]");
       const firstMenu = rows.nth(0).locator("details.admin_guests_menu");
-      const secondMenu = rows.nth(1).locator("details.admin_guests_menu");
+      // Row 2, not row 1: at 1440 the open popover hangs over the next row's ⋯.
+      const secondMenu = rows.nth(2).locator("details.admin_guests_menu");
 
       await firstMenu.locator("summary").click();
       await expect(firstMenu).toHaveAttribute("open", "");
@@ -98,6 +104,26 @@ test.describe("guest list rows", () => {
       await expect(firstMenu).not.toHaveAttribute("open", "");
       await expect(secondMenu).toHaveAttribute("open", "");
 
+      const outsidePoint = await page.evaluate(() => {
+        const section = document.querySelector("[data-admin-guests-page]");
+        if (!section) return null;
+        for (let y = 8; y < window.innerHeight; y += 8)
+          for (let x = 8; x < window.innerWidth; x += 8) {
+            const element = document.elementFromPoint(x, y);
+            if (
+              element &&
+              !section.contains(element) &&
+              !element.closest("a, button, input, select, textarea, summary")
+            )
+              return { x, y };
+          }
+        return null;
+      });
+      expect(outsidePoint).not.toBeNull();
+      await page.mouse.click(outsidePoint!.x, outsidePoint!.y);
+      await expect(secondMenu).not.toHaveAttribute("open", "");
+
+      await secondMenu.locator("summary").click();
       await page
         .locator("[data-admin-guests-page]")
         .click({ position: { x: 8, y: 8 } });

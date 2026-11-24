@@ -980,7 +980,7 @@ const editSeats = (row: AdminHousehold) => {
     },
     true,
   );
-  guestPage?.addEventListener("click", (event) => {
+  document.addEventListener("click", (event) => {
     const mouse = event as MouseEvent;
     if (
       mouse.button !== 0 ||
