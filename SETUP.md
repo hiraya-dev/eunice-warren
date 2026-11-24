@@ -70,7 +70,7 @@ sandbox cannot do** in `AGENTS.md`.
 ## Deploys: Cloudflare Workers Builds
 
 One Worker, `eunice-warren`, builds from this repository. Every push to `main`
-deploys production at `https://eunice-warren.warren-and-eunice.workers.dev`; every other
+deploys production at `https://thefisheswedding.com` (also `https://eunice-warren.warren-and-eunice.workers.dev`); every other
 branch builds a preview at `https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`
 with `npx wrangler preview`; that is where the user does **Local review**. CI never
 deploys and holds no Cloudflare token. The RSVP secrets are Worker secrets

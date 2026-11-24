@@ -414,7 +414,7 @@ merged or not, so the thread returns to the user's inbox.
 ## Merging deploys production
 
 Cloudflare Workers Builds deploys `main` to the `eunice-warren` Worker
-(`https://eunice-warren.warren-and-eunice.workers.dev`) on every push. PR branches get only a
+(`https://thefisheswedding.com`, also `https://eunice-warren.warren-and-eunice.workers.dev`) on every push. PR branches get only a
 preview, for **Local review**.
 
 After every merge, Claude confirms the Workers Build for the merge commit's SHA
