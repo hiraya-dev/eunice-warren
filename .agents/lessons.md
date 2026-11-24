@@ -417,6 +417,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`
 
+### L-064 — A disclosure menu closes itself
+- **Date:** 2026-11-24
+- **Trigger:** PR #114 Local review round; escape: runtime #96 (Guest list row menus never closed: they stacked, and one stayed open behind the Add household drawer)
+- **Symptom:** several row ⋯ menus open at once; a menu left open over the dimmed page behind the drawer.
+- **Root cause:** the menu was a bare `<details>`; nothing closed it on another menu, an outside click, Escape, or a drawer opening.
+- **Rule:** any `<details>` used as a menu ships with: one open at a time, outside click and Escape close it (focus back to its summary), and every overlay or drawer open closes it first. When a row loses height or its trailing column widens, re-check that its popover clears the phone tab bar and that the trigger is not covered.
+- **Check:** `tests/admin-guests.spec.ts` "keeps row menus exclusive and closes them for drawer actions" and "keeps every row menu button clear of its RSVP pill".
+- **Guard:** none
+- **Paths:** `src/pages/admin/**`, `src/components/admin/**`, `src/styles/admin.css`
+
 ## Data and backend
 
 ### L-045 — External data the user owns is read-only

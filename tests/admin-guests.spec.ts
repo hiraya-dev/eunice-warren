@@ -19,6 +19,13 @@ const expectedIds = (filter: string) =>
 
 const rowById = (page: Page, id: string) =>
   page.locator(`[data-household-id="${id}"]`);
+const expectRsvpSeatCount = async (
+  row: ReturnType<typeof rowById>,
+  seatCount: number,
+) =>
+  expect(row.locator("[data-admin-rsvp]")).toContainText(
+    new RegExp(`(?:of\\s+${seatCount}\\s+coming|·\\s+${seatCount}\\s+seats?)`),
+  );
 const editor = fakeAdminFixtures.find((row) => row.id === "hh-admin-editor")!;
 const openSeatFixture = fakeAdminFixtures.find(
   (row) => row.id === "hh-mendoza",
@@ -72,6 +79,99 @@ test.describe("guest list filters", () => {
       expectedIds("declined").length,
     );
     await page.close();
+  });
+});
+
+test.describe("guest list rows", () => {
+  test("keeps row menus exclusive and closes them for drawer actions", async ({
+    page,
+  }) => {
+    await withAdminLock(async () => {
+      await page.goto("/admin/guests");
+      const rows = page.locator("[data-admin-household]");
+      const firstMenu = rows.nth(0).locator("details.admin_guests_menu");
+      const secondMenu = rows.nth(1).locator("details.admin_guests_menu");
+
+      await firstMenu.locator("summary").click();
+      await expect(firstMenu).toHaveAttribute("open", "");
+      await secondMenu.locator("summary").click();
+      await expect(firstMenu).not.toHaveAttribute("open", "");
+      await expect(secondMenu).toHaveAttribute("open", "");
+
+      await page
+        .locator("[data-admin-guests-page]")
+        .click({ position: { x: 8, y: 8 } });
+      await expect(secondMenu).not.toHaveAttribute("open", "");
+
+      await firstMenu.locator("summary").click();
+      await page.keyboard.press("Escape");
+      await expect(firstMenu).not.toHaveAttribute("open", "");
+      await expect(firstMenu.locator("summary")).toBeFocused();
+
+      await firstMenu.locator("summary").click();
+      await page.getByRole("link", { name: "+ Add household" }).click();
+      await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+      await expect(
+        page.locator("details.admin_guests_menu[open]"),
+      ).toHaveCount(0);
+    });
+  });
+
+  test("keeps renamed members quiet in rows and detailed in the drawer", async ({
+    page,
+  }) => {
+    const renamed = fakeAdminFixtures.find((row) => row.id === "hh-dela-cruz")!;
+    await page.goto("/admin/guests");
+    const row = rowById(page, renamed.id);
+    await expect(row.locator(".rename")).toHaveCount(0);
+    await expect(row.locator(".admin_guests_renamed")).toHaveText("renamed");
+    await row.locator("details.admin_guests_menu summary").click();
+    await row.locator("[data-admin-edit]").click();
+    await expect(page.locator("[data-admin-drawer]")).toContainText(
+      "renamed by",
+    );
+  });
+
+  test("keeps every row menu button clear of its RSVP pill", async ({
+    page,
+  }) => {
+    // The pill carries the seat count now, so it is wider; at 1344 and up the
+    // menu sits absolutely at the cell's right edge and must not sit under it.
+    for (const width of [390, 1344, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/admin/guests");
+      const overlaps = await page
+        .locator("[data-admin-household]")
+        .evaluateAll((rows) =>
+          rows.flatMap((row) => {
+            const pill = row
+              .querySelector("[data-admin-rsvp]")!
+              .getBoundingClientRect();
+            const menu = row
+              .querySelector(".admin_guests_menu summary")!
+              .getBoundingClientRect();
+            return pill.right > menu.left + 1
+              ? [row.getAttribute("data-household-id")]
+              : [];
+          }),
+        );
+      expect(overlaps, `width ${width}`).toEqual([]);
+    }
+  });
+
+  test("shows coming and seat counts in the combined RSVP pill", async ({
+    page,
+  }) => {
+    const coming = fakeAdminFixtures.find(
+      (row) => row.id === "hh-dela-cruz" && row.rsvp.state === "coming",
+    )!;
+    await page.goto("/admin/guests");
+    const pill = rowById(page, coming.id).locator("[data-admin-rsvp]");
+    await expect(pill).toHaveAttribute("data-state", coming.rsvp.state);
+    const comingCount =
+      coming.rsvp.state === "coming" ? coming.rsvp.coming : 0;
+    await expect(pill).toContainText(String(comingCount));
+    await expect(pill).toContainText(String(coming.seatCount));
   });
 });
 
@@ -924,7 +1024,7 @@ test.describe("guest list drawer", () => {
       );
       await expect(edit.locator("[name='display_name']")).toHaveValue(first);
       await edit.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(row.locator("[data-col='seats']")).toContainText("1 seat");
+      await expectRsvpSeatCount(row, 1);
 
       await page.goto("/admin/guests");
       const saved = page
@@ -1118,7 +1218,7 @@ test.describe("guest list drawer", () => {
       const added = page.locator("[data-admin-household]").filter({
         hasText: `Enter ${surname}`,
       });
-      await expect(added.locator("[data-col='seats']")).toContainText("1 seat");
+      await expectRsvpSeatCount(added, 1);
       await expect(added).toContainText(`Enter invite ${surname}`);
       await added.locator("summary").click();
       await added.getByRole("link", { name: "Archive household" }).click();
@@ -1134,9 +1234,7 @@ test.describe("guest list drawer", () => {
       await editForm.locator("[name='display_name']").press("Enter");
       await expect(page).toHaveURL(/q=/);
       const edited = rowById(page, editor.id);
-      await expect(edited.locator("[data-col='seats']")).toContainText(
-        `${seatCount} seats`,
-      );
+      await expectRsvpSeatCount(edited, seatCount);
       await expect(edited).toContainText("Enter edit");
     });
   });
@@ -1266,10 +1364,8 @@ test.describe("guest list drawer", () => {
       const form = page.locator("[data-edit-household]");
       await form.getByRole("button", { name: "Remove open seat" }).click();
       await form.getByRole("button", { name: "Save" }).click();
-      const seats = rowById(page, openSeatFixture.id).locator(
-        "[data-col='seats']",
-      );
-      await expect(seats).toContainText("1 seat");
+      const seats = rowById(page, openSeatFixture.id);
+      await expectRsvpSeatCount(seats, 1);
 
       // Put the open seat back so the next project finds the fixture as it was.
       await page.goto(`/admin/guests?edit=${openSeatFixture.id}`);
@@ -1277,7 +1373,7 @@ test.describe("guest list drawer", () => {
       await again.locator("[name='member_input']").fill("+1");
       await again.locator("[name='member_input']").press("Enter");
       await again.getByRole("button", { name: "Save" }).click();
-      await expect(seats).toContainText("2 seats");
+      await expectRsvpSeatCount(seats, 2);
     });
   });
 
@@ -1307,9 +1403,10 @@ test.describe("guest list drawer", () => {
         .locator("[data-edit-household]")
         .getByRole("button", { name: "Save" })
         .click();
-      await expect(
-        rowById(noJs, openSeatFixture.id).locator("[data-col='seats']"),
-      ).toContainText(`${openSeatFixture.seatCount - 1} seat`);
+      await expectRsvpSeatCount(
+        rowById(noJs, openSeatFixture.id),
+        openSeatFixture.seatCount - 1,
+      );
       await noJs.close();
 
       // Put the open seat back so the next project finds the fixture as it was.
@@ -1318,9 +1415,10 @@ test.describe("guest list drawer", () => {
       await again.locator("[name='member_input']").fill("+1");
       await again.locator("[name='member_input']").press("Enter");
       await again.getByRole("button", { name: "Save" }).click();
-      await expect(
-        rowById(page, openSeatFixture.id).locator("[data-col='seats']"),
-      ).toContainText(`${openSeatFixture.seatCount} seats`);
+      await expectRsvpSeatCount(
+        rowById(page, openSeatFixture.id),
+        openSeatFixture.seatCount,
+      );
     });
   });
 
@@ -1360,7 +1458,7 @@ test.describe("guest list drawer", () => {
         hasText: `NoJS ${surname}`,
       });
       await expect(added).toHaveCount(1);
-      await expect(added.locator("[data-col='seats']")).toContainText("1 seat");
+      await expectRsvpSeatCount(added, 1);
 
       await added.locator("summary").click();
       await added.getByRole("link", { name: "Archive household" }).click();
@@ -1470,9 +1568,7 @@ test.describe("guest drawer round trips without JavaScript", () => {
         .locator("[data-new-household]")
         .getByRole("button", { name: "Save", exact: true })
         .click();
-      await expect(
-        rowFor(page, surname).locator("[data-col='seats']"),
-      ).toContainText("2 seats");
+      await expectRsvpSeatCount(rowFor(page, surname), 2);
 
       // Edit: the stepper's "−" takes the open seat off and Save stores it.
       const id = await rowFor(page, surname).getAttribute("data-household-id");
@@ -1487,9 +1583,7 @@ test.describe("guest drawer round trips without JavaScript", () => {
         .locator("[data-edit-household]")
         .getByRole("button", { name: "Save", exact: true })
         .click();
-      await expect(
-        rowFor(page, surname).locator("[data-col='seats']"),
-      ).toContainText("1 seat");
+      await expectRsvpSeatCount(rowFor(page, surname), 1);
       await archiveRow(page, surname);
       await page.close();
     });
@@ -1550,7 +1644,7 @@ test.describe("guest drawer round trips without JavaScript", () => {
         .click();
       await expect(page.locator("[data-admin-write-error]")).toHaveCount(0);
       const row = rowFor(page, surname);
-      await expect(row.locator("[data-col='seats']")).toContainText("1 seat");
+      await expectRsvpSeatCount(row, 1);
       await expect(row.locator("[data-col='members']")).not.toContainText(
         "Otto",
       );
@@ -1631,7 +1725,7 @@ test.describe("guest drawer plus-one off with JavaScript", () => {
       const row = page
         .locator("[data-admin-household]")
         .filter({ hasText: first });
-      await expect(row.locator("[data-col='seats']")).toContainText("2 seats");
+      await expectRsvpSeatCount(row, 2);
 
       const id = await row.getAttribute("data-household-id");
       await page.goto(`/admin/guests?edit=${id}`);
@@ -1649,12 +1743,10 @@ test.describe("guest drawer plus-one off with JavaScript", () => {
       await expect(edit.locator("[data-seat-number]")).toHaveText("1");
       await expect(edit.locator("input[name='removed_seat']")).toHaveCount(1);
       await edit.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(
-        page
-          .locator("[data-admin-household]")
-          .filter({ hasText: first })
-          .locator("[data-col='seats']"),
-      ).toContainText("1 seat");
+      await expectRsvpSeatCount(
+        page.locator("[data-admin-household]").filter({ hasText: first }),
+        1,
+      );
 
       await page.goto("/admin/guests");
       const saved = page

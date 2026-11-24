@@ -1066,7 +1066,7 @@
   tr {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "household rsvp" "members members" "seats seats";
+    grid-template-areas: "household rsvp" "members members";
     align-items: center;
     gap: 0.375rem 1rem;
     padding: 1rem 0;
@@ -1121,39 +1121,20 @@
   [data-col="members"] {
     grid-area: members;
   }
-  [data-col="seats"] {
-    grid-area: seats;
-
-    @media (min-width: 84rem) {
-      width: 5rem;
-      text-align: center;
-    }
-  }
   [data-col="rsvp"] {
     grid-area: rsvp;
 
     @media (min-width: 84rem) {
-      width: 10rem;
-      padding-right: 3rem;
+      /* Fits the widest pill ("Declined · 1 seat", "Waiting · 5 seats")
+         beside the 2.75rem menu button. */
+      width: 15rem;
+      padding-right: 3.25rem;
     }
   }
   tbody [data-col="household"] {
     font-weight: 500;
     overflow-wrap: anywhere;
     color: var(--dark-900);
-  }
-  tbody [data-col="seats"] {
-    font-size: 0.875rem;
-    line-height: 1.125rem;
-    color: var(--dark-700);
-
-    @media (min-width: 84rem) {
-      font-family: var(--admin-display);
-      font-size: 2rem;
-      font-weight: 200;
-      line-height: 2.5rem;
-      color: var(--dark-900);
-    }
   }
 }
 
@@ -1168,12 +1149,6 @@
   color: var(--dark-700);
 }
 
-.admin-guests_unit {
-  @media (min-width: 84rem) {
-    display: none;
-  }
-}
-
 .admin-guests_detail {
   display: flex;
   flex-direction: column;
@@ -1184,10 +1159,18 @@
     font-size: 0.875rem;
     line-height: 1.125rem;
     color: var(--dark-700);
-    &.rename {
-      color: var(--accent-500);
-    }
   }
+}
+.admin_guests_renamed {
+  margin-left: 0.375rem;
+  color: var(--dark-700);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+.admin_guests_note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-guests_chips {
@@ -1753,6 +1736,11 @@ label.admin_guests_host {
   &[open] {
     z-index: 3;
   }
+}
+/* The last rows open their menu upward so it clears the phone tab bar. */
+tr:nth-last-child(-n + 2) .admin_guests_popover {
+  top: auto;
+  bottom: calc(100% + 0.25rem);
 }
 .admin_guests_popover {
   position: absolute;
