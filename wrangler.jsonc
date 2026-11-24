@@ -6,9 +6,10 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "RSVP_STORE": "d1",
-    // Set these once the Cloudflare Access app exists; empty refuses production /admin access.
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
+    // Cloudflare Access "Guest ledger" app on thefisheswedding.com/admin (and www).
+    // Set here, not in the dashboard: deploys overwrite dashboard vars.
+    "ACCESS_TEAM_DOMAIN": "warren-eunice.cloudflareaccess.com",
+    "ACCESS_AUD": "7622f360d30408b0c41a184357254a5a548fd6e31b8cf433ecf6483cb1719202",
   },
 
   "d1_databases": [{
@@ -65,6 +66,10 @@
     "vars": {
       "RSVP_STORE": "fake",
       "PUBLIC_RSVP_STORE": "fake",
+      // Blank so preview /admin shows the sample host for Local review, even
+      // if previews inherit the production ADMIN_HOSTS secret.
+      "ACCESS_TEAM_DOMAIN": "",
+      "ACCESS_AUD": "",
     },
   },
 
