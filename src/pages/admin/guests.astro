@@ -1049,6 +1049,97 @@ const editSeats = (row: AdminHousehold) => {
   document.addEventListener("input", () => {
     discardConfirmed = false;
   });
+  let stopKeyboardTracking: (() => void) | null = null;
+  const clearKeyboardTracking = () => {
+    const stop = stopKeyboardTracking;
+    stopKeyboardTracking = null;
+    stop?.();
+  };
+  const trackKeyboard = (drawer: HTMLElement) => {
+    clearKeyboardTracking();
+    const panel = drawer.querySelector<HTMLElement>(".admin_guests_panel");
+    const scroll = drawer.querySelector<HTMLElement>(
+      ".admin_guests_drawer_scroll",
+    );
+    const viewport = window.visualViewport;
+    if (!panel || !scroll || !viewport) return;
+    const media = window.matchMedia("(max-width: 63.999rem)");
+
+    let frame = 0;
+    let previous = -1;
+    let keyboardOpen = false;
+    let focusedForOpening = false;
+    let listening = false;
+    const clearPanel = () => {
+      panel.style.removeProperty("--guest-sheet-keyboard");
+      panel.removeAttribute("data-keyboard-open");
+      previous = -1;
+      keyboardOpen = false;
+      focusedForOpening = false;
+    };
+    const update = () => {
+      frame = 0;
+      if (!media.matches) return;
+      const keyboard = Math.max(
+        0,
+        Math.round(window.innerHeight - viewport.height - viewport.offsetTop),
+      );
+      if (keyboard !== previous) {
+        panel.style.setProperty("--guest-sheet-keyboard", `${keyboard}px`);
+        panel.toggleAttribute("data-keyboard-open", keyboard > 80);
+        previous = keyboard;
+      }
+      if (keyboard > 80 && !keyboardOpen) {
+        keyboardOpen = true;
+        focusedForOpening = false;
+      } else if (keyboard <= 80) {
+        keyboardOpen = false;
+        focusedForOpening = false;
+      }
+      if (keyboardOpen && !focusedForOpening) {
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && scroll.contains(active)) {
+          focusedForOpening = true;
+          active.scrollIntoView({ block: "nearest" });
+        }
+      }
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    const addViewportListeners = () => {
+      if (listening) return;
+      viewport.addEventListener("resize", schedule);
+      viewport.addEventListener("scroll", schedule);
+      listening = true;
+    };
+    const removeViewportListeners = () => {
+      if (!listening) return;
+      viewport.removeEventListener("resize", schedule);
+      viewport.removeEventListener("scroll", schedule);
+      listening = false;
+    };
+    const onMediaChange = () => {
+      if (media.matches) {
+        addViewportListeners();
+        update();
+      } else {
+        removeViewportListeners();
+        clearPanel();
+      }
+    };
+    media.addEventListener("change", onMediaChange);
+    stopKeyboardTracking = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      removeViewportListeners();
+      media.removeEventListener("change", onMediaChange);
+      clearPanel();
+    };
+    if (media.matches) {
+      addViewportListeners();
+      update();
+    }
+  };
   const setDrawerOpen = (open: boolean) =>
     document.documentElement.toggleAttribute("data-admin-drawer-open", open);
   const currentDrawerUrl = () => {
@@ -1072,6 +1163,7 @@ const editSeats = (row: AdminHousehold) => {
     url.searchParams.delete("new");
     url.searchParams.delete("edit");
     history.pushState(null, "", `${url.pathname}${url.search}`);
+    clearKeyboardTracking();
     document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
     setDrawerOpen(false);
     opener?.focus();
@@ -1087,6 +1179,7 @@ const editSeats = (row: AdminHousehold) => {
         "[data-admin-guests-page]",
       );
       if (!next || !page) throw new Error("drawer missing");
+      clearKeyboardTracking();
       document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
       page.append(next);
       if (push) history.pushState(null, "", href);
@@ -1219,6 +1312,7 @@ const editSeats = (row: AdminHousehold) => {
     if (url.searchParams.has("new") || url.searchParams.has("edit"))
       void loadDrawer(url.href, false);
     else {
+      clearKeyboardTracking();
       document.querySelector<HTMLElement>("[data-admin-drawer]")?.remove();
       setDrawerOpen(false);
     }
@@ -1254,6 +1348,7 @@ const editSeats = (row: AdminHousehold) => {
       "[data-admin-household-form]",
     );
     if (!form) return;
+    trackKeyboard(drawer);
     // The no-JS "Add" button is hidden once the script owns Enter.
     form.dataset.js = "true";
     // A drawer the server re-rendered after a refused save holds a draft that

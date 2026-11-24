@@ -77,15 +77,15 @@ const names =
     : props.seats
         .filter((seat) => !seat.retire && seat.name)
         .map((seat) => seat.name);
-// The invitation is addressed to the invited members; a plus-one the guest
-// named counts as a seat, never as part of the suggested name.
-const suggestion = suggestInvitationName(
+const invitedMemberNames =
   props.variant === "new"
     ? names
     : props.seats
         .filter((seat) => seat.kind === "member" && !seat.retire && seat.name)
-        .map((seat) => seat.name),
-);
+        .map((seat) => seat.name);
+// The invitation is addressed to the invited members; a plus-one the guest
+// named counts as a seat, never as part of the suggested name.
+const suggestion = suggestInvitationName(invitedMemberNames);
 const seatCount =
   props.variant === "new"
     ? props.draft.seatCount
@@ -123,7 +123,9 @@ const titleParts: [string, string] =
   props.variant === "new"
     ? ["Who are you", "inviting?"]
     : (() => {
-        const firstNames = names.map((name) => name.split(/\s+/)[0]);
+        const firstNames = invitedMemberNames.map(
+          (name) => name.split(/\s+/)[0],
+        );
         if (firstNames.length > 3) return splitLast(invitationName);
         if (firstNames.length < 2)
           return splitLast(firstNames[0] ?? invitationName);
@@ -278,7 +280,9 @@ const rsvpState = (value: string | undefined) =>
                 <p id="guest-names-label" class="admin_guests_label">
                   Guests · one name at a time
                 </p>
-                <p class="admin_guests_hint">Full name, then Enter to add</p>
+                <p class="admin_guests_hint admin_guests_hint_desktop">
+                  Full name, then Enter to add
+                </p>
               </div>
               <div class="admin_guests_names" data-name-list>
                 {props.draft.memberNames.filter(Boolean).map((name) => (
@@ -300,6 +304,7 @@ const rsvpState = (value: string | undefined) =>
                     name="member_input"
                     data-add-name
                     autocomplete="off"
+                    aria-describedby="guest-name-tip"
                     placeholder="Full name, then Enter to add"
                   />
                 </label>
@@ -313,6 +318,9 @@ const rsvpState = (value: string | undefined) =>
                   Add
                 </button>
               </div>
+              <p id="guest-name-tip" class="admin_guests_name_tip">
+                “1 Guest”, “guest” or “+1” becomes an open plus-one seat.
+              </p>
               <div
                 data-duplicate-warning
                 hidden={!props.duplicateOpenId}
@@ -657,6 +665,20 @@ const rsvpState = (value: string | undefined) =>
             }</textarea
           >
         </section>
+
+        <div class="admin_guests_sheet_actions">
+          {
+            props.variant === "new" ? (
+              <button type="submit" name="save_and_add" value="1">
+                Save and add another
+              </button>
+            ) : (
+              <a class="accent" href={withParam("archive", props.row.id)}>
+                Archive household
+              </a>
+            )
+          }
+        </div>
       </div>
 
       {
