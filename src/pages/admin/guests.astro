@@ -981,10 +981,12 @@ const editSeats = (row: AdminHousehold) => {
         if (other !== menu) other.open = false;
 
       if (window.matchMedia("(width < 84rem)").matches) {
-        const popover = menu.querySelector(".admin_guests_popover");
+        const popover = menu.querySelector<HTMLElement>(".admin_guests_popover");
         const tabbar = document.querySelector("[data-admin-tabbar]");
         const bottom = window.innerHeight - (tabbar?.getBoundingClientRect().height ?? 0);
-        if (popover && popover.getBoundingClientRect().bottom > bottom)
+        // Layout height, not the box: the entrance scales the popover from the
+        // top, so its painted bottom is short of where it settles.
+        if (popover && popover.getBoundingClientRect().top + popover.offsetHeight > bottom)
           menu.setAttribute("data-up", "");
       }
     },

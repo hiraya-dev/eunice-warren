@@ -495,7 +495,22 @@ test.describe("admin RSVPs", () => {
     expect(colors.actual).toBe(colors.expected);
   });
 
-  test("pins the edit footer to the sheet and keeps Save reply under no other layer", { tag: "@single" }, async ({ page }) => {
+  test("presses Save reply in to 0.97 and back on release", { tag: "@single" }, async ({ page }) => {
+    // Read-only: the pointer leaves the button before release, so nothing saves.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
+    const save = page.locator(".admin-drawer_edit-footer button");
+    const scale = () => save.evaluate((el) => (getComputedStyle(el).scale === "none" ? "1" : getComputedStyle(el).scale));
+    await save.hover();
+    await page.mouse.down();
+    await expect.poll(scale).toBe("0.97");
+    const footer = (await save.locator("..").boundingBox())!;
+    await page.mouse.move(footer.x + 2, footer.y + 2);
+    await page.mouse.up();
+    await expect.poll(scale).toBe("1");
+  });
+
+  test("pins the edit footer to the sheet and keeps Save reply under no other layer",{ tag: "@single" }, async ({ page }) => {
     // Read-only: opens the form and measures, never saves.
     const measure = () =>
       page.evaluate(() => {
