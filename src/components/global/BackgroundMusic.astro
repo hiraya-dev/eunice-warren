@@ -95,11 +95,15 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
       audio.play().then(() => setState("playing")).catch(() => setState(audio.error ? "error" : "paused"));
     };
     const toggle = () => { if (audio.paused) start(); else { audio.pause(); setState("paused"); } };
+    const pauseForHiddenPage = () => { if (audio.paused) return; audio.pause(); setState("paused"); };
     toggles.forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); toggle(); }));
     mutes.forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); audio.muted = !audio.muted; setState(root.dataset.state as "idle" | "playing" | "paused" | "error"); }));
     document.querySelector<HTMLElement>("[data-music-tag]")?.addEventListener("click", (event) => { if (!(event.target as HTMLElement).closest("button")) toggle(); });
     document.addEventListener("ew:music-start", start);
     document.addEventListener("ew:playlist-play", () => { if (audio.error) return; audio.pause(); setState("paused"); });
+    const onVisibilityChange = () => { if (document.visibilityState === "hidden") pauseForHiddenPage(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", pauseForHiddenPage);
     audio.addEventListener("play", () => setState("playing"));
     audio.addEventListener("pause", () => { if (!audio.ended && !audio.error) setState("paused"); });
     audio.addEventListener("timeupdate", updateProgress);
@@ -152,7 +156,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     document.addEventListener("focusin", (event) => { if (isField(event.target)) { fieldFocused = true; syncFieldHide(); } }, { signal: listeners.signal });
     document.addEventListener("focusout", (event) => { if (isField(event.target)) { fieldFocused = false; syncFieldHide(); } }, { signal: listeners.signal });
     const teardown = initMusicTeleport(container);
-    document.addEventListener("astro:before-swap", () => { teardown(); listeners.abort(); titleResize.disconnect(); document.fonts.removeEventListener("loadingdone", measureTitles); document.removeEventListener("ew:music-start", start); }, { once: true });
+    document.addEventListener("astro:before-swap", () => { teardown(); listeners.abort(); titleResize.disconnect(); document.fonts.removeEventListener("loadingdone", measureTitles); document.removeEventListener("ew:music-start", start); document.removeEventListener("visibilitychange", onVisibilityChange); window.removeEventListener("pagehide", pauseForHiddenPage); }, { once: true });
   }
 </script>}
 
@@ -160,9 +164,9 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
   @layer components {
     .music-player_root { position: fixed; z-index: 80; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); width: 16rem; height: 4.375rem; visibility: hidden; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
     .music-player_root:has([data-music-visible]) { visibility: visible; }
-    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) { visibility: hidden; opacity: 0; transform: translateY(0.75rem); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s; }
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) { visibility: hidden; opacity: 0; transform: translateY(0.75rem); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s; }
     /* Visibility waits for the fade; clicks must not. */
-    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) .music-player_tag { pointer-events: none; }
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) .music-player_tag { pointer-events: none; }
     .music-player_tag { position: relative; display: flex; align-items: center; gap: 0.75rem; width: 100%; height: 100%; padding: 0 0.75rem 0 0.875rem; overflow: clip; border-radius: 0.375rem 0.875rem 0.875rem 0.375rem; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 1px 0 rgb(31 47 92 / 6%), 0 0.75rem 1.75rem rgb(31 47 92 / 22%); color: var(--dark-900); transform: rotate(-2deg); transform-origin: 0 100%; cursor: pointer; pointer-events: auto; }
     .music-player_tag[data-state="error"] { cursor: default; }
     .music-player_hole { width: 0.75rem; height: 0.75rem; flex: 0 0 auto; border: 0.125rem solid var(--border); border-radius: 50%; background: var(--light-100); box-shadow: inset 0 1px 2px rgb(31 47 92 / 35%); }
@@ -191,12 +195,12 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     .music-player_string { position: absolute; top: -1rem; left: -3rem; width: 5rem; height: 3.75rem; pointer-events: none; }
     .music-player_string svg { display: block; width: 100%; height: 100%; overflow: visible; }
     .music-player_string path { fill: none; stroke: var(--accent-500); stroke-linecap: round; stroke-width: 2; }
-    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) { pointer-events: none; }
+    .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) { pointer-events: none; }
     @media (max-width: 47.999rem) {
       /* The root is the closed disc. The pill is as wide as it gets and always there; the wipe uncovers it. */
       .music-player_root { width: 3.5rem; height: 3.5rem; }
       .music-player_tag, .music-player_string { display: none; }
-      .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) :is(.music-player_disc, .music-player_controls) { pointer-events: none; }
+      .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) :is(.music-player_disc, .music-player_controls) { pointer-events: none; }
       .music-player_pill { position: absolute; right: 0; bottom: 0; display: flex; width: min(22.375rem, calc(100vw - 2rem)); height: 3.5rem; align-items: center; gap: 0.5rem; padding-left: 1.375rem; color: var(--dark-900); pointer-events: none; }
       /* clip-path would cut a box-shadow off, so the shadow is a filter on a shell that holds the paper:
          it follows whatever the wipe has uncovered. Only transform, opacity and clip-path animate. */
@@ -268,7 +272,7 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
       :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap { visibility: hidden; pointer-events: none; }
       /* A surface that is not on screen holds its title still. */
       .music-player_root:not([data-music-docked]):not([data-music-flying]) .music-player_tag [data-music-ticker] .music-ticker_track,
-      .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form]) .music-player_tag [data-music-ticker] .music-ticker_track,
+      .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) .music-player_tag [data-music-ticker] .music-ticker_track,
       :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap [data-music-ticker] .music-ticker_track { animation-play-state: paused !important; }
     }
   }

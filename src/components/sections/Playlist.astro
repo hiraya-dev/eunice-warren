@@ -291,6 +291,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       data: { isPaused: boolean; position: number; duration: number };
     }
     interface SpotifyController {
+      pause: () => void;
       addListener: (
         event: string,
         callback: (event: SpotifyPlaybackEvent) => void,
@@ -397,6 +398,10 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       if (!playing || pauseTimeout) return;
       pauseTimeout = window.setTimeout(liftArm, 400);
     };
+    const pauseForHiddenPage = () => {
+      controller?.pause();
+      pause();
+    };
     const handleReducedMotion = () => {
       const pausing = Boolean(pauseTimeout);
       if (pauseTimeout) window.clearTimeout(pauseTimeout);
@@ -464,6 +469,9 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     observer.observe(section);
     tonearm.style.transform = "rotate(-30deg)";
     reducedMotion.addEventListener("change", handleReducedMotion);
+    const onVisibilityChange = () => { if (document.visibilityState === "hidden") pauseForHiddenPage(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", pauseForHiddenPage);
     document.addEventListener(
       "astro:before-swap",
       () => {
@@ -473,6 +481,8 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         reducedMotion.removeEventListener("change", handleReducedMotion);
         observer?.disconnect();
         if (timeout) window.clearTimeout(timeout);
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+        window.removeEventListener("pagehide", pauseForHiddenPage);
       },
       { once: true },
     );

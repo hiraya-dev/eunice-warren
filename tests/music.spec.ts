@@ -87,6 +87,27 @@ test.describe("background music", () => {
     expect(await isPaused(audio)).toBe(true);
   });
 
+  test("pauses background music when the page is hidden and stays paused", async ({ page }) => {
+    await page.goto("/");
+    const audio = audioOf(page);
+    await page.getByRole("button", { name: "Just browsing" }).click();
+    await expect.poll(() => isPaused(audio)).toBe(false);
+
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect.poll(() => isPaused(audio)).toBe(true);
+    await expect(page.locator("[data-music-surface]").first()).toHaveAttribute("data-state", "paused");
+
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await page.waitForTimeout(300);
+    expect(await isPaused(audio)).toBe(true);
+  });
+
   test("disables every control when the audio fails, without throwing", async ({ page }) => {
     const problems: string[] = [];
     page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
@@ -104,6 +125,40 @@ test.describe("background music", () => {
     for (const surface of await page.locator("[data-music-surface]").all()) await expect(surface).toHaveAttribute("data-state", "error");
     expect(problems).toEqual([]);
   });
+});
+
+test.describe("background music hit targets", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  for (const [label, width, height] of [["mobile", 390, 844], ["desktop", 1440, 900]] as const) {
+    test(`hides for the Spotify embed at ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
+      await page.goto("/");
+      const embed = page.locator("[data-playlist-embed]");
+      await embed.evaluate((element) => element.scrollIntoView({ block: "end" }));
+      await expect(page.locator("[data-music-container] [data-music-hidden-for-embed]")).toHaveCount(1, { timeout: 5000 });
+      const hit = await embed.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return document.elementFromPoint(box.left + Math.min(323, box.width / 2), box.top + Math.min(60, box.height / 2))?.closest("[data-playlist-embed]") === element;
+      });
+      expect(hit).toBe(true);
+    });
+
+    test(`hides for the footer back-to-top link at ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
+      await page.goto("/");
+      const link = page.locator(".footer_top-link");
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect(page.locator("[data-music-container] [data-music-hidden-for-footer]")).toHaveCount(1, { timeout: 5000 });
+      const hit = await link.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)?.closest(".footer_top-link") === element;
+      });
+      expect(hit).toBe(true);
+    });
+  }
 });
 
 test.describe("background music returning guest", () => {
@@ -554,6 +609,9 @@ test.describe("background music disc, phone", { tag: ["@single"] }, () => {
     await discOf(page).focus();
     await page.keyboard.press("Shift+Tab");
     expect(await page.evaluate(() => Boolean(document.activeElement?.closest("[data-music-controls]")))).toBe(false);
+    // Shift+Tab can land on the footer's Back to top, which scrolls there and hides the disc for it.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
+    await expect(containerOf(page).locator("[data-music-hidden-for-footer]")).toHaveCount(0);
     await discOf(page).click();
     await expect(containerOf(page)).toHaveAttribute(PILL_OPEN, "");
     expect((await inReach()).inert).toBe(false);
