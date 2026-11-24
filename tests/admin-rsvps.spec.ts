@@ -249,6 +249,53 @@ test.describe("admin RSVPs", () => {
     },
   );
 
+  test("closes on Back and removes synchronously under reduced motion", async ({
+    page,
+  }) => {
+    await page.goto("/admin/rsvps");
+    const opener = page.locator("[data-admin-rsvp-link]").first();
+    await opener.click();
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    await page.evaluate(() => {
+      window.addEventListener(
+        "popstate",
+        () => {
+          document.documentElement.toggleAttribute(
+            "data-test-closing-seen",
+            Boolean(document.querySelector("[data-admin-drawer][data-closing]")),
+          );
+        },
+        { once: true },
+      );
+    });
+    await page.goBack();
+    await expect
+      .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 500 })
+      .toBe(0);
+    const closingSeen = await page.evaluate(() =>
+      document.documentElement.hasAttribute("data-test-closing-seen"),
+    );
+    expect(closingSeen).toBe(true);
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await opener.click();
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    const reduced = await page.evaluate(() => {
+      const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+      drawer?.querySelector<HTMLElement>("[data-admin-drawer-close]")?.click();
+      return {
+        count: document.querySelectorAll("[data-admin-drawer]").length,
+        perceptible: document.getAnimations().filter((animation) => {
+          const effect = animation.effect;
+          if (!(effect instanceof KeyframeEffect)) return false;
+          const timing = effect.getComputedTiming();
+          return Number(timing.duration) + Number(timing.delay) > 1;
+        }).length,
+      };
+    });
+    expect(reduced).toEqual({ count: 0, perceptible: 0 });
+  });
+
   test("unknown household is a 404", { tag: "@single" }, async ({ page }) => {
     const response = await page.goto("/admin/rsvps?household=unknown");
     expect(response?.status()).toBe(404);

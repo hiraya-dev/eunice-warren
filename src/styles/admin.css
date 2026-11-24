@@ -2816,10 +2816,40 @@ html[data-admin-drawer-open] {
     transform: translateX(100%);
   }
 }
+@keyframes admin-drawer-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes admin-drawer-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes admin-drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+[data-admin-drawer][data-closing] .admin-drawer_scrim {
+  animation: admin-drawer-fade-out 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+[data-admin-drawer][data-closing] .admin-drawer_panel {
+  animation: admin-drawer-down 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+
+  @media (min-width: 64rem) {
+    animation-name: admin-drawer-out;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .admin-drawer_scrim,
   .admin-drawer_panel {
+    animation: none;
+  }
+  [data-admin-drawer][data-closing] .admin-drawer_scrim,
+  [data-admin-drawer][data-closing] .admin-drawer_panel {
     animation: none;
   }
 }

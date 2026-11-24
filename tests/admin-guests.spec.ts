@@ -451,6 +451,48 @@ test.describe("guest list drawer", () => {
   );
 
   test(
+    "animates the drawer out and replaces it cleanly while closing",
+    { tag: ["@single"] },
+    async ({ page }) => {
+      for (const width of [390, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto("/admin/guests");
+        await page.locator(".admin_guests_add").click();
+        await expect(page.locator(".admin_guests_panel")).toBeVisible();
+        const state = await page.evaluate(() => {
+          const opener = document.querySelector<HTMLElement>(".admin_guests_add");
+          const drawer = document.querySelector<HTMLElement>("[data-admin-drawer]");
+          if (!opener || !drawer) throw new Error("drawer not ready");
+          drawer
+            .querySelector<HTMLElement>("[data-admin-drawer-close], .admin-drawer_scrim")
+            ?.click();
+          return {
+            closing: drawer.hasAttribute("data-closing"),
+            inert: drawer.inert,
+            focused: document.activeElement === opener,
+          };
+        });
+        expect(state).toEqual({ closing: true, inert: true, focused: true });
+        await expect
+          .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 500 })
+          .toBe(0);
+
+        await page.goto("/admin/guests");
+        await page.locator(".admin_guests_add").click();
+        await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+        await page.evaluate(() => {
+          document.querySelector<HTMLElement>("[data-admin-drawer-close]")?.click();
+          document.querySelector<HTMLElement>(".admin_guests_add")?.click();
+        });
+        await expect(page.locator("[data-admin-drawer]")).toHaveCount(1);
+        await expect(
+          page.locator("[data-admin-drawer]:not([data-closing])"),
+        ).toHaveCount(1);
+      }
+    },
+  );
+
+  test(
     "the phone sheet pins the header and footer and scrolls only the body",
     { tag: ["@single"] },
     async ({ page }) => {
