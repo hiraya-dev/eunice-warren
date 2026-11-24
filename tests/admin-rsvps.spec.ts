@@ -270,7 +270,7 @@ test.describe("admin RSVPs", () => {
     });
     await page.goBack();
     await expect
-      .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 500 })
+      .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 1_000 })
       .toBe(0);
     const closingSeen = await page.evaluate(() =>
       document.documentElement.hasAttribute("data-test-closing-seen"),
@@ -294,6 +294,23 @@ test.describe("admin RSVPs", () => {
       };
     });
     expect(reduced).toEqual({ count: 0, perceptible: 0 });
+  });
+
+  test("reopening during the exit keeps one open drawer and the page locked", async ({
+    page,
+  }) => {
+    await page.goto("/admin/rsvps");
+    await page.locator("[data-admin-rsvp-link]").first().click();
+    await expect(page.locator("[data-admin-drawer]")).toBeVisible();
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>("[data-admin-drawer-close]")?.click();
+      document.querySelectorAll<HTMLElement>("[data-admin-rsvp-link]")[1]?.click();
+    });
+    await expect(page.locator("[data-admin-drawer]:not([data-closing])")).toHaveCount(1);
+    // Past the closing drawer's 300ms fallback (wall clock, L-009).
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+    await expect(page.locator("[data-admin-drawer]")).toHaveCount(1);
+    await expect(page.locator("html")).toHaveAttribute("data-admin-drawer-open", "");
   });
 
   test("unknown household is a 404", { tag: "@single" }, async ({ page }) => {

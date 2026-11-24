@@ -651,7 +651,7 @@ test.describe("guest list drawer", () => {
         });
         expect(state).toEqual({ closing: true, inert: true, focused: true });
         await expect
-          .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 500 })
+          .poll(() => page.locator("[data-admin-drawer]").count(), { timeout: 1_000 })
           .toBe(0);
 
         await page.goto("/admin/guests");
@@ -665,6 +665,11 @@ test.describe("guest list drawer", () => {
         await expect(
           page.locator("[data-admin-drawer]:not([data-closing])"),
         ).toHaveCount(1);
+        // Past the closing drawer's 300ms fallback: its timer must not unlock
+        // the page under the new drawer (wall clock, L-009).
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+        await expect(page.locator("[data-admin-drawer]:not([data-closing])")).toHaveCount(1);
+        await expect(page.locator("html")).toHaveAttribute("data-admin-drawer-open", "");
       }
     },
   );

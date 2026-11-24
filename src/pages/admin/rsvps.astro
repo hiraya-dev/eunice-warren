@@ -951,7 +951,9 @@ if (savedNotice && !editMode) {
     const panel = drawer.querySelector<HTMLElement>(".admin-drawer_panel");
     let finished = false;
     const finish = () => {
-      if (finished) return;
+      // A reopen mid-exit already removed this drawer; its timer must not
+      // unlock the page or stop tracking under the new one.
+      if (finished || !drawer.isConnected) return;
       finished = true;
       panel?.removeEventListener("animationend", onAnimationEnd);
       removeDrawer(drawer);
