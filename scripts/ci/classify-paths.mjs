@@ -34,7 +34,6 @@ export const SWEEP_SPECS = new Set([
   "tests/gallery.spec.ts",
   "tests/gallery-teaser.spec.ts",
   "tests/rsvp-ticket.spec.ts",
-  "tests/with-love.spec.ts",
   "tests/footer.spec.ts",
   "tests/preloader.spec.ts",
 ]);

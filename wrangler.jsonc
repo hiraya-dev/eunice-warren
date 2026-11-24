@@ -34,9 +34,6 @@
     "run_worker_first": ["/admin", "/admin/*", "/_actions/*", "/api/*"],
   },
 
-  // With Love is off the page, so no photo KV namespace is bound. Restoring the
-  // section needs a WITH_LOVE_PHOTOS namespace created in this account first.
-
   "ratelimits": [
     {
       "name": "RSVP_LOOKUP_LIMITER",
@@ -46,11 +43,6 @@
     { "name": "RSVP_SUBMIT_LIMITER", "namespace_id": "1003", "simple": { "limit": 5, "period": 60 } },
     { "name": "SONG_LIMITER", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } },
     { "name": "SONG_SEARCH_LIMITER", "namespace_id": "1005", "simple": { "limit": 30, "period": 60 } },
-    {
-      "name": "WITH_LOVE_LIMITER",
-      "namespace_id": "1002",
-      "simple": { "limit": 5, "period": 60 },
-    },
   ],
 
   "env": {
