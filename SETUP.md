@@ -42,7 +42,7 @@ re-adapted from adc-website, which had already made that move. `scripts/codex/`,
 
 - Node 22.19 or newer, `gh` authenticated.
 - T3 Code, with the Codex provider enabled with models `gpt-5.6-luna` and
-  `gpt-5.6-sol`, and **Delete merged worktrees** turned on in its storage cleanup
+  `gpt-6-astra`, and **Delete merged worktrees** turned on in its storage cleanup
   settings.
 - The Paper desktop app and the `paper-desktop@paper` Claude Code plugin. The
   project settings enable it; approve the install the first time Claude Code opens
@@ -61,7 +61,7 @@ seven commands with `delegate_task` (`target`
 Capability probe. Run each command and report the exact exit code and the first line of any error: (1) git config --local probe.x 1  (2) node -e "require('net').createServer().listen(4199,'127.0.0.1',()=>{console.log('bound');process.exit(0)}).on('error',e=>{console.log(e.code);process.exit(1)})"  (3) npm run build  (4) npm view astro version  (5) npm run check  (6) git status --short  (7) echo ok > .context/codex-probe.txt. Change no other files.
 ```
 
-Then send a one-line task on `gpt-5.6-sol` to confirm that model name is accepted.
+Then send a one-line task on `gpt-6-astra` to confirm that model name is accepted.
 Afterwards delete `.context/codex-probe.txt`, and unset `probe.x` with
 `git config --local --unset probe.x` if the write succeeded. If a result changes,
 update `.agents/skills/codex-handoff/references/codex-sandbox.md` and **What your

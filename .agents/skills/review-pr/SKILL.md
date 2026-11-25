@@ -237,7 +237,7 @@ gh pr comment <pr> --body "$(cat <<'EOF'
 - Findings: <none | path:line — problem — fix | N/A — blocker — required input, one per line>
 - Lessons checked: <L-NNN, … | none matched>
 - Reviewer: pr-reviewer (Sonnet 5.5)
-- Authorship: <Codex luna | Codex sol | layout-implementer | Claude>
+- Authorship: <Codex luna | Codex astra | layout-implementer | Claude>
 - Codex second opinion: <N raised, N upheld | NO FINDINGS | skipped: not a risky PR | failed>
 EOF
 )"

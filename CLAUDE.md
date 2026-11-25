@@ -1,10 +1,11 @@
 # Claude Code notes — Eunice Warren
 
 The Eunice Warren wedding site: Lumos for Astro on Cloudflare Workers, with an RSVP
-and song backend on a Google Sheet. Designs live in Paper; the repository
-owns everything that ships. Read `AGENTS.md` **Development**, **Building** and
-**Skills** (the rest is for Codex) and `LUMOS.md` before UI work. The workflow is
-adapted from adc-website; `SETUP.md` says what was kept and what was left out.
+and song backend on Cloudflare D1 (`docs/rsvp-backend.md`). Designs live in Paper;
+the repository owns everything that ships. Read `AGENTS.md` **Development**,
+**Building** and **Skills** (the rest is for Codex) and `LUMOS.md` before UI work.
+The workflow is adapted from adc-website; `SETUP.md` says what was kept and what was
+left out.
 
 ## Host
 
@@ -13,27 +14,41 @@ task (`t3_worktree_status`); if not, stop and tell the user. One task lives in o
 thread (`~/.t3/worktrees/eunice-warren/`); Codex runs through `delegate_task`;
 waiting for CI is `watch_pull_request`, then end the turn.
 
+## Talking to the user
+
+The user has ADHD. Every reply to them follows these rules, all session, with no
+`/i-have-adhd` needed; "stop adhd mode" turns them off for that session only. Repo
+stops (**Approval**) and confirmations before destructive actions still win;
+"explain" or "walk me through" gets a full answer under skimmable headers.
+
+1. The first line is the next action: a command, a path, or the one decision needed.
+2. More than one step → a numbered list, one bounded action per step, fewest steps.
+3. Restate where the task stands ("PR open, CI running"), and end with one concrete
+   next action the user can do in under two minutes.
+4. Time estimates in real units ("about 10 minutes"), never "a bit of work".
+5. Show wins concretely (what now works, how to see it); state errors as cause + fix.
+6. No preamble, recap, sign-off or hedging filler. Finish one issue, then offer the
+   next as a question. At most five items per list, grouped and ranked.
+
 ## Roles
 
 Three change classes, read from the diff (`local-checks` **CI routes**):
 
-- **Trivial**: the `docs` and `workflow` routes. `prepush`, a ready PR,
-  `pr-reviewer`, merge on PASS. No Local review.
-- **Normal**: `runtime`. A draft PR, `pr-reviewer` in parallel with CI, the user's
-  preview review, "ship it".
+- **Trivial**: the `docs` and `workflow` routes. A ready PR, `pr-reviewer`, merge on
+  PASS. No Local review.
+- **Normal**: `runtime`. A draft PR, `pr-reviewer` in parallel with CI, Local review.
 - **Risky**: `runtime` touching the RSVP or song actions and stores
   (`src/actions/**`, `src/lib/**`, `src/pages/api/**`), dependencies, or root config
   (`wrangler.jsonc`, `astro.config.mjs`). The review adds the Codex second opinion.
 
 Claude owns judgment, Git and every gate. Codex works in a sandbox (`codex-handoff`
 **What Codex cannot do here**). `layout-implementer` can build, run Playwright and
-check the browser, but never touches Git. `haiku-lookup` and `pr-reviewer` only
-read.
+check the browser, but never touches Git. `haiku-lookup` and `pr-reviewer` only read.
 
 | Role | Model | Set in |
 | --- | --- | --- |
 | Orchestrator | Claude Opus 5.5 (Fable 5.2 via `/model` for one truly hard session) | `.claude/settings.json` |
-| Codex | `gpt-5.6-luna`; `gpt-5.6-sol` for a hard round | each `delegate_task` call |
+| Codex | `gpt-5.6-luna` at `medium`; `gpt-6-astra` at `medium` for a hard round | each `delegate_task` call |
 | `haiku-lookup` | Claude Haiku 5.5, `effort: low` | agent frontmatter |
 | `pr-reviewer`; `layout-implementer` | Claude Sonnet 5.5, both at `effort: high` | agent frontmatter |
 
@@ -41,14 +56,15 @@ Spawn `.claude/agents` subagents natively with the Agent tool, never with a per-
 `model` and never as a `fork` (it re-reads the thread). The one allowed override is
 `model: "opus"` with `effort: "medium"` on a `layout-implementer` fix round for
 animation or scroll-driven motion, after one failed run at the pinned Sonnet 5.5
-`high`. A hard Codex round is a second failed fix round on one finding, a flaky
-test, or tricky animation logic; the PR body says which rounds ran on `sol` and why.
+`high`. A hard Codex round (more than luna at `medium` needs, a second failed fix
+round on one finding, a flaky test, tricky animation logic) moves to `gpt-6-astra` at
+`medium`, never luna at `high`; the PR body says which rounds ran on astra and why.
 
 When a run is not good enough: first check it can verify its own work (a test, build
-or script), then raise effort one level, then move up one model at a lower effort
-than the smaller model used. Switch the orchestrator's model only at the start of a
-thread or after `/compact`. A `t3_thread_launch` sets `modelSelection` to Opus 5.5 (a
-launch inherits the parent's model otherwise), except for the one truly hard session.
+or script), then (Claude subagents) raise effort one level, then move up one model at
+a lower effort. Switch the orchestrator's model only at the start of a thread or
+after `/compact`. A `t3_thread_launch` sets `modelSelection` to Opus 5.5 (it inherits
+the parent's otherwise), except for the one truly hard session.
 
 ## Task routing
 
@@ -73,48 +89,41 @@ and gates stay with Claude. A task with both halves runs them one after the othe
   `layout-implementer`**; after two failed runs on one finding, Claude takes over
   and says so in the PR body.
 - **Mechanical edits** (copy, typos, alt text, a token value, lint fixes, config
-  values, pins): mechanical only when it adds no logic (no new branch, loop,
-  listener, prop, island, route or schema field, no change to what existing code
-  does) **and** the whole diff can be written from the task description alone. If
-  unsure, it is not. Claude makes it directly. In workflow files (the paths
-  `scripts/ci/classify-paths.mjs` routes `workflow`) a typo is mechanical, but any
-  change to a rule, step, owner, model or CI condition is Claude's to write. It
-  still gets a PR, CI, a review and a merge; the PR body says why it was mechanical.
+  values, pins) add no logic (no new branch, loop, listener, prop, island, route or
+  schema field, no change to what existing code does) **and** the whole diff can be
+  written from the task description alone; if unsure, it is not. In workflow files
+  (paths `scripts/ci/classify-paths.mjs` routes `workflow`) only a typo is
+  mechanical; any change to a rule, step, owner, model or CI condition is Claude's to
+  write. Both still get a PR, CI, a review and a merge; the PR body says why.
 - **Read-only** work that must run commands goes to Codex as a research task, never
   a mutation. Questions answerable by reading go to `haiku-lookup`.
-
-## Delegating
-
-Read `.agents/skills/codex-handoff/SKILL.md` before any Codex task. Never delegate
-Codex through a Codex plugin, the Agent tool or a slash command. Claude does not
-touch delegated files until the run is terminal; if Codex fails or errors, Claude
-implements the change once the run has ended and says so in the PR body. **One
-writer at a time**: Codex, `layout-implementer` and Claude never edit the checkout
-together; `haiku-lookup` and `pr-reviewer` only read, so they may run alongside.
+- **Delegating**: read `codex-handoff` before any Codex task; delegate only through
+  `delegate_task`, never a Codex plugin, the Agent tool or a slash command. Claude
+  does not touch delegated files until the run is terminal; if Codex fails, Claude
+  implements the change after it ends and says so in the PR body. **One writer at a
+  time**: Codex, `layout-implementer` and Claude never edit the checkout together.
 
 ## Approval
 
 After classifying, state the classification, the lane and the acceptance criteria,
 then stop for the user's OK. For a new section or visual feature, recommend an
 approach first (options, trade-offs) and stop. Once approved, the chain runs without
-check-ins, except the **Local review** stop on `runtime`; after "ship it", the rest
-runs without asking.
+check-ins, except Local review on `runtime`; after "ship it", the rest runs without
+asking.
 
-## Local review
-
-A `runtime` change waits for the user on its draft PR's Cloudflare preview
-(`https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`). CI and the
-`pr-reviewer` verdict run on the draft first; then Claude posts the review pack and
-**stops**. Feedback → a fix round and a new pack. "Ship it" (or "push", "merge",
-"go") authorizes ready + merge. A fix after "ship it" comes back only if it changes
-what renders. `docs` and `workflow` skip this. Procedure: `review-pr` **Local
-review**.
+**Local review**: a `runtime` change waits for the user on its draft PR's Cloudflare
+preview (`https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`).
+CI and the `pr-reviewer` verdict run on the draft first; then Claude posts the review
+pack and **stops**. Feedback → a fix round and a new pack. "Ship it" (or "push",
+"merge", "go") authorizes ready + merge. A fix after "ship it" comes back only if it
+changes what renders. Procedure: `review-pr` **Local review**.
 
 ## Git
 
 One thread, one worktree, one branch, one task. T3 creates the branch from
 `origin/main`; never create, rename or switch branches, and never work in the root
-checkout.
+checkout. Keep uncommitted changes found at the start out of the task's commits
+unless they belong to it.
 
 1. Confirm the binding (`t3_worktree_status`), `git status -sb`, `git fetch origin`.
    Run `npm ci` if `node_modules` is missing or older than `package-lock.json`
@@ -123,34 +132,28 @@ checkout.
 2. Diff against `origin/main`, never a local `main`.
 3. One logical change per branch; unrelated work → a new thread (`t3_thread_launch`
    with a `workspaceStrategy`). Never `git worktree add`.
-4. Criteria approved (**Approval**).
-5. Route per **Task routing**. A bug fix has its draft PR before the handoff
-   (`fix-bug`).
-6. Review the returned diff, then `local-checks`: `npm run prepush && git push …`
-   before every push; a new or changed spec runs once, by its author. No full
-   Playwright run gates a commit; CI runs the suite.
-7. Open the PR: `runtime` as a draft (`gh pr create --draft --base main`), `docs`
+4. Criteria approved; route per **Task routing**. A bug fix has its draft PR before
+   the handoff (`fix-bug`).
+5. Review the returned diff, then `local-checks`: `npm run prepush && git push …`
+   before every push; a new or changed spec runs once, by its author. CI runs the
+   full Playwright suite, never a local gate.
+6. Open the PR: `runtime` as a draft (`gh pr create --draft --base main`), `docs`
    and `workflow` ready. `link_pull_request`, then start `review-pr` at once.
-8. Verdict, merge and cleanup run per `review-pr` **Verdicts** and **Merging**: a
-   posted `PASS` on the head, green `gate` on it, the branch up to date with
-   `origin/main`, and "ship it" for `runtime`; merge with
-   `gh pr merge <pr> --squash`. Otherwise hand the PR to the user. Any new push voids
-   the head's CI result and verdict.
+7. Merge per `review-pr` **Verdicts** and **Merging**: a posted `PASS` on the head,
+   green `gate` on it, the branch up to date with `origin/main`, and "ship it" for
+   `runtime`; `gh pr merge <pr> --squash`. Otherwise hand the PR to the user.
 
 "CI is green" means the `gate` job of the `CI` workflow passed on the head commit; a
-skipped `gate` is never green. A `runtime` merge needs it from the full tier (a draft
-runs `@smoke`; `gh pr ready` starts the full run). `main` has no branch protection, so every merge gate
-is self-enforced.
-
-If the working tree already has uncommitted changes when a task starts, keep them
-out of the task's commits unless they belong to it.
+skipped `gate` is never green. A `runtime` merge needs the full tier (a draft runs
+`@smoke`; `gh pr ready` starts the full run). Any new push voids the head's CI result
+and verdict. `main` has no branch protection, so every merge gate is self-enforced.
 
 ## Deploys
 
-Merging to `main` deploys production (Workers Builds, Worker `eunice-warren`);
-Claude confirms that build succeeded and reports it (`review-pr` **Merging deploys production**).
-Every other branch builds a preview for **Local review**. Never deploy by hand, roll
-back, or change Workers routes, settings or secrets unless asked.
+Merging to `main` deploys production (Workers Builds, Worker `eunice-warren`); Claude
+confirms that build succeeded and reports it (`review-pr` **Merging deploys
+production**). Every other branch builds a preview. Never deploy by hand, roll back,
+or change Workers routes, settings or secrets unless asked.
 
 - Previews run the fake store (`wrangler.jsonc` `previews`), so a reviewer can try
   the RSVP and song forms there. Never submit any of them on production.
@@ -158,21 +161,18 @@ back, or change Workers routes, settings or secrets unless asked.
 
 ## Skills
 
-Check `.agents/skills/` before related work (`.claude/skills/` links to them).
-Sections, components and Paper → `astro-component` and `LUMOS.md`; Codex handoffs
-and `layout-implementer` briefs → `codex-handoff`; before every commit and push →
-`local-checks`; reviewing, Local review and merging → `review-pr`; a reported bug →
-`fix-bug`; editing site copy → `copy-editing`, with the voice and rules in
-`.agents/product-marketing.md`.
+Check `.agents/skills/` (linked from `.claude/skills/`) before related work. Beyond
+those named above: sections and Paper → `astro-component` and `LUMOS.md`; site
+copy → `copy-editing`, with the voice and rules in `.agents/product-marketing.md`.
 
 ## Lessons
 
 Claude writes or updates a `.agents/lessons.md` entry on the task branch after a
 `CHANGES_REQUIRED`, a red CI job that was not a timeout or cancel (L-013), a revert,
-a flaky test, a Local review fix round, or a correction from the user (format and upkeep: the file). A bug the
-user finds is an `escape: <route> #PR` in **Trigger**, and the fix PR adds a test
-that fails on the old code when one can measure it. A repeat adds the PR to
-**Trigger** and sharpens the rule.
+a flaky test, a Local review fix round, or a correction from the user (format and
+upkeep: the file). A bug the user finds is an `escape: <route> #PR` in **Trigger**,
+and the fix PR adds a test that fails on the old code when one can measure it. A
+repeat adds the PR to **Trigger** and sharpens the rule.
 
 **Guards earn their place.** A lesson gets a hook, lint or test guard only when the
 guard cuts cost (CI minutes, tokens, or the user's time) or catches an escape the
@@ -180,20 +180,15 @@ user found.
 
 ## Traps
 
-One line each; the ledger has the detail. `scripts/hooks/guard-git.mjs` runs before
-every Bash call (subagents too), `guard-deps.mjs` before `delegate_task`. Both are
-registered with `onFailure: block`, but each script allows a call whose input it
-cannot read rather than break every call (their tests pin this). If a hook blocks
-something the user asked for, say so; never work around it. `permissions.deny` in
-`.claude/settings.json` blocks force pushes, `branch -D`, `wrangler
-deploy/delete/rollback/secret/kv`, `gh repo delete/edit`, `gh` API deletes and
-`rm -rf` on `/` or `~`, in every mode and for subagents.
+One line each; the ledger has the detail. Hooks: `guard-git.mjs` before every Bash
+call (subagents too), `guard-deps.mjs` before `delegate_task`. `permissions.deny` in
+`.claude/settings.json` blocks force pushes, deploys and other destructive commands.
+If either blocks something the user asked for, say so; never work around it.
 
 - Hooks block: `--merge`, `--rebase`, `--delete-branch` (L-001); checking out `main`
-  (L-002); `git worktree add` (L-003); co-author trailers (L-004); any push to
-  `main` (L-005); a commit chained after a pipe (`local-checks`) or a push
-  chained after one (L-058); a Codex
-  handoff without `node_modules` (L-006).
+  (L-002); `git worktree add` (L-003); co-author trailers (L-004); any push to `main`
+  (L-005); a commit chained after a pipe, or a push chained after one (L-058); a
+  Codex handoff without `node_modules` (L-006).
 - `git status -sb` before each handoff, commit and push; others' hunks are not
   "stray" (L-007).
 - Shared ports: when a suite acts as if a change is missing, `lsof` the port. Keep
