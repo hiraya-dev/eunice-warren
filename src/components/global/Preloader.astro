@@ -108,10 +108,21 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     const main = document.querySelector<HTMLElement>("main");
     const previousFocus = document.activeElement as HTMLElement | null;
     const turnstile = createTurnstileController(isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV));
+    const turnstileContainer = overlay.querySelector<HTMLElement>("[data-preloader-turnstile]")!;
     let state: "ask" | "found" | "not-found" | "suggest" = "ask";
     let suggestion = "";
     let closing = false;
     const stopLenis = () => lenis?.stop();
+    const prefetchTurnstile = () => {
+      if (closing) return;
+      const start = "ew:turnstile:prefetch:start";
+      const end = "ew:turnstile:prefetch:end";
+      performance.mark(start);
+      void turnstile.prefetch(turnstileContainer).finally(() => {
+        performance.mark(end);
+        performance.measure("ew:turnstile:prefetch", start, end);
+      });
+    };
 
     document.body.classList.add("preloader-open");
     mobileHint.hidden = false;
@@ -175,6 +186,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     const finishClose = () => {
       if (closing) return;
       closing = true;
+      turnstile.close();
       document.documentElement.dataset.preloaderClosing = "true";
       document.dispatchEvent(new CustomEvent("ew:preloader-close"));
       lenis?.start();
@@ -202,6 +214,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     };
     document.addEventListener("keydown", onKeydown);
+    prefetchTurnstile();
     browse.addEventListener("click", () => { document.dispatchEvent(new CustomEvent("ew:music-start")); close(); });
     resetButton.addEventListener("click", () => setAskState());
     input.addEventListener("input", () => {
@@ -215,10 +228,25 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       submit.setAttribute("aria-busy", "true");
       const submittedValue = input.value;
       try {
-        const result = await actions.rsvp.find({
-          name: state === "suggest" ? suggestion : input.value,
-          turnstileToken: await turnstile.getToken(overlay.querySelector<HTMLElement>("[data-preloader-turnstile]")!),
-        });
+        performance.mark("ew:lookup:token-wait:start");
+        let token: string;
+        try {
+          token = await turnstile.getToken(turnstileContainer);
+        } finally {
+          performance.mark("ew:lookup:token-wait:end");
+          performance.measure("ew:lookup:token-wait", "ew:lookup:token-wait:start", "ew:lookup:token-wait:end");
+        }
+        performance.mark("ew:lookup:action:start");
+        let result: Awaited<ReturnType<typeof actions.rsvp.find>>;
+        try {
+          result = await actions.rsvp.find({
+            name: state === "suggest" ? suggestion : input.value,
+            turnstileToken: token,
+          });
+        } finally {
+          performance.mark("ew:lookup:action:end");
+          performance.measure("ew:lookup:action", "ew:lookup:action:start", "ew:lookup:action:end");
+        }
         if (input.value !== submittedValue) return;
         if (result.error || !result.data) throw new Error(result.error?.message || "Something went wrong. Please try again.");
         if (!result.data.invite) {
@@ -269,6 +297,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
         submit.disabled = false;
         submit.removeAttribute("aria-busy");
         turnstile.reset();
+        prefetchTurnstile();
       }
     });
   };

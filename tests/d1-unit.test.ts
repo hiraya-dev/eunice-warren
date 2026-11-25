@@ -13,6 +13,7 @@ import { createFakeRsvpStore, fakeFixtures, type RsvpStore } from "../src/lib/rs
 import type { SongStore } from "../src/lib/songs/store.ts";
 import { signRsvpToken, validateSubmission, verifyRsvpToken } from "../src/lib/rsvp/logic.ts";
 import { ticketFilename, ticketReference } from "../src/lib/rsvp/event.ts";
+import { logRsvpFindTiming, rsvpFindOutcome } from "../src/lib/rsvp/timing.ts";
 
 const now = "2026-11-21T00:00:00.000Z";
 const setup = () => {
@@ -25,6 +26,27 @@ const setup = () => {
     ('toledo','plus_one',3,'active',NULL,NULL,NULL,NULL,'${now}','${now}');`);
   return database;
 };
+
+test("RSVP find timing outcomes are safe and complete", () => {
+  assert.equal(rsvpFindOutcome({ invite: {} }), "found");
+  assert.equal(rsvpFindOutcome({ suggestion: "Lucia Target" }), "suggestion");
+  assert.equal(rsvpFindOutcome({ invite: null }), "none");
+  assert.equal(rsvpFindOutcome(null, { code: "FORBIDDEN" }), "forbidden");
+  assert.equal(rsvpFindOutcome(null, { code: "TOO_MANY_REQUESTS" }), "rate_limited");
+  assert.equal(rsvpFindOutcome(null, { code: "GONE" }), "closed");
+  assert.equal(rsvpFindOutcome(null, new Error("failure")), "error");
+  const logs: string[] = [];
+  const original = console.log;
+  console.log = (line: string) => logs.push(line);
+  try {
+    logRsvpFindTiming({ turnstileMs: 1, rateLimitMs: 2, storeMs: 3, totalMs: 4, queries: 2, outcome: "found" });
+  } finally {
+    console.log = original;
+  }
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].includes("Lucia"), false);
+  assert.deepEqual(JSON.parse(logs[0]), { event: "rsvp.find.timing", turnstileMs: 1, rateLimitMs: 2, storeMs: 3, totalMs: 4, queries: 2, outcome: "found" });
+});
 
 test("MAX_SEATS stays aligned with the migration slot check", () => {
   assert.equal(MAX_SEATS, 12);
