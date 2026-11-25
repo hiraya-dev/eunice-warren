@@ -18,9 +18,10 @@ Codex runs through T3 Code's `delegate_task` (**Launch: `delegate_task`**), the 
 path (`CLAUDE.md` **Host**). Every handoff sends the
 **Handoff template** and gets the same report back. These rules hold:
 
-- Every task starts on `gpt-5.6-luna`. Step up to `gpt-5.6-sol` only for a hard
-  round (`CLAUDE.md` **Roles**): a second failed fix round on one finding, a flaky
-  test, or tricky animation logic. Say in the PR body which rounds did.
+- Every task starts on `gpt-5.6-luna` at `medium`. Step up to `gpt-6-astra` at
+  `medium` only for a hard round (`CLAUDE.md` **Roles**): more than luna at `medium`
+  needs, a second failed fix round on one finding, a flaky test, or tricky animation
+  logic. Never raise luna to `high`. Say in the PR body which rounds did.
 - A question answerable by reading alone — where something is used, a summary, an
   inventory, a saved log — goes to the `haiku-lookup` subagent instead; it is faster
   and does not hold the checkout. See `CLAUDE.md` **Task routing**.
@@ -63,11 +64,11 @@ From the thread's own worktree, one call:
 }
 ```
 
-- **Model and options.** Step up with `"model": "gpt-5.6-sol"` per **Rules for every handoff**.
+- **Model and options.** Step up with `"model": "gpt-6-astra"` per **Rules for every handoff**.
   Reasoning settings go in `target.options`, never only in the prompt. Read the
   model's option descriptors from `orchestrator_capabilities` first (on 2026-10-26,
   luna: `reasoningEffort` `low`–`max`, default `medium`; `serviceTier` `default` or
-  `priority`; sol adds `ultra`). Use only advertised values.
+  `priority`; on 2026-11-25, astra adds `ultra`, default `medium`). Use only advertised values.
 - **Check the result.** The call returns `taskId`, `childThreadId`, and the resolved
   `providerInstanceId`, `model`, and `options`. Compare them with what was requested.
   A mismatch is a failed launch: cancel the task and treat it as **Fallback** below
@@ -107,7 +108,7 @@ conversation, so its `task` carries what Codex needs, and no more:
 
 Each round has its own `taskId` and a distinct `clientRequestId`
 (`<branch>-r2`, `<branch>-r3`, …) that stays the same across retries of that round.
-A round may switch `target.model` to `gpt-5.6-sol` per **Rules for every handoff**.
+A round may switch `target.model` to `gpt-6-astra` per **Rules for every handoff**.
 
 ### Questions and approvals
 
@@ -185,9 +186,10 @@ Five things must be true, or the handoff is premature:
    cannot install packages, so without them its `npm run check` fails. The
    `guard-deps.mjs` hook blocks the `delegate_task` call until this holds (L-006).
 
-Codex cannot see Paper. Every design value the code needs — token names and values,
-spacing, type scale, breakpoints, exported asset paths — goes into **Relevant
-context**, read with the Paper MCP tools. Export assets into
+Codex can read Paper through its own Paper MCP: give it the Paper file, page and
+artboard names (and say Paper is read-only), not screenshots. Still put every design
+value the code needs — token names and values, spacing, type scale, breakpoints,
+exported asset paths — into **Relevant context** as a fallback. Export assets into
 `public/` or `src/assets/` before handing off.
 
 Quote the lessons that apply. List the files the task is expected to touch and pick

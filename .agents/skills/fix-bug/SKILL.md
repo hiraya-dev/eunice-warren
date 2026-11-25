@@ -218,7 +218,7 @@ off.
 | 4 | The source diff is at most 50 changed lines, excluding `tests/` | `git diff --shortstat origin/main...HEAD -- src`. |
 | 5 | The acceptance criteria came from the user | Criteria you inferred do not count — ask, or hand off. |
 | 6 | Every acceptance criterion is met by a measured check | A committed spec, or a measurement recorded in the PR body with command, viewport, and numbers. "Looked fixed" is not a measurement. |
-| 7 | The root cause is inside this repo | A root cause in hosting, a third-party service (Google Sheets, Cloudflare, Spotify), or the design itself hands off. |
+| 7 | The root cause is inside this repo | A root cause in hosting, a third-party service (Cloudflare, Spotify), or the design itself hands off. |
 
 **If all gates pass:** confirm the branch is up to date (`git fetch origin` and
 `git merge-base --is-ancestor origin/main HEAD`; see `review-pr` **Merging** if

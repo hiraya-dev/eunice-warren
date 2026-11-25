@@ -34,7 +34,7 @@ what to wear and what to do next, without hunting.
 ## Rules
 
 - **No em dashes in site copy.** Use a full stop, a comma, a colon or "and".
-  The user audited them out of the pre-wedding section; the rest of the site still
+  The user audited them out of the old pre-wedding copy; the rest of the site still
   has a few (Hero date line, Entourage intro, Stay intro, two RSVP prompts) to
   clear when that copy is next touched.
 - Dates in prose read "14 January 2027" or "Thu, Jan 14, 2027"; display lines may
