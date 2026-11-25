@@ -116,9 +116,23 @@ test("close while loading prevents rendering and rejects pending callers", async
     controller.close();
     assert.equal(await prefetch, undefined);
     await assert.rejects(token, /Turnstile unavailable/);
-    (globalThis.window as { turnstile?: unknown }).turnstile = { render: () => { throw new Error("must not render"); } };
+    let renderCalls = 0;
+    let removeCalls = 0;
+    let cleared = 0;
+    const container = env.container as unknown as { replaceChildren: () => void };
+    container.replaceChildren = () => { cleared += 1; };
+    (globalThis.window as { turnstile?: unknown }).turnstile = {
+      ...env.api,
+      render: () => { renderCalls += 1; return "late-widget"; },
+      remove: () => { removeCalls += 1; },
+    };
     env.scripts[0].onload?.();
-    assert.equal(env.renders.length, 0);
+    await tick();
+    await tick();
+    await tick();
+    assert.equal(renderCalls, 0);
+    assert.equal(removeCalls, 0);
+    assert.equal(cleared, 0);
   } finally { env.cleanup(); }
 });
 
