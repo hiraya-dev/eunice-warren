@@ -8,7 +8,7 @@ import { addSeat, removeTrailingSeat, retireSeat, setInvitedName, setSeatName } 
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
 import { MAX_SEATS } from "../src/lib/rsvp/limits.ts";
 import { readFileSync } from "node:fs";
-import { buildFindActionResponse, GuestActionFailure, runFindAction, runSongAction, runSubmitAction, selectStore } from "../src/lib/guest-actions.ts";
+import { buildFindActionResponse, GuestActionFailure, runFindAction, runGreetAction, runSongAction, runSubmitAction, selectStore } from "../src/lib/guest-actions.ts";
 import { createFakeRsvpStore, fakeFixtures, type RsvpStore } from "../src/lib/rsvp/store.ts";
 import type { SongStore } from "../src/lib/songs/store.ts";
 import { signRsvpToken, validateSubmission, verifyRsvpToken } from "../src/lib/rsvp/logic.ts";
@@ -40,12 +40,15 @@ test("RSVP find timing outcomes are safe and complete", () => {
   console.log = (line: string) => logs.push(line);
   try {
     logRsvpFindTiming({ turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 4, totalMs: 5, queries: 2, outcome: "found" });
+    logRsvpFindTiming({ turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 0, totalMs: 5, queries: 1, outcome: "found", path: "greet" });
   } finally {
     console.log = original;
   }
-  assert.equal(logs.length, 1);
+  assert.equal(logs.length, 2);
   assert.equal(logs[0].includes("Lucia"), false);
-  assert.deepEqual(JSON.parse(logs[0]), { event: "rsvp.find.timing", turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 4, totalMs: 5, queries: 2, outcome: "found" });
+  assert.deepEqual(JSON.parse(logs[0]), { event: "rsvp.find.timing", path: "find", turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 4, totalMs: 5, queries: 2, outcome: "found" });
+  assert.deepEqual(JSON.parse(logs[1]), { event: "rsvp.find.timing", path: "greet", turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 0, totalMs: 5, queries: 1, outcome: "found" });
+  assert.equal(logs[1].includes("Luna"), false);
 });
 
 test("MAX_SEATS stays aligned with the migration slot check", () => {
@@ -132,6 +135,23 @@ test("find action timing separates store lookup and token signing", async () => 
   assert.deepEqual(suggestion, { invite: null, suggestion: "Mateo Cruz" });
   assert.equal(suggestionTiming.storeMs > 0, true);
   assert.equal(suggestionTiming.signMs, 0);
+});
+
+test("greet action returns only the envelope shape and never signs", async () => {
+  const store = createFakeRsvpStore();
+  const timing = { storeMs: 0, signMs: 0 };
+  const found = await runGreetAction(store, "Luna Toledo", timing);
+  assert.equal(timing.storeMs > 0, true);
+  assert.equal(timing.signMs, 0);
+  assert.deepEqual(found, { invite: { householdName: "Toledo Family", seats: 2 }, matchedName: "Luna Toledo" });
+  const suggestion = await runGreetAction(store, "Matoe Cruz");
+  assert.deepEqual(suggestion, { invite: null, suggestion: "Mateo Cruz" });
+  const none = await runGreetAction(store, "Nobody Example");
+  assert.deepEqual(none, { invite: null });
+  for (const output of [found, suggestion, none]) {
+    const text = JSON.stringify(output);
+    for (const field of ["token", "previous", "householdId", "ticketCode", "seatList", "members"]) assert.equal(text.includes(field), false);
+  }
 });
 
 test("fake mode never calls the D1/getDb factory", () => {

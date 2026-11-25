@@ -100,9 +100,25 @@ test("D1 query budgets with Miniflare", async (t) => {
     assert(meter.budget().rowsRead <= 30, `exact lookup read ${meter.budget().rowsRead} rows`);
 
     meter.reset();
+    const greetExact = await rsvp.findInvite("Lucia Target", { includePrevious: false });
+    assert(greetExact?.invite);
+    assert.equal(meter.budget().roundTrips, 1, `exact greet used ${meter.budget().roundTrips} D1 round trips`);
+
+    meter.reset();
     const near = await rsvp.findInvite("Lucai Target");
     assert.equal(near && !near.invite ? near.suggestion : null, "Lucia Target");
     assert(meter.budget().rowsRead <= 60, `near lookup read ${meter.budget().rowsRead} rows`);
+
+    meter.reset();
+    const greetNear = await rsvp.findInvite("Lucai Target", { includePrevious: false });
+    assert.equal(greetNear && !greetNear.invite ? greetNear.suggestion : null, "Lucia Target");
+    assert.equal(meter.budget().roundTrips, 2, `near greet used ${meter.budget().roundTrips} D1 round trips`);
+
+    await db.prepare("INSERT INTO households (id,label,display_name,ticket_code,created_at,updated_at) VALUES (?,?,?,?,?,?)").bind("duplicate", "Duplicate_Test", "Duplicate Family", "DUPLICATE", now, now).run();
+    await db.prepare("INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES (?, 'member', 1, 'active', ?, ?, ?, ?, ?, ?)").bind("duplicate", "Lucia Target", "lucia target", "target", "Lucia Target", now, now).run();
+    meter.reset();
+    assert.equal(await rsvp.findInvite("Lucia Target", { includePrevious: false }), null);
+    assert.equal(meter.budget().roundTrips, 2, `duplicate greet used ${meter.budget().roundTrips} D1 round trips`);
 
     meter.reset();
     await rsvp.submit({ inviteId: "target", name: "Lucia Target", attending: true, guests: 1, email: "luna@example.com", seats: [

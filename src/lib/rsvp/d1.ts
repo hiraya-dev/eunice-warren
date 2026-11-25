@@ -98,7 +98,7 @@ export const createD1RsvpStore = (database: D1Database, queryCounter?: D1QueryCo
     return { invite, householdId: household.id, matchedName: match.matchedName, previous: await previousFor(db, household.id, activeSeats) };
   };
   return {
-    async findInvite(name): Promise<InviteLookup> {
+    async findInvite(name, options): Promise<InviteLookup> {
       const key = normalizeGuestName(name);
       const matchedSeat = aliasedTable(inviteSeats, "matched_seat");
       const exactRows = await db.select({ household: households, seat: inviteSeats }).from(inviteSeats)
@@ -135,7 +135,7 @@ export const createD1RsvpStore = (database: D1Database, queryCounter?: D1QueryCo
       const activeRows = matchedRows.filter((row) => row.household.id === matchedRow.household.id);
       const activeSeats = activeRows.map(({ seat }) => seat);
       const invite = toInvite(matchedRow.household, activeSeats);
-      return { invite, householdId: matchedRow.household.id, matchedName: result.matchedName, previous: await previousFor(db, matchedRow.household.id, activeSeats) };
+      return { invite, householdId: matchedRow.household.id, matchedName: result.matchedName, previous: options?.includePrevious === false ? null : await previousFor(db, matchedRow.household.id, activeSeats) };
     },
     findInviteByTicketCode,
     async submit(submission: RsvpSubmission) {

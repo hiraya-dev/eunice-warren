@@ -58,7 +58,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
             <div class="preloader_address">
               <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
               <input id="preloader-name" name="name" autocomplete="name" required data-preloader-name />
-              <p class="preloader_hint" data-preloader-hint>Write your name as it's on your invitation.</p>
+              <p class="preloader_hint" data-preloader-hint role="status" aria-live="polite">Write your name as it's on your invitation.</p>
               <p class="preloader_not-you" data-preloader-not-you hidden>
                 Not you? <button type="button" data-preloader-reset>Write your own name</button>
               </p>
@@ -66,7 +66,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
             </div>
           </div>
         </div>
-        <p class="preloader_hint preloader_hint-mobile" data-preloader-hint-mobile hidden></p>
+        <p class="preloader_hint preloader_hint-mobile" data-preloader-hint-mobile hidden role="status" aria-live="polite"></p>
         <button class="preloader_primary" type="submit" data-preloader-submit>
           <span data-preloader-submit-label>Open my letter →</span>
         </button>
@@ -111,6 +111,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     const turnstileContainer = overlay.querySelector<HTMLElement>("[data-preloader-turnstile]")!;
     let state: "ask" | "found" | "not-found" | "suggest" = "ask";
     let suggestion = "";
+    let pending = false;
     let closing = false;
     const stopLenis = () => lenis?.stop();
     const prefetchTurnstile = () => {
@@ -135,7 +136,25 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     requestAnimationFrame(() => input.focus());
 
     const resetButton = overlay.querySelector<HTMLButtonElement>("[data-preloader-reset]")!;
+    let hintBeforePending = { text: "", error: false };
+    const clearPendingStatus = () => {
+      if (!pending) return;
+      pending = false;
+      hint.textContent = hintBeforePending.text;
+      mobileHint.textContent = hint.textContent;
+      hint.classList.toggle("is-error", hintBeforePending.error);
+      mobileHint.classList.toggle("is-error", hintBeforePending.error);
+    };
+    const setPendingStatus = () => {
+      hintBeforePending = { text: hint.textContent ?? "", error: hint.classList.contains("is-error") };
+      pending = true;
+      hint.textContent = "Finding your invitation…";
+      mobileHint.textContent = hint.textContent;
+      hint.classList.remove("is-error");
+      mobileHint.classList.remove("is-error");
+    };
     const setAskState = (clearInput = true) => {
+      clearPendingStatus();
       state = "ask";
       suggestion = "";
       title.textContent = "A letter is waiting for you.";
@@ -158,6 +177,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       input.focus();
     };
     const setFoundState = (guest: RememberedGuest, returning = false) => {
+      clearPendingStatus();
       state = "found";
       title.textContent = `${returning ? "Welcome back" : "Welcome"}, ${guest.householdName ?? guest.name}.`;
       label.textContent = "To";
@@ -218,6 +238,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     browse.addEventListener("click", () => { document.dispatchEvent(new CustomEvent("ew:music-start")); close(); });
     resetButton.addEventListener("click", () => setAskState());
     input.addEventListener("input", () => {
+      clearPendingStatus();
       if (state === "suggest") setAskState(false);
     });
     form.addEventListener("submit", async (event) => {
@@ -227,6 +248,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       submit.disabled = true;
       submit.setAttribute("aria-busy", "true");
       const submittedValue = input.value;
+      setPendingStatus();
       try {
         performance.mark("ew:lookup:token-wait:start");
         let token: string;
@@ -237,9 +259,9 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
           performance.measure("ew:lookup:token-wait", "ew:lookup:token-wait:start", "ew:lookup:token-wait:end");
         }
         performance.mark("ew:lookup:action:start");
-        let result: Awaited<ReturnType<typeof actions.rsvp.find>>;
+        let result: Awaited<ReturnType<typeof actions.rsvp.greet>>;
         try {
-          result = await actions.rsvp.find({
+          result = await actions.rsvp.greet({
             name: state === "suggest" ? suggestion : input.value,
             turnstileToken: token,
           });
@@ -247,7 +269,8 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
           performance.mark("ew:lookup:action:end");
           performance.measure("ew:lookup:action", "ew:lookup:action:start", "ew:lookup:action:end");
         }
-        if (input.value !== submittedValue) return;
+        if (input.value !== submittedValue) { clearPendingStatus(); return; }
+        clearPendingStatus();
         if (result.error || !result.data) throw new Error(result.error?.message || "Something went wrong. Please try again.");
         if (!result.data.invite) {
           if (result.data.suggestion) {
@@ -284,6 +307,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
         setFoundState(guest);
         document.dispatchEvent(new CustomEvent("ew:guest", { detail: guest }));
       } catch (error) {
+        clearPendingStatus();
         suggestion = "";
         state = "not-found";
         hint.textContent = error instanceof Error && error.message ? error.message : "Something went wrong. Please try again.";
@@ -432,8 +456,8 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     .preloader_primary:disabled { opacity: .6; cursor: wait; }
     .preloader_browse { padding: 0 0 .25rem; border: 0; border-bottom: .0625rem solid var(--dark-900); background: none; color: var(--dark-900); cursor: pointer; font: var(--eyebrow) / 1rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
     .preloader_admits { margin: 0; font: .875rem / 1.25rem var(--primary-family); }
-    .preloader_turnstile { min-height: 0; }
-    .preloader_turnstile:has(iframe) { min-height: 4.0625rem; }
+    /* Reserve the widget's height from the start so the prefetched iframe never moves the centred column. */
+    .preloader_turnstile { display: flex; justify-content: center; width: 100%; min-height: 4.0625rem; }
     /* Flat-lay table. Every length is a multiple of --u (1px at the 1440 artboard, 1px per px on a 390 phone),
        so props scale with the viewport; anchors are the nearest edges. */
     .preloader_table { --u: min(0.069444cqw, 0.0625rem); --v: 0.0625rem; position: absolute; z-index: -1; inset: 0; overflow: clip; container-type: size; pointer-events: none; }

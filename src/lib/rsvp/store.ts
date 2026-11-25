@@ -8,7 +8,7 @@ export interface RsvpSeat { seatId?: number; original?: string | null; shownName
 export interface PreviousRsvp { attending: boolean; seats: RsvpSeat[] }
 export interface RsvpSubmission { inviteId: string; name: string; attending: boolean; guests: number; seats: RsvpSeat[]; email: string; note?: string }
 export type InviteLookup = { invite: Invite; householdId: string; matchedName: string; previous: PreviousRsvp | null } | { invite: null; suggestion?: string } | null;
-export interface RsvpStore { findInvite(name: string): Promise<InviteLookup>; findInviteByTicketCode?(ticketCode: string, name: string): Promise<InviteLookup>; submit(submission: RsvpSubmission): Promise<void> }
+export interface RsvpStore { findInvite(name: string, options?: { includePrevious?: boolean }): Promise<InviteLookup>; findInviteByTicketCode?(ticketCode: string, name: string): Promise<InviteLookup>; submit(submission: RsvpSubmission): Promise<void> }
 
 export const normalizeGuestName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u0009\u00a0\s]+/g, " ").trim().toLocaleLowerCase();
 const makeInvite = (id: string, label: string, displayName: string, ticketCode: string, names: string[], total: number): FakeInvite => ({ id, label, householdName: displayName, ticketCode, seatList: [...names.map((name, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: name, name })), ...Array.from({ length: total - names.length }, (_, index) => ({ seatId: names.length + index + 1, kind: "plus_one" as const, invitedName: null, name: null }))], members: names, seats: total });
@@ -47,7 +47,7 @@ const currentInvite = (fixture: FakeInvite): FakeInvite => ({
 
 export const createFakeRsvpStore = (fixtureSource: FakeInvite[] = fakeFixtures): RsvpStore => {
   return {
-    async findInvite(name) {
+    async findInvite(name, options) {
       await pause();
       if (normalizeGuestName(name) === "error test") throw new Error("fictional RSVP lookup failure");
       const fixtures = fixtureSource.map(fixtureInvite);
@@ -55,7 +55,7 @@ export const createFakeRsvpStore = (fixtureSource: FakeInvite[] = fakeFixtures):
       if (!result || !result.invite) return result;
       const householdId = result.invite.id!;
       if (householdId === "seat-change-test" && seatChangePending) seatChangePending = false;
-      return { ...result, householdId, previous: previousByInvite.get(householdId) ?? null };
+      return { ...result, householdId, previous: options?.includePrevious === false ? null : previousByInvite.get(householdId) ?? null };
     },
     async findInviteByTicketCode(ticketCode, name) {
       const fixture = fixtureSource.find((item) => item.ticketCode === ticketCode);

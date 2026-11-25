@@ -26,7 +26,7 @@ test.describe("guest preloader", () => {
   test("welcomes a remembered guest without looking them up", { tag: ["@single"] }, async ({ page }) => {
     await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
     const requests: string[] = [];
-    page.on("request", (request) => { if (request.url().includes("rsvp.find")) requests.push(request.url()); });
+    page.on("request", (request) => { if (/rsvp\.(find|greet)/.test(request.url())) requests.push(request.url()); });
     await page.reload();
     const overlay = preloader(page);
     await expect(overlay.getByRole("heading", { name: "Welcome back, Cruz Family." })).toBeVisible();
@@ -73,6 +73,72 @@ test.describe("guest preloader", () => {
       seats: 4,
     });
     await expect(page.locator("[data-rsvp-name]")).toHaveValue("Mateo Cruz");
+  });
+
+  test("announces a pending envelope lookup and clears it after the response", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(/\/_actions\/rsvp\.greet\/?$/, async (route) => {
+      await held;
+      await route.continue();
+    });
+    const overlay = preloader(page);
+    const hint = overlay.locator("[data-preloader-hint-mobile]");
+    const initialHint = await hint.textContent();
+    await expect(hint).toBeVisible();
+    await expect(hint).toHaveRole("status");
+    await expect(hint).toHaveAttribute("aria-live", "polite");
+    const name = overlay.locator("[data-preloader-name]");
+    await name.fill("Mateo Cruz");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(hint).toHaveText("Finding your invitation…");
+    await name.fill("Nobody Example");
+    await expect(hint).toHaveText(initialHint!);
+    await expect(hint).not.toHaveText("Finding your invitation…");
+    release!();
+    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeEnabled();
+  });
+
+  test("restores an error hint when a retry is edited while pending", { tag: ["@single"] }, async ({ page }) => {
+    let requests = 0;
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(/\/_actions\/rsvp\.greet\/?$/, async (route) => {
+      requests += 1;
+      if (requests === 2) await held;
+      await route.continue();
+    });
+    const overlay = preloader(page);
+    const name = overlay.locator("[data-preloader-name]");
+    const hint = overlay.locator("[data-preloader-hint]");
+    const submit = overlay.getByRole("button", { name: /Open my letter|Try again/ });
+    await name.fill("Error Test");
+    await submit.click();
+    await expect(hint).toHaveText("Something went wrong. Please try again.");
+    await expect(hint).toHaveClass(/is-error/);
+    await submit.click();
+    await expect(hint).toHaveText("Finding your invitation…");
+    await name.fill("Error Test edited");
+    await expect(hint).toHaveText("Something went wrong. Please try again.");
+    await expect(hint).toHaveClass(/is-error/);
+    release!();
+    await expect(submit).toBeEnabled();
+  });
+
+  test("clears the pending status for not-found and suggestion outcomes", { tag: ["@single"] }, async ({ page }) => {
+    const overlay = preloader(page);
+    const hint = overlay.locator("[data-preloader-hint]");
+    await overlay.locator("[data-preloader-name]").fill("Nobody Example");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(hint).toHaveText("Check the spelling, or try the name on your invitation.");
+    await expect(hint).toHaveClass(/is-error/);
+    await overlay.locator("[data-preloader-name]").fill("Matoe Cruz");
+    await overlay.getByRole("button", { name: "Try again" }).click();
+    await expect(overlay.getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
+    await expect(hint).toHaveText("Tap yes if that's the name on your invitation.");
+    await expect(hint).not.toHaveText("Finding your invitation…");
   });
 
   test("uses the display name and removes the legacy guest key", async ({ page }) => {
@@ -200,6 +266,34 @@ test.describe("guest preloader", () => {
       return getComputedStyle(envelope).animationName;
     });
     expect(animationName).toBe("none");
+  });
+
+  // The Turnstile widget is prefetched at envelope open. Its iframe must land in space that is already
+  // reserved, or the centred column slides up and the input and button jump under the guest's hands.
+  test("keeps the input and button still when the Turnstile iframe appears", { tag: ["@single"] }, async ({ page }) => {
+    // Tall enough that the envelope column is centred; a shorter window scrolls and hides the shift.
+    await page.setViewportSize({ width: 1440, height: 1080 });
+    await page.goto("/");
+    const overlay = preloader(page);
+    await expect(overlay.locator("[data-preloader-name]")).toBeFocused();
+    await expect(overlay.locator(".preloader_stage")).toHaveCSS("transform", "none");
+    // Measured from the overlay (the fixed, stable frame). The form itself is centred, so its own top
+    // moves with the column and form-relative offsets would read zero even when everything jumps.
+    const measure = () => overlay.evaluate((root) => {
+      const frame = root.getBoundingClientRect();
+      const top = (selector: string) => root.querySelector(selector)!.getBoundingClientRect().top - frame.top + root.scrollTop;
+      return { input: top("[data-preloader-name]"), button: top(".preloader_primary") };
+    });
+    const before = await measure();
+    await page.evaluate(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText = "display:block;width:300px;height:65px;border:0";
+      document.querySelector("[data-preloader-turnstile]")!.append(iframe);
+    });
+    const after = await measure();
+    // With the old `:has(iframe) { min-height: 4.0625rem }` rule both moved by about 30px.
+    expect(Math.abs(after.input - before.input)).toBeLessThanOrEqual(2);
+    expect(Math.abs(after.button - before.button)).toBeLessThanOrEqual(2);
   });
 
   // The envelope picks its layout by its own width, so a window just above the phone breakpoint

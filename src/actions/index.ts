@@ -10,7 +10,7 @@ import type { RsvpStore } from "@/lib/rsvp/store";
 import { createFakeRsvpStore } from "@/lib/rsvp/store";
 import { createD1RsvpStore } from "@/lib/rsvp/d1";
 import { createD1SongStore, createFakeSongStore } from "@/lib/songs/store";
-import { GuestActionFailure, runFindAction, runSongAction, runSubmitAction, selectStore } from "@/lib/guest-actions";
+import { GuestActionFailure, runFindAction, runGreetAction, runSongAction, runSubmitAction, selectStore } from "@/lib/guest-actions";
 import type { D1Database } from "@/lib/db/types";
 import { rsvpSubmitInput } from "@/lib/rsvp/input";
 import { songInput } from "@/lib/songs/input";
@@ -131,6 +131,32 @@ export const server = {
           await guard(input.turnstileToken, context, true, "RSVP_LOOKUP_LIMITER", "Too many tries. Wait a minute and try again.", timing);
           if (!tokenSecret) fail("Something went wrong. Please try again.");
           result = await runFindAction(getStore(queryCounter), input.name, tokenSecret, Date.now(), timing);
+          return result;
+        } catch (error) {
+          caught = error;
+          if (error instanceof ActionError) throw error;
+          if (error instanceof GuestActionFailure) throw new ActionError({ code: error.code, message: error.message });
+          fail();
+        } finally {
+          timing.queries = queryCounter.count;
+          timing.outcome = rsvpFindOutcome(result, caught);
+          timing.totalMs = performance.now() - started;
+          logRsvpFindTiming(timing);
+        }
+      },
+    }),
+    greet: defineAction({
+      input: findInput,
+      handler: async (input, context) => {
+        const started = performance.now();
+        const timing = { turnstileMs: 0, rateLimitMs: 0, storeMs: 0, signMs: 0, totalMs: 0, queries: 0, outcome: "error" as RsvpFindOutcome, path: "greet" as const };
+        const queryCounter: D1QueryCounter = { count: 0 };
+        let result: Awaited<ReturnType<typeof runGreetAction>> | undefined;
+        let caught: unknown;
+        try {
+          closed();
+          await guard(input.turnstileToken, context, true, "RSVP_LOOKUP_LIMITER", "Too many tries. Wait a minute and try again.", timing);
+          result = await runGreetAction(getStore(queryCounter), input.name, timing);
           return result;
         } catch (error) {
           caught = error;

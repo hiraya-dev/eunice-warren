@@ -23,4 +23,8 @@ export const logRsvpFindTiming = (timing: {
   totalMs: number;
   queries: number;
   outcome: RsvpFindOutcome;
-}) => console.log(JSON.stringify({ event: "rsvp.find.timing", ...timing }));
+  path?: "find" | "greet";
+}) => {
+  const { path = "find", ...fields } = timing;
+  console.log(JSON.stringify({ event: "rsvp.find.timing", path, ...fields }));
+};
