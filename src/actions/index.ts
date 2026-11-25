@@ -84,15 +84,21 @@ async function guard(
   let withinLimit = true;
   try {
     const turnstileStarted = performance.now();
-    verified = await verifyTurnstile(inputToken);
-    if (timing) timing.turnstileMs = performance.now() - turnstileStarted;
+    try {
+      verified = await verifyTurnstile(inputToken);
+    } finally {
+      if (timing) timing.turnstileMs = performance.now() - turnstileStarted;
+    }
     const rateLimitStarted = performance.now();
-    if (verified && applyRateLimit)
-      withinLimit = await isWithinRateLimit(
-        envRecord[limiterName] as RateLimiter | undefined,
-        context.request.headers.get("CF-Connecting-IP") ?? "unknown",
-      );
-    if (timing) timing.rateLimitMs = applyRateLimit ? performance.now() - rateLimitStarted : 0;
+    try {
+      if (verified && applyRateLimit)
+        withinLimit = await isWithinRateLimit(
+          envRecord[limiterName] as RateLimiter | undefined,
+          context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+        );
+    } finally {
+      if (timing) timing.rateLimitMs = applyRateLimit ? performance.now() - rateLimitStarted : 0;
+    }
   } catch {
     // Never surface a platform error message to guests.
     fail();
@@ -116,7 +122,7 @@ export const server = {
       input: findInput,
       handler: async (input, context) => {
         const started = performance.now();
-        const timing = { turnstileMs: 0, rateLimitMs: 0, storeMs: 0, totalMs: 0, queries: 0, outcome: "error" as RsvpFindOutcome };
+        const timing = { turnstileMs: 0, rateLimitMs: 0, storeMs: 0, signMs: 0, totalMs: 0, queries: 0, outcome: "error" as RsvpFindOutcome };
         const queryCounter: D1QueryCounter = { count: 0 };
         let result: Awaited<ReturnType<typeof runFindAction>> | undefined;
         let caught: unknown;
@@ -124,9 +130,7 @@ export const server = {
           closed();
           await guard(input.turnstileToken, context, true, "RSVP_LOOKUP_LIMITER", "Too many tries. Wait a minute and try again.", timing);
           if (!tokenSecret) fail("Something went wrong. Please try again.");
-          const storeStarted = performance.now();
-          result = await runFindAction(getStore(queryCounter), input.name, tokenSecret);
-          timing.storeMs = performance.now() - storeStarted;
+          result = await runFindAction(getStore(queryCounter), input.name, tokenSecret, Date.now(), timing);
           return result;
         } catch (error) {
           caught = error;

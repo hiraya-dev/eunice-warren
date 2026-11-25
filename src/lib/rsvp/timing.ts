@@ -19,6 +19,7 @@ export const logRsvpFindTiming = (timing: {
   turnstileMs: number;
   rateLimitMs: number;
   storeMs: number;
+  signMs: number;
   totalMs: number;
   queries: number;
   outcome: RsvpFindOutcome;
