@@ -119,6 +119,30 @@ test.describe("RSVP section", () => {
     }
   });
 
+  // Turnstile loads on submit. Its box is held from the start, so the buttons do not jump under the
+  // guest's finger when the 72px widget (measured on production) appears.
+  test("keeps the Find my invite button still when the Turnstile widget appears", { tag: ["@single"] }, async ({ page }) => {
+    for (const width of [375, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const measure = () =>
+        page.evaluate(() => {
+          const button = document.querySelector<HTMLElement>("#rsvp [data-rsvp-panel]:not([hidden]) .rsvp_primary")!;
+          const cardTop = button.closest<HTMLElement>(".rsvp_card-wrap")!.getBoundingClientRect().top;
+          return button.getBoundingClientRect().top - cardTop;
+        });
+      const before = await measure();
+      await page.evaluate(() => {
+        const box = document.querySelector("#rsvp [data-rsvp-panel]:not([hidden]) [data-rsvp-turnstile]")!;
+        box.replaceChildren();
+        const iframe = document.createElement("iframe");
+        iframe.style.cssText = "display:block;width:300px;height:72px;border:0";
+        box.append(iframe);
+      });
+      expect(Math.abs((await measure()) - before)).toBeLessThanOrEqual(1);
+      await page.evaluate(() => document.querySelector("#rsvp [data-rsvp-panel]:not([hidden]) [data-rsvp-turnstile]")!.replaceChildren());
+    }
+  });
+
   test("finds invites case-insensitively and ignores accents and spacing", { tag: ["@single"] }, async ({
     page,
   }) => {
