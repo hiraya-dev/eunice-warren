@@ -74,6 +74,28 @@ export async function runFindAction(store: RsvpStore, name: string, tokenSecret:
   }
 }
 
+export interface GreetActionTiming { storeMs: number; signMs: number }
+
+export async function runGreetAction(store: RsvpStore, name: string, timing?: GreetActionTiming) {
+  try {
+    const storeStarted = performance.now();
+    let result: InviteLookup;
+    try {
+      result = await store.findInvite(name, { includePrevious: false });
+    } finally {
+      if (timing) timing.storeMs = performance.now() - storeStarted;
+    }
+    if (!result) return { invite: null };
+    if (!result.invite) return { invite: null, suggestion: result.suggestion };
+    return {
+      invite: { householdName: result.invite.householdName, seats: result.invite.seats },
+      matchedName: result.matchedName,
+    };
+  } catch (error) {
+    storeFailure(error);
+  }
+}
+
 export interface SubmitActionInput {
   token: string;
   name: string;

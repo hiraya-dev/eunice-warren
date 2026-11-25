@@ -17,6 +17,7 @@ export function createTurnstileController(fakeMode: boolean) {
   let closed = false;
   let prefetched: { token: string; createdAt: number } | undefined;
   let inFlight: Promise<string | undefined> | undefined;
+  let resolvePending: ((token: string) => void) | undefined;
   let rejectPending: ((reason: Error) => void) | undefined;
   const stale = (value: { createdAt: number }) => Date.now() - value.createdAt >= 280_000;
   const consumePrefetched = () => {
@@ -38,47 +39,58 @@ export function createTurnstileController(fakeMode: boolean) {
   const createToken = (container: HTMLElement) => {
     if (closed) return Promise.reject(new Error("Turnstile unavailable"));
     return new Promise<string>((resolve, reject) => {
-      let settled = false;
-      const settle = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        if (rejectPending === fail) rejectPending = undefined;
-        fn();
-      };
-      const fail = (reason: Error) => settle(() => reject(reason));
-      rejectPending = fail;
+      resolvePending = resolve;
+      rejectPending = reject;
       void (async () => {
         try {
           await load();
           if (closed) throw new Error("Turnstile unavailable");
-          if (widget !== undefined) window.turnstile!.remove(widget);
-          container.replaceChildren();
-          if (closed) throw new Error("Turnstile unavailable");
-          widget = window.turnstile!.render(container, {
-            sitekey: import.meta.env?.PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAGLQ97oeYHLG-p4Y",
-            appearance: "interaction-only",
-            execution: "execute",
-            callback: (token: string) => settle(() => resolve(token)),
-            "error-callback": () => fail(new Error("Turnstile rejected")),
-          });
-          if (closed) {
-            window.turnstile?.remove(widget);
-            widget = undefined;
-            throw new Error("Turnstile unavailable");
+          if (widget === undefined) {
+            container.replaceChildren();
+            if (closed) throw new Error("Turnstile unavailable");
+            widget = window.turnstile!.render(container, {
+              sitekey: import.meta.env?.PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAGLQ97oeYHLG-p4Y",
+              appearance: "interaction-only",
+              execution: "execute",
+              "refresh-expired": "auto",
+              callback: (token: string) => {
+                if (closed) return;
+                prefetched = { token, createdAt: Date.now() };
+                resolvePending?.(token);
+                resolvePending = undefined;
+                rejectPending = undefined;
+              },
+              "expired-callback": () => { prefetched = undefined; },
+              "error-callback": () => {
+                const fail = rejectPending;
+                resolvePending = undefined;
+                rejectPending = undefined;
+                fail?.(new Error("Turnstile rejected"));
+              },
+            });
+            if (closed) {
+              window.turnstile?.remove(widget);
+              widget = undefined;
+              throw new Error("Turnstile unavailable");
+            }
           }
+          if (closed) throw new Error("Turnstile unavailable");
+          window.turnstile!.reset(widget);
+          if (closed) throw new Error("Turnstile unavailable");
           window.turnstile!.execute(widget);
         } catch (error) {
-          fail(error instanceof Error ? error : new Error("Turnstile unavailable"));
+          if (rejectPending === reject) {
+            resolvePending = undefined;
+            rejectPending = undefined;
+            reject(error instanceof Error ? error : new Error("Turnstile unavailable"));
+          }
         }
       })();
     });
   };
   const prefetch = async (container: HTMLElement) => {
     if (fakeMode || closed || prefetched && !stale(prefetched) || inFlight) return inFlight;
-    inFlight = createToken(container).then((token) => {
-      if (!closed) prefetched = { token, createdAt: Date.now() };
-      return token;
-    }).catch(() => undefined).finally(() => { inFlight = undefined; });
+    inFlight = createToken(container).catch(() => undefined).finally(() => { inFlight = undefined; });
     return inFlight;
   };
   const getToken = async (container: HTMLElement) => {
@@ -91,13 +103,19 @@ export function createTurnstileController(fakeMode: boolean) {
     if (pending) await pending;
     const awaited = consumePrefetched();
     if (awaited) return awaited;
-    return createToken(container);
+    inFlight = createToken(container).finally(() => { inFlight = undefined; });
+    const token = await inFlight;
+    const readyAfterCreate = consumePrefetched();
+    if (readyAfterCreate) return readyAfterCreate;
+    if (token) return token;
+    throw new Error("Turnstile unavailable");
   };
   const reset = () => { if (!fakeMode && !closed && widget !== undefined) window.turnstile?.reset(widget); };
   const close = () => {
     closed = true;
     prefetched = undefined;
     rejectPending?.(new Error("Turnstile unavailable"));
+    resolvePending = undefined;
     rejectPending = undefined;
     if (!fakeMode && widget !== undefined) window.turnstile?.remove(widget);
     widget = undefined;

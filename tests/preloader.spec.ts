@@ -75,6 +75,22 @@ test.describe("guest preloader", () => {
     await expect(page.locator("[data-rsvp-name]")).toHaveValue("Mateo Cruz");
   });
 
+  test("announces a pending envelope lookup and clears it after the response", { tag: ["@single"] }, async ({ page }) => {
+    await page.route(/\/_actions\/rsvp\.greet\/?$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await route.continue();
+    });
+    const overlay = preloader(page);
+    const hint = overlay.locator("[data-preloader-hint]");
+    await expect(hint).toHaveRole("status");
+    await expect(hint).toHaveAttribute("aria-live", "polite");
+    await overlay.locator("[data-preloader-name]").fill("Mateo Cruz");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(hint).toHaveText("Finding your invitation…");
+    await expect(overlay.getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
+    await expect(hint).not.toHaveText("Finding your invitation…");
+  });
+
   test("uses the display name and removes the legacy guest key", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("ew-guest-v1", JSON.stringify({ name: "Private Label" })));
     await page.reload();
@@ -200,6 +216,34 @@ test.describe("guest preloader", () => {
       return getComputedStyle(envelope).animationName;
     });
     expect(animationName).toBe("none");
+  });
+
+  // The Turnstile widget is prefetched at envelope open. Its iframe must land in space that is already
+  // reserved, or the centred column slides up and the input and button jump under the guest's hands.
+  test("keeps the input and button still when the Turnstile iframe appears", { tag: ["@single"] }, async ({ page }) => {
+    // Tall enough that the envelope column is centred; a shorter window scrolls and hides the shift.
+    await page.setViewportSize({ width: 1440, height: 1080 });
+    await page.goto("/");
+    const overlay = preloader(page);
+    await expect(overlay.locator("[data-preloader-name]")).toBeFocused();
+    await expect(overlay.locator(".preloader_stage")).toHaveCSS("transform", "none");
+    // Measured from the overlay (the fixed, stable frame). The form itself is centred, so its own top
+    // moves with the column and form-relative offsets would read zero even when everything jumps.
+    const measure = () => overlay.evaluate((root) => {
+      const frame = root.getBoundingClientRect();
+      const top = (selector: string) => root.querySelector(selector)!.getBoundingClientRect().top - frame.top + root.scrollTop;
+      return { input: top("[data-preloader-name]"), button: top(".preloader_primary") };
+    });
+    const before = await measure();
+    await page.evaluate(() => {
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText = "display:block;width:300px;height:65px;border:0";
+      document.querySelector("[data-preloader-turnstile]")!.append(iframe);
+    });
+    const after = await measure();
+    // With the old `:has(iframe) { min-height: 4.0625rem }` rule both moved by about 30px.
+    expect(Math.abs(after.input - before.input)).toBeLessThanOrEqual(2);
+    expect(Math.abs(after.button - before.button)).toBeLessThanOrEqual(2);
   });
 
   // The envelope picks its layout by its own width, so a window just above the phone breakpoint

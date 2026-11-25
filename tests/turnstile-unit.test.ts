@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createTurnstileController } from "../src/scripts/turnstile.ts";
 
-type Callbacks = { callback: (token: string) => void; error: () => void };
+type Callbacks = { callback: (token: string) => void; error: () => void; expired: () => void };
 const tick = () => new Promise<void>((resolve) => queueMicrotask(resolve));
 
 const setup = (withApi = true) => {
@@ -14,11 +14,11 @@ const setup = (withApi = true) => {
   let nextWidget = 1;
   const api = {
     render: (_container: HTMLElement, options: Record<string, unknown>) => {
-      renders.push({ callback: options.callback as (token: string) => void, error: options["error-callback"] as () => void });
+      renders.push({ callback: options.callback as (token: string) => void, error: options["error-callback"] as () => void, expired: options["expired-callback"] as () => void });
       return `widget-${nextWidget++}`;
     },
     execute: () => {},
-    reset: (widget: string | number | undefined) => resets.push(widget),
+    reset: (widget: string | number | undefined) => { resets.push(widget); },
     remove: (widget: string | number | undefined) => removed.push(widget),
   };
   const windowStub = withApi ? { turnstile: api } : {};
@@ -48,7 +48,7 @@ const setup = (withApi = true) => {
   };
 };
 
-test("consumes a prefetched token once, then renders for the next token", async () => {
+test("consumes a prefetched token once, then resets the same widget for the next token", async () => {
   const env = setup();
   try {
     const controller = createTurnstileController(false);
@@ -59,9 +59,10 @@ test("consumes a prefetched token once, then renders for the next token", async 
     assert.equal(await controller.getToken(env.container), "prefetched");
     const fresh = controller.getToken(env.container);
     await tick();
-    env.renders[1].callback("fresh");
+    env.renders[0].callback("fresh");
     assert.equal(await fresh, "fresh");
-    assert.equal(env.renders.length, 2);
+    assert.equal(env.renders.length, 1);
+    assert.deepEqual(env.resets, ["widget-1", "widget-1"]);
   } finally { env.cleanup(); }
 });
 
@@ -82,7 +83,7 @@ test("getToken awaits an in-flight prefetch without rendering twice", async () =
   } finally { env.cleanup(); }
 });
 
-test("stale prefetched and failed prefetched tokens are replaced with fresh renders", async () => {
+test("stale prefetched and failed prefetched tokens are replaced with fresh executions", async () => {
   const env = setup();
   try {
     const controller = createTurnstileController(false);
@@ -93,17 +94,18 @@ test("stale prefetched and failed prefetched tokens are replaced with fresh rend
     env.setNow(1_280_000);
     const fresh = controller.getToken(env.container);
     await tick();
-    env.renders[1].callback("fresh");
+    env.renders[0].callback("fresh");
     assert.equal(await fresh, "fresh");
 
     const failed = controller.prefetch(env.container);
     await tick();
-    env.renders[2].error();
+    env.renders[0].error();
     assert.equal(await failed, undefined);
     const recovered = controller.getToken(env.container);
     await tick();
-    env.renders[3].callback("recovered");
+    env.renders[0].callback("recovered");
     assert.equal(await recovered, "recovered");
+    assert.equal(env.renders.length, 1);
   } finally { env.cleanup(); }
 });
 
@@ -147,7 +149,21 @@ test("close while awaiting a token removes the widget, rejects, and reset is gua
     controller.reset();
     await assert.rejects(token, /Turnstile unavailable/);
     assert.deepEqual(env.removed, ["widget-1"]);
-    assert.deepEqual(env.resets, []);
+    assert.deepEqual(env.resets, ["widget-1"]);
+  } finally { env.cleanup(); }
+});
+
+test("a callback that arrives after close stores no token", async () => {
+  const env = setup();
+  try {
+    const controller = createTurnstileController(false);
+    const token = controller.getToken(env.container);
+    await tick();
+    controller.close();
+    await assert.rejects(token, /Turnstile unavailable/);
+    env.renders[0].callback("late");
+    await assert.rejects(controller.getToken(env.container), /Turnstile unavailable/);
+    assert.equal(await controller.prefetch(env.container), undefined);
   } finally { env.cleanup(); }
 });
 
@@ -158,5 +174,39 @@ test("fake mode returns the local token without rendering", async () => {
     assert.equal(await controller.getToken(env.container), "local-test-token");
     await controller.prefetch(env.container);
     assert.equal(env.renders.length, 0);
+  } finally { env.cleanup(); }
+});
+
+test("auto-refreshed tokens replace stale stored state and expired clears it", async () => {
+  const env = setup();
+  try {
+    const controller = createTurnstileController(false);
+    const pending = controller.getToken(env.container);
+    await tick();
+    env.renders[0].callback("first");
+    assert.equal(await pending, "first");
+    env.renders[0].callback("auto-refresh");
+    assert.equal(await controller.getToken(env.container), "auto-refresh");
+    env.renders[0].callback("stored");
+    env.renders[0].expired();
+    const next = controller.getToken(env.container);
+    await tick();
+    env.renders[0].callback("after-expiry");
+    assert.equal(await next, "after-expiry");
+  } finally { env.cleanup(); }
+});
+
+test("close during reset rejects the waiter", async () => {
+  const env = setup();
+  try {
+    let controller: ReturnType<typeof createTurnstileController>;
+    env.api.reset = (widget) => { env.resets.push(widget); controller.close(); };
+    controller = createTurnstileController(false);
+    const token = controller.getToken(env.container);
+    await tick();
+    assert.equal(env.renders.length, 1);
+    await assert.rejects(token, /Turnstile unavailable/);
+    assert.deepEqual(env.removed, ["widget-1"]);
+    assert.deepEqual(env.resets, ["widget-1"]);
   } finally { env.cleanup(); }
 });
