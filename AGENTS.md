@@ -42,7 +42,7 @@ page from the existing components in `src/components/`, and add CSS only through
 the checklist there. Every section gets an `id`.
 
 The RSVP and song features run as Astro actions in the Cloudflare
-Worker, against a Google Sheet in production and a fake store everywhere else
+Worker, against Cloudflare D1 in production and a fake store everywhere else
 (`docs/rsvp-backend.md`). Keep guest data out of the repository and the client
 bundle; fixtures are fictional.
 
