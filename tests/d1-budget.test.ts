@@ -7,10 +7,10 @@ import { createD1SongStore } from "../src/lib/songs/store.ts";
 import { getUnnamedPlusOneCount } from "../src/lib/db/summary.ts";
 import type { D1Database, D1PreparedStatement } from "../src/lib/db/types.ts";
 
-type Budget = { rowsRead: number; rowsWritten: number };
+type Budget = { rowsRead: number; rowsWritten: number; roundTrips: number };
 
 const meterDatabase = (database: D1Database) => {
-  let budget: Budget = { rowsRead: 0, rowsWritten: 0 };
+  let budget: Budget = { rowsRead: 0, rowsWritten: 0, roundTrips: 0 };
   const underlying = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
   const record = (result: unknown) => {
     const meta = (result as { meta?: { rows_read?: number; rows_written?: number } } | undefined)?.meta;
@@ -21,10 +21,10 @@ const meterDatabase = (database: D1Database) => {
   const wrap = (statement: D1PreparedStatement): D1PreparedStatement => {
     const wrapped: D1PreparedStatement = {
       bind: (...values) => wrap(statement.bind(...values)),
-      first: (column) => statement.first(column),
-      raw: () => statement.raw(),
-      all: async <T = Record<string, unknown>>() => record(await statement.all<T>()) as { results: T[]; success: boolean; meta?: Record<string, unknown> },
-      run: async () => record(await statement.run()) as Awaited<ReturnType<D1PreparedStatement["run"]>>,
+      first: async (column) => { budget.roundTrips += 1; return statement.first(column); },
+      raw: async () => { budget.roundTrips += 1; return statement.raw(); },
+      all: async <T = Record<string, unknown>>() => { budget.roundTrips += 1; return record(await statement.all<T>()) as { results: T[]; success: boolean; meta?: Record<string, unknown> }; },
+      run: async () => { budget.roundTrips += 1; return record(await statement.run()) as Awaited<ReturnType<D1PreparedStatement["run"]>>; },
     };
     underlying.set(wrapped, statement);
     return wrapped;
@@ -33,13 +33,14 @@ const meterDatabase = (database: D1Database) => {
     prepare: (query) => wrap(database.prepare(query)),
     batch: async (statements) => {
       const results = await database.batch(statements.map((statement) => underlying.get(statement) ?? statement) as unknown as typeof statements);
+      budget.roundTrips += 1;
       for (const result of results) record(result);
       return results;
     },
   };
   return {
     database: measured,
-    reset: () => { budget = { rowsRead: 0, rowsWritten: 0 }; },
+    reset: () => { budget = { rowsRead: 0, rowsWritten: 0, roundTrips: 0 }; },
     budget: () => ({ ...budget }),
   };
 };
@@ -95,6 +96,7 @@ test("D1 query budgets with Miniflare", async (t) => {
     meter.reset();
     const exact = await rsvp.findInvite("Lucia Target");
     assert(exact?.invite);
+    assert(meter.budget().roundTrips <= 3, `exact lookup used ${meter.budget().roundTrips} D1 round trips`);
     assert(meter.budget().rowsRead <= 30, `exact lookup read ${meter.budget().rowsRead} rows`);
 
     meter.reset();

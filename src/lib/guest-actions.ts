@@ -22,6 +22,11 @@ const unavailable = "We're busy right now, try again in a bit.";
 const generic = "Something went wrong. Please try again.";
 const inviteChanged = "Your invite changed. Check the seats before sending.";
 
+export interface FindActionTiming {
+  storeMs: number;
+  signMs: number;
+}
+
 const storeFailure = (error: unknown): never => {
   if (error instanceof GuestActionFailure) throw error;
   if (error instanceof InviteChangedError || String(error).includes("invite changed"))
@@ -30,10 +35,16 @@ const storeFailure = (error: unknown): never => {
   throw new GuestActionFailure("INTERNAL_SERVER_ERROR", generic);
 };
 
-export async function buildFindActionResponse(result: InviteLookup, tokenSecret: string, expiresAt: number) {
+export async function buildFindActionResponse(result: InviteLookup, tokenSecret: string, expiresAt: number, timing?: FindActionTiming) {
   if (!result) return { invite: null };
   if (!result.invite) return { invite: null, suggestion: result.suggestion };
-  const token = await signRsvpToken(result.invite.ticketCode, expiresAt, tokenSecret);
+  const signStarted = performance.now();
+  let token: string;
+  try {
+    token = await signRsvpToken(result.invite.ticketCode, expiresAt, tokenSecret);
+  } finally {
+    if (timing) timing.signMs = performance.now() - signStarted;
+  }
   return {
     invite: {
       householdName: result.invite.householdName,
@@ -48,9 +59,16 @@ export async function buildFindActionResponse(result: InviteLookup, tokenSecret:
   };
 }
 
-export async function runFindAction(store: RsvpStore, name: string, tokenSecret: string, now = Date.now()) {
+export async function runFindAction(store: RsvpStore, name: string, tokenSecret: string, now = Date.now(), timing?: FindActionTiming) {
   try {
-    return await buildFindActionResponse(await store.findInvite(name), tokenSecret, now + 2 * 60 * 60 * 1000);
+    const storeStarted = performance.now();
+    let result: InviteLookup;
+    try {
+      result = await store.findInvite(name);
+    } finally {
+      if (timing) timing.storeMs = performance.now() - storeStarted;
+    }
+    return await buildFindActionResponse(result, tokenSecret, now + 2 * 60 * 60 * 1000, timing);
   } catch (error) {
     storeFailure(error);
   }

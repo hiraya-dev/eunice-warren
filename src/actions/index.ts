@@ -15,6 +15,9 @@ import type { D1Database } from "@/lib/db/types";
 import { rsvpSubmitInput } from "@/lib/rsvp/input";
 import { songInput } from "@/lib/songs/input";
 import { scheduleRsvpNotification } from "@/lib/rsvp/notify";
+import { logRsvpFindTiming, rsvpFindOutcome } from "@/lib/rsvp/timing";
+import type { D1QueryCounter } from "@/lib/rsvp/d1";
+import type { RsvpFindOutcome } from "@/lib/rsvp/timing";
 
 const TEST_SECRET = "local-rsvp-token-secret";
 const stripControls = (value: string) => value.replace(/[\u0000-\u001f\u007f]/g, "").trim();
@@ -22,9 +25,9 @@ const envRecord = env as unknown as Record<string, unknown>;
 const storeName =
   typeof envRecord.RSVP_STORE === "string" ? envRecord.RSVP_STORE : "d1";
 let selectedStore: RsvpStore | undefined;
-const getStore = () => {
-  if (!selectedStore)
-    selectedStore = selectStore(storeName, createFakeRsvpStore, () => createD1RsvpStore(envRecord.DB as D1Database));
+const getStore = (queryCounter?: D1QueryCounter) => {
+  if (storeName !== "fake") return createD1RsvpStore(envRecord.DB as D1Database, queryCounter);
+  if (!selectedStore) selectedStore = createFakeRsvpStore();
   return selectedStore;
 };
 let selectedSongStore: ReturnType<typeof createD1SongStore> | ReturnType<typeof createFakeSongStore> | undefined;
@@ -75,16 +78,27 @@ async function guard(
   applyRateLimit = false,
   limiterName = "RSVP_LOOKUP_LIMITER",
   rateLimitMessage = "Too many tries. Wait a minute and try again.",
+  timing?: { turnstileMs: number; rateLimitMs: number },
 ) {
   let verified = false;
   let withinLimit = true;
   try {
-    verified = await verifyTurnstile(inputToken);
-    if (verified && applyRateLimit)
-      withinLimit = await isWithinRateLimit(
-        envRecord[limiterName] as RateLimiter | undefined,
-        context.request.headers.get("CF-Connecting-IP") ?? "unknown",
-      );
+    const turnstileStarted = performance.now();
+    try {
+      verified = await verifyTurnstile(inputToken);
+    } finally {
+      if (timing) timing.turnstileMs = performance.now() - turnstileStarted;
+    }
+    const rateLimitStarted = performance.now();
+    try {
+      if (verified && applyRateLimit)
+        withinLimit = await isWithinRateLimit(
+          envRecord[limiterName] as RateLimiter | undefined,
+          context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+        );
+    } finally {
+      if (timing) timing.rateLimitMs = applyRateLimit ? performance.now() - rateLimitStarted : 0;
+    }
   } catch {
     // Never surface a platform error message to guests.
     fail();
@@ -107,15 +121,27 @@ export const server = {
     find: defineAction({
       input: findInput,
       handler: async (input, context) => {
-        closed();
-        await guard(input.turnstileToken, context, true);
+        const started = performance.now();
+        const timing = { turnstileMs: 0, rateLimitMs: 0, storeMs: 0, signMs: 0, totalMs: 0, queries: 0, outcome: "error" as RsvpFindOutcome };
+        const queryCounter: D1QueryCounter = { count: 0 };
+        let result: Awaited<ReturnType<typeof runFindAction>> | undefined;
+        let caught: unknown;
         try {
+          closed();
+          await guard(input.turnstileToken, context, true, "RSVP_LOOKUP_LIMITER", "Too many tries. Wait a minute and try again.", timing);
           if (!tokenSecret) fail("Something went wrong. Please try again.");
-          return await runFindAction(getStore(), input.name, tokenSecret);
+          result = await runFindAction(getStore(queryCounter), input.name, tokenSecret, Date.now(), timing);
+          return result;
         } catch (error) {
+          caught = error;
           if (error instanceof ActionError) throw error;
           if (error instanceof GuestActionFailure) throw new ActionError({ code: error.code, message: error.message });
           fail();
+        } finally {
+          timing.queries = queryCounter.count;
+          timing.outcome = rsvpFindOutcome(result, caught);
+          timing.totalMs = performance.now() - started;
+          logRsvpFindTiming(timing);
         }
       },
     }),

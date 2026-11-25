@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, aliasedTable } from "drizzle-orm";
 import { getDb } from "../db/client.ts";
 import { inviteSeats, households, responseSeats, responses, seatAssignments } from "../db/schema.ts";
-import type { D1Database } from "../db/types.ts";
+import type { D1Database, D1PreparedStatement } from "../db/types.ts";
 import { lookupInvite } from "./lookup.ts";
 import type { Invite, InviteLookup, PreviousRsvp, RsvpStore, RsvpSubmission } from "./store.ts";
 import { normalizeGuestName } from "./store.ts";
@@ -22,18 +22,23 @@ const toInvite = (household: typeof households.$inferSelect, seats: (typeof invi
   seats: seats.filter((seat) => seat.status === "active").length,
 });
 
-const latestResponse = async (db: ReturnType<typeof getDb>, householdId: string) => {
-  const result = await db.select().from(responses).where(eq(responses.householdId, householdId)).orderBy(desc(responses.submittedAt), desc(responses.id)).limit(1);
-  return result[0] ?? null;
-};
-
 const previousFor = async (db: ReturnType<typeof getDb>, householdId: string, seats: (typeof inviteSeats.$inferSelect)[]): Promise<PreviousRsvp | null> => {
-  const latest = await latestResponse(db, householdId);
-  if (!latest) return null;
-  const saved = await db.select().from(responseSeats).where(eq(responseSeats.responseId, latest.id));
+  const latest = db.select({ id: responses.id })
+    .from(responses)
+    .where(eq(responses.householdId, householdId))
+    .orderBy(desc(responses.submittedAt), desc(responses.id))
+    .limit(1);
+  const rows = await db.select({ response: responses, seat: responseSeats })
+    .from(responses)
+    .leftJoin(responseSeats, eq(responseSeats.responseId, responses.id))
+    .where(and(eq(responses.householdId, householdId), inArray(responses.id, latest)));
+  const latestRow = rows[0];
+  if (!latestRow) return null;
+  const saved = rows.flatMap(({ seat }) => seat ? [seat] : []);
+  const latestResponse = latestRow.response;
   const bySeat = new Map(saved.filter((seat) => seat.seatId !== null).map((seat) => [seat.seatId!, seat]));
   return {
-    attending: Boolean(latest.attending),
+    attending: Boolean(latestResponse.attending),
     seats: seats.filter((seat) => seat.status === "active").sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0)).map((seat) => {
       const savedSeat = bySeat.get(seat.id);
       return {
@@ -41,7 +46,7 @@ const previousFor = async (db: ReturnType<typeof getDb>, householdId: string, se
         original: seat.invitedName,
         shownName: seat.name,
         name: seat.name ?? "",
-        attending: latest.attending
+        attending: latestResponse.attending
           ? (savedSeat ? Boolean(savedSeat.attending) : seat.kind === "member")
           : seat.kind === "member",
         slipperSize: savedSeat?.slipperSize ?? undefined,
@@ -60,8 +65,29 @@ const groupedInvites = (rows: Array<{ household: typeof households.$inferSelect;
   return [...byHousehold.values()].map(({ household, seats }) => toInvite(household, seats));
 };
 
-export const createD1RsvpStore = (database: D1Database): RsvpStore => {
-  const db = getDb(database);
+export interface D1QueryCounter { count: number }
+
+const countQueries = (database: D1Database, counter: D1QueryCounter): D1Database => {
+  const originals = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
+  const wrap = (statement: D1PreparedStatement): D1PreparedStatement => {
+    const wrapped: D1PreparedStatement = {
+    bind: (...values) => wrap(statement.bind(...values)),
+    first: async (column) => { counter.count += 1; return statement.first(column); },
+    raw: async () => { counter.count += 1; return statement.raw(); },
+    all: async <T = Record<string, unknown>>() => { counter.count += 1; return statement.all<T>(); },
+    run: async () => { counter.count += 1; return statement.run(); },
+    };
+    originals.set(wrapped, statement);
+    return wrapped;
+  };
+  return {
+    prepare: (query) => wrap(database.prepare(query)),
+    batch: async (statements) => { counter.count += 1; return database.batch(statements.map((statement) => originals.get(statement) ?? statement) as unknown as typeof statements); },
+  };
+};
+
+export const createD1RsvpStore = (database: D1Database, queryCounter?: D1QueryCounter): RsvpStore => {
+  const db = getDb(queryCounter ? countQueries(database, queryCounter) : database);
   const findInviteByTicketCode = async (ticketCode: string, name: string): Promise<InviteLookup> => {
     const household = (await db.select().from(households).where(and(eq(households.ticketCode, ticketCode), eq(households.status, "active"))).limit(1))[0];
     if (!household) return null;
@@ -74,29 +100,42 @@ export const createD1RsvpStore = (database: D1Database): RsvpStore => {
   return {
     async findInvite(name): Promise<InviteLookup> {
       const key = normalizeGuestName(name);
+      const matchedSeat = aliasedTable(inviteSeats, "matched_seat");
       const exactRows = await db.select({ household: households, seat: inviteSeats }).from(inviteSeats)
         .innerJoin(households, eq(inviteSeats.householdId, households.id))
-        .where(and(eq(households.status, "active"), eq(inviteSeats.status, "active"), eq(inviteSeats.nameKey, key)))
-        .limit(50);
+        .where(and(eq(households.status, "active"), eq(inviteSeats.status, "active"), exists(
+          db.select({ id: matchedSeat.id }).from(matchedSeat).where(and(
+            eq(matchedSeat.householdId, households.id),
+            eq(matchedSeat.status, "active"),
+            eq(matchedSeat.nameKey, key),
+          )),
+        )));
       let candidates = groupedInvites(exactRows);
+      let matchedRows = exactRows;
       let result = lookupInvite(name, candidates);
       if (!result || !result.invite) {
         const surname = key.split(" ").at(-1) ?? key;
+        const matchedSeat = aliasedTable(inviteSeats, "matched_surname_seat");
         const nearRows = await db.select({ household: households, seat: inviteSeats }).from(inviteSeats)
           .innerJoin(households, eq(inviteSeats.householdId, households.id))
-          .where(and(eq(households.status, "active"), eq(inviteSeats.status, "active"), eq(inviteSeats.surnameKey, surname)))
-          .limit(50);
+          .where(and(eq(households.status, "active"), eq(inviteSeats.status, "active"), exists(
+            db.select({ id: matchedSeat.id }).from(matchedSeat).where(and(
+              eq(matchedSeat.householdId, households.id),
+              eq(matchedSeat.status, "active"),
+              eq(matchedSeat.surnameKey, surname),
+            )),
+          )));
+        matchedRows = nearRows;
         candidates = groupedInvites(nearRows);
         result = lookupInvite(name, candidates);
       }
       if (!result || !result.invite) return result;
-      const household = await db.select().from(households).where(and(eq(households.ticketCode, result.invite.ticketCode), eq(households.status, "active"))).limit(1);
-      if (!household[0]) return null;
-      const activeSeats = await db.select().from(inviteSeats)
-        .where(and(eq(inviteSeats.householdId, household[0].id), eq(inviteSeats.status, "active")))
-        .orderBy(inviteSeats.slot);
-      const invite = toInvite(household[0], activeSeats);
-      return { invite, householdId: household[0].id, matchedName: result.matchedName, previous: await previousFor(db, household[0].id, activeSeats) };
+      const matchedRow = matchedRows.find((row) => row.household.ticketCode === result.invite?.ticketCode);
+      if (!matchedRow || !result.invite) return null;
+      const activeRows = matchedRows.filter((row) => row.household.id === matchedRow.household.id);
+      const activeSeats = activeRows.map(({ seat }) => seat);
+      const invite = toInvite(matchedRow.household, activeSeats);
+      return { invite, householdId: matchedRow.household.id, matchedName: result.matchedName, previous: await previousFor(db, matchedRow.household.id, activeSeats) };
     },
     findInviteByTicketCode,
     async submit(submission: RsvpSubmission) {

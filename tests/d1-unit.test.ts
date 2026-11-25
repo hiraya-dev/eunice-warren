@@ -13,6 +13,7 @@ import { createFakeRsvpStore, fakeFixtures, type RsvpStore } from "../src/lib/rs
 import type { SongStore } from "../src/lib/songs/store.ts";
 import { signRsvpToken, validateSubmission, verifyRsvpToken } from "../src/lib/rsvp/logic.ts";
 import { ticketFilename, ticketReference } from "../src/lib/rsvp/event.ts";
+import { logRsvpFindTiming, rsvpFindOutcome } from "../src/lib/rsvp/timing.ts";
 
 const now = "2026-11-21T00:00:00.000Z";
 const setup = () => {
@@ -25,6 +26,27 @@ const setup = () => {
     ('toledo','plus_one',3,'active',NULL,NULL,NULL,NULL,'${now}','${now}');`);
   return database;
 };
+
+test("RSVP find timing outcomes are safe and complete", () => {
+  assert.equal(rsvpFindOutcome({ invite: {} }), "found");
+  assert.equal(rsvpFindOutcome({ suggestion: "Lucia Target" }), "suggestion");
+  assert.equal(rsvpFindOutcome({ invite: null }), "none");
+  assert.equal(rsvpFindOutcome(null, { code: "FORBIDDEN" }), "forbidden");
+  assert.equal(rsvpFindOutcome(null, { code: "TOO_MANY_REQUESTS" }), "rate_limited");
+  assert.equal(rsvpFindOutcome(null, { code: "GONE" }), "closed");
+  assert.equal(rsvpFindOutcome(null, new Error("failure")), "error");
+  const logs: string[] = [];
+  const original = console.log;
+  console.log = (line: string) => logs.push(line);
+  try {
+    logRsvpFindTiming({ turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 4, totalMs: 5, queries: 2, outcome: "found" });
+  } finally {
+    console.log = original;
+  }
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].includes("Lucia"), false);
+  assert.deepEqual(JSON.parse(logs[0]), { event: "rsvp.find.timing", turnstileMs: 1, rateLimitMs: 2, storeMs: 3, signMs: 4, totalMs: 5, queries: 2, outcome: "found" });
+});
 
 test("MAX_SEATS stays aligned with the migration slot check", () => {
   assert.equal(MAX_SEATS, 12);
@@ -95,6 +117,21 @@ test("guest action responses, signed token, ticket reference, and filename never
       assert.equal(surface.includes(fixture.id), false);
     }
   }
+});
+
+test("find action timing separates store lookup and token signing", async () => {
+  const timing = { storeMs: 0, signMs: 0 };
+  const store = createFakeRsvpStore();
+  const found = await runFindAction(store, "Luna Toledo", "secret", Date.now(), timing);
+  assert(found && "token" in found && found.token);
+  assert.equal(timing.storeMs > 0, true);
+  assert.equal(timing.signMs > 0, true);
+
+  const suggestionTiming = { storeMs: 0, signMs: 0 };
+  const suggestion = await runFindAction(store, "Matoe Cruz", "secret", Date.now(), suggestionTiming);
+  assert.deepEqual(suggestion, { invite: null, suggestion: "Mateo Cruz" });
+  assert.equal(suggestionTiming.storeMs > 0, true);
+  assert.equal(suggestionTiming.signMs, 0);
 });
 
 test("fake mode never calls the D1/getDb factory", () => {
@@ -341,6 +378,24 @@ test("find, submit, and song action functions map D1 limits and generic failures
     () => runSubmitAction(rsvpStore(generic), submit, "secret"),
     () => runSongAction(songStore(generic), { name: "Luna", song: "Song" }),
   ]) await assert.rejects(run, (error: unknown) => error instanceof GuestActionFailure && error.message === "Something went wrong. Please try again.");
+});
+
+test("find action records store time when lookup throws and preserves error mapping", async () => {
+  const timing = { storeMs: 0, signMs: 0 };
+  const store: RsvpStore = {
+    findInvite: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      throw new Error("database exploded");
+    },
+    findInviteByTicketCode: async () => null,
+    submit: async () => {},
+  };
+  await assert.rejects(
+    () => runFindAction(store, "Luna Toledo", "secret", Date.now(), timing),
+    (error: unknown) => error instanceof GuestActionFailure && error.code === "INTERNAL_SERVER_ERROR" && error.message === "Something went wrong. Please try again.",
+  );
+  assert.equal(timing.storeMs > 0, true);
+  assert.equal(timing.signMs, 0);
 });
 
 test("D1 store and summary statements use indexes instead of table scans", async () => {
