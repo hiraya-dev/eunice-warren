@@ -286,8 +286,9 @@ test.describe("guest preloader", () => {
     });
     const before = await measure();
     await page.evaluate(() => {
+      // The live widget grows the box to 72px (the 65px iframe plus its wrapper), measured on production at 390x844.
       const iframe = document.createElement("iframe");
-      iframe.style.cssText = "display:block;width:300px;height:65px;border:0";
+      iframe.style.cssText = "display:block;width:300px;height:72px;border:0";
       document.querySelector("[data-preloader-turnstile]")!.append(iframe);
     });
     const after = await measure();

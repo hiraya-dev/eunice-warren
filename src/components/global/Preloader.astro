@@ -457,7 +457,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     .preloader_browse { padding: 0 0 .25rem; border: 0; border-bottom: .0625rem solid var(--dark-900); background: none; color: var(--dark-900); cursor: pointer; font: var(--eyebrow) / 1rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
     .preloader_admits { margin: 0; font: .875rem / 1.25rem var(--primary-family); }
     /* Reserve the widget's height from the start so the prefetched iframe never moves the centred column. */
-    .preloader_turnstile { display: flex; justify-content: center; width: 100%; min-height: 4.0625rem; }
+    .preloader_turnstile { display: flex; justify-content: center; width: 100%; min-height: 4.5rem; }
     /* Flat-lay table. Every length is a multiple of --u (1px at the 1440 artboard, 1px per px on a 390 phone),
        so props scale with the viewport; anchors are the nearest edges. */
     .preloader_table { --u: min(0.069444cqw, 0.0625rem); --v: 0.0625rem; position: absolute; z-index: -1; inset: 0; overflow: clip; container-type: size; pointer-events: none; }
