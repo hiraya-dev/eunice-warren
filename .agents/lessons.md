@@ -369,11 +369,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-038 — An async form state must survive the guest typing
 - **Date:** 2026-11-19
-- **Trigger:** #86 CHANGES_REQUIRED (the envelope and RSVP "Did you mean" state: a stale suggestion stayed on screen after typing, a late lookup response overwrote a newer name, a failed "Yes" kept resending the old suggestion, and an ignored stale response left the envelope's submit disabled)
+- **Trigger:** #86 CHANGES_REQUIRED (the envelope and RSVP "Did you mean" state: a stale suggestion stayed on screen after typing, a late lookup response overwrote a newer name, a failed "Yes" kept resending the old suggestion, and an ignored stale response left the envelope's submit disabled); #120 CHANGES_REQUIRED (the envelope's new pending status had a spec for the found outcome only, and its live region sat on a hint that the compact layout hides)
 - **Symptom:** a form that adds a state between submit and result (suggest, confirm, pending) shows or submits a value the guest has already replaced.
 - **Root cause:** each branch set its own part of the state (text, label, flag, `disabled`), and the input listener, the failure paths and the early return each reset only some of them.
-- **Rule:** keep one reset function per state and call it from the input listener, every failure branch and every early return; compare the submitted value with the current input before applying an async response; re-enable the submit control in `finally`, not per branch.
-- **Check:** a spec types after the new state appears and asserts the visible text, the button's accessible name and the hidden alert all reset; the submit button's `disabled = false` lives in `finally`.
+- **Rule:** keep one reset function per state and call it from the input listener, every failure branch and every early return; compare the submitted value with the current input before applying an async response; re-enable the submit control in `finally`, not per branch. A status that announces the state lives in a live region that is rendered at every width (a component with a separate compact hint needs one on each), and the brief names one spec assertion per outcome that clears it.
+- **Check:** a spec types after the new state appears and asserts the visible text, the button's accessible name and the hidden alert all reset; the submit button's `disabled = false` lives in `finally`; a pending-status spec covers found, suggestion, not found, error and typing, and asserts the live region `toBeVisible()` at a compact width (`tests/preloader.spec.ts` "restores an error hint when a retry is edited while pending").
 - **Guard:** none
 - **Paths:** `src/components/global/Preloader.astro`, `src/components/sections/Rsvp.astro`
 

@@ -83,6 +83,37 @@ test("getToken awaits an in-flight prefetch without rendering twice", async () =
   } finally { env.cleanup(); }
 });
 
+test("concurrent getToken calls share one widget and consume distinct tokens", async () => {
+  const env = setup();
+  try {
+    const controller = createTurnstileController(false);
+    const first = controller.getToken(env.container);
+    const second = controller.getToken(env.container);
+    await tick();
+    assert.equal(env.renders.length, 1);
+    env.renders[0].callback("first");
+    assert.equal(await first, "first");
+    await tick();
+    env.renders[0].callback("second");
+    assert.equal(await second, "second");
+    assert.equal(env.renders.length, 1);
+  } finally { env.cleanup(); }
+});
+
+test("close rejects concurrent getToken callers", async () => {
+  const env = setup();
+  try {
+    const controller = createTurnstileController(false);
+    const first = controller.getToken(env.container);
+    const second = controller.getToken(env.container);
+    await tick();
+    assert.equal(env.renders.length, 1);
+    controller.close();
+    await assert.rejects(first, /Turnstile unavailable/);
+    await assert.rejects(second, /Turnstile unavailable/);
+  } finally { env.cleanup(); }
+});
+
 test("stale prefetched and failed prefetched tokens are replaced with fresh executions", async () => {
   const env = setup();
   try {

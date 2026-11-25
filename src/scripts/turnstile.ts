@@ -18,7 +18,7 @@ export function createTurnstileController(fakeMode: boolean) {
   let prefetched: { token: string; createdAt: number } | undefined;
   let inFlight: Promise<string | undefined> | undefined;
   let resolvePending: ((token: string) => void) | undefined;
-  let rejectPending: ((reason: Error) => void) | undefined;
+  let rejectActive: ((reason: Error) => void) | undefined;
   const stale = (value: { createdAt: number }) => Date.now() - value.createdAt >= 280_000;
   const consumePrefetched = () => {
     const current = prefetched;
@@ -40,7 +40,7 @@ export function createTurnstileController(fakeMode: boolean) {
     if (closed) return Promise.reject(new Error("Turnstile unavailable"));
     return new Promise<string>((resolve, reject) => {
       resolvePending = resolve;
-      rejectPending = reject;
+      rejectActive = reject;
       void (async () => {
         try {
           await load();
@@ -58,13 +58,13 @@ export function createTurnstileController(fakeMode: boolean) {
                 prefetched = { token, createdAt: Date.now() };
                 resolvePending?.(token);
                 resolvePending = undefined;
-                rejectPending = undefined;
+                rejectActive = undefined;
               },
               "expired-callback": () => { prefetched = undefined; },
               "error-callback": () => {
-                const fail = rejectPending;
+                const fail = rejectActive;
                 resolvePending = undefined;
-                rejectPending = undefined;
+                rejectActive = undefined;
                 fail?.(new Error("Turnstile rejected"));
               },
             });
@@ -79,9 +79,9 @@ export function createTurnstileController(fakeMode: boolean) {
           if (closed) throw new Error("Turnstile unavailable");
           window.turnstile!.execute(widget);
         } catch (error) {
-          if (rejectPending === reject) {
+          if (rejectActive === reject) {
             resolvePending = undefined;
-            rejectPending = undefined;
+            rejectActive = undefined;
             reject(error instanceof Error ? error : new Error("Turnstile unavailable"));
           }
         }
@@ -96,27 +96,35 @@ export function createTurnstileController(fakeMode: boolean) {
   const getToken = async (container: HTMLElement) => {
     if (fakeMode) return "local-test-token";
     if (closed) throw new Error("Turnstile unavailable");
-    const ready = consumePrefetched();
-    if (ready) return ready;
-    prefetched = undefined;
-    const pending = inFlight;
-    if (pending) await pending;
-    const awaited = consumePrefetched();
-    if (awaited) return awaited;
-    inFlight = createToken(container).finally(() => { inFlight = undefined; });
-    const token = await inFlight;
-    const readyAfterCreate = consumePrefetched();
-    if (readyAfterCreate) return readyAfterCreate;
-    if (token) return token;
-    throw new Error("Turnstile unavailable");
+    while (true) {
+      const ready = consumePrefetched();
+      if (ready) return ready;
+      if (closed) throw new Error("Turnstile unavailable");
+      if (!inFlight) {
+        const execution = createToken(container);
+        const pending = execution.finally(() => {
+          if (inFlight === pending) inFlight = undefined;
+        });
+        inFlight = pending;
+        try {
+          await pending;
+        } catch (error) {
+          if (closed) throw new Error("Turnstile unavailable");
+          throw error;
+        }
+      } else {
+        await inFlight.catch(() => undefined);
+      }
+      if (closed) throw new Error("Turnstile unavailable");
+    }
   };
   const reset = () => { if (!fakeMode && !closed && widget !== undefined) window.turnstile?.reset(widget); };
   const close = () => {
     closed = true;
     prefetched = undefined;
-    rejectPending?.(new Error("Turnstile unavailable"));
+    rejectActive?.(new Error("Turnstile unavailable"));
     resolvePending = undefined;
-    rejectPending = undefined;
+    rejectActive = undefined;
     if (!fakeMode && widget !== undefined) window.turnstile?.remove(widget);
     widget = undefined;
   };

@@ -26,7 +26,7 @@ test.describe("guest preloader", () => {
   test("welcomes a remembered guest without looking them up", { tag: ["@single"] }, async ({ page }) => {
     await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
     const requests: string[] = [];
-    page.on("request", (request) => { if (request.url().includes("rsvp.find")) requests.push(request.url()); });
+    page.on("request", (request) => { if (/rsvp\.(find|greet)/.test(request.url())) requests.push(request.url()); });
     await page.reload();
     const overlay = preloader(page);
     await expect(overlay.getByRole("heading", { name: "Welcome back, Cruz Family." })).toBeVisible();
@@ -76,18 +76,68 @@ test.describe("guest preloader", () => {
   });
 
   test("announces a pending envelope lookup and clears it after the response", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
     await page.route(/\/_actions\/rsvp\.greet\/?$/, async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await held;
       await route.continue();
     });
     const overlay = preloader(page);
-    const hint = overlay.locator("[data-preloader-hint]");
+    const hint = overlay.locator("[data-preloader-hint-mobile]");
+    const initialHint = await hint.textContent();
+    await expect(hint).toBeVisible();
     await expect(hint).toHaveRole("status");
     await expect(hint).toHaveAttribute("aria-live", "polite");
-    await overlay.locator("[data-preloader-name]").fill("Mateo Cruz");
+    const name = overlay.locator("[data-preloader-name]");
+    await name.fill("Mateo Cruz");
     await overlay.getByRole("button", { name: "Open my letter" }).click();
     await expect(hint).toHaveText("Finding your invitation…");
-    await expect(overlay.getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
+    await name.fill("Nobody Example");
+    await expect(hint).toHaveText(initialHint!);
+    await expect(hint).not.toHaveText("Finding your invitation…");
+    release!();
+    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeEnabled();
+  });
+
+  test("restores an error hint when a retry is edited while pending", { tag: ["@single"] }, async ({ page }) => {
+    let requests = 0;
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(/\/_actions\/rsvp\.greet\/?$/, async (route) => {
+      requests += 1;
+      if (requests === 2) await held;
+      await route.continue();
+    });
+    const overlay = preloader(page);
+    const name = overlay.locator("[data-preloader-name]");
+    const hint = overlay.locator("[data-preloader-hint]");
+    const submit = overlay.getByRole("button", { name: /Open my letter|Try again/ });
+    await name.fill("Error Test");
+    await submit.click();
+    await expect(hint).toHaveText("Something went wrong. Please try again.");
+    await expect(hint).toHaveClass(/is-error/);
+    await submit.click();
+    await expect(hint).toHaveText("Finding your invitation…");
+    await name.fill("Error Test edited");
+    await expect(hint).toHaveText("Something went wrong. Please try again.");
+    await expect(hint).toHaveClass(/is-error/);
+    release!();
+    await expect(submit).toBeEnabled();
+  });
+
+  test("clears the pending status for not-found and suggestion outcomes", { tag: ["@single"] }, async ({ page }) => {
+    const overlay = preloader(page);
+    const hint = overlay.locator("[data-preloader-hint]");
+    await overlay.locator("[data-preloader-name]").fill("Nobody Example");
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    await expect(hint).toHaveText("Check the spelling, or try the name on your invitation.");
+    await expect(hint).toHaveClass(/is-error/);
+    await overlay.locator("[data-preloader-name]").fill("Matoe Cruz");
+    await overlay.getByRole("button", { name: "Try again" }).click();
+    await expect(overlay.getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
+    await expect(hint).toHaveText("Tap yes if that's the name on your invitation.");
     await expect(hint).not.toHaveText("Finding your invitation…");
   });
 
