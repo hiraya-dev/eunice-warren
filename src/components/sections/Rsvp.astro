@@ -1179,11 +1179,9 @@ const {
       font: var(--primary-regular) var(--text-small) / var(--line-height-huge)
         var(--primary-family);
     }
+    /* Held from the start: the live widget is 72px, so the buttons below stay put when it appears on submit. */
     .rsvp_turnstile {
-      min-height: 0;
-    }
-    .rsvp_turnstile:has(iframe) {
-      min-height: 4.0625rem;
+      min-height: 4.5rem;
     }
     .rsvp_text-link,
     .rsvp_back {
