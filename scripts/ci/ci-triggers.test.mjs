@@ -56,6 +56,18 @@ test("classify decides the tier from the labels API and checks an already-tested
   assert.match(classify, /node scripts\/ci\/already-tested\.mjs/);
 });
 
+test("a content-only diff stays on the smoke tier on every event", () => {
+  const classify = jobBlock("classify");
+  assert.match(classify, /content: \$\{\{ steps\.paths\.outputs\.content \}\}/);
+  assert.match(classify, /CONTENT: \$\{\{ steps\.paths\.outputs\.content \}\}/);
+  // The content check comes before the event and draft checks, so neither a
+  // ready PR nor a push to main promotes a content diff to the full tier.
+  const tier = classify.slice(classify.indexOf("Decide the test tier"));
+  const contentAt = tier.indexOf('"$CONTENT" == "true"');
+  assert.notEqual(contentAt, -1);
+  assert.ok(contentAt < tier.indexOf('"$EVENT" != "pull_request"'));
+});
+
 test("runtime runs the build, and e2e names its tier and runs it on two workers", () => {
   const build = jobBlock("build");
   assert.match(build, /npm run check/);

@@ -61,7 +61,7 @@ Return:
 
 ### TIER
 
-`full`, `workflow`, `docs`, or `trivial`
+`full`, `content`, `workflow`, `docs`, or `trivial`
 
 ### AXES JUDGED
 
