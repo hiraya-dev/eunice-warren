@@ -959,11 +959,25 @@ test("host IDs are a short slug of the invitation name and avoid collisions", ()
   assert.equal(generateHostId("Theo Cruz"), "theo-cruz");
   assert.equal(
     generateHostId("The Dela Cruz Family", ["dela-cruz"]),
-    "dela-cruz-2",
+    "dela-cruz-02",
   );
   assert.equal(
-    generateHostId("The Dela Cruz Family", ["DELA-CRUZ", "dela-cruz-2"]),
-    "dela-cruz-3",
+    generateHostId("The Dela Cruz Family", ["DELA-CRUZ", "dela-cruz-02"]),
+    "dela-cruz-03",
+  );
+  assert.equal(
+    generateHostId("The Dela Cruz Family", [
+      "dela-cruz",
+      "dela-cruz-02",
+      "dela-cruz-03",
+      "dela-cruz-04",
+      "dela-cruz-05",
+      "dela-cruz-06",
+      "dela-cruz-07",
+      "dela-cruz-08",
+      "dela-cruz-09",
+    ]),
+    "dela-cruz-10",
   );
   assert.equal(duplicateNameKey("  Ána   Dela Cruz "), "ana dela cruz");
 });

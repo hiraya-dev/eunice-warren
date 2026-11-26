@@ -101,7 +101,7 @@ export function slugifyName(value: string) {
 
 // The host ID is a short slug of the invitation name: "The Toledo Family" →
 // "toledo", "Jay R Nearents & family" → "jay-r-nearents". A taken ID (compared
-// without case) gets -2, -3….
+// without case) gets -02, -03…. Suffixes use at least two digits.
 export function generateHostId(
   invitationName: string,
   taken: Iterable<string> = [],
@@ -114,6 +114,6 @@ export function generateHostId(
   const used = new Set([...taken].map((value) => value.toLowerCase()));
   if (!used.has(base)) return base;
   let suffix = 2;
-  while (used.has(`${base}-${suffix}`)) suffix += 1;
-  return `${base}-${suffix}`;
+  while (used.has(`${base}-${String(suffix).padStart(2, "0")}`)) suffix += 1;
+  return `${base}-${String(suffix).padStart(2, "0")}`;
 }
