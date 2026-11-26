@@ -132,8 +132,6 @@ if (Astro.request.method === "POST") {
           ),
         );
         const postedDisplayName = String(form.get("display_name") ?? "");
-        // The posted name was suggested from the names that were posted, not
-        // from the name this request adds; compare with that suggestion.
         const postedSuggestion = suggestInvitationName(namesFromForm(form));
         newDraft = {
           displayName: postedDisplayName,
@@ -315,11 +313,6 @@ if (Astro.request.method === "POST") {
               : form.get("seat_action") === "remove"
                 ? -1
                 : 0;
-          // "Remove open seat" without JS submits remove_seat=<id> and comes
-          // back as a draft without that seat; with JS the row is removed in
-          // place. Both paths carry the ids already removed as removed_seat and
-          // have already taken the seat off seat_count, so the save counts it
-          // once and still runs when removed_seat is present.
           const removeNow = Number(form.get("remove_seat") ?? 0) || undefined;
           const removedIds = [
             ...form
@@ -544,8 +537,6 @@ if (!newDraft.label)
   );
 const archiveId = Astro.url.searchParams.get("archive");
 const newOpen = Astro.url.searchParams.get("new") === "1";
-// A POST re-render, or the redirect after Save and add another, continues the
-// drawer the host already had open, so it shows in place without sliding in.
 const drawerSettled =
   Astro.request.method === "POST" ||
   (newOpen && Boolean(Astro.url.searchParams.get("added")));
@@ -558,8 +549,6 @@ const takenHouseholds = view.rows.map((row) => ({
     .flatMap((seat) => [seat.name, seat.invitedName])
     .filter((name): name is string => Boolean(name)),
 }));
-// A refusal shows inside the open edit or new row, above its bottom line; any
-// other failure (an archive, a failed load) keeps the page-level notice.
 const errorInRow =
   Boolean(writeError) &&
   (newOpen || view.rows.some((row) => row.id === editId));
@@ -991,8 +980,6 @@ const editSeats = (row: AdminHousehold) => {
         const popover = menu.querySelector<HTMLElement>(".admin_guests_popover");
         const tabbar = document.querySelector("[data-admin-tabbar]");
         const bottom = window.innerHeight - (tabbar?.getBoundingClientRect().height ?? 0);
-        // Layout height, not the box: the entrance scales the popover from the
-        // top, so its painted bottom is short of where it settles.
         if (popover && popover.getBoundingClientRect().top + popover.offsetHeight > bottom)
           menu.setAttribute("data-up", "");
       }
@@ -1222,8 +1209,6 @@ const editSeats = (row: AdminHousehold) => {
     const panel = drawer.querySelector<HTMLElement>(".admin-drawer_panel");
     let finished = false;
     const finish = () => {
-      // A reopen mid-exit already removed this drawer; its timer must not
-      // unlock the page or stop tracking under the new one.
       if (finished || !drawer.isConnected) return;
       finished = true;
       panel?.removeEventListener("animationend", onAnimationEnd);
@@ -1244,7 +1229,6 @@ const editSeats = (row: AdminHousehold) => {
     panel?.addEventListener("animationend", onAnimationEnd);
     window.setTimeout(finish, 300);
   };
-  // Callers confirm a dirty discard first; popstate has already asked.
   const beginDrawerClose = (pushHistory: boolean) => {
     if (pushHistory) {
       const url = new URL(location.href);
@@ -1280,8 +1264,6 @@ const editSeats = (row: AdminHousehold) => {
       if (push) history.pushState(null, "", href);
       setDrawerOpen(true);
       hydrateDrawer(next);
-      // The discard was for the drawer just replaced; the new one starts clean,
-      // and its stepper/switch changes fire no input event to clear the flag.
       discardConfirmed = false;
       syncLinks();
       next.querySelector<HTMLElement>("h2")?.focus();
@@ -1459,11 +1441,7 @@ const editSeats = (row: AdminHousehold) => {
     );
     if (!form) return;
     trackKeyboard(drawer);
-    // The no-JS "Add" button is hidden once the script owns Enter.
     form.dataset.js = "true";
-    // A drawer the server re-rendered after a refused save holds a draft that
-    // was never stored, so it starts dirty. Read this before sync(): sync()
-    // shows the duplicate warning for any shared name, refused or not.
     const refusedOnLoad = Boolean(
       form.querySelector("[data-admin-write-error]") ||
         form.querySelector("[data-duplicate-warning]:not([hidden])"),
@@ -1562,8 +1540,6 @@ const editSeats = (row: AdminHousehold) => {
       if (warning) warning.hidden = false;
     };
     const seatNames = () => allNames();
-    // Invited members only: the suggestion and the host ID never use a
-    // plus-one's name.
     const memberNames = () =>
       isEdit
         ? [
@@ -1606,8 +1582,6 @@ const editSeats = (row: AdminHousehold) => {
       }
       const members = memberNames();
       const nextSuggestion = suggestInvitationName(members);
-      // The ID follows the invitation name (typed or suggested) until the host
-      // uses Edit ID; an existing household keeps its ID.
       const idSource = invitation?.dataset.edited
         ? invitation.value
         : nextSuggestion;
@@ -1718,7 +1692,6 @@ const editSeats = (row: AdminHousehold) => {
           if (buttonValue === "on") {
             count.value = String(Math.min(12, names + 1));
           } else if (form.dataset.variant === "new") {
-            // Add has no seat rows: open seats are seat_count minus the names.
             count.value = String(Math.max(1, names));
           } else {
             const removable = [
@@ -1745,8 +1718,6 @@ const editSeats = (row: AdminHousehold) => {
               }
               row.remove();
             }
-            // Off also drops open seats added in this draft (they have no row
-            // yet); the seats left are the rows that remain.
             count.value = String(
               Math.max(
                 1,
@@ -1815,7 +1786,6 @@ const editSeats = (row: AdminHousehold) => {
         sync();
       }
       if (target.closest("[data-confirm-duplicate]")) {
-        // With JS the confirmation stays in the draft; the submit is the no-JS path.
         event.preventDefault();
         const names = allNames();
         const duplicate = names.find((name) =>
