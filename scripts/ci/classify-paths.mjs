@@ -74,6 +74,17 @@ const WORKFLOW_DIRECTORIES = [
 
 const DOCS_FILES = new Set([".gitignore", ".gitkeep"]);
 
+// Content collection data (wording, names, list order, hidden flags). A diff of
+// only these files is still runtime, so build and e2e run, but it routes
+// `content`: CI runs the smoke tier on every event and the PR merges on PASS
+// with no Local review (CLAUDE.md **Roles**). Anything else in the diff,
+// images and schemas included, makes it plain runtime.
+const CONTENT_DATA = /^src\/content\/[^/].*\.json$/;
+
+export function isContentData(path) {
+  return CONTENT_DATA.test(path) && !path.split("/").includes("..");
+}
+
 function isUnder(path, directory) {
   return path.startsWith(`${directory}/`);
 }
@@ -127,8 +138,13 @@ export function classifyPaths(files) {
     reasons.push("nothing changed");
   }
 
+  const content = paths.length > 0 && paths.every(isContentData);
+
   let route;
-  if (runtime) {
+  if (content) {
+    route = "content";
+    reasons.unshift("only content collection data changed");
+  } else if (runtime) {
     route = "runtime";
     reasons.unshift("runtime-affecting files changed");
   } else if (workflow) {
@@ -139,7 +155,7 @@ export function classifyPaths(files) {
     if (paths.length > 0) reasons.unshift("documentation or ignored metadata changed");
   }
 
-  return { route, reasons, runtime, workflow, docs };
+  return { route, reasons, runtime, workflow, docs, content };
 }
 
 async function readCliFiles() {
@@ -159,6 +175,7 @@ async function main() {
     `runtime=${result.runtime}`,
     `workflow=${result.workflow}`,
     `docs=${result.docs}`,
+    `content=${result.content}`,
     `reasons=${result.reasons.join("; ")}`,
   ].join("\n") + "\n";
 

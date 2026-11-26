@@ -49,6 +49,19 @@ const cases = [
   ["unknown foo/bar.txt → runtime", ["foo/bar.txt"], "runtime"],
   ["committed dist/ fails closed → runtime", ["dist/index.html"], "runtime"],
   ["[] → docs", [], "docs"],
+  ["src/content/faq/rsvp.json only → content", ["src/content/faq/rsvp.json"], "content"],
+  [
+    "several content JSON files → content",
+    ["src/content/entourage/entourage.json", "src/content/explore/bulabog.json"],
+    "content",
+  ],
+  ["content JSON + a section component → runtime", ["src/content/faq/rsvp.json", "src/components/sections/Faq.astro"], "runtime"],
+  ["content JSON + content.config.ts → runtime", ["src/content/faq/rsvp.json", "src/content.config.ts"], "runtime"],
+  ["content JSON + an image → runtime", ["src/content/explore/bulabog.json", "src/assets/images/explore/bulabog.jpg"], "runtime"],
+  ["image under src/content → runtime", ["src/content/explore/photo.jpg"], "runtime"],
+  ["content JSON + README.md → runtime", ["src/content/faq/rsvp.json", "README.md"], "runtime"],
+  ["content JSON + CLAUDE.md → runtime", ["src/content/faq/rsvp.json", "CLAUDE.md"], "runtime"],
+  ["path traversal out of src/content → runtime", ["src/content/../pages/x.json"], "runtime"],
 ];
 
 for (const [name, files, route] of cases) {
@@ -56,6 +69,17 @@ for (const [name, files, route] of cases) {
     assert.equal(classifyPaths(files).route, route);
   });
 }
+
+test("content keeps runtime true, so build and e2e still run", () => {
+  const result = classifyPaths(["src/content/faq/rsvp.json"]);
+  assert.equal(result.content, true);
+  assert.equal(result.runtime, true);
+});
+
+test("plain runtime is not content", () => {
+  assert.equal(classifyPaths(["src/pages/index.astro"]).content, false);
+  assert.equal(classifyPaths([]).content, false);
+});
 
 test("empty list reason says nothing changed", () => {
   assert.ok(classifyPaths([]).reasons.includes("nothing changed"));
@@ -66,6 +90,7 @@ function assertWorkflowOutput(output) {
   assert.match(output, /^runtime=false$/m);
   assert.match(output, /^workflow=true$/m);
   assert.match(output, /^docs=true$/m);
+  assert.match(output, /^content=false$/m);
 }
 
 test("CLI output contains GitHub Actions key=value lines", () => {

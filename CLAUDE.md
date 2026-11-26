@@ -32,10 +32,14 @@ stops (**Approval**) and confirmations before destructive actions still win;
 
 ## Roles
 
-Three change classes, read from the diff (`local-checks` **CI routes**):
+Four change classes, read from the diff (`local-checks` **CI routes**):
 
 - **Trivial**: the `docs` and `workflow` routes. A ready PR, `pr-reviewer`, merge on
   PASS. No Local review.
+- **Content**: the `content` route, a diff of only `src/content/**/*.json` (wording,
+  names, list order, `hidden` flags). A ready PR, `pr-reviewer`, merge on PASS and a
+  green smoke-tier `gate`. No Local review (user, 2026-11-26). A new image or schema
+  field makes it **Normal**.
 - **Normal**: `runtime`. A draft PR, `pr-reviewer` in parallel with CI, Local review.
 - **Risky**: `runtime` touching the RSVP or song actions and stores
   (`src/actions/**`, `src/lib/**`, `src/pages/api/**`), dependencies, or root config
@@ -138,14 +142,14 @@ unless they belong to it.
 5. Review the returned diff, then `local-checks`: `npm run prepush && git push …`
    before every push; a new or changed spec runs once, by its author. CI runs the
    full Playwright suite, never a local gate.
-6. Open the PR: `runtime` as a draft (`gh pr create --draft --base main`), `docs`
-   and `workflow` ready. `link_pull_request`, then start `review-pr` at once.
+6. Open the PR: `runtime` as a draft (`gh pr create --draft --base main`), `docs`,
+   `workflow` and `content` ready. `link_pull_request`, then start `review-pr` at once.
 7. Merge per `review-pr` **Verdicts** and **Merging**: a posted `PASS` on the head,
    green `gate` on it, the branch up to date with `origin/main`, and "ship it" for
-   `runtime`; `gh pr merge <pr> --squash`. Otherwise hand the PR to the user.
+   `runtime` (not `content`); `gh pr merge <pr> --squash`. Otherwise hand the PR to the user.
 
 "CI is green" means the `gate` job of the `CI` workflow passed on the head commit; a
-skipped `gate` is never green. A `runtime` merge needs the full tier (a draft runs
+skipped `gate` is never green. A `runtime` merge (not `content`) needs the full tier (a draft runs
 `@smoke`; `gh pr ready` starts the full run). Any new push voids the head's CI result
 and verdict. `main` has no branch protection, so every merge gate is self-enforced.
 

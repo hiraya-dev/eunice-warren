@@ -16,6 +16,10 @@ name: CI
 #           sharded two ways with one worker each; full tier only.
 #           webkit: the @smoke tests on WebKit (iPhone 14 Safari) in a job of
 #           its own at one worker; full tier only.
+# content   a runtime diff of only src/content/**/*.json (wording, names, list
+#           order, hidden flags): build and the smoke tier on every event, never
+#           the full tier. The schemas in src/content.config.ts reject a bad
+#           file at build time, and specs never pin site copy (L-017).
 # workflow  checks: Markdown lint, routing, CI-script, hook and lessons tests,
 #           the spec map, the lessons ledger, and actionlint.
 # docs      checks: Markdown lint only.
@@ -56,6 +60,7 @@ jobs:
       runtime: ${{ steps.paths.outputs.runtime }}
       workflow: ${{ steps.paths.outputs.workflow }}
       docs: ${{ steps.paths.outputs.docs }}
+      content: ${{ steps.paths.outputs.content }}
       full: ${{ steps.tier.outputs.full }}
       playwright: ${{ steps.playwright.outputs.version }}
     steps:
@@ -99,10 +104,13 @@ jobs:
           DRAFT: ${{ github.event.pull_request.draft }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUNTIME: ${{ steps.paths.outputs.runtime }}
+          CONTENT: ${{ steps.paths.outputs.content }}
         run: |
           full=false
           if [[ "$RUNTIME" == "true" ]]; then
-            if [[ "$EVENT" != "pull_request" ]]; then
+            if [[ "$CONTENT" == "true" ]]; then
+              echo "Content data only: smoke tier on every event."
+            elif [[ "$EVENT" != "pull_request" ]]; then
               full=true; echo "Not a pull request: full tier."
             elif [[ "$DRAFT" != "true" ]]; then
               full=true; echo "Ready pull request: full tier."
