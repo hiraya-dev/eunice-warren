@@ -73,6 +73,29 @@ test.describe("Playlist section", () => {
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
   });
 
+  test("caps request fields and hides input validation details", { tag: ["@single"] }, async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    for (const field of ["name", "song", "artist"] as const) {
+      const input = form.locator(`input[name="${field}"]`);
+      await expect(input).toHaveAttribute("maxlength", "120");
+      await input.pressSequentially("x".repeat(200));
+      await expect(input).toHaveValue("x".repeat(120));
+    }
+    const dedication = form.locator('textarea[name="dedication"]');
+    await expect(dedication).toHaveAttribute("maxlength", "500");
+    await dedication.pressSequentially("x".repeat(600));
+    await expect(dedication).toHaveValue("x".repeat(500));
+    await form.locator('input[name="name"]').evaluate((input) => input.removeAttribute("maxlength"));
+    await form.locator('input[name="name"]').fill("x".repeat(200));
+    await form.locator('input[name="song"]').fill("Dancing Queen");
+    await form.locator("button[type=submit]").click();
+    const error = page.locator('.playlist_form-wrap .form_note-failed[role="alert"]');
+    await expect(error).toBeVisible();
+    await expect(error).not.toContainText(/Failed to validate|too_big|\{/);
+  });
+
   test("drops the picked track ID when the song is edited", async ({ page }) => {
     await page.goto("/");
     const form = page.locator('form[name="song-request"]');

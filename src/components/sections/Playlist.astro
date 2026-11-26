@@ -172,6 +172,7 @@ const copy = data.copy;
           name="name"
           placeholder=""
           required
+          maxlength="120"
         /><div class="song-search_field"><Input
           appearance="postcard"
           label={copy.songLabel}
@@ -184,17 +185,20 @@ const copy = data.copy;
           aria-autocomplete="list"
           aria-expanded="false"
           aria-controls="song-request-suggestions"
+          maxlength="120"
         /><div class="song-search_popup" data-song-search-popup hidden><div id="song-request-suggestions" class="song-search_list" role="listbox" aria-label={copy.suggestionsLabel}></div><div class="song-search_footer"><span>{copy.notListed}</span><a class="song-search_credit" href="https://open.spotify.com/" target="_blank" rel="noopener" aria-label={copy.spotifyLink} data-song-search-credit><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 9.5c3.8-1 7.1-.5 10 1M7.5 13c3.1-.7 5.8-.3 8.4 1M8.5 16c2.2-.3 4.1.1 5.9 1"/></svg><span>{copy.spotifyBrand}</span></a></div></div><div class="sr-only" aria-live="polite" data-song-search-live></div></div><input type="hidden" name="spotifyTrackId" /><input type="hidden" name="coverUrl" /><Input
           appearance="postcard"
           label={copy.artistLabel}
           name="artist"
           placeholder={copy.artistPlaceholder}
+          maxlength="120"
         /><Textarea
           appearance="postcard"
           label={copy.dedicationLabel}
           name="dedication"
           minLines={4}
           maxLines={6}
+          maxlength="500"
         /><button class="playlist_submit" type="submit">{copy.submit}</button
         ><div class="playlist_turnstile" data-playlist-turnstile></div>
       </div>
@@ -205,7 +209,7 @@ const copy = data.copy;
 
 <script>
   import { getGuest } from "@/lib/guest";
-  import { actions } from "astro:actions";
+  import { actions, isInputError } from "astro:actions";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
   import copy from "@/content/playlist/playlist.json";
   const initPlaylist = () => {
@@ -264,7 +268,10 @@ const copy = data.copy;
       try {
         const value = (field: string) => (form.elements.namedItem(field) as HTMLInputElement | HTMLTextAreaElement).value;
         const result = await actions.songs.submit({ name: value("name"), song: value("song"), artist: value("artist") || undefined, dedication: value("dedication") || undefined, spotifyTrackId: value("spotifyTrackId") || undefined, coverUrl: value("coverUrl") || undefined, turnstileToken: await turnstile.getToken(section.querySelector<HTMLElement>("[data-playlist-turnstile]")!) });
-        if (result.error) throw new Error(result.error.message);
+        if (result.error) {
+          if (isInputError(result.error)) throw new Error(copy.copy.fieldsTooLong);
+          throw new Error(result.error.message);
+        }
         if (wrap) wrap.dataset.state = "sent";
         form.reset(); clearPicked(); dismissSuggestions();
       } catch (error) {

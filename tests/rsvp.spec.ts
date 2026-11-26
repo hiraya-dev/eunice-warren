@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { fakeFixtures } from "../src/lib/rsvp/store.ts";
 import { reveal } from "./helpers/reveal.ts";
+
+const rsvpContent = JSON.parse(readFileSync("src/content/rsvp/rsvp.json", "utf8")) as { copy: { nameTooLong: string } };
 
 const garciaLock = join(
   tmpdir(),
@@ -50,6 +52,56 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator("[data-rsvp-intro]")).toContainText(
       "December 14",
     );
+  });
+
+  test("caps RSVP names, including seat renames, and hides input validation details", { tag: ["@single"] }, async ({ page }) => {
+    const name = rsvp(page).locator("[data-rsvp-name]");
+    await expect(name).toHaveAttribute("maxlength", "120");
+    await name.pressSequentially("x".repeat(200));
+    await expect(name).toHaveValue("x".repeat(120));
+    await name.evaluate((input) => input.removeAttribute("maxlength"));
+    await name.fill("x".repeat(200));
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    const error = rsvp(page).locator("[data-rsvp-name-error]");
+    await expect(error).toBeVisible();
+    await expect(error).not.toContainText(/Failed to validate|too_big|\{/);
+
+    await name.fill("Mateo Cruz");
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await expect(rsvp(page).locator("[data-rsvp-panel='2']")).toBeVisible();
+    const edit = rsvp(page).locator("[data-rsvp-seat-list] button").first();
+    await edit.click();
+    const seatName = rsvp(page).locator("input[id^='rsvp-seat-name-']").first();
+    await expect(seatName).toHaveAttribute("maxlength", "120");
+    await seatName.fill("");
+    await seatName.pressSequentially("x".repeat(200));
+    await expect(seatName).toHaveValue("x".repeat(120));
+    await seatName.evaluate((input) => input.removeAttribute("maxlength"));
+    await seatName.fill("x".repeat(200));
+    await rsvp(page).getByRole("button", { name: "Done" }).click();
+    await rsvp(page).locator("#rsvp-seat-0").check();
+    await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+    await rsvp(page).locator("#rsvp-email").fill("long-name@example.com");
+    await chooseSlippers(page);
+    await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
+    const submitError = rsvp(page).locator("[data-rsvp-submit-error]");
+    await expect(submitError).toBeVisible();
+    await expect(submitError).not.toContainText(/Failed to validate|too_big|\{/);
+  });
+
+  test("uses neutral copy for a non-name RSVP input error", { tag: ["@single"] }, async ({ page }) => {
+    await rsvp(page).locator("[data-rsvp-name]").fill("Mateo Cruz");
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await expect(rsvp(page).locator("[data-rsvp-panel='2']")).toBeVisible();
+    await rsvp(page).locator("#rsvp-seat-0").check();
+    await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+    await rsvp(page).locator("#rsvp-email").fill("me@localhost");
+    await chooseSlippers(page);
+    await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
+    const submitError = rsvp(page).locator("[data-rsvp-submit-error]");
+    await expect(submitError).toBeVisible();
+    await expect(submitError).not.toContainText(/Failed to validate|too_big|\{/);
+    await expect(submitError).not.toHaveText(rsvpContent.copy.nameTooLong);
   });
 
   test("shows a stable busy spinner without changing the button name", { tag: ["@single"] }, async ({ page }) => {

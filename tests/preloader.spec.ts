@@ -19,6 +19,20 @@ test.describe("guest preloader", () => {
     await expect(preloader(page).locator("[data-preloader-name]")).toBeFocused();
   });
 
+  test("caps the envelope name and hides input validation details", { tag: ["@single"] }, async ({ page }) => {
+    const overlay = preloader(page);
+    const name = overlay.locator("[data-preloader-name]");
+    await expect(name).toHaveAttribute("maxlength", "120");
+    await name.pressSequentially("x".repeat(200));
+    await expect(name).toHaveValue("x".repeat(120));
+    await name.evaluate((input) => input.removeAttribute("maxlength"));
+    await name.fill("x".repeat(200));
+    await overlay.getByRole("button", { name: "Open my letter" }).click();
+    const hint = overlay.locator("[data-preloader-hint]");
+    await expect(hint).toBeVisible();
+    await expect(hint).not.toContainText(/Failed to validate|too_big|\{/);
+  });
+
   test("shows the blank envelope again after a skipped visit", { tag: ["@single"] }, async ({ page }) => {
     await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
     await page.reload();
