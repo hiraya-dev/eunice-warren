@@ -15,7 +15,6 @@ export interface SendEmailMessage {
   html: string;
 }
 
-/** Minimal shape of the Cloudflare Email Service Workers binding used here. */
 export interface SendEmailBinding {
   send(message: SendEmailMessage): Promise<void>;
 }

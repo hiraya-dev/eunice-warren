@@ -1,4 +1,4 @@
-# 0011: The Git and dependency hooks parse commands instead of matching text
+# 0014: The Git and dependency hooks parse commands instead of matching text
 
 - **Status:** accepted
 - **Date:** 2026-11-26

@@ -182,7 +182,6 @@ export const fakeAdminFixtures: AdminHousehold[] = [
     rsvp: { state: "waiting" },
   },
   {
-    // Owned by the host RSVP edit specs in admin-rsvps.spec.ts (L-022).
     id: "hh-rsvp-editor",
     label: "RSVP_EDITOR_FIXTURE",
     displayName: "Reply Editor Family",
@@ -621,7 +620,6 @@ export function createFakeAdminStore(): AdminStore {
   async function getSlipperOrder(): Promise<AdminSlipperOrder> {
     const counts = new Map<string, number>();
     let missing = 0;
-    // Sizes come from each household's newest reply, as in the D1 store.
     for (const row of activeFixtures().map(makeFakeRsvpRow))
       if (row.state === "attending")
         for (const current of row.seats.filter((seat) => seat.coming)) {
@@ -1103,7 +1101,6 @@ export function createFakeAdminStore(): AdminStore {
       chronological.map((row, index) => [row.id, index + 1]),
     );
     return {
-      // Newest first, like the D1 store (created_at desc, id desc).
       rows: [...chronological].reverse().map((row) => ({
         ...row,
         no: numbers.get(row.id) ?? 0,
@@ -1133,8 +1130,6 @@ export function createFakeAdminStore(): AdminStore {
             (sum, row) => sum + row.seatCount,
             0,
           ),
-          // Seats, not households, and never a declined household's seat,
-          // matching getUnnamedPlusOneCount on D1.
           unnamedPlusOnes: activeFixtures()
             .filter((row) => row.rsvp.state !== "declined")
             .flatMap((row) => activeSeats(row))

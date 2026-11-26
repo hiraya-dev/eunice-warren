@@ -16,8 +16,6 @@ export interface HouseholdSummary {
 
 export async function getHouseholdSummary(database: D1Database): Promise<HouseholdSummary> {
   const db = getDb(database);
-  // Drizzle cannot express the correlated newest-response CTE and its several
-  // indexed dashboard aggregates as one SQLite query.
   const [row] = await db.all(sql`WITH active_seats AS (
       SELECT s.* FROM invite_seats s
       JOIN households h ON h.id = s.household_id AND h.status = 'active'
@@ -68,9 +66,6 @@ export interface PlusOneState {
 
 export async function getUnnamedPlusOneCount(database: D1Database): Promise<number> {
   const db = getDb(database);
-  // This focused count lets D1 start at the (kind, name) index and probe only
-  // the newest response for each unnamed plus-one, instead of materialising the
-  // rest of the dashboard summary.
   const rows = await db.all(sql`SELECT count(*) AS count
     FROM invite_seats s
     JOIN households h ON h.id = s.household_id AND h.status = 'active'
@@ -95,8 +90,6 @@ export async function getUnnamedPlusOneCount(database: D1Database): Promise<numb
 
 export async function getPlusOneStates(database: D1Database, householdId?: string): Promise<PlusOneState[]> {
   const db = getDb(database);
-  // The newest-response anti-join is intentionally SQL so SQLite can use the
-  // household/submitted-at index for each plus-one state.
   const rows = await db.all(sql`SELECT s.id AS seat_id, s.name, s.named_by, s.named_by_kind, s.named_at,
       CASE WHEN latest.attending = 1 AND latest_seat.attending = 0 THEN 'freed'
            WHEN s.name IS NULL THEN 'open' ELSE 'named' END AS state

@@ -23,6 +23,12 @@ rules in comments until ADR 0002.
   posted, not from the name the same request adds.
 - The host ID follows the invitation name, typed or suggested, until the host
   uses Edit ID. An existing household keeps its ID.
+- `generateHostId` (`src/lib/admin/names.ts`) makes the host ID from the
+  invitation name's surname in capitals plus a two-digit counter: "The Toledo
+  Family" → `TOLEDO-01`. Taken IDs are compared without case, and a taken ID
+  moves to the next free counter.
+- `adminHistoryHeading` (`src/lib/admin/presentation.ts`) leaves out a host edit's
+  "by host · email", which the history renders separately so it can be coloured.
 - Add has no seat rows: open seats are `seat_count` minus the names. Turning the
   plus-one off also drops open seats added in this draft (they have no row yet);
   the seats left are the rows that remain.

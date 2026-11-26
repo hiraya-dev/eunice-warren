@@ -670,3 +670,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** `ls docs/decisions | cut -c1-4 | uniq -d` prints nothing.
 - **Guard:** none
 - **Paths:** `docs/decisions/**`
+
+### L-073 — An ADR moved from a comment states only what the code does
+- **Date:** 2026-11-26
+- **Trigger:** #169 CHANGES_REQUIRED (ADR 0013 said `guard` answers platform errors with `FORBIDDEN` or `TOO_MANY_REQUESTS`; it throws `INTERNAL_SERVER_ERROR`)
+- **Symptom:** the ADR that replaced a deleted comment described the error codes, an input attribute and a date wrongly, so the record was less true than the comment it replaced.
+- **Root cause:** the ADR prose was written from the comment and memory, adding detail around it without reading the code it named.
+- **Rule:** each ADR sentence moved from a comment is checked against the named symbol before the push; context added around it (dates, attributes, codes) cites the line it comes from or is left out.
+- **Check:** for every symbol an ADR names, open it and confirm the sentence; no date in an ADR without a source in the repo.
+- **Guard:** none
+- **Paths:** `docs/decisions/**`

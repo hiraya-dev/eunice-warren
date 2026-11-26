@@ -1,4 +1,4 @@
-# 0012: The Playwright harness tests the fake-store build on a per-checkout port
+# 0015: The Playwright harness tests the fake-store build on a per-checkout port
 
 - **Status:** accepted
 - **Date:** 2026-11-26
