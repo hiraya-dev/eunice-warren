@@ -86,6 +86,11 @@ const fromBase64Url = (value: string) => {
 
 export const isRsvpClosed = (now = Date.now()) => now > RSVP_DEADLINE_TIME;
 
+export type RsvpAction = "find" | "greet" | "submit";
+
+export const isRsvpActionClosed = (action: RsvpAction, now = Date.now()) =>
+  action !== "greet" && isRsvpClosed(now);
+
 export interface SubmissionProblem {
   seatId?: number;
   field: "answer" | "seats" | "name" | "slipperSize" | "note";
