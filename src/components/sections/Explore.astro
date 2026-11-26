@@ -38,9 +38,14 @@ const stickers = {
       aria-label="Field notes"
     >
       <header class="explore_header" data-fade-in>
-        <h2 class="explore_title" data-fade-in-item>
-          Field notes<br />on Boracay
-        </h2>
+        <div class="explore_heading">
+          <h2 class="explore_title" data-fade-in-item>
+            Field notes<br />on Boracay
+          </h2>
+          <p class="explore_disclaimer" data-fade-in-item>
+            A few ideas for your free time on the island. Book and pay on your own.
+          </p>
+        </div>
         <div class="explore_stamp" data-fade-in-item><Stamp><Image src={stamp} alt="" aria-hidden="true" width={100} height={129} densities={[1, 2]} loading="lazy" /></Stamp></div>
         <div
           class="explore_controls explore_controls-header"
@@ -182,6 +187,18 @@ const stickers = {
       font: var(--secondary-regular) var(--h1) / var(--line-height-medium)
         var(--secondary-family);
       letter-spacing: var(--letter-spacing-tight);
+    }
+    .explore_heading {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .explore_disclaimer {
+      max-width: 28rem;
+      margin: 0;
+      color: var(--dark-700);
+      font: var(--primary-regular) var(--text-small) / var(--line-height-large)
+        var(--primary-family);
     }
     .explore_stamp {
       position: absolute;
