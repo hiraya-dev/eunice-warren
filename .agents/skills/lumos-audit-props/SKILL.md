@@ -51,6 +51,13 @@ explanation. `class` is exempt; it explains itself.
 order the props were declared. When they disagree, one of the two is the
 intended order and the other is drift.
 
+**What the script reads.** Only type declarations in the frontmatter: scanning
+all of it reads object literals and lookup tables as props. An `interface` is read
+to its closing brace and a `type` to its semicolon at depth zero, so a union's
+props on every branch count. A `type` that holds no props (`type Tag = "span" |
+"p"`) is a vocabulary, not a shape, and does not make a component "span several
+aliases". A prop typed `never` belongs to another variant branch and is skipped.
+
 ## Reading the findings
 
 Fix the cheap ones directly: a missing tooltip, a `@min` that was never added,

@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-/**
- * Checks that the component API reads as one API.
- *
- * Two things drift once a library has more than a few components: the order
- * props are declared in, and the words used to describe the same prop twice.
- * Neither breaks a build, both are felt every time someone types `<` and reads
- * the autocomplete.
- *
- * Nothing here is rewritten — the fixes are judgement calls about wording and
- * intent. This reports, and the skill decides.
- *
- * Usage: node audit-props.mjs [src/components] [--json]
- */
 
 import { readdirSync, statSync, readFileSync } from "node:fs";
 import { join, relative, extname } from "node:path";
@@ -33,21 +20,13 @@ function walk(dir, out = []) {
   return out;
 }
 
-/** Props in declaration order, each with the doc comment above it. */
 function readComponent(file) {
   const src = readFileSync(file, "utf8");
   const fm = src.startsWith("---") ? src.split("---")[1] : "";
   const props = [];
   const seen = new Set();
 
-  /* Only look inside type declarations. Scanning the whole frontmatter reads
-     object literals as props — a `const marks = { play, close, arrow }` is not
-     an API, and neither is a lookup table of variant names. */
   const blocks = [];
-  /* Capture a whole declaration: `interface X { … }` by brace matching, and
-     `type X = … ;` to its terminating semicolon at depth zero. A union spreads
-     its props over several branches, and cutting at the first branch loses the
-     documented ones. */
   for (const decl of fm.matchAll(/\b(interface|type)\s+(\w+)/g)) {
     let i = decl.index;
     let depth = 0;
@@ -58,13 +37,11 @@ function readComponent(file) {
       else if (ch === "}" || ch === ")") {
         depth--;
         if (started && depth === 0 && decl[1] === "interface") { i++; break; }
-      } else if (ch === ";" && depth === 0) { break; } // also ends a brace-less union
+      } else if (ch === ";" && depth === 0) { break; }
     }
     blocks.push(fm.slice(decl.index, i + 1));
   }
   const re = /(?:\/\*\*([\s\S]*?)\*\/\s*)?^(\s{2,8})([a-zA-Z_]\w*)(\?)?:\s*([^\n]+)$/gm;
-  /* Only a declaration that actually holds props counts towards "spans a
-     union" — a bare `type Tag = "span" | "p"` is a vocabulary, not a shape. */
   let blocksWithProps = 0;
   for (const block of blocks) {
     const before = props.length;
@@ -72,7 +49,6 @@ function readComponent(file) {
       const [, doc, , name, , type] = m;
       if (name === "type" && /^\s*(never|"[^"]*")/.test(type)) continue;
       if (seen.has(name)) continue;
-      /* `never` marks a prop that belongs to a different variant branch. */
       if (/^never;?$/.test(type.trim())) continue;
       seen.add(name);
       props.push({
@@ -95,7 +71,6 @@ function readComponent(file) {
 
 const components = walk(root).map(readComponent).filter((c) => c.props.length);
 
-/* ---------- 1. render, the one prop every component shares ---------- */
 const renderIssues = [];
 const renderAdvisories = [];
 for (const c of components) {
@@ -109,15 +84,7 @@ for (const c of components) {
     renderIssues.push([c.file, `render's wording differs: "${c.props[0].doc ?? "(none)"}"`]);
 }
 
-/* ---------- 2. relative order of props that co-occur ----------
-   For every pair of prop names appearing together in two or more components,
-   the order should be the same everywhere. Where it is not, the majority is
-   the convention and the rest are the drift. */
 const pairOrder = new Map();
-/* A discriminated union writes its branches in the order the variants demand:
-   the discriminant leads each branch, and shared props sit in a base type.
-   There is no single declaration order to compare, so these are listed for a
-   hand read instead of being reported as drift. */
 const unionComponents = components.filter((c) => c.multiBlock).map((c) => c.file);
 for (const c of components) {
   if (c.multiBlock) continue;
@@ -125,7 +92,7 @@ for (const c of components) {
   for (let i = 0; i < names.length; i++) {
     for (let j = i + 1; j < names.length; j++) {
       const [a, b] = [names[i], names[j]];
-      if (a === "render" || b === "render") continue; // covered by its own check
+      if (a === "render" || b === "render") continue;
       const key = [a, b].sort().join("|");
       const forward = key.split("|")[0] === a;
       const entry = pairOrder.get(key) ?? { forward: [], backward: [] };
@@ -137,7 +104,6 @@ for (const c of components) {
 const orderConflicts = [];
 for (const [key, { forward, backward }] of pairOrder) {
   if (!forward.length || !backward.length) continue;
-  /* One against one is not a convention, it is a coin toss. */
   if (Math.max(forward.length, backward.length) < 2) continue;
   if (forward.length === backward.length) continue;
   const [a, b] = key.split("|");
@@ -153,10 +119,6 @@ for (const [key, { forward, backward }] of pairOrder) {
 }
 orderConflicts.sort((x, y) => y.majority - x.majority || y.offenders.length - x.offenders.length);
 
-/* ---------- 3. how docs are written ----------
-   The prose differs by necessity. The shape should not: selectable props
-   describe the decision without duplicating their values, scalar defaults use
-   a sentence, and numbers state their range. */
 const optionLists = [];
 const numberNoRange = [];
 
@@ -202,17 +164,15 @@ if (numberNoRange.length) {
   });
 }
 
-/* ---------- 4. undocumented props ---------- */
 const undocumented = [];
 for (const c of components) {
   const bare = c.props.filter((p) => !p.doc && p.name !== "class").map((p) => p.name);
   if (bare.length) undocumented.push([c.file, bare]);
 }
 
-/* ---------- 5. destructuring that disagrees with declaration ---------- */
 const destructureIssues = [];
 for (const c of components) {
-  if (c.multiBlock) continue; // branch order is not a style choice
+  if (c.multiBlock) continue;
   const declared = c.props.map((p) => p.name);
   const inBoth = c.destructured.filter((n) => declared.includes(n));
   const expected = declared.filter((n) => inBoth.includes(n));

@@ -206,5 +206,11 @@ upgrade has an exact base. Then delete `.lumos-upgrade/`.
 ## Using this without Claude Code
 
 The steps are plain git and node. `visual-check.mjs` needs headless Chrome and
-sharp, both of which an Astro project on a Mac already has. Only the automatic
+sharp, both of which an Astro project on a Mac already has. It captures every static
+route `src/pages` builds (no dynamic routes, no 404) at 1440 and 390. A channel that
+moves by `CHANNEL_TOLERANCE` (8) or less is antialiasing noise, and a page with
+under `PIXEL_THRESHOLD` (0.1%) of its pixels changed counts as unchanged. Both
+images are forced to RGBA before comparing: an RGB and an RGBA screenshot decode
+to different strides, and mixing them reads a two-pixel nudge as a rewritten
+page. The diff image marks each changed pixel red on a dimmed copy. Only the automatic
 triggering and `/lumos-upgrade` are Claude Code features.
