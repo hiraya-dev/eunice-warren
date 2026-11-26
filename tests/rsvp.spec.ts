@@ -79,6 +79,7 @@ test.describe("RSVP section", () => {
     await seatName.evaluate((input) => input.removeAttribute("maxlength"));
     await seatName.fill("x".repeat(200));
     await rsvp(page).getByRole("button", { name: "Done" }).click();
+    await rsvp(page).locator("#rsvp-seat-0").check();
     await rsvp(page).getByRole("button", { name: /Continue/ }).click();
     await rsvp(page).locator("#rsvp-email").fill("long-name@example.com");
     await chooseSlippers(page);
@@ -92,6 +93,7 @@ test.describe("RSVP section", () => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Mateo Cruz");
     await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
     await expect(rsvp(page).locator("[data-rsvp-panel='2']")).toBeVisible();
+    await rsvp(page).locator("#rsvp-seat-0").check();
     await rsvp(page).getByRole("button", { name: /Continue/ }).click();
     await rsvp(page).locator("#rsvp-email").fill("me@localhost");
     await chooseSlippers(page);
