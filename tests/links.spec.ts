@@ -39,12 +39,10 @@ test.describe("home page links", { tag: ["@smoke"] }, () => {
       await expect(maps.nth(index)).toHaveAttribute("rel", "noopener");
     }
     for (const link of [
-      page.locator(".invitation_fact-link").filter({ hasText: "OPEN IN MAPS" }),
-      page
-        .locator(".rsvp_invitation-links a")
-        .filter({ hasText: "Open in maps" }),
+      page.locator(`.invitation_fact-link[href='${churchMap}']`),
+      page.locator(`.rsvp_invitation-links a[href='${churchMap}']`),
     ]) {
-      await expect(link).toHaveAttribute("href", churchMap);
+      await expect(link).toHaveCount(1);
       await expect(link).toHaveAttribute("target", "_blank");
       await expect(link).toHaveAttribute("rel", "noopener");
     }

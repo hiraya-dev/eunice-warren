@@ -145,16 +145,6 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `.agents/skills/codex-handoff/**`
 
-### L-017 — Specs assert structure, not the couple's copy
-- **Date:** 2026-11-13
-- **Trigger:** carried over from adc-website (its L-031: a content publish turned a footer spec red with no code change); this repo's audit found specs pinning FAQ and Explore counts, entourage group slugs, attire swatch names, the footer sign-off and button labels
-- **Symptom:** a content or copy edit (`src/content/**`, a section's text) turns a spec red with no code change.
-- **Root cause:** the spec asserted the current copy or item count instead of the structure the code guarantees.
-- **Rule:** specs that render content assert structure (the element exists, has a label or href, sits in the right group, one item per content file read with `node:fs`), not the current copy. Facts the site states as facts (the date, the RSVP deadline, the couple's names) may stay. When a PR changes copy, grep `tests/` for the old values first.
-- **Check:** `grep -rn` in `tests/` for strings from `src/content/**` or section copy the diff adds finds no exact-copy assertion.
-- **Guard:** none
-- **Paths:** `tests/**`, `src/content/**`
-
 ### L-021 — A de-pinned count comes from the source, never an async label
 - **Date:** 2026-11-13
 - **Trigger:** flaky test, #73: "renders one checklist row per seat" read its expected seat total from the "N of M seats" label, failed locally at 4 workers, fixed in PR A; repeat, #75: `tests/rsvp-paths.spec.ts` (written by Codex) read its starting count from the label again, caught in review
@@ -630,3 +620,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** `tests/playlist.spec.ts` "keeps a closed list closed when a slow search answers" (holds the search response, presses Escape, releases it, expects the listbox hidden) and "opens the highlighted track on Spotify from the credit".
 - **Guard:** none
 - **Paths:** `src/components/sections/Playlist.astro`, `src/scripts/**`
+
+### L-068 — A CSS locator that replaces `getByRole` keeps its visibility filter
+- **Date:** 2026-11-26
+- **Trigger:** this PR, local spec run (de-pinning L-017 copy turned `getByRole("link", { name: … })` into `a[href*='archive']`, `button[name='save_and_add']` and `button.rsvp_primary`; each hit a strict-mode violation on hidden duplicates or a test-data substring, and `toHaveRole("alert")` on static markup passed with no error shown)
+- **Symptom:** a spec rewritten to drop copy fails with "strict mode violation … resolved to 2 elements", or passes without proving the state it used to check.
+- **Root cause:** `getByRole` matches only the accessibility tree, so hidden copies of a control never matched; a CSS locator matches them all, and a loose `href*=` substring also matches query values from test data. A static `role` attribute is true whether or not the message shows.
+- **Rule:** when a role-and-name locator becomes a CSS one, scope it to the one visible control (`:visible`, the owning form, or an exact attribute such as `href*='archive='`) and keep the old state check: visibility for messages, and a value from the fixture or source for text that differs by state.
+- **Check:** each changed locator in the diff resolves to one element in the spec run, and no replacement assertion is only `toHaveRole` on markup that sets the role statically.
+- **Guard:** none
+- **Paths:** `tests/**`

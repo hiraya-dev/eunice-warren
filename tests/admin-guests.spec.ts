@@ -874,15 +874,13 @@ test.describe("guest list drawer", () => {
 
       // Save and add another ends the body; the footer drops it.
       await expect(
-        footer.locator("button[name='save_and_add']"),
+        footer.locator("button[name='save_and_add']:visible"),
       ).toBeHidden();
       await expect(footer.locator("a.accent")).toHaveCount(0);
       await expect(
         page.locator(".admin_guests_footer_hint"),
       ).toBeHidden();
-      const bodyCopy = scroll.getByRole("button", {
-        name: "Save and add another",
-      });
+      const bodyCopy = scroll.locator("button[name='save_and_add']:visible");
       await bodyCopy.scrollIntoViewIfNeeded();
       await expect(bodyCopy).toBeVisible();
       const copyBox = (await bodyCopy.boundingBox())!;
@@ -899,9 +897,7 @@ test.describe("guest list drawer", () => {
 
       await page.goto(`/admin/guests?edit=${editor.id}`);
       const editScroll = page.locator(".admin_guests_drawer_scroll");
-      const archive = editScroll.getByRole("link", {
-        name: "Archive household",
-      });
+      const archive = editScroll.locator("a[href*='archive=']:visible");
       await archive.scrollIntoViewIfNeeded();
       await expect(archive).toBeVisible();
       await expect(
@@ -1220,7 +1216,7 @@ test.describe("guest list drawer", () => {
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
       await saved.locator("summary").click();
-      await saved.getByRole("link", { name: "Archive household" }).click();
+      await saved.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1241,7 +1237,7 @@ test.describe("guest list drawer", () => {
 
     // Archive household is a full navigation: dismissing keeps the draft.
     page.once("dialog", (dialog) => dialog.dismiss());
-    await drawer.getByRole("link", { name: "Archive household" }).click();
+    await drawer.locator("a[href*='archive=']:visible").click();
     await expect(page).toHaveURL(new RegExp(`edit=${editor.id}`));
     await expect(drawer.locator("[name='notes']")).toHaveValue("Swap guard");
 
@@ -1299,7 +1295,7 @@ test.describe("guest list drawer", () => {
     editPage.on("dialog", unexpected);
     await editPage.goto(`/admin/guests?edit=${openSeatFixture.id}`);
     const edit = editPage.locator("[data-edit-household]");
-    await edit.getByRole("button", { name: "Remove open seat" }).click();
+    await edit.locator("[data-remove-open-seat]").click();
     // The edit form is dirty now, so leaving this page would rightly warn
     // (beforeunload). Tick Archive on a fresh page instead.
     const archivePage = await browser.newPage();
@@ -1342,11 +1338,16 @@ test.describe("guest list drawer", () => {
     const bodySaveAndAdd = form.locator(
       ".admin_guests_sheet_actions button[name='save_and_add']",
     );
+    const saveLabel = await save.textContent();
+    const saveAndAddLabel = await saveAndAdd.textContent();
+    const bodySaveAndAddLabel = await bodySaveAndAdd.textContent();
     await save.click();
-    await expect(save).toHaveText("Saving…");
     await expect(save).toBeDisabled();
     await expect(saveAndAdd).toBeDisabled();
     await expect(bodySaveAndAdd).toBeDisabled();
+    await expect(save).toHaveText(/Saving/);
+    await expect(saveAndAdd).toHaveText(saveAndAddLabel!);
+    await expect(bodySaveAndAdd).toHaveText(bodySaveAndAddLabel!);
     await expect(form.locator("button[name='save']")).toHaveCount(2);
     await expect(form.locator("[data-admin-submit-mirror]")).toHaveCount(1);
     expect(dialogs).toBe(0);
@@ -1356,12 +1357,12 @@ test.describe("guest list drawer", () => {
       Object.defineProperty(event, "persisted", { value: true });
       window.dispatchEvent(event);
     });
-    await expect(save).toHaveText("Save");
     await expect(save).toBeEnabled();
-    await expect(saveAndAdd).toHaveText("Save and add another");
     await expect(saveAndAdd).toBeEnabled();
-    await expect(bodySaveAndAdd).toHaveText("Save and add another");
     await expect(bodySaveAndAdd).toBeEnabled();
+    await expect(save).toHaveText(saveLabel!);
+    await expect(saveAndAdd).toHaveText(saveAndAddLabel!);
+    await expect(bodySaveAndAdd).toHaveText(bodySaveAndAddLabel!);
     await expect(form.locator("[data-admin-submit-mirror]")).toHaveCount(0);
   });
 
@@ -1415,7 +1416,7 @@ test.describe("guest list drawer", () => {
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
       await saved.locator("summary").click();
-      await saved.getByRole("link", { name: "Archive household" }).click();
+      await saved.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1463,7 +1464,7 @@ test.describe("guest list drawer", () => {
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
       await saved.locator("summary").click();
-      await saved.getByRole("link", { name: "Archive household" }).click();
+      await saved.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1490,7 +1491,7 @@ test.describe("guest list drawer", () => {
       await expect(row).toHaveCount(1);
       await expect(row.locator("[data-col='members']")).toContainText(name);
       await row.locator("summary").click();
-      await row.getByRole("link", { name: "Archive household" }).click();
+      await row.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1543,7 +1544,7 @@ test.describe("guest list drawer", () => {
       await form.locator("[data-restore-suggestion]").click();
       await expect(invitation).toHaveValue(first);
       await form.locator("[name='member_input']").fill(`Sage ${surname}`);
-      await form.getByRole("button", { name: "Save and add another" }).click();
+      await form.locator("button[name='save_and_add']:visible").click();
       await expect(page).toHaveURL(
         new RegExp(`(?=.*new=1)(?=.*filter=waiting)(?=.*q=${surname})`),
       );
@@ -1561,7 +1562,7 @@ test.describe("guest list drawer", () => {
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
       await added.locator("summary").click();
-      await added.getByRole("link", { name: "Archive household" }).click();
+      await added.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1611,7 +1612,7 @@ test.describe("guest list drawer", () => {
       hasText: "Jonas Ong",
     });
     await expect(named).toHaveCount(1);
-    await expect(named).not.toContainText("Remove open seat");
+    await expect(named.locator("[data-remove-open-seat]")).toHaveCount(0);
     await expect(named).toContainText("+1 · named by Kat");
     await expect(form.locator("[data-seat-summary]")).toContainText(
       "2 names + 0",
@@ -1653,7 +1654,7 @@ test.describe("guest list drawer", () => {
       await expectRsvpSeatCount(added, 1);
       await expect(added).toContainText(`Enter invite ${surname}`);
       await added.locator("summary").click();
-      await added.getByRole("link", { name: "Archive household" }).click();
+      await added.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1727,7 +1728,7 @@ test.describe("guest list drawer", () => {
       // confirm's token is stale and the archive is refused.
       await page
         .locator("[data-edit-household]")
-        .getByRole("link", { name: "Archive household" })
+        .locator("a[href*='archive=']:visible")
         .click();
       await expect(page.locator("[data-admin-archive-confirm]")).toBeVisible();
       await other
@@ -1769,8 +1770,7 @@ test.describe("guest list drawer", () => {
       ).toHaveText("Undo");
       await archive.uncheck();
       await form
-        .locator("details")
-        .filter({ hasText: "Fix invited name" })
+        .locator("details.admin_guests_fix")
         .first()
         .locator("summary")
         .click();
@@ -1794,7 +1794,7 @@ test.describe("guest list drawer", () => {
     await withAdminLock(async () => {
       await page.goto(`/admin/guests?edit=${openSeatFixture.id}`);
       const form = page.locator("[data-edit-household]");
-      await form.getByRole("button", { name: "Remove open seat" }).click();
+      await form.locator("[data-remove-open-seat]").click();
       await form.getByRole("button", { name: "Save" }).click();
       const seats = rowById(page, openSeatFixture.id);
       await expectRsvpSeatCount(seats, 1);
@@ -1893,7 +1893,7 @@ test.describe("guest list drawer", () => {
       await expectRsvpSeatCount(added, 1);
 
       await added.locator("summary").click();
-      await added.getByRole("link", { name: "Archive household" }).click();
+      await added.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1932,7 +1932,7 @@ test.describe("guest list drawer", () => {
       });
       await expect(added).toHaveCount(1);
       await added.locator("summary").click();
-      await added.getByRole("link", { name: "Archive household" }).click();
+      await added.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -1955,7 +1955,7 @@ test.describe("guest drawer round trips without JavaScript", () => {
     await page.goto("/admin/guests");
     const row = rowFor(page, text);
     await row.locator("summary").click();
-    await row.getByRole("link", { name: "Archive household" }).click();
+    await row.locator("a[href*='archive=']:visible").click();
     await page
       .locator("[data-admin-archive-confirm]")
       .getByRole("button", { name: "Archive" })
@@ -2128,7 +2128,7 @@ test.describe("host ID from the invitation name", () => {
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
       await saved.locator("summary").click();
-      await saved.getByRole("link", { name: "Archive household" }).click();
+      await saved.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
@@ -2185,7 +2185,7 @@ test.describe("guest drawer plus-one off with JavaScript", () => {
         .locator("[data-admin-household]")
         .filter({ hasText: first });
       await saved.locator("summary").click();
-      await saved.getByRole("link", { name: "Archive household" }).click();
+      await saved.locator("a[href*='archive=']:visible").click();
       await page
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })

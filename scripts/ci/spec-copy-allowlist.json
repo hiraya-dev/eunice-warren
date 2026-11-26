@@ -1,0 +1,8 @@
+[
+  { "value": "01.14.27", "reason": "The wedding date is a site fact." },
+  { "value": "December 12", "reason": "The RSVP deadline is a site fact." },
+  { "value": "Warren & Eunice", "reason": "The couple's names are a site fact." },
+  { "value": "Eunice Warren", "reason": "The couple's names are a site fact." },
+  { "value": "Mateo Cruz", "reason": "The fixture's guest name is controlled by the spec." },
+  { "value": "Liza Santos", "reason": "The fixture's guest name is controlled by the spec." }
+]

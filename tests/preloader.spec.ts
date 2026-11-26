@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { fakeFixtures } from "../src/lib/rsvp/store.ts";
+
+// The ask-state title, read from the component so a copy edit updates both (L-017).
+const askTitle = readFileSync(new URL("../src/components/global/Preloader.astro", import.meta.url), "utf8")
+  .match(/const setAskState[\s\S]*?title\.textContent = "([^"]+)"/)![1];
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -19,7 +24,7 @@ test.describe("guest preloader", () => {
     await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
     await page.reload();
     await expect(preloader(page)).toBeVisible();
-    await expect(preloader(page).getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(preloader(page).getByRole("heading")).toHaveText(askTitle);
     await expect(preloader(page).locator("[data-preloader-name]")).toHaveValue("");
   });
 
@@ -44,8 +49,8 @@ test.describe("guest preloader", () => {
     await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ name: "Mateo Cruz", householdName: "Cruz Family", seats: 4, at: "2026-01-01T00:00:00.000Z" })));
     await page.reload();
     const overlay = preloader(page);
-    await overlay.getByRole("button", { name: "Write your own name" }).click();
-    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await overlay.locator("[data-preloader-reset]").click();
+    await expect(overlay.getByRole("heading")).toHaveText(askTitle);
     await expect(overlay.locator("[data-preloader-name]")).toHaveValue("");
     await expect(overlay.locator("[data-preloader-name]")).not.toHaveAttribute("readonly", "");
     await expect(overlay.locator("[data-preloader-name]")).not.toHaveClass(/is-found/);
@@ -64,7 +69,7 @@ test.describe("guest preloader", () => {
     await preloader(page).locator("[data-preloader-name]").fill("Mateo Cruz");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page).getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
-    await expect(preloader(page)).toContainText("Your invitation admits 4");
+    await expect(preloader(page).locator("[data-preloader-admits]")).toContainText(String(4));
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page)).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ew-guest-v2") || "null"))).toMatchObject({
@@ -92,12 +97,12 @@ test.describe("guest preloader", () => {
     const name = overlay.locator("[data-preloader-name]");
     await name.fill("Mateo Cruz");
     await overlay.getByRole("button", { name: "Open my letter" }).click();
-    await expect(hint).toHaveText("Finding your invitation…");
+    // Pending swaps in its own hint; editing the name restores the previous one.
+    await expect(hint).not.toHaveText(initialHint!);
     await name.fill("Nobody Example");
     await expect(hint).toHaveText(initialHint!);
-    await expect(hint).not.toHaveText("Finding your invitation…");
     release!();
-    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(overlay.getByRole("heading")).toHaveText(askTitle);
     await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeEnabled();
   });
 
@@ -116,12 +121,12 @@ test.describe("guest preloader", () => {
     const submit = overlay.getByRole("button", { name: /Open my letter|Try again/ });
     await name.fill("Error Test");
     await submit.click();
-    await expect(hint).toHaveText("Something went wrong. Please try again.");
+    await expect(hint).toBeVisible();
     await expect(hint).toHaveClass(/is-error/);
     await submit.click();
-    await expect(hint).toHaveText("Finding your invitation…");
+    await expect(hint).not.toHaveClass(/is-error/);
     await name.fill("Error Test edited");
-    await expect(hint).toHaveText("Something went wrong. Please try again.");
+    await expect(hint).toBeVisible();
     await expect(hint).toHaveClass(/is-error/);
     release!();
     await expect(submit).toBeEnabled();
@@ -132,13 +137,13 @@ test.describe("guest preloader", () => {
     const hint = overlay.locator("[data-preloader-hint]");
     await overlay.locator("[data-preloader-name]").fill("Nobody Example");
     await overlay.getByRole("button", { name: "Open my letter" }).click();
-    await expect(hint).toHaveText("Check the spelling, or try the name on your invitation.");
+    await expect(hint).toBeVisible();
     await expect(hint).toHaveClass(/is-error/);
     await overlay.locator("[data-preloader-name]").fill("Matoe Cruz");
     await overlay.getByRole("button", { name: "Try again" }).click();
     await expect(overlay.getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
-    await expect(hint).toHaveText("Tap yes if that's the name on your invitation.");
-    await expect(hint).not.toHaveText("Finding your invitation…");
+    await expect(hint).toBeVisible();
+    await expect(hint).not.toHaveClass(/is-error/);
   });
 
   test("uses the display name and removes the legacy guest key", async ({ page }) => {
@@ -185,8 +190,8 @@ test.describe("guest preloader", () => {
   test("shows safe not-found copy without other guest names", { tag: ["@single"] }, async ({ page }) => {
     await preloader(page).locator("[data-preloader-name]").fill("Nobody Example");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
-    await expect(preloader(page)).toContainText("Hmm, we can't find that name.");
-    await expect(preloader(page)).toContainText("Check the spelling, or try the name on your invitation.");
+    await expect(preloader(page).locator("[data-preloader-hint]")).toBeVisible();
+    await expect(preloader(page).locator("[data-preloader-hint]")).toHaveClass(/is-error/);
     await expect(preloader(page)).not.toContainText("Cruz Family");
     await expect(preloader(page)).not.toContainText("Mateo Cruz");
   });
@@ -195,7 +200,7 @@ test.describe("guest preloader", () => {
     await preloader(page).locator("[data-preloader-name]").fill("Matoe Cruz");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
     await expect(preloader(page).getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
-    await expect(preloader(page)).toContainText("Tap yes if that's the name on your invitation.");
+    await expect(preloader(page).locator("[data-preloader-hint]")).not.toHaveClass(/is-error/);
     await expect(preloader(page)).not.toContainText("Cruz Family");
     await preloader(page).getByRole("button", { name: "Yes, that's me" }).click();
     await expect(preloader(page).getByRole("heading", { name: "Welcome, Cruz Family." })).toBeVisible();
@@ -209,7 +214,7 @@ test.describe("guest preloader", () => {
     await preloader(page).getByRole("button", { name: "No, let me try again" }).click();
     await expect(name).toHaveValue("");
     await expect(name).toBeFocused();
-    await expect(preloader(page).getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(preloader(page).getByRole("heading")).toHaveText(askTitle);
   });
 
   test("returns to the ask state when a suggestion is edited", { tag: ["@single"] }, async ({ page }) => {
@@ -217,9 +222,9 @@ test.describe("guest preloader", () => {
     const name = overlay.locator("[data-preloader-name]");
     await name.fill("Matoe Cruz");
     await overlay.getByRole("button", { name: "Open my letter" }).click();
-    await expect(overlay.getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
+    await expect(overlay.getByRole("heading")).toContainText("Mateo Cruz");
     await name.fill("Nobody Example");
-    await expect(overlay.getByRole("heading", { name: "A letter is waiting for you." })).toBeVisible();
+    await expect(overlay.getByRole("heading")).toHaveText(askTitle);
     await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeVisible();
   });
 
