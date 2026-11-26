@@ -264,7 +264,6 @@ export function adminHistoryHeading(version: {
   attending: boolean;
   coming: number;
 }) {
-  // A host edit's "by host · email" is rendered separately so it can be coloured.
   return `${adminTimestamp(version.submittedAt)} · ${version.attending ? `Yes, ${version.coming} coming` : "No"}`;
 }
 

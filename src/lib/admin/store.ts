@@ -218,7 +218,6 @@ export interface AdminSongRequests {
 }
 export interface AdminNavCounts {
   households: number;
-  /** Active households with any reply (attending + declined). */
   rsvpReplies: number;
   slipperPairs: number;
   songRequests: number;

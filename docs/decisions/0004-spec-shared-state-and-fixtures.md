@@ -28,6 +28,13 @@ lived as comments in the specs.
    `rsvp.spec.ts` writes a unique name, so the value it reads back is provably
    its own write. A read-only spec stops the browser's own submission at the form
    (`admin-rsvps.spec.ts`), and a refused save needs no temporary household.
+   Fixtures that persist writes have one owning spec each (L-022): Garcia
+   (`rsvp.spec.ts`) and Lim (`rsvp-paths.spec.ts`, the declined guest) are the
+   only returning-guest fixtures whose answers `createFakeRsvpStore`
+   (`src/lib/rsvp/store.ts`) keeps, since keeping every fixture's writes would
+   leak state across parallel workers. `hh-rsvp-editor` in
+   `src/lib/admin/fake.ts` belongs to the host RSVP edit specs in
+   `admin-rsvps.spec.ts`.
 3. **Expected values come from the source (L-017, L-021).** Counts come from the
    fixture or the fake store, never from a rendered or async label
    (`rsvp-paths.spec.ts`, `admin.spec.ts`). Copy comes from the component or the

@@ -99,9 +99,6 @@ export function slugifyName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-// The host ID is the surname from the invitation name in uppercase letters plus
-// a two-digit counter: "The Toledo Family" → "TOLEDO-01". Taken IDs (compared
-// without case) use the next available counter.
 export function generateHostId(
   invitationName: string,
   taken: Iterable<string> = [],

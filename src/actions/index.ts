@@ -100,7 +100,6 @@ async function guard(
       if (timing) timing.rateLimitMs = applyRateLimit ? performance.now() - rateLimitStarted : 0;
     }
   } catch {
-    // Never surface a platform error message to guests.
     fail();
   }
   if (!verified)

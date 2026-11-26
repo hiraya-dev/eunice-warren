@@ -598,8 +598,6 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       .bind(input.id, input.id)
       .first<{ respondent_name: string; email: string; max_id: number | null }>();
     const now = new Date().toISOString();
-    // Two saves in the same millisecond share submitted_at, and history breaks
-    // that tie by id, so the new id must sort after every earlier one.
     const responseId = Math.max(
       Date.now() * 1000 + Math.floor(Math.random() * 1000),
       Number(latest?.max_id ?? 0) + 1,
@@ -651,8 +649,6 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       const posted = input.seats.find((seat) => seat.seatId === current.id)!;
       const clean = posted.name.trim();
       if (!clean || clean === (posted.shownName ?? current.name ?? "")) continue;
-      // Only the current name changes: name_key/surname_key follow the invited
-      // name, which guest lookup uses, and a host rename never touches it.
       statements.push(
         database
           .prepare(
@@ -840,8 +836,6 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     }
     const now = new Date().toISOString();
     const token = input.updatedAt ?? "";
-    // This must remain the first statement. SQLite rolls back the whole D1 batch when
-    // a stale token sets the NOT NULL updated_at column to NULL.
     const statements: D1PreparedStatement[] = [
       database
         .prepare(

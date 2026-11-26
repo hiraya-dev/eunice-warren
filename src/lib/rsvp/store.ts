@@ -18,7 +18,6 @@ export const fakeFixtures: FakeInvite[] = [
   makeInvite("reyes", "Reyes_Lipa", "Ana Reyes", "REYESA", ["Ana Reyes"], 1),
   makeInvite("cruz", "Cruz_Batangas", "Cruz Family", "CRUZAA", ["Mateo Cruz", "Sofía Cruz", "Remedios Cruz"], 4),
   makeInvite("garcia", "Garcia_Manila", "Garcia Family", "GARCAA", ["Paolo Garcia", "Bea Garcia"], 3),
-  // Second persisted fixture, owned by the declined-guest spec in rsvp-paths (L-022).
   makeInvite("lim", "Lim_Quezon", "Lim Family", "LIMDEC", ["Nora Lim", "Theo Lim"], 3),
   makeInvite("toledo", "Toledo_Sabang", "Toledo Family", "T2EDOS", ["Luna Toledo"], 2),
   makeInvite("teachaburanatapaporn", "Teachaburanatapaporn_Test", "Teachaburanatapaporn Family", "TEACH1", ["Lea Teachaburanatapaporn"], 12),
@@ -79,9 +78,6 @@ export const createFakeRsvpStore = (fixtureSource: FakeInvite[] = fakeFixtures):
         const shown = seat.shownName ?? current.name ?? "";
         if (seat.name.trim() && seat.name !== shown) names.set(seat.seatId!, seat.name);
       }
-      // Garcia (rsvp.spec) and Lim (rsvp-paths.spec) are the dedicated
-      // returning-guest fixtures, one per spec. Keeping every fixture's writes
-      // would leak state across parallel Playwright workers (L-022).
       if (fixture.id === "garcia" || fixture.id === "lim") {
         seatNames.set(fixture.id, names);
         previousByInvite.set(fixture.id, { attending: submission.attending, seats: submission.seats.map((item) => ({ ...item })) });
