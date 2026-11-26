@@ -5,6 +5,10 @@ import stampIsland from "@/assets/images/footer/stamp-island.jpg";
 import stampSunset from "@/assets/images/footer/stamp-sunset.jpg";
 import stampWe from "@/assets/images/stamps/we.jpg";
 import postmark from "@/assets/images/footer/postmark.png";
+import { getCollection } from "astro:content";
+
+const [{ data }] = await getCollection("footer");
+const copy = data.copy;
 
 interface Props {
   /** Set to `false` to omit the component. */
@@ -15,22 +19,21 @@ const { render = true } = Astro.props;
 
 ---
 
-{
-  render && (
+{render && !data.hidden && (
     <div data-footer-parallax class="footer-wrap">
       <footer data-footer-parallax-inner class="footer_footer">
         <p class="footer_signoff">
-          <span>From</span>
+          <span>{copy.from}</span>
           <span class="footer_stamp footer_stamp-island">
             <Stamp paper="light-200"><Image src={stampIsland} alt="" width={56} height={72} densities={[1, 2]} /></Stamp>
           </span>
-          <span class="footer_highlight footer_highlight-brand">island hopping</span>
-          <span>to</span>
+          <span class="footer_highlight footer_highlight-brand">{copy.island}</span>
+          <span>{copy.to}</span>
           <span class="footer_stamp footer_stamp-sunset">
             <Stamp paper="light-200"><Image src={stampSunset} alt="" width={56} height={72} densities={[1, 2]} /></Stamp>
           </span>
-          <span class="footer_highlight footer_highlight-accent">sunset vows,</span>
-          <span>see you in Boracay ↘</span>
+          <span class="footer_highlight footer_highlight-accent">{copy.sunset}</span>
+          <span>{copy.signoff}</span>
         </p>
 
         <p class="footer_date">01.14.27</p>
@@ -42,21 +45,20 @@ const { render = true } = Astro.props;
 
         <div class="footer_meta">
           <p class="footer_contact text-style-small">
-            <span class="footer_contact-lead">Questions?</span>
-            <span class="footer_contact-person">Warren <a href="tel:+639362300525">0936 230 0525</a></span>
+            <span class="footer_contact-lead">{copy.questions}</span>
+            <span class="footer_contact-person">{copy.warren} <a href="tel:+639362300525">{copy.warrenPhone}</a></span>
             <span class="footer_contact-separator" aria-hidden="true">·</span>
-            <span class="footer_contact-person">Eunice <a href="tel:+639362300539">0936 230 0539</a></span>
+            <span class="footer_contact-person">{copy.eunice} <a href="tel:+639362300539">{copy.eunicePhone}</a></span>
           </p>
           <div class="footer_meta-links">
-            <p class="footer_hashtag">#WarrenAndEunice</p>
-            <a class="footer_top-link button_wrap link" href="#hero">Back to top ↑</a>
+            <p class="footer_hashtag">{copy.hashtag}</p>
+            <a class="footer_top-link button_wrap link" href="#hero">{copy.backToTop}</a>
           </div>
         </div>
       </footer>
       <div data-footer-parallax-dark class="footer-wrap__dark" aria-hidden="true"></div>
     </div>
-  )
-}
+)}
 
 <script>
   import { gsap } from "@/scripts/scroll.ts";

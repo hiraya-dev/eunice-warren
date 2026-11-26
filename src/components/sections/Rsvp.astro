@@ -5,6 +5,10 @@ import stamp from "@/assets/images/rsvp/stamp-received.png";
 import postcardPaper from "@/assets/textures/postcard-paper.jpg";
 import { CHURCH_MAP_URL, MESSAGE_US_HREF, RSVP_DEADLINE_LABEL, WEDDING_CALENDAR_PATH } from "@/consts";
 import RsvpTicketPrinter from "@/components/sections/RsvpTicketPrinter.astro";
+import { getCollection } from "astro:content";
+
+const [{ data }] = await getCollection("rsvp");
+const copy = data.copy;
 
 interface Props extends HTMLAttributes<"section"> {
   /** Message destination for guests who cannot find an invite. */
@@ -24,7 +28,7 @@ const {
 } = Astro.props;
 ---
 
-<section
+{!data.hidden && <section
   id="rsvp"
   class:list={["rsvp_wrap", "theme-dark", className]}
   style="scroll-margin-top: var(--nav-height)"
@@ -37,30 +41,27 @@ const {
   >
     <div class="rsvp_left">
       <header class="rsvp_header" data-rsvp-header data-fade-in>
-        <h2 class="rsvp_title" data-fade-in-item>Will you<br />be there?</h2>
+        <h2 class="rsvp_title" data-fade-in-item>{copy.titleBefore}<br />{copy.titleAfter}</h2>
         <p class="rsvp_intro" data-rsvp-intro data-fade-in-item>
-          Please reply by {RSVP_DEADLINE_LABEL}. Three quick steps, and you can
-          change your answer until then.
+          {copy.intro.replace("{deadline}", RSVP_DEADLINE_LABEL)}
         </p>
       </header>
       <div class="rsvp_invitation" data-rsvp-invitation hidden>
         <div class="rsvp_invitation-top">
           <div>
-            <span class="rsvp_eyebrow">Your invitation</span><strong
+            <span class="rsvp_eyebrow">{copy.invitation}</span><strong
               data-rsvp-household></strong>
           </div><div class="rsvp_admits">
-            <span class="rsvp_eyebrow">Admits</span><strong data-rsvp-seats
+            <span class="rsvp_eyebrow">{copy.admits}</span><strong data-rsvp-seats
             ></strong>
           </div>
         </div>
         <div class="rsvp_invitation-bottom">
           <ul>
-            <li>Thu, Jan 14, 2027 · 3:00 PM</li><li>
-              Our Lady of the Most Holy Rosary Parish, Boracay
-            </li><li>Island formal</li>
+            <li>{copy.date}</li><li>{copy.venue}</li><li>{copy.dress}</li>
           </ul><div class="rsvp_invitation-links">
-            <a href={calendarHref}>Add to calendar ↗</a><a href={mapsHref} target="_blank" rel="noopener"
-              >Open in maps ↗</a
+            <a href={calendarHref}>{copy.calendar}</a><a href={mapsHref} target="_blank" rel="noopener"
+              >{copy.maps}</a
             >
           </div>
         </div>
@@ -68,19 +69,19 @@ const {
     </div>
 
     <div class="rsvp_right">
-      <ol class="rsvp_steps" aria-label="RSVP progress" data-rsvp-steps data-fade-in data-fade-in-item>
+      <ol class="rsvp_steps" aria-label={copy.progress} data-rsvp-steps data-fade-in data-fade-in-item>
         <li data-step="1" aria-current="step">
           <span></span><b
-            >1 · <span class="rsvp_step-full">Find invite</span><span
-              class="rsvp_step-short">Find</span
+            >1 · <span class="rsvp_step-full">{copy.findFull}</span><span
+              class="rsvp_step-short">{copy.findShort}</span
             ></b
           >
         </li>
-        <li data-step="2"><span></span><b>2 · Attending</b></li>
-        <li data-step="3"><span></span><b>3 · Details</b></li>
+        <li data-step="2"><span></span><b>2 · {copy.attendingStep}</b></li>
+        <li data-step="3"><span></span><b>3 · {copy.detailsStep}</b></li>
       </ol>
       <div class="rsvp_sent-steps" data-rsvp-sent-steps hidden>
-        <span>✓ RSVP received</span><span>3 of 3 · Done</span>
+        <span>{copy.received}</span><span>{copy.doneStep}</span>
       </div>
 
       <div class="rsvp_card-wrap" data-fade-in data-fade-in-item>
@@ -88,23 +89,22 @@ const {
           class="rsvp_card"
           style={`--rsvp-paper: url("${postcardPaper.src}")`}
         >
-          <div class="rsvp_stub" aria-hidden="true">RSVP · Nº 011427</div>
+          <div class="rsvp_stub" aria-hidden="true">{copy.stub}</div>
           <div class="rsvp_content">
             <div class="rsvp_panel" data-rsvp-panel="1">
               <form data-rsvp-find novalidate>
                 <h3 tabindex="-1" data-rsvp-heading>
-                  First, let's find your invitation.
+                  {copy.findHeading}
                 </h3>
                 <div class="rsvp_field">
-                  <label for="rsvp-name">Full name on your invite</label><input
+                  <label for="rsvp-name">{copy.nameLabel}</label><input
                     id="rsvp-name"
                     name="name"
                     autocomplete="name"
                     required
                     data-rsvp-name
                   /><p class="rsvp_help">
-                    Just one name from your household is enough. We'll find the
-                    rest.
+                    {copy.nameHelp}
                   </p><p
                     class="rsvp_error"
                     id="rsvp-name-error"
@@ -117,9 +117,9 @@ const {
                 <div class="rsvp_turnstile" data-rsvp-turnstile></div>
                 <div class="rsvp_actions">
                   <a class="rsvp_text-link" href={messageHref}
-                    >Can't find it? Message us</a
-                  ><button class="rsvp_primary" type="submit" aria-label="Find my invite"
-                    ><span class="rsvp_primary-label"><span>Find my invite</span><span class="rsvp_primary-label-busy" aria-hidden="true">Finding…</span></span> <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
+                    >{copy.message}</a
+                  ><button class="rsvp_primary" type="submit" aria-label={copy.find}
+                    ><span class="rsvp_primary-label"><span>{copy.find}</span><span class="rsvp_primary-label-busy" aria-hidden="true">{copy.finding}</span></span> <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
                   >
                 </div>
               </form>
@@ -131,31 +131,31 @@ const {
                   Hi <span data-rsvp-first-name></span>, can you make it?
                 </h3>
                 <fieldset class="rsvp_options">
-                  <legend>Will you be attending?</legend><label
+                  <legend>{copy.attendingLegend}</legend><label
                     class="rsvp_option"
                     ><input
                       type="radio"
                       name="attending"
                       value="yes"
                       checked
-                    /><span>Joyfully accepts</span></label
+                    /><span>{copy.accept}</span></label
                   ><label class="rsvp_option"
                     ><input type="radio" name="attending" value="no" /><span
-                      >Regretfully declines</span
+                      >{copy.decline}</span
                     ></label
                   >
                 </fieldset>
                 <fieldset class="rsvp_guest-list" data-rsvp-guests>
-                  <legend class="rsvp_guest-list-header"><span class="rsvp_guest-list-wide">Tick everyone who's coming</span><span class="rsvp_guest-list-narrow" aria-hidden="true">Who's coming</span><output data-rsvp-count aria-live="polite"></output></legend>
+                  <legend class="rsvp_guest-list-header"><span class="rsvp_guest-list-wide">{copy.guestsWide}</span><span class="rsvp_guest-list-narrow" aria-hidden="true">{copy.guestsNarrow}</span><output data-rsvp-count aria-live="polite"></output></legend>
                   <div data-rsvp-seat-list></div>
-                  <p class="rsvp_help rsvp_guest-help" data-rsvp-guest-help>Someone can't make it? Untick them, or tap Edit to give their seat to someone else. You can also fix a misspelled name.</p>
-                  <p class="rsvp_error rsvp_guest-error" data-rsvp-guest-error role="alert" hidden>Tick at least one guest. If no one can make it, choose “Regretfully declines” above.</p>
+                  <p class="rsvp_help rsvp_guest-help" data-rsvp-guest-help>{copy.guestHelp}</p>
+                  <p class="rsvp_error rsvp_guest-error" data-rsvp-guest-error role="alert" hidden>{copy.guestError}</p>
                 </fieldset>
                 <div class="rsvp_actions">
                   <button class="rsvp_back" type="button" data-rsvp-back
-                    >← Back</button
+                    >{copy.back}</button
                   ><button class="rsvp_primary" type="submit"
-                    >Continue <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
+                    >{copy.continue} <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
                   >
                 </div>
               </form>
@@ -164,10 +164,10 @@ const {
             <div class="rsvp_panel" data-rsvp-panel="3" hidden>
               <form data-rsvp-details novalidate>
                 <h3 tabindex="-1" data-rsvp-heading>
-                  Last bit: a few details.
+                  {copy.detailsHeading}
                 </h3>
                 <div class="rsvp_field">
-                  <label for="rsvp-email">Email for updates</label><input
+                  <label for="rsvp-email">{copy.emailLabel}</label><input
                     id="rsvp-email"
                     name="email"
                     type="email"
@@ -180,33 +180,33 @@ const {
                     role="alert"
                     hidden
                   >
-                    Please enter a valid email address.
+                    {copy.emailError}
                   </p>
                 </div>
                 <div class="rsvp_after-party" data-rsvp-after-party hidden>
                   <div class="rsvp_after-party-header">
-                    <span class="rsvp_eyebrow">A little gift from us</span>
+                    <span class="rsvp_eyebrow">{copy.gift}</span>
                     <span class="rsvp_eyebrow" data-rsvp-after-party-count></span>
                   </div>
                   <div data-rsvp-slipper-list></div>
-                  <p class="rsvp_after-party-absent" data-rsvp-not-coming hidden><span>Not coming:</span> </p>
-                  <p class="rsvp_after-party-help">Every guest takes home a pair of slippers from us. Sizes are US.</p>
+                  <p class="rsvp_after-party-absent" data-rsvp-not-coming hidden><span>{copy.notComing}</span> </p>
+                  <p class="rsvp_after-party-help">{copy.giftHelp}</p>
                 </div>
                 <div class="rsvp_field">
                   <label for="rsvp-note"
-                    >A note for Warren &amp; Eunice (optional)</label
+                    >{copy.noteLabel}</label
                   ><textarea
                     id="rsvp-note"
                     name="note"
-                    placeholder="Can't wait to see you two in Boracay…"
+                    placeholder={copy.notePlaceholder}
                   ></textarea>
                 </div>
                 <div class="rsvp_turnstile" data-rsvp-turnstile></div>
                 <div class="rsvp_actions">
                   <button class="rsvp_back" type="button" data-rsvp-details-back
-                    >← Back</button
-                  ><button class="rsvp_primary" type="submit" data-rsvp-submit aria-label="Send RSVP"
-                    ><span class="rsvp_primary-label"><span>Send RSVP</span><span class="rsvp_primary-label-busy" aria-hidden="true">Sending…</span></span> <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
+                    >{copy.back}</button
+                  ><button class="rsvp_primary" type="submit" data-rsvp-submit aria-label={copy.send}
+                    ><span class="rsvp_primary-label"><span>{copy.send}</span><span class="rsvp_primary-label-busy" aria-hidden="true">{copy.sending}</span></span> <span class="rsvp_primary-mark" aria-hidden="true"><span class="rsvp_primary-arrow">→</span><span class="rsvp_primary-spinner"></span></span></button
                   >
                 </div>
                 <p
@@ -215,7 +215,7 @@ const {
                   role="alert"
                   hidden
                 >
-                  Something went wrong. Please try again.
+                  {copy.genericError}
                 </p>
               </form>
             </div>
@@ -232,17 +232,17 @@ const {
               <h3 tabindex="-1" data-rsvp-heading></h3>
               <dl class="rsvp_summary">
                 <div>
-                  <dt>Attending</dt><dd data-rsvp-attending-summary></dd>
+                  <dt>{copy.attendingSummary}</dt><dd data-rsvp-attending-summary></dd>
                 </div><div data-rsvp-guests-summary>
-                  <dt>Guests</dt><dd data-rsvp-guests-summary-value></dd>
+                  <dt>{copy.guestsSummary}</dt><dd data-rsvp-guests-summary-value></dd>
                 </div><div>
-                  <dt>Updates to</dt><dd data-rsvp-email-summary></dd>
+                  <dt>{copy.updatesTo}</dt><dd data-rsvp-email-summary></dd>
                 </div>
               </dl>
               <button
                 class="rsvp_text-link rsvp_edit"
                 type="button"
-                data-rsvp-edit>Edit my RSVP</button
+                data-rsvp-edit>{copy.editRsvp}</button
               >
             </div>
           </div>
@@ -251,7 +251,7 @@ const {
     </div>
   </div>
   <div class="rsvp_scallop" aria-hidden="true"></div>
-</section>
+</section>}
 <RsvpTicketPrinter />
 
 <script>
@@ -261,6 +261,7 @@ const {
   import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
   import { getGuest, setGuest } from "@/lib/guest";
+  import copy from "@/content/rsvp/rsvp.json";
 
   const initRsvp = () => {
     document
@@ -297,7 +298,7 @@ const {
         nameInput.addEventListener("input", () => {
           if (!suggestion) return;
           suggestion = "";
-          setFindLabel("Find my invite");
+          setFindLabel(copy.copy.find);
           const error = root.querySelector<HTMLElement>("[data-rsvp-name-error]")!;
           error.textContent = "";
           error.hidden = true;
@@ -311,19 +312,19 @@ const {
         document.addEventListener("ew:guest", onGuest);
         const setConfirmationCopy = (isAttending: boolean) => {
           title.textContent = isAttending
-            ? "See you in Boracay."
-            : "We'll miss you.";
+            ? copy.copy.seeYou
+            : copy.copy.missYou;
           intro.textContent = isAttending
-            ? `Your ticket is fresh off the press. Save it for the big day, and change your answer any time before ${deadline}.`
-            : `Plans change? You can update your RSVP any time before ${deadline}.`;
+            ? copy.copy.freshTicket.replace("{deadline}", deadline)
+            : copy.copy.plansChange.replace("{deadline}", deadline);
         };
         const restoreIntro = () => {
           title.replaceChildren(
-            document.createTextNode("Will you"),
+            document.createTextNode(copy.copy.titleBefore),
             document.createElement("br"),
-            document.createTextNode("be there?"),
+            document.createTextNode(copy.copy.titleAfter),
           );
-          intro.textContent = `Please reply by ${deadline}. Three quick steps, and you can change your answer until then.`;
+          intro.textContent = copy.copy.intro.replace("{deadline}", deadline);
         };
         const setStep = (next: typeof step) => {
           step = next;
@@ -358,8 +359,8 @@ const {
         const updateGuestControls = () => {
           const count = root.querySelector<HTMLOutputElement>("[data-rsvp-count]")!;
           const attendingCount = seats.filter((seat) => seat.attending).length;
-          count.value = `${attendingCount} of ${invite?.seats ?? 0} seats`;
-          count.textContent = `${attendingCount} of ${invite?.seats ?? 0} seats`;
+          count.value = copy.copy.seats.replace("{count}", String(attendingCount)).replace("{total}", String(invite?.seats ?? 0));
+          count.textContent = copy.copy.seats.replace("{count}", String(attendingCount)).replace("{total}", String(invite?.seats ?? 0));
         };
         const clearGuestError = () => {
           root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!.hidden = true;
@@ -376,11 +377,13 @@ const {
           absent.hidden = absentSeats.length === 0;
           absent.replaceChildren();
           const absentPrefix = document.createElement("span");
-          absentPrefix.textContent = "Not coming:";
+          absentPrefix.textContent = copy.copy.notComing;
           absent.textContent = absentSeats.map((seat) => seat.name).join(", ");
           absent.prepend(absentPrefix, " ");
           const count = root.querySelector<HTMLElement>("[data-rsvp-after-party-count]")!;
-          count.textContent = `${selectedSeats.length} ${selectedSeats.length === 1 ? "guest" : "guests"}`;
+          count.textContent = selectedSeats.length === 1
+            ? copy.copy.guestCount.replace("{count}", String(selectedSeats.length))
+            : copy.copy.guestsCount.replace("{count}", String(selectedSeats.length));
           selectedSeats.forEach((seat, index) => {
             const row = document.createElement("div");
             row.className = "rsvp_after-party-row";
@@ -392,21 +395,21 @@ const {
             if (seat.original && normalizeGuestName(seat.original) === normalizeGuestName(matchedName)) {
               const you = document.createElement("span");
               you.className = "rsvp_after-party-you";
-              you.textContent = "You";
+              you.textContent = copy.copy.you;
               nameWrap.append(you);
             }
             const control = document.createElement("div");
             control.className = "rsvp_after-party-control";
             const label = document.createElement("label");
             label.className = "rsvp_eyebrow";
-            label.textContent = "Slippers";
+            label.textContent = copy.copy.sizeLabel;
             const select = document.createElement("select");
             select.required = true;
             select.id = `rsvp-slipper-${index}`;
-            select.setAttribute("aria-label", `Slipper size for ${seat.name}`);
+            select.setAttribute("aria-label", copy.copy.slipperFor.replace("{name}", seat.name));
             const placeholder = document.createElement("option");
             placeholder.value = "";
-            placeholder.textContent = "Size";
+            placeholder.textContent = copy.copy.sizePlaceholder;
             placeholder.disabled = true;
             placeholder.selected = !seat.slipperSize;
             select.append(placeholder);
@@ -427,7 +430,7 @@ const {
             error.className = "rsvp_error rsvp_slipper-error";
             error.setAttribute("role", "alert");
             error.hidden = true;
-            error.textContent = "Please choose a slipper size.";
+            error.textContent = copy.copy.sizeError;
             select.addEventListener("change", () => {
               seat.slipperSize = select.value;
               error.hidden = true;
@@ -452,21 +455,21 @@ const {
             checkbox.type = "checkbox";
             checkbox.checked = seat.attending;
             checkbox.id = `rsvp-seat-${index}`;
-            checkbox.setAttribute("aria-label", `Seat ${index + 1}: ${seat.name || "Open seat"}`);
+            checkbox.setAttribute("aria-label", copy.copy.seat.replace("{number}", String(index + 1)).replace("{name}", seat.name || copy.copy.openSeat));
             checkbox.dataset.rsvpSeatToggle = "true";
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
             label.className = "rsvp_seat-label";
             const name = document.createElement("span");
             name.className = "rsvp_seat-name";
-            name.textContent = seat.name || "Open seat";
+            name.textContent = seat.name || copy.copy.openSeat;
             label.append(checkbox, name);
             const meta = document.createElement("span");
             meta.className = "rsvp_seat-meta";
-            if (index === invite?.members.indexOf(matchedName)) meta.textContent = "You";
+            if (index === invite?.members.indexOf(matchedName)) meta.textContent = copy.copy.you;
             if (!seat.attending && seat.name) {
               const notComing = document.createElement("span");
-              notComing.textContent = "Not coming";
+              notComing.textContent = copy.copy.notComingSeat;
               meta.append(notComing);
             }
             if (meta.textContent) label.append(meta);
@@ -478,15 +481,15 @@ const {
               const input = document.createElement("input");
               input.value = seat.name;
               input.id = `rsvp-seat-name-${index}`;
-              input.setAttribute("aria-label", `Name for seat ${index + 1}`);
+              input.setAttribute("aria-label", copy.copy.nameForSeat.replace("{number}", String(index + 1)));
               const done = document.createElement("button");
               done.type = "button";
-              done.textContent = "Done";
-              done.setAttribute("aria-label", `Done editing ${seat.name || `seat ${index + 1}`}`);
+              done.textContent = copy.copy.done;
+              done.setAttribute("aria-label", copy.copy.doneEditing.replace("{name}", seat.name || `seat ${index + 1}`));
               const message = document.createElement("p");
               message.className = "rsvp_error";
               message.hidden = true;
-              message.textContent = "Please enter a name.";
+              message.textContent = copy.copy.pleaseName;
               const finish = () => {
                 const value = input.value.trim();
                 if (!value) { message.hidden = false; input.focus(); return; }
@@ -505,11 +508,11 @@ const {
               if (seat.original && normalizeGuestName(seat.name) !== normalizeGuestName(seat.original)) {
                 const changed = document.createElement("span");
                 changed.className = "rsvp_seat-change";
-                changed.textContent = `Was ${seat.original}`;
+                changed.textContent = copy.copy.was.replace("{name}", seat.original!);
                 const undo = document.createElement("button");
                 undo.type = "button";
-                undo.textContent = "Undo";
-                undo.setAttribute("aria-label", `Undo name change for ${seat.name}`);
+                undo.textContent = copy.copy.undo;
+                undo.setAttribute("aria-label", copy.copy.undoChange.replace("{name}", seat.name));
                 undo.addEventListener("click", () => { seat.name = seat.original!; renderSeats(index, "action"); });
                 editWrap.append(changed, undo);
               }
@@ -527,30 +530,30 @@ const {
             icon.innerHTML = seat.name
               ? '<path d="M8.2 1.3 10.7 3.8 4 10.5H1.5V8L8.2 1.3Z" />'
               : '<path d="M6 1v10M1 6h10" />';
-            action.append(icon, document.createTextNode(seat.name ? "Edit" : "Add name"));
-            action.setAttribute("aria-label", seat.name ? `Edit ${seat.name}` : `Add name for seat ${index + 1}`);
+            action.append(icon, document.createTextNode(seat.name ? copy.copy.edit : copy.copy.addName));
+            action.setAttribute("aria-label", seat.name ? copy.copy.editName.replace("{name}", seat.name) : copy.copy.addNameForSeat.replace("{number}", String(index + 1)));
             action.dataset.rsvpSeatAction = "true";
             action.addEventListener("click", () => { editingSeat = index; renderSeats(); });
             row.append(action);
             if (seat.original && normalizeGuestName(seat.name) !== normalizeGuestName(seat.original) && seat.name) {
               const change = document.createElement("div");
               change.className = "rsvp_seat-change-line";
-              change.textContent = `Was ${seat.original}`;
+              change.textContent = copy.copy.was.replace("{name}", seat.original!);
               const undo = document.createElement("button");
               undo.type = "button";
-              undo.textContent = "Undo";
-              undo.setAttribute("aria-label", `Undo name change for ${seat.name}`);
+              undo.textContent = copy.copy.undo;
+              undo.setAttribute("aria-label", copy.copy.undoChange.replace("{name}", seat.name));
               undo.addEventListener("click", () => { seat.name = seat.original!; renderSeats(index, "action"); });
               change.append(" ", undo);
               row.append(change);
             } else if (seat.original === null && seat.name) {
               const change = document.createElement("div");
               change.className = "rsvp_seat-change-line";
-              change.textContent = "Plus-one";
+              change.textContent = copy.copy.plusOne;
               const remove = document.createElement("button");
               remove.type = "button";
-              remove.textContent = "Remove";
-              remove.setAttribute("aria-label", `Remove ${seat.name}`);
+              remove.textContent = copy.copy.remove;
+              remove.setAttribute("aria-label", copy.copy.removeName.replace("{name}", seat.name));
               remove.addEventListener("click", () => { seat.name = ""; seat.attending = false; renderSeats(index, "action"); });
               change.append(" ", remove);
               row.append(change);
@@ -591,7 +594,7 @@ const {
             )!;
             const value = nameInput.value;
             if (!value.trim()) {
-              error.textContent = "Please enter the name on your invitation.";
+              error.textContent = copy.copy.findRequired;
               error.hidden = false;
               nameInput.setAttribute("aria-invalid", "true");
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -612,10 +615,10 @@ const {
               if (nameInput.value !== submittedValue) return;
               if (result.error || !result.data) {
                 suggestion = "";
-                setFindLabel("Find my invite");
+                setFindLabel(copy.copy.find);
                 error.textContent =
                   result.error?.message ||
-                  "Something went wrong. Please try again.";
+                  copy.copy.genericError;
                 error.hidden = false;
                 nameInput.setAttribute("aria-invalid", "true");
                 nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -624,7 +627,7 @@ const {
               if (!result.data.invite) {
                 if (result.data.suggestion) {
                   suggestion = result.data.suggestion;
-                  error.textContent = `Did you mean ${suggestion}?`;
+                  error.textContent = copy.copy.suggestion.replace("{name}", suggestion);
                   error.hidden = false;
                   nameInput.removeAttribute("aria-invalid");
                   nameInput.removeAttribute("aria-describedby");
@@ -632,9 +635,9 @@ const {
                   return;
                 }
                 error.textContent =
-                  "We couldn't find that name. Try it exactly as it's written on your invite, or message us.";
+                  copy.copy.notFound;
                 suggestion = "";
-                setFindLabel("Find my invite");
+                setFindLabel(copy.copy.find);
                 error.hidden = false;
                 nameInput.setAttribute("aria-invalid", "true");
                 nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -642,7 +645,7 @@ const {
               }
               error.hidden = true;
               suggestion = "";
-              setFindLabel("Find my invite");
+                setFindLabel(copy.copy.find);
               nameInput.removeAttribute("aria-invalid");
               nameInput.removeAttribute("aria-describedby");
               invite = result.data.invite as unknown as Invite;
@@ -672,8 +675,8 @@ const {
               setStep("2");
             } catch {
               suggestion = "";
-              setFindLabel("Find my invite");
-              error.textContent = "Something went wrong. Please try again.";
+              setFindLabel(copy.copy.find);
+              error.textContent = copy.copy.genericError;
               error.hidden = false;
               nameInput.setAttribute("aria-invalid", "true");
               nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -700,7 +703,7 @@ const {
             event.preventDefault();
             if (attending && !seats.some((seat) => seat.attending)) {
               const error = root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!;
-              error.textContent = "Tick at least one guest. If no one can make it, choose “Regretfully declines” above.";
+              error.textContent = copy.copy.guestError;
               error.hidden = false;
               root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.add("has-error");
               root.querySelector<HTMLInputElement>("[data-rsvp-seat-toggle]")?.focus();
@@ -709,7 +712,7 @@ const {
             const blankAttending = attending && seats.find((seat) => seat.attending && !seat.name.trim());
             if (blankAttending) {
               const error = root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!;
-              error.textContent = "Add a name or untick this seat.";
+              error.textContent = copy.copy.pleaseName;
               error.hidden = false;
               root.querySelector<HTMLElement>(`[data-seat-index="${seats.indexOf(blankAttending)}"] [data-rsvp-seat-action]`)?.focus();
               return;
@@ -820,8 +823,7 @@ const {
                 return;
               }
             } catch {
-              submitError.textContent =
-                "Something went wrong. Please try again.";
+              submitError.textContent = copy.copy.genericError;
               submitError.hidden = false;
               return;
             } finally {
@@ -835,11 +837,11 @@ const {
             root.querySelector<HTMLElement>(
               "[data-rsvp-attending-summary]",
             )!.textContent = attending
-              ? "Joyfully accepts"
-              : "Regretfully declines";
+              ? copy.copy.accept
+              : copy.copy.decline;
             const tickedNames = seats.filter((seat) => attending && seat.attending).map((seat) => seat.name);
             root.querySelector<HTMLElement>("[data-rsvp-guests-summary-value]")!.textContent = attending
-              ? `${tickedNames.length} ${tickedNames.length === 1 ? "guest" : "guests"}: ${tickedNames.join(", ")}`
+              ? `${(tickedNames.length === 1 ? copy.copy.guestCount : copy.copy.guestsCount).replace("{count}", String(tickedNames.length))}: ${tickedNames.join(", ")}`
               : "";
             root.querySelector<HTMLElement>(
               "[data-rsvp-guests-summary]",
@@ -847,8 +849,8 @@ const {
             root.querySelector<HTMLElement>(
               "[data-rsvp-panel=sent] h3",
             )!.textContent = attending
-              ? `You're on the list, ${matchedName.split(" ")[0]}.`
-              : `Thanks for letting us know, ${matchedName.split(" ")[0]}.`;
+              ? copy.copy.onList.replace("{name}", matchedName.split(" ")[0])
+              : copy.copy.thanks.replace("{name}", matchedName.split(" ")[0]);
             setConfirmationCopy(attending);
             submit.disabled = false;
             submit.removeAttribute("aria-busy");

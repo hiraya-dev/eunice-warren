@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { reveal } from "./helpers/reveal";
 import { fakeSongSearch } from "../src/lib/songs/fake";
+import { readFileSync } from "node:fs";
+
+const playlistContent = JSON.parse(readFileSync("src/content/playlist/playlist.json", "utf8")) as { copy: { success: string } };
 
 const fakeSpotify = `
   window.__playlistController = { listeners: [], calls: [], addListener(name, callback) { this.listeners.push([name, callback]); }, pause() { this.calls.push('pause'); }, resume() { this.calls.push('resume'); }, play() { this.calls.push('play'); }, togglePlay() { this.calls.push('togglePlay'); } };
@@ -376,7 +379,7 @@ test.describe("Playlist section", () => {
     await page.locator(".playlist_submit").click();
     await expect(
       page.locator('.playlist_form-wrap .form_note-sent[role="status"]'),
-    ).toHaveText("It's on Side A. See you on the dance floor!");
+    ).toHaveText(playlistContent.copy.success);
   });
 
   test("shows both song caps and the fake rate-limit message", { tag: ["@single"] }, async ({ page }) => {
