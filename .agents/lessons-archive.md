@@ -117,3 +117,13 @@ The entry below is guarded by a hook on T3's delegation tool.
 - **Check:** a spec sets the heading to its longest variant and asserts the line count at 320–1023 (`tests/admin.spec.ts` "keeps the greeting to two lines on phones").
 - **Guard:** test — `tests/admin.spec.ts`
 - **Paths:** `src/pages/**`, `src/styles/**`, `src/components/**`
+
+### L-017 — Specs assert structure, not the couple's copy
+- **Date:** 2026-11-13
+- **Trigger:** carried over from adc-website (its L-031: a content publish turned a footer spec red with no code change); this repo's audit found specs pinning FAQ and Explore counts, entourage group slugs, attire swatch names, the footer sign-off and button labels; escape: e2e red on copy-only edits, reported by the user 2026-11-26 (this PR)
+- **Symptom:** a content or copy edit (`src/content/**`, a section's text) turns a spec red with no code change.
+- **Root cause:** the spec asserted the current copy or item count instead of the structure the code guarantees.
+- **Rule:** specs that render content assert structure (the element exists, has a label or href, sits in the right group, one item per content file read with `node:fs`), not the current copy. Facts the site states as facts (the date, the RSVP deadline, the couple's names) may stay. When a PR changes copy, grep `tests/` for the old values first.
+- **Check:** `grep -rn` in `tests/` for strings from `src/content/**` or section copy the diff adds finds no exact-copy assertion.
+- **Guard:** lint — `scripts/ci/check-spec-copy.mjs` (`npm run check:spec-copy`, a `prepush` step; tests in `scripts/ci/check-spec-copy.test.mjs`) fails on any 12+ character string from `src/content/**` or a component text node pinned in `tests/*.spec.ts`, except `scripts/ci/spec-copy-allowlist.json`; counts and slugs stay under the rule and L-021
+- **Paths:** `tests/**`, `src/content/**`

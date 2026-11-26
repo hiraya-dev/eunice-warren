@@ -44,7 +44,7 @@ async function findInvite(
 ) {
   const section = rsvp(page);
   await section.locator("[data-rsvp-name]").fill(name);
-  await section.getByRole("button", { name: "Find my invite" }).click();
+  await section.locator("[data-rsvp-find] button.rsvp_primary").click();
 
   const panel = section.locator("[data-rsvp-panel='2']");
   const seatRows = section.locator("[data-rsvp-seat-list] .rsvp_seat-row");
@@ -177,7 +177,7 @@ test.describe("RSVP paths", () => {
     await section.getByRole("button", { name: "Continue" }).click();
     const error = section.locator("[data-rsvp-guest-error]");
     await expect(error).toBeVisible();
-    await expect(error).toHaveText("Add a name or untick this seat.");
+    await expect(error).toHaveRole("alert");
     await name.fill("Fictional Companion");
     await section.getByRole("button", { name: "Done editing seat 2" }).click();
     await expect(error).toBeHidden();
@@ -191,7 +191,8 @@ test.describe("RSVP paths", () => {
     await section.locator("[aria-label='Name for seat 1']").fill("Kept Typed Value");
     await section.getByRole("button", { name: `Done editing ${fixture.members[0]}` }).click();
     await submitRsvp(page, "fixture-conflict@example.com");
-    await expect(section.locator("[data-rsvp-submit-error]")).toHaveText("Your invite changed. Check the seats before sending.");
+    await expect(section.locator("[data-rsvp-submit-error]")).toBeVisible();
+    await expect(section.locator("[data-rsvp-submit-error]")).toHaveAttribute("role", "alert");
     await expect(section.locator("[data-rsvp-seat-list] .rsvp_seat-row")).toHaveCount(2);
     await expect(section.locator("[data-rsvp-seat-list]")).toContainText("Kept Typed Value");
     await expect(section.locator("[data-rsvp-seat-list]")).not.toContainText("Pia Fixture");
@@ -208,16 +209,14 @@ test.describe("RSVP paths", () => {
     await expect(ticket).toBeHidden();
     await expect(section.locator("[data-rsvp-panel='sent']")).toBeVisible();
 
-    await section.getByRole("button", { name: "Edit my RSVP" }).click();
+    await section.locator("[data-rsvp-edit]").click();
     await expect(section.locator("[data-rsvp-panel='2']")).toBeVisible();
     await section.locator("input[name='attending'][value='no']").check();
     await submitRsvp(page, "liza-edit@example.com");
 
     await expect(section.locator("[data-rsvp-panel='sent']")).toBeVisible();
     await expect(visiblePanels(page)).toHaveCount(1);
-    await expect(section.locator("[data-rsvp-attending-summary]")).toHaveText(
-      "Regretfully declines",
-    );
+    await expect(section.locator("[data-rsvp-attending-summary]")).toHaveText(/declines/);
     await expect(section.locator("[data-rsvp-guests-summary]")).toBeHidden();
   });
 

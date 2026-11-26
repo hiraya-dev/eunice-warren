@@ -31,7 +31,7 @@ const archiveByPrefix = async (page: Page, prefix: string) => {
       .first();
     if (!(await row.count())) return;
     await row.locator("summary").click();
-    await row.getByRole("link", { name: "Archive household" }).click();
+    await row.locator("a[href*='archive=']").click();
     await page
       .locator("[data-admin-archive-confirm]")
       .getByRole("button", { name: "Archive" })
@@ -697,7 +697,7 @@ test.describe("admin RSVPs", () => {
         await page.locator('select[name="slipper_size_1"]').selectOption("W 7");
         await page.getByRole("button", { name: "Save reply" }).click();
         await expect(page.locator(".admin-drawer_stale")).toBeVisible();
-        await expect(page.locator(".admin-drawer_stale")).toContainText("This reply changed while you were editing");
+        await expect(page.locator(".admin-drawer_stale")).toHaveRole("alert");
         await expect(page.locator(".admin-drawer_stale a", { hasText: "Reload" })).toHaveAttribute("href", /household=.*edit=1/);
         await expect(page.locator('input[name="seat_name_1"]')).toHaveValue(`Stale draft ${prefix}`);
         await page.getByRole("button", { name: "Save reply" }).click();
