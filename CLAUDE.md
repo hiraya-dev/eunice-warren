@@ -202,3 +202,5 @@ If either blocks something the user asked for, say so; never work around it.
   `requestAnimationFrame` (L-009). Release snap drags at rest (L-010). Prove load
   flakes on a runner with `flake-check.yml`, not on the Mac.
 - Never load a hosted deploy in a loop (L-012). A red `e2e` may be a cancel (L-013). Specs never pin site copy: `check:spec-copy` in prepush (L-017).
+- No code comments: `check:comments` ratchets each file down; a decision goes in
+  `docs/decisions/`, a hack in an issue (ADR 0002, `delete-comment`).
