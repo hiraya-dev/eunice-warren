@@ -73,7 +73,6 @@
     object-fit: contain;
   }
 }
-/* Section background children */
 .section > :where(:not(.container)) {
   pointer-events: none;
   position: absolute;
@@ -82,7 +81,6 @@
   height: 100%;
 }
 
-/* Flex */
 .flex-horizontal-wrap {
   display: flex;
   flex-flow: wrap;
@@ -113,7 +111,6 @@
   align-items: var(--_alignment, start);
 }
 
-/* Grid */
 .grid-autofit {
   --_gap-size: var(--site-gutter);
   --_column-count: 12;
@@ -136,7 +133,6 @@
   grid-template-columns: repeat(auto-fill, minmax(min(max(8rem, (100% - ((var(--_column-count) - 1) * var(--_gap-size))) / var(--_column-count)), 100%), 1fr));
 }
 
-/* Trim, clamp & cover */
 :is(.margin-trim, .heading, .text, .layout > *) {
   & > :first-child {
     margin-top: 0;

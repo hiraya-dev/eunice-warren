@@ -154,7 +154,6 @@ const column2 = await slotContent(Astro.slots, "column2");
 <style is:global>
   @layer components {
     .layout {
-      /* layout defaults */
       --_visual-ratio: 3 / 2;
       --_alignment: start;
       --_column-count: 1;
@@ -166,7 +165,6 @@ const column2 = await slotContent(Astro.slots, "column2");
       align-items: stretch;
       grid-template-columns: repeat(var(--_column-count), minmax(0, 1fr));
 
-      /* column defaults */
       & > * {
         display: flex;
         flex-direction: column;
@@ -179,7 +177,6 @@ const column2 = await slotContent(Astro.slots, "column2");
         align-self: center;
       }
 
-      /* visual ratio lock */
       & > :last-child:not(:has(> :not(.image, .video, .overlay))) {
         position: relative;
         border-radius: var(--radius-small);
@@ -193,7 +190,6 @@ const column2 = await slotContent(Astro.slots, "column2");
         }
       }
 
-      /* variant overrides */
       &.centered {
         --_alignment: center;
       }

@@ -251,7 +251,6 @@ export function initGalleryOverlay() {
           30,
           Math.min(window.innerWidth * 0.92, window.innerWidth - 32),
         );
-        // The frame hugs the stamp, so its CSS max-height (resolved to px) is the space left.
         const frame = lightboxStamp.parentElement;
         const frameHeight =
           (frame && Number.parseFloat(getComputedStyle(frame).maxHeight)) ||
@@ -260,7 +259,6 @@ export function initGalleryOverlay() {
           30,
           Math.min(window.innerHeight * 0.74, frameHeight),
         );
-        // The whole photo sits inside a 6% side/top border and a 20% bottom strip.
         const outerHeightPerWidth =
           0.88 * (photo.height / photo.width) + 0.26;
         const width = Math.min(maxWidth, maxHeight / outerHeightPerWidth);
@@ -362,7 +360,6 @@ export function initGalleryOverlay() {
             drawLightbox(index, image);
           })
           .catch(() => {
-            // The decoded texture-sized image remains visible if the sharp variant fails.
           });
       };
 
@@ -432,7 +429,6 @@ export function initGalleryOverlay() {
         try {
           await animation.finished;
         } catch {
-          // A new navigation or close intentionally supersedes the animation.
         }
         if (frameAnimation === animation) {
           animation.cancel();
@@ -504,8 +500,6 @@ export function initGalleryOverlay() {
           return;
         }
 
-        // Draw first, then hide the WebGL source and expose the popup in the same task. The browser
-        // therefore cannot paint a frame with both representations (or neither) visible.
         const canvasSource = canvas?.setLightboxOpen(true, index) ?? null;
         hideHoverLabel();
         overlay.style.setProperty(
@@ -546,7 +540,6 @@ export function initGalleryOverlay() {
         overlay.dataset.galleryClosing = "true";
         await animateStamp(target, false);
 
-        // Restoring the mesh and hiding the popup are deliberately adjacent writes, matching open.
         overlay.dataset.galleryState = "canvas";
         delete overlay.dataset.galleryClosing;
         canvas?.setLightboxOpen(false);

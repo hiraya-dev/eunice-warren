@@ -28,7 +28,6 @@ const socialImage = new URL(image, Astro.site);
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 {Astro.url.pathname === "/" && <script is:inline>
   try {
-    // Test-only bypass; real guest storage never suppresses the preloader.
     if (localStorage.getItem("ew-test-skip-preloader") !== "1") document.documentElement.classList.add("ew-preloader-pending");
   } catch {
     document.documentElement.classList.add("ew-preloader-pending");

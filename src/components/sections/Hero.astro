@@ -110,14 +110,11 @@ const [{ data }] = await getCollection("hero");
 
     const play = () => {
       revealFallback?.disconnect();
-      // The close signal can arrive with reduced motion on; the hero is already visible then.
       if (timeline || !window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
       timeline = gsap.timeline();
       hero.dataset.heroEntering = "";
       timeline.from(textItems, { autoAlpha: 0, y: 16, duration: 0.8, stagger: 0.08, ease: "power3.out" });
       timeline.from(keepsakes, { autoAlpha: 0, y: -24, scale: 1.06, rotation: (_index, element) => element.matches(".hero_couple, .hero_sunset, .hero_music, .hero_palm, .hero_postmark, .hero_note") ? "-=4" : "+=4", duration: 0.9, stagger: 0.07, ease: "power3.out" }, "<0.25");
-      // The from() tweens have already rendered their hidden start state inline, so the
-      // CSS pre-paint gate can go; otherwise they would animate towards `visibility: hidden`.
       hero.removeAttribute("data-hero-motion");
       timeline.eventCallback("onComplete", () => {
         delete hero.dataset.heroEntering;
@@ -211,20 +208,16 @@ const [{ data }] = await getCollection("hero");
     .hero_subtitle { margin: 0; color: var(--dark-900); font: italic var(--secondary-ultralight) clamp(1.5rem, calc(1.1429rem + 1.984vw), 2.5rem) / 1.1 var(--secondary-family); }
     .hero_actions { display: flex; align-items: center; gap: var(--space-4); padding-top: var(--space-3); }
     .hero_rsvp { --button-016-color-background: var(--accent-500); --button-016-color: var(--light-100); --button-016-hover-color: var(--light-100); --button-016-hover-color-background: var(--dark-900); --button-016-color-focus: var(--dark-900); padding: 0; font-size: 1rem; }
-    /* Keep the hero pill's 1.25 line height (52px tall, as before). */
     .hero_rsvp :global(.button-016__inner) { padding: var(--space-3) var(--space-4); line-height: 1.25; }
     .hero_weekend { display: inline-flex; align-items: baseline; gap: 0.35em; padding-bottom: 0.25rem; border-bottom: 1px solid var(--dark-900); color: var(--dark-900); font: var(--primary-regular) 1rem / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wide); text-decoration: none; }
     .hero_weekend { --button-016-color: var(--dark-900); --button-016-hover-color: var(--dark-900); --button-016-color-background: transparent; --button-016-hover-color-background: transparent; --button-016-color-focus: var(--dark-900); }
     .hero_weekend :global(.button-016__inner) { padding: 0; }
   }
 
-  /* From 48rem up the fluid display size outgrows the scaled collage and the title runs into
-     the polaroids, so cap it at 8.9vw (it reaches the 128px token max at 1440). */
   @media (min-width: 48rem) {
     .hero_title { font-size: min(var(--display), 8.9vw); }
   }
 
-  /* Keep the scaled postmark clear of the fixed-size tablet actions row. */
   @media (min-width: 48rem) and (max-width: 61.999rem) {
     .hero_postmark { top: 47.5cqw; }
   }

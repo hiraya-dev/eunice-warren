@@ -84,7 +84,6 @@ const roundedRect = (
   context.closePath();
 };
 
-/** Draw the common cream paper, photograph, hairline and scaled corner radius. */
 const drawPolaroid = ({
   context,
   image,
@@ -97,7 +96,6 @@ const drawPolaroid = ({
   cover,
   hairline,
 }: DrawStampOptions) => {
-  // The window is centred: equal left and right borders.
   const photoLeft = (width - photoWidth) / 2;
   context.clearRect(0, 0, width, height);
   context.save();
@@ -139,10 +137,6 @@ const drawPolaroid = ({
   context.restore();
 };
 
-/**
- * Transparent margin around the polaroid, as a fraction of its width, that holds its baked
- * drop shadow. Plane geometry includes this padding; projected source rects exclude it.
- */
 export const polaroidPadding = (landscape: boolean) =>
   landscape ? 0.1 : 0.125;
 
@@ -152,7 +146,6 @@ type PopupText = {
   fontFamily: string;
 };
 
-/** Draw a popup polaroid with fixed fractional paper borders and optional handwritten metadata. */
 export const drawPopupPolaroid = (
   canvas: HTMLCanvasElement,
   image: HTMLImageElement,
@@ -205,7 +198,6 @@ export const drawPopupPolaroid = (
   }
 };
 
-/** Draw the polaroid paper and baked shadow used as each WebGL plane texture. */
 export async function createPolaroidCanvas(
   photo: GalleryTexturePhoto,
   longEdge: number,

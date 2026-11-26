@@ -102,9 +102,6 @@ const content = await slotContent(Astro.slots);
       display: inline-block;
     }
 
-    /* Block-level, not inline: an inline box would sit on a line of its own
-       inside the `details`, and the leading around it would push the control
-       off the centre its neighbours are aligned to. */
     .dropdown_toggle {
       display: flex;
       align-items: center;
@@ -130,8 +127,6 @@ const content = await slotContent(Astro.slots);
       transition: rotate var(--open-duration) var(--open-ease);
     }
 
-    /* The builder cannot set the `open` attribute, so its own classes dress
-       the control as open alongside it, as `Modal` does. */
     .dropdown_wrap:is([open], .stacki-opened) .dropdown_icon,
     .stacki-designer .dropdown_wrap.preview .dropdown_icon {
       rotate: -90deg;

@@ -151,8 +151,6 @@ if (Astro.request.method === "POST") {
           slipperSize: String(form.get(`slipper_size_${seat.seatId}`) ?? ""),
         }));
         const note = String(form.get("note") ?? "");
-        // Without JS the size select stays enabled, so an unticked seat can
-        // post a size; it is not coming, so the size is dropped, not refused.
         for (const seat of seats) if (!seat.attending) seat.slipperSize = "";
         if (attending === false) {
           for (const seat of seats) {
@@ -819,8 +817,6 @@ if (savedNotice && !editMode) {
     history.replaceState(null, "", url);
     syncLinks();
   });
-  // The edit form can arrive later through the drawer swap, so the change
-  // listener is delegated and every swap re-syncs the form it brings in.
   const syncEditForm = (form: HTMLFormElement) => {
     const no =
       form.querySelector<HTMLInputElement>("input[name='attending']:checked")
@@ -877,9 +873,6 @@ if (savedNotice && !editMode) {
   };
   const discardMessage = "Discard your changes to this reply?";
   const confirmDiscard = () => !currentEditFormIsDirty() || window.confirm(discardMessage);
-  // Set when the host said OK to discarding on a link that leaves the page, so
-  // beforeunload doesn't ask a second time. Any new typing clears it, and so
-  // does showing the page again.
   let discardConfirmed = false;
   document.addEventListener("input", () => {
     discardConfirmed = false;
@@ -954,8 +947,6 @@ if (savedNotice && !editMode) {
     const panel = drawer.querySelector<HTMLElement>(".admin-drawer_panel");
     let finished = false;
     const finish = () => {
-      // A reopen mid-exit already removed this drawer; its timer must not
-      // unlock the page or stop tracking under the new one.
       if (finished || !drawer.isConnected) return;
       finished = true;
       panel?.removeEventListener("animationend", onAnimationEnd);
@@ -976,7 +967,6 @@ if (savedNotice && !editMode) {
     panel?.addEventListener("animationend", onAnimationEnd);
     window.setTimeout(finish, 300);
   };
-  // Callers confirm a dirty discard first; popstate has already asked.
   const beginDrawerClose = (pushHistory: boolean) => {
     if (pushHistory) {
       const url = new URL(location.href);
@@ -1050,7 +1040,6 @@ if (savedNotice && !editMode) {
       closeDrawer();
       return;
     }
-    // The CSV link downloads without leaving the page, so it is not guarded.
     const dashboardNav = target.closest<HTMLAnchorElement>("[data-admin-nav] a, [data-admin-tabbar] a, [data-admin-filter], .admin_brand, .admin_topbar a, .admin_account a");
     if (dashboardNav) {
       const dirty = currentEditFormIsDirty();
@@ -1099,7 +1088,6 @@ if (savedNotice && !editMode) {
   });
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
-    // Back from a dirty edit asks first; keeping the edit puts its URL back.
     const dirtyForm = document.querySelector<HTMLFormElement>(
       "[data-admin-drawer]:not([data-closing]) .admin-drawer_edit-form",
     );

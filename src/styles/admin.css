@@ -1,14 +1,3 @@
-/*
- * Guest ledger (the hosts' dashboard). Loaded only by AdminLayout, so the guest
- * site never ships it. Sits outside the cascade layers on purpose: it has to win
- * over the guest site's base styles (headings, body, leading trim) that
- * global.css brings in for the colour and spacing tokens.
- *
- * Mobile first. Two breakpoints: 64rem swaps the tab bar for the sidebar, and
- * 84rem swaps the stacked guest cards for the table (84rem).
- */
-
-/* 1. Tokens and ground */
 :root {
   --admin-display: var(--font-admin-newsreader, Georgia, serif);
   --admin-sans: var(--font-admin-geist, Arial, sans-serif);
@@ -42,8 +31,6 @@
     align-items: start;
   }
 
-  /* The guest site trims text with pseudo-elements and sets heading sizes; the
-     dashboard sets its own. */
   :where(h1, h2, h3, p)::before,
   :where(h1, h2, h3, p)::after {
     content: none;
@@ -69,7 +56,6 @@
   }
 }
 
-/* 2. Shared parts */
 .admin_label {
   font-family: var(--admin-mono);
   font-size: 0.75rem;
@@ -176,7 +162,6 @@
   }
 }
 
-/* 3. Shell */
 .admin_sidebar {
   display: none;
   background-color: var(--dark-900);
@@ -367,12 +352,9 @@
   }
 }
 
-/* 4. Overview */
 .admin-overview_header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  /* Phones give the greeting the full width under the date and stamp, so
-     "Good afternoon, Eunice" stays on two lines down to 320px. */
   grid-template-areas: "date stamp" "greeting greeting";
   align-items: start;
   column-gap: 1rem;
@@ -845,7 +827,6 @@
   }
 }
 
-/* 5. Guest list */
 .admin-guests_header {
   display: flex;
   flex-direction: column;
@@ -1039,7 +1020,6 @@
   }
 }
 
-/* Stacked cards until there is room for the table. */
 .admin-guests_table {
   display: block;
   width: 100%;
@@ -1082,7 +1062,6 @@
       border-bottom-color: var(--dark-900);
     }
   }
-  /* The last visible row has no divider; search can hide the rows after it. */
   tbody tr:not([hidden]):not(:has(~ tr:not([hidden]))) {
     border-bottom: 0;
   }
@@ -1125,8 +1104,6 @@
     grid-area: rsvp;
 
     @media (min-width: 84rem) {
-      /* Fits the widest pill ("Declined · 1 seat", "Waiting · 5 seats")
-         beside the 2.75rem menu button. */
       width: 15rem;
       padding-right: 3.25rem;
     }
@@ -1207,8 +1184,6 @@
   }
 }
 
-/* Guest list editor: the edit row, the new-household row, the archive
-   confirm and the row menu. Cream rows inside the white list card. */
 .admin-guests_title {
   display: flex;
   flex-direction: column;
@@ -1249,7 +1224,6 @@
   }
 }
 
-/* The open rows replace the stacked card until the table is back. */
 .admin-guests_table tr:is(.admin-guests_edit-row, .admin-guests_archive-row) {
   display: block;
   padding: 0;
@@ -1358,7 +1332,6 @@ label.admin_guests_host {
   }
 }
 
-/* The names box: member chips, open seats and (new row) the member inputs. */
 .admin_guests_edit-seats {
   grid-area: names;
   display: flex;
@@ -1382,8 +1355,6 @@ label.admin_guests_host {
   gap: 0.125rem;
   min-width: 0;
   max-width: 100%;
-  /* The first line of text (the server's and the script's) is for screen
-     readers; the inputs carry the visible words. */
   > span:not(.admin_guests_chip-main) {
     position: absolute;
     width: 1px;
@@ -1410,7 +1381,6 @@ label.admin_guests_host {
       opacity: 1;
     }
   }
-  /* An open seat: a bare input in the box. */
   > input[name="seat_name"] {
     min-width: 11rem;
     height: 1.875rem;
@@ -1449,7 +1419,6 @@ label.admin_guests_host {
   place-items: center;
   min-width: 1.25rem;
   height: 1.25rem;
-  /* The label's words are for screen readers; the chip shows the mark. */
   [data-retire-label] {
     font-size: 0;
     line-height: 1rem;
@@ -1488,7 +1457,6 @@ label.admin_guests_host {
 }
 .admin_guests_member {
   display: block;
-  /* Labels the script adds carry their words as plain text. */
   font-size: 0;
   line-height: 0;
   input {
@@ -1703,7 +1671,6 @@ label.admin_guests_host {
   }
 }
 
-/* The row menu: a ⋯ hit area that opens a small popover. */
 .admin-guests_table td[data-col="rsvp"] {
   display: flex;
   align-items: center;
@@ -1759,8 +1726,6 @@ label.admin_guests_host {
       transform-origin: bottom right;
     }
   }
-  /* Without JS nothing measures, so the last rows open upward to clear the
-     phone tab bar. */
   @media (width < 84rem) and (scripting: none) {
     tr:nth-last-child(-n + 2) & {
       top: auto;
@@ -1774,11 +1739,6 @@ label.admin_guests_host {
     translate: 0 -50%;
     transform-origin: right center;
   }
-  /* Opening grows out of the button; closing stays instant, since only the
-     open state carries a transition. Scale, not transform, so the centring
-     translate above keeps working. A closed details keeps its content styled
-     (content-visibility), where @starting-style never applies, so the closed
-     state holds the from values too. */
   @media (prefers-reduced-motion: no-preference) {
     opacity: 0;
     scale: 0.96;
@@ -1819,7 +1779,6 @@ label.admin_guests_host {
   }
 }
 
-/* 6. Page header and buttons (Slippers, Songs) */
 .admin_pagehead {
   display: flex;
   flex-direction: column;
@@ -1855,8 +1814,6 @@ label.admin_guests_host {
   }
 }
 
-/* The copy status sits under the buttons without taking space, so it appearing
-   never moves the page. */
 .admin_actions {
   position: relative;
   display: flex;
@@ -1930,7 +1887,6 @@ label.admin_guests_host {
   }
 }
 
-/* 7. Slipper order */
 .admin-slippers_stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1965,7 +1921,6 @@ label.admin_guests_host {
   }
   strong {
     font-family: var(--admin-display);
-    /* 64px, shrinking below 346px so three digits fit the two-up cards. */
     font-size: min(4rem, 18.5vw);
     font-weight: 200;
     line-height: 1;
@@ -1973,7 +1928,6 @@ label.admin_guests_host {
     color: var(--dark-900);
 
     @media (min-width: 64rem) {
-      /* 72px at 1024 so three digits fit a narrow card, 120px from 1344. */
       font-size: clamp(4.5rem, 15vw - 5.1rem, 7.5rem);
     }
   }
@@ -2126,7 +2080,6 @@ label.admin_guests_host {
   color: var(--dark-700);
 }
 
-/* 8. Song requests: stacked cards until there is room for the table. */
 .admin-songs_table {
   --_cols: 2.5rem 20rem 10rem minmax(0, 1fr) 4.5rem;
   position: relative;
@@ -2150,7 +2103,6 @@ label.admin_guests_host {
   padding-block: 1rem;
   border-bottom: var(--border-width) solid var(--light-300);
 
-  /* The last request has no divider above the card's bottom edge. */
   &[data-song-row]:not(:has(~ [data-song-row])) {
     border-bottom: 0;
   }
@@ -2293,7 +2245,6 @@ label.admin_guests_host {
 }
 
 .admin-songs_header-row {
-  /* Visually hidden below 84rem; screen readers still get the column names. */
   position: absolute;
   width: 0.0625rem;
   height: 0.0625rem;
@@ -2327,7 +2278,6 @@ label.admin_guests_host {
   }
 }
 
-/* 9. RSVPs and the reply drawer */
 html[data-admin-drawer-open] {
   overflow: hidden;
 }
@@ -2414,7 +2364,6 @@ html[data-admin-drawer-open] {
     justify-content: space-between;
     gap: 1rem 2rem;
   }
-  /* Phones keep the pills in one scrolling row that bleeds to the gutters. */
   nav {
     display: flex;
     gap: 0.5rem;
@@ -2544,7 +2493,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Stacked cards until there is room for the table. */
 .admin-rsvps_table {
   display: block;
   width: 100%;
@@ -2593,7 +2541,6 @@ html[data-admin-drawer-open] {
         background-color: var(--light-100);
       }
     }
-    /* The last visible row has no divider; search can hide the rows after it. */
     &:not([hidden]):not(:has(~ tr:not([hidden]))) {
       border-bottom: 0;
     }
@@ -2663,9 +2610,6 @@ html[data-admin-drawer-open] {
     padding: 0.1875rem 0.625rem;
   }
 
-  /* On phones the household cell shares the row's grid (subgrid), so the name
-     sits beside the pill and the email on its own line, while the link stays a
-     real box that can take focus. */
   tbody [data-col="household"],
   tbody [data-col="household"] a {
     display: grid;
@@ -2690,7 +2634,6 @@ html[data-admin-drawer-open] {
     &:focus-visible {
       outline: 0;
     }
-    /* The whole row is the target; the ring is drawn around it. */
     &::after {
       content: "";
       position: absolute;
@@ -2781,7 +2724,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* The drawer is a full-screen sheet on phones and a side panel from 64rem. */
 .admin-drawer_wrap {
   position: fixed;
   inset: 0;
@@ -2877,8 +2819,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* A drawer the server re-renders (a POST answer, Save and add another) is the
-   same drawer the host already had open: it shows in place. Closing still plays. */
 [data-admin-drawer][data-admin-drawer-settled]:not([data-closing])
   :is(.admin-drawer_scrim, .admin-drawer_panel) {
   animation: none;
@@ -2895,12 +2835,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/*
- * Guest list add/edit drawer (Paper Admin 11 and 12). The panel and scrim come
- * from the RSVP drawer above; this block docks it at 37.5rem from 64rem, pins
- * the footer and lets only the middle scroll. Under 64rem it is the full-screen
- * phone sheet (Paper Admin 13a and 13b), styled at the end of the block.
- */
 .admin_guests_panel {
   --drawer-pad: 1.25rem;
   --drawer-gap: 1.5rem;
@@ -2923,7 +2857,6 @@ html[data-admin-drawer-open] {
     }
   }
 }
-/* Above .admin-drawer_panel header h2, which comes later in the file. */
 .admin_guests_panel .admin_guests_drawer_header h2 {
   @media (min-width: 64rem) {
     font-size: 3.5rem;
@@ -2933,8 +2866,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Every control sets its own face; the browser defaults would not follow.
-   Zero specificity, so each part below overrides it. */
 :where(.admin_guests_drawer) :where(button, input, textarea, summary) {
   margin: 0;
   font-family: var(--admin-sans);
@@ -2991,7 +2922,6 @@ html[data-admin-drawer-open] {
   flex-direction: column;
   gap: var(--drawer-gap);
   min-height: 0;
-  /* The scrollbar sits on the drawer's edge, not inside its padding. */
   margin-inline: calc(var(--drawer-pad) * -1);
   padding: 0 var(--drawer-pad) var(--drawer-gap);
   overflow-y: auto;
@@ -3046,7 +2976,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Names chip box (add) */
 .admin_guests_names {
   display: flex;
   flex-wrap: wrap;
@@ -3082,7 +3011,6 @@ html[data-admin-drawer-open] {
     font-size: 0.9375rem;
     line-height: 1.25rem;
     color: var(--dark-700);
-    /* The glyph is small; the tap target is not. */
     &::after {
       content: "";
       position: absolute;
@@ -3122,7 +3050,6 @@ html[data-admin-drawer-open] {
   display: none;
 }
 
-/* Already invited */
 .admin_guests_duplicate_warning {
   padding: 0.625rem 0.75rem;
   border-inline-start: 0.125rem solid var(--accent-500);
@@ -3159,7 +3086,6 @@ html[data-admin-drawer-open] {
   margin-top: 0.625rem;
 }
 
-/* Plus-one switch and seat line */
 .admin_guests_plus {
   gap: 0.75rem;
   padding-bottom: 1.25rem;
@@ -3291,7 +3217,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Invitation name, Host ID and notes */
 .admin_guests_invite_row {
   display: flex;
   align-items: center;
@@ -3389,7 +3314,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Edit: guests table */
 .admin_guests_people_head {
   display: flex;
   align-items: baseline;
@@ -3551,7 +3475,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* A save refusal, above the footer */
 .admin_guests_drawer .admin_guests_error {
   flex: none;
   margin: 0 0 1rem;
@@ -3566,7 +3489,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Footer, pinned */
 .admin_guests_drawer_footer {
   display: flex;
   flex: none;
@@ -3634,7 +3556,6 @@ html[data-admin-drawer-open] {
 
 .admin-drawer_top {
   position: sticky;
-  /* Sticky offsets count from inside the panel's padding. */
   top: -1.5rem;
   z-index: 1;
   display: flex;
@@ -3710,24 +3631,14 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Body copies of the footer's Save and add another and Archive household, and
-   the names hint: phone sheet only. */
 .admin_guests_sheet_actions,
 .admin_guests_name_tip {
   display: none;
 }
 
-/*
- * Guest list phone sheet (Paper Admin 13a, and 13b with the keyboard up).
- * Under 64rem the drawer fills the screen: the eyebrow and title stay pinned
- * above the scrolling body, the footer is pinned below it. The keyboard script
- * in guests.astro sets --guest-sheet-keyboard and [data-keyboard-open] on the
- * panel; without it the CSS alone keeps the footer on the bottom edge.
- */
 @media (max-width: 63.99rem) {
   .admin_guests_panel {
     &[data-keyboard-open] {
-      /* The footer sits on the keyboard; the body above it shrinks. */
       bottom: var(--guest-sheet-keyboard, 0px);
 
       .admin_guests_drawer_footer {
@@ -3735,7 +3646,6 @@ html[data-admin-drawer-open] {
       }
     }
 
-    /* Header: eyebrow, then the title, over a full-width rule. */
     > .admin_guests_drawer .admin-drawer_top {
       margin: 0;
 
@@ -3748,7 +3658,6 @@ html[data-admin-drawer-open] {
       }
     }
     .admin_guests_drawer_scroll {
-      /* Keeps a focused field clear of the pinned title. */
       scroll-padding-top: 6.5rem;
     }
     .admin_guests_drawer_header {
@@ -3766,7 +3675,6 @@ html[data-admin-drawer-open] {
       }
     }
 
-    /* Body */
     .admin_guests_drawer_section {
       gap: 0.5rem;
     }
@@ -3785,15 +3693,12 @@ html[data-admin-drawer-open] {
     }
     .admin_guests_name_tip {
       color: var(--dark-700);
-      /* It leaves a beat after the box loses focus, so the tap that blurred
-         it still lands on the control below before the page moves up. */
       transition: display 0s linear 0.25s allow-discrete;
     }
     .admin_guests_names:focus-within + .admin_guests_name_tip {
       display: block;
       transition-delay: 0s;
     }
-    /* A warning below the box takes the place of the hint. */
     .admin_guests_drawer_section:has(
         [data-duplicate-warning]:not([hidden])
       )
@@ -3832,7 +3737,6 @@ html[data-admin-drawer-open] {
       line-height: 1.25rem;
     }
 
-    /* "Allow a plus-one" on the left, "N seats · More" on the right. */
     .admin_guests_plus {
       flex-flow: row wrap;
       align-items: flex-start;
@@ -3857,7 +3761,6 @@ html[data-admin-drawer-open] {
       flex-wrap: nowrap;
       align-items: baseline;
       gap: 0.25rem;
-      /* Centres the 18px line on the 24px switch. */
       padding-top: 0.1875rem;
 
       p {
@@ -3911,7 +3814,6 @@ html[data-admin-drawer-open] {
       }
     }
 
-    /* Footer: Cancel and Save, pinned to the bottom edge. */
     .admin_guests_drawer_footer {
       position: relative;
       z-index: 2;
@@ -3945,7 +3847,6 @@ html[data-admin-drawer-open] {
       }
     }
 
-    /* End of the scrolling body: the actions the footer drops. */
     .admin_guests_sheet_actions {
       display: flex;
       flex-direction: column;
@@ -3981,11 +3882,6 @@ html[data-admin-drawer-open] {
   color: var(--accent-500);
 }
 
-/*
- * RSVP edit form (Paper Admin 15, 15b and 16). The panel stops scrolling in
- * edit mode: the middle scrolls, the footer stays pinned, as in the Guest list
- * drawer. Under 64rem it is the full-width phone sheet.
- */
 .admin-drawer_panel:has(.admin-drawer_edit-form) {
   --edit-pad: 1.25rem;
   gap: 0;
@@ -4007,7 +3903,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Every control sets its own face; the browser defaults would not follow. */
 .admin-drawer_edit-form :is(input, select, textarea, button) {
   margin: 0;
   font-family: var(--admin-sans);
@@ -4017,7 +3912,6 @@ html[data-admin-drawer-open] {
   display: none;
 }
 
-/* Header pills: Edit reply / Answer for them, left of Close. */
 .admin-drawer_top .admin-drawer_edit-link {
   width: auto;
   height: 2.5rem;
@@ -4062,7 +3956,6 @@ html[data-admin-drawer-open] {
   flex-direction: column;
   gap: 1.75rem;
   min-height: 0;
-  /* The scrollbar sits on the drawer's edge, not inside its padding. */
   margin-inline: calc(var(--edit-pad) * -1);
   padding: 1.25rem var(--edit-pad) 1.75rem;
   overflow-y: auto;
@@ -4075,7 +3968,6 @@ html[data-admin-drawer-open] {
     padding-top: 1.75rem;
   }
 }
-/* Phone: the header closes with a full-width rule (Admin 15b). */
 .admin-drawer_edit-scroll > header {
   @media (max-width: 63.99rem) {
     gap: 0.5rem;
@@ -4093,7 +3985,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Deadline note (navy, not red) and the stale bar */
 .admin-drawer_deadline-note,
 .admin-drawer_stale {
   display: flex;
@@ -4152,7 +4043,6 @@ html[data-admin-drawer-open] {
   }
 }
 
-/* Field-level text under a control, and errors beside fields */
 p.admin-drawer_error {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
@@ -4163,7 +4053,6 @@ p.admin-drawer_error {
   margin-top: 0;
 }
 
-/* Their answer */
 .admin-drawer_answer {
   min-width: 0;
   margin: 0;
@@ -4240,7 +4129,6 @@ p.admin-drawer_error {
   }
 }
 
-/* Seats */
 .admin-drawer_edit-seats {
   display: block;
   min-width: 0;
@@ -4285,8 +4173,6 @@ p.admin-drawer_error {
   align-items: start;
   gap: 1rem;
   padding-block: 1rem;
-  /* Open list on the drawer ground: keeps Paper's closing rule above the
-     note (L-051 drops it only for list cards). */
   border-bottom: var(--border-width) solid var(--light-300);
 
   @media (max-width: 63.99rem) {
@@ -4370,7 +4256,6 @@ p.admin-drawer_error {
       outline-offset: 2px;
     }
   }
-  /* A renamed seat reads as touched. */
   &:has([data-admin-was]:not([hidden])) input {
     border-color: var(--dark-900);
   }
@@ -4390,7 +4275,6 @@ p.admin-drawer_error {
     }
   }
 }
-/* Not coming: the row recedes, but its name stays editable. */
 .admin-drawer_edit-seat:has(.admin-drawer_check input:not(:checked)) .admin-drawer_edit-seat-fields input {
   background-color: transparent;
   color: var(--dark-700);
@@ -4447,7 +4331,6 @@ small .admin-drawer_error::before {
       cursor: default;
     }
   }
-  /* Unticked seats show a dash instead of "Size". */
   &:has(select:disabled)::before {
     content: "—";
     position: absolute;
@@ -4459,12 +4342,10 @@ small .admin-drawer_error::before {
     color: var(--dark-700);
   }
 }
-/* Errors: the field takes the accent border (after the touched/focus rules). */
 .admin-drawer_edit-form .admin-drawer_edit-seat :is(input, select).has-error {
   border-color: var(--accent-500);
 }
 
-/* Nobody is coming */
 .admin-drawer_nobody {
   padding-block: 1rem;
   border-top: var(--border-width) solid var(--dark-900);
@@ -4485,7 +4366,6 @@ small .admin-drawer_error::before {
   }
 }
 
-/* Their note */
 .admin-drawer_edit-note {
   gap: 0.625rem;
   > div {
@@ -4527,7 +4407,6 @@ small .admin-drawer_error::before {
   }
 }
 
-/* Footer text: under the note on phones, inside the pinned footer from 64rem. */
 .admin-drawer_footnote {
   margin: -0.75rem 0 0;
   font-size: 0.8125rem;
@@ -4606,7 +4485,6 @@ small .admin-drawer_error::before {
   }
 }
 
-/* Reply saved (Admin 16, card 7) */
 .admin-rsvps_saved {
   display: inline-flex;
   align-items: center;
@@ -4752,7 +4630,6 @@ small .admin-drawer_error::before {
       border-radius: 0.125rem;
       background-color: transparent;
     }
-    /* The line from the current version down to the one before it. */
     &[data-current]:not(:last-child)::after {
       content: "";
       position: absolute;

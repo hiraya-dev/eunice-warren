@@ -1,25 +1,12 @@
 import { gsap, ScrollTrigger } from "@/scripts/scroll.ts";
 
-/**
- * Motion for the #gallery teaser: the polaroids settle in once on scroll, and on a fine pointer
- * they drift with the mouse by depth tier.
- *
- * Layers, so nothing fights:
- *   .gallery_slot      position, resting `rotate` (inline), resting opacity, parallax `translate`
- *   .gallery_polaroid  reveal (GSAP opacity, scale, y, rotation), cleared when it finishes
- */
-
 type Tier = "near" | "mid" | "far";
 
-/** Parallax travel in px at the section's edge (pointer offset from centre of ±1). */
 const TRAVEL: Record<Tier, number> = { near: 14, mid: 8, far: 4 };
 const TIER_ORDER: Record<Tier, number> = { near: 0, mid: 1, far: 2 };
-/** Time constant of the lerp toward the pointer, in seconds (settles in about a second). */
 const FOLLOW = 0.22;
 const SETTLED = 0.02;
 const REVEAL_STEP = 0.045;
-/** The 14-polaroid layout starts at 80rem, where the near tier sits about 7px from the copy;
-    it eases up to full travel by 1380px as that gap widens. */
 const WIDE_FROM = 1280;
 const travelScale = (width: number) =>
   width < WIDE_FROM ? 1 : Math.min(1, 0.3 + (0.7 * (width - WIDE_FROM)) / 100);
@@ -42,7 +29,6 @@ function setupReveal(section: HTMLElement, slots: HTMLElement[]) {
   if (!polaroids.length) return () => {};
 
   const context = gsap.context(() => {
-    // Start a few degrees past each slot's own resting tilt, so the photo turns into place.
     polaroids.forEach((polaroid, index) => {
       const tilt = parseFloat(getComputedStyle(slots[index]).rotate) || 0;
       const sign = tilt === 0 ? (index % 2 ? 1 : -1) : Math.sign(tilt);
@@ -54,7 +40,6 @@ function setupReveal(section: HTMLElement, slots: HTMLElement[]) {
       const box = section.getBoundingClientRect();
       const cx = box.left + box.width / 2;
       const cy = box.top + box.height / 2;
-      // Near tier first, far last; inside a tier, nearest the section's centre first.
       const ranked = slots
         .map((slot, index) => {
           const rect = slot.getBoundingClientRect();
@@ -120,7 +105,6 @@ function setupParallax(section: HTMLElement, slots: HTMLElement[]) {
     const dt = Math.min(0.05, Math.max(0.001, (time - last) / 1000 || 0.016));
     last = time;
 
-    // Read, then write.
     let nx = 0;
     let ny = 0;
     if (pointer) {
@@ -155,7 +139,6 @@ function setupParallax(section: HTMLElement, slots: HTMLElement[]) {
 
   const onMove = (event: PointerEvent) => {
     if (event.pointerType === "touch") return;
-    // The fullscreen overlay sits inside the section; the page behind it stays still.
     pointer = overlay && !overlay.hidden ? null : { x: event.clientX, y: event.clientY };
     schedule();
   };

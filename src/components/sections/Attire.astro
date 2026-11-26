@@ -167,7 +167,6 @@ const holes = Array.from({ length: 8 });
 <style>
   @layer components {
     .attire_wrap {
-      /* Guest attire motif colours, deliberately not site tokens. */
       --_attire-tiffany: #81d8d0;
       --_attire-seafoam: #a8c9a6;
       --_attire-champagne: #eedfc4;
@@ -191,7 +190,6 @@ const holes = Array.from({ length: 8 });
       gap: 4.5rem;
     }
 
-    /* Header */
     .attire_header {
       display: flex;
       flex-direction: column;
@@ -289,7 +287,6 @@ const holes = Array.from({ length: 8 });
       font: var(--primary-regular) 0.9375rem / 1.375rem var(--primary-family);
     }
 
-    /* Looks */
     .attire_looks {
       display: flex;
       min-width: 0;
@@ -328,7 +325,6 @@ const holes = Array.from({ length: 8 });
       top: 0.5rem;
       left: 50%;
       width: 100vw;
-      /* The global svg rule caps width at the parent; the string must outrun it. */
       max-width: none;
       translate: -50% 0;
       pointer-events: none;
@@ -356,7 +352,6 @@ const holes = Array.from({ length: 8 });
       margin-right: var(--slider-gap);
       container-type: inline-size;
     }
-    /* The two desktop strings follow the looks in the list, so the last look is not :last-child. */
     .attire_item:has(+ .attire_string) {
       margin-right: 0;
     }
@@ -425,7 +420,6 @@ const holes = Array.from({ length: 8 });
     .attire_caption-dot-champagne { --_dot: var(--_attire-champagne); }
     .attire_caption-dot-gold { --_dot: var(--_attire-gold); }
 
-    /* Slider controls (mobile only) */
     .attire_controls-row {
       display: flex;
       align-items: center;
@@ -484,20 +478,12 @@ const holes = Array.from({ length: 8 });
       display: none;
     }
 
-    /* Notebook page */
     .attire_note-wrap {
       display: flex;
       justify-content: center;
       padding-block: 0.75rem;
     }
     .attire_note {
-      /*
-       * The ruled lines and the writing share one pitch. Every padding, margin, gap and
-       * line-height inside the card is a whole number of rows, so each line box ends on
-       * a rule. A hand font's baseline sits above the bottom of its line box, so the text
-       * is nudged down by the difference: half a row, less --_*-k em (half the font's
-       * ascent minus descent), less the 1px rule, which leaves the baseline on the rule.
-       */
       --_rule: 2rem;
       --_rule-start: calc(var(--_rule) * 2);
       --_hand-k: 0.39;
@@ -559,7 +545,6 @@ const holes = Array.from({ length: 8 });
       box-sizing: border-box;
     }
     .attire_note-holes i:nth-child(4) { margin-right: auto; }
-    /* No leading trim on the writing: its line boxes are whole rows. */
     .attire_note-title,
     .attire_note-label,
     .attire_note-sentence {
@@ -615,17 +600,14 @@ const holes = Array.from({ length: 8 });
       margin-top: var(--_rule);
       flex-direction: column;
       align-items: flex-start;
-      /* The stamp scales to the seal's own width, so a narrow phone never crops it. */
       container-type: inline-size;
     }
     .attire_postmark {
-      /* Resolved here, against the seal container; --_stamp-h mirrors the 340 x 254 attributes. */
       --_stamp-w: min(16.875rem, 100cqi);
       --_stamp-h: calc(var(--_stamp-w) * 254 / 340);
       display: block;
       width: var(--_stamp-w);
       height: var(--_stamp-h);
-      /* The stamp may sit off the rules; the sentence below it comes back on them. */
       margin: 0 0 calc(round(up, var(--_stamp-h), var(--_rule)) - var(--_stamp-h)) -0.75rem;
       rotate: -7deg;
     }
@@ -726,13 +708,6 @@ const holes = Array.from({ length: 8 });
     }
   }
 
-  /*
-   * Two clotheslines per group (looks 1-4, then 5-7 centred); narrower than this
-   * the cards would drop under ~220px, so they swipe instead (--slider-status: on).
-   * One list stays in the DOM; a 4-track grid holds line 1, and line 2 sits in a
-   * full-width second row where each card is offset by percentage margins.
-   * Every size scales with --_u (1px at 1440, capped there).
-   */
   @media (min-width: 72rem) {
     .attire_looks {
       gap: 2.5rem;

@@ -1,18 +1,14 @@
-/* 1. Design tokens */
 :root {
-  /* Swatches */
   --light-100: #f5efe3;
   --light-200: #fbf8f1;
   --light-300: #d6cdbb;
   --dark-700: #5b6788;
-  /* Derived midpoint for Lumos's dark background-2. */
   --dark-800: #3d4b72;
   --dark-900: #1f2f5c;
   --brand-500: #bcd3e8;
   --brand-text: var(--dark-900);
   --accent-500: #c23b2e;
 
-  /* Typography primitives */
   --primary-family: var(--font-neue-montreal, system-ui, sans-serif);
   --secondary-family: var(--font-editorial-new, Georgia, serif);
   --mono-family: var(--font-fraktion-mono, ui-monospace, monospace);
@@ -29,7 +25,6 @@
   --mono-trim-top: 0.276em;
   --mono-trim-bottom: 0.406em;
 
-  /* Letter spacing */
   --letter-spacing-tighter: -0.04em;
   --letter-spacing-tight: -0.03em;
   --letter-spacing-snug: -0.02em;
@@ -37,7 +32,6 @@
   --letter-spacing-wide: 0.08em;
   --letter-spacing-wider: 0.12em;
 
-  /* Line height */
   --line-height-tight: 0.9;
   --line-height-small: 1;
   --line-height-medium: 1.1;
@@ -45,38 +39,30 @@
   --line-height-large: 1.3;
   --line-height-huge: 1.5;
 
-  /* Borders & focus */
   --border-width: 0.0625rem;
   --focus-width: 0.125rem;
   --focus-offset: 0.1827rem;
   --focus-offset-inner: calc(var(--focus-width) * -1);
 
-  /* Hover motion */
   --hover-duration: 200ms;
   --hover-ease: ease;
 
-  /* Opening motion */
   --open-duration: var(--hover-duration);
   --open-ease: var(--hover-ease);
 
-  /* Radius */
   --radius-small: 0.5rem;
   --radius-main: 1rem;
   --radius-round: 100vw;
 
-  /* Fluid scale range */
   --viewport-min: 320;
   --viewport-max: 1440;
 
-  /* Max width */
   --max-width-small: 70rem;
   --max-width-main: calc(var(--viewport-max) / 16 * 1rem);
   --max-width-full: 100%;
 
-  /* Nav */
   --nav-height: 5rem;
 
-  /* Typography styles */
   --display: clamp(var(--display-min) / 16 * 1rem, ((var(--display-min) - ((var(--display-max) - var(--display-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--display-max) - var(--display-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--display-max) / 16 * 1rem);
   --display-min: 80;
   --display-max: 128;
@@ -228,7 +214,6 @@
   --eyebrow-trim-bottom: var(--mono-trim-bottom);
   --eyebrow-text-wrap: pretty;
 
-  /* Site layout */
   --site-margin: clamp(var(--site-margin-min) / 16 * 1rem, ((var(--site-margin-min) - ((var(--site-margin-max) - var(--site-margin-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--site-margin-max) - var(--site-margin-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--site-margin-max) / 16 * 1rem);
   --site-margin-min: 20;
   --site-margin-max: 64;
@@ -239,7 +224,6 @@
 
   --site-width: calc(100% - var(--site-margin) * 2);
 
-  /* Spacing */
   --space-1: clamp(var(--space-1-min) / 16 * 1rem, ((var(--space-1-min) - ((var(--space-1-max) - var(--space-1-min)) / (var(--viewport-max) - var(--viewport-min)) * var(--viewport-min))) / 16 * 1rem + ((var(--space-1-max) - var(--space-1-min)) / (var(--viewport-max) - var(--viewport-min))) * 100vw), var(--space-1-max) / 16 * 1rem);
   --space-1-min: 4;
   --space-1-max: 8;
@@ -279,7 +263,6 @@
   --section-space-nav-overlap-max: 224;
 }
 
-/* 2. Color themes */
 :root,
 .theme-light,
 .theme-dark .theme-invert,
@@ -406,7 +389,6 @@ html {
   scroll-padding-block-start: calc(var(--nav-height) + 2rem);
 }
 
-/* 3. Reset & base */
 *,
 ::before,
 ::after {
@@ -529,7 +511,6 @@ select:has(option[value=""]:checked) {
   }
 }
 
-/* 4. Text styles */
 body,
 .text-style-main {
   font-family: var(--text-main-font-family);
@@ -689,7 +670,6 @@ h6,
   --_margin-bottom: var(--h6-margin-bottom);
 }
 
-/* Leading trim */
 :is(h1, h2, h3, h4, h5, h6, p, [class*="text-style-"]:not(:has(h1, h2, h3, h4, h5, h6, p))) {
   display: flow-root;
   &::before {

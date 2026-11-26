@@ -61,8 +61,6 @@ const links = [
   </>
 )}
 
-<!-- Without JavaScript the menu can't open, so render the panel in normal flow below the bar
-     (not as a fixed overlay, which would cover the page) and hide the toggle. -->
 <noscript><style>
   .nav_toggle { display: none; }
   .navigation { position: static; visibility: visible; pointer-events: auto; clip-path: none; overflow: visible; }
@@ -121,16 +119,11 @@ const links = [
           document.documentElement.style.overflow = "hidden";
           document.documentElement.style.setProperty("--scrollbar-compensation", `${scrollbar}px`);
           document.body.style.paddingRight = "var(--scrollbar-compensation, 0px)";
-          // The page texture is centred on the root, which widens by the scrollbar's width when
-          // the scrollbar goes away; pull it back by half that so the grain doesn't jump.
           previousBackgroundPosition = document.documentElement.style.backgroundPosition;
           document.documentElement.style.backgroundPosition = `calc(50% - ${scrollbar / 2}px) 50%`;
           lockActive = true;
         }
         lenis?.stop();
-        // The panel can still compute as `visibility: hidden` on the first frame (the global
-        // reduced-motion rule turns its visibility switch into a tiny transition), so retry
-        // until the first link actually takes focus.
         const firstLink = links.find((link) => link.classList.contains("navigation_link"));
         let attempts = 0;
         const focusFirstLink = () => {
@@ -207,7 +200,6 @@ const links = [
     .navigation_label { display: block; overflow: clip; font-family: var(--secondary-family); font-size: var(--h3); font-weight: var(--secondary-regular); line-height: var(--line-height-medium); letter-spacing: var(--letter-spacing-snug); }
     .navigation_label-text { display: block; text-shadow: 0 1.1em 0 currentColor; transform: none; transition: transform 0.5s cubic-bezier(.7, 0, .3, 1); }
     .navigation_bottom { position: relative; display: flex; flex-direction: column; gap: var(--space-4); margin-top: auto; padding-bottom: max(2.125rem, env(safe-area-inset-bottom)); }
-    /* Out-specify Button.astro's `.button_wrap.pill` padding: Paper's panel RSVP is 17px all round. */
     .button_wrap.pill.navigation_rsvp { --button-016-color-background: var(--accent-500); --button-016-color: var(--light-100); --button-016-hover-color: var(--dark-900); --button-016-hover-color-background: var(--light-100); --button-016-color-focus: var(--light-100); width: 100%; grid-template-columns: 100%; padding: 0; line-height: 1.25; }
     .button_wrap.pill.navigation_rsvp .button-016__inner { width: 100%; box-sizing: border-box; padding: 1.0625rem; }
     .navigation_meta { display: flex; justify-content: space-between; padding-top: var(--space-2); color: var(--brand-500); font-family: var(--mono-family); font-size: var(--eyebrow); letter-spacing: var(--letter-spacing-wider); line-height: var(--line-height-medium); text-transform: uppercase; }
@@ -217,14 +209,12 @@ const links = [
     @media (width < 62rem) {
       .nav_actions { gap: var(--space-3); }
       .nav_toggle-label { position: absolute; right: calc(100% + var(--space-3)); display: none; }
-      /* Paper's mobile bar shows only the button when closed, and "CLOSE" beside it when open. */
       .nav_wrap[data-navigation-status="active"] .nav_toggle-label { display: inline; }
       .nav_wrap[data-navigation-status="active"] .nav_rsvp { opacity: 0; visibility: hidden; transition-delay: 0.3s; }
       .navigation_location-full { display: none; }
       .navigation_location-short { display: inline; }
     }
     @media (width >= 62rem) {
-      /* Holds the bar at the height the retired now-playing pill gave it, so removing it moved nothing. */
       .nav_actions { min-height: calc(1.875rem + 2 * var(--space-2) + 2 * var(--border-width)); }
       .navigation_inner { max-width: var(--max-width-main); width: 100%; margin-inline: auto; padding-top: var(--nav-height); }
       .navigation_links { margin-top: var(--space-7); }
@@ -236,9 +226,6 @@ const links = [
     }
     @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
       .navigation_item { transition: opacity 0.5s cubic-bezier(.7, 0, .3, 1); }
-      /* Hover uses the list's own :hover rather than :has(:hover): WebKit doesn't reliably restyle
-         siblings when a :has(:hover) match changes, and left rows stuck dimmed. The list has no
-         padding, so hovering it means hovering a row. Keyboard focus still uses :has(). */
       .navigation_links:is(:hover, :has(.navigation_link:focus-visible)) .navigation_item { opacity: 0.15; }
       .navigation_links .navigation_item:is(:hover, :has(> .navigation_link:focus-visible)) { opacity: 1; }
       .navigation_link:is(:hover, :focus-visible) .navigation_label-text { transform: translateY(-100%); }

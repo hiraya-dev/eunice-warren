@@ -115,14 +115,12 @@ const {
 
 const isLink = element === "link";
 const Tag = isLink ? "a" : "button";
-// Osmo Button 016 (text roll + bg colour) is the primary pill; other pills keep the plain style.
 const isButton016 = variant === "main" && shape === "pill" && emphasis === "primary";
 const tagAttrs = isLink
   ? { href: href || "#" }
   : { type: type === "submit" ? undefined : type };
 
 const marks = { play, close, arrow };
-/* main and link are written, the rest are marks with a label. */
 const isWritten = variant === "main" || variant === "link";
 const content = isWritten ? await slotContent(Astro.slots) : "";
 
@@ -298,7 +296,6 @@ const named = {
     }
 
     [data-button-016] {
-      /* Defined here, not only on pills, so non-pill uses (the hero's weekend link) roll too. */
       --button-016-text-duplicate-distance: 2lh;
       position: relative;
       user-select: none;
@@ -318,7 +315,6 @@ const named = {
       transition: box-shadow 0.3s cubic-bezier(0.32, 0.72, 0, 1);
     }
     [data-button-016]:focus-visible::after { box-shadow: 0 0 0 0.125em var(--button-016-color-focus); }
-    /* :where() keeps these at one-class specificity so a consumer (.hero_rsvp .button-016__inner) can set its own padding. */
     :where([data-button-016]) .button-016__inner { z-index: 1; grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; overflow: clip; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--radius-round); pointer-events: none; }
     :where([data-button-016]) .button-016__text { text-shadow: 0 2lh 0 currentColor; transition: translate 0.3s cubic-bezier(0.785, 0.135, 0.15, 0.86); }
     :where([data-button-016]) .button-016__bg { z-index: 0; grid-area: 1 / 1; width: 100%; height: 100%; border-radius: var(--radius-round); background: var(--button-016-color-background); pointer-events: none; transition: background-color 0.325s cubic-bezier(0.785, 0.135, 0.15, 0.86); }
