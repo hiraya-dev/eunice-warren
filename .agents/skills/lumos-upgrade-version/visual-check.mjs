@@ -1,21 +1,4 @@
 #!/usr/bin/env node
-/**
- * Proves an upgrade changed nothing visible.
- *
- * Capture every route before the upgrade, capture them again after, and
- * compare. A framework upgrade should move markup and tokens around without
- * moving a single pixel; anything that does move is either a fix worth
- * knowing about or a regression worth stopping for.
- *
- * Captures with headless Chrome and compares with sharp — both already
- * present in an Astro project on a Mac, so the check adds no dependencies.
- *
- * Usage
- *   node visual-check.mjs capture before        # dev server must be running
- *   ... upgrade ...
- *   node visual-check.mjs capture after
- *   node visual-check.mjs compare
- */
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -31,11 +14,8 @@ const WIDTHS = [
   { name: "desktop", w: 1440, h: 3200 },
   { name: "mobile", w: 390, h: 3200 },
 ];
-/* Antialiasing and font rasterisation wobble by a channel or two between
-   runs. Anything under this is noise, not a change. */
 const CHANNEL_TOLERANCE = 8;
-/* Below this share of changed pixels a page is called unchanged. */
-const PIXEL_THRESHOLD = 0.001; // 0.1%
+const PIXEL_THRESHOLD = 0.001;
 
 const CHROME = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -45,7 +25,6 @@ const CHROME = [
   "/usr/bin/chromium",
 ].find((p) => existsSync(p));
 
-/** Every static route the site builds, so nothing is spot-checked by memory. */
 function routes(dir = "src/pages", prefix = "") {
   const found = [];
   for (const entry of readdirSync(dir)) {
@@ -55,7 +34,7 @@ function routes(dir = "src/pages", prefix = "") {
       continue;
     }
     if (!entry.endsWith(".astro")) continue;
-    if (entry.startsWith("[") || entry.includes("[")) continue; // dynamic
+    if (entry.startsWith("[") || entry.includes("[")) continue;
     if (entry === "404.astro") continue;
     const name = entry.replace(/\.astro$/, "");
     found.push(name === "index" ? `${prefix}/` : `${prefix}/${name}`);
@@ -118,10 +97,6 @@ async function compare() {
       continue;
     }
 
-    /* Force both to RGBA. A screenshot saved as RGB and another as RGBA
-       decode to different strides, and indexing one buffer with the other's
-       stride misreads every pixel — which reads as a total rewrite of the
-       page rather than the two-pixel nudge it actually was. */
     const [ia, ib] = await Promise.all([
       sharp(a).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
       sharp(b).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
@@ -143,8 +118,6 @@ async function compare() {
     const pb = ib.data;
     const total = width * height;
     let changed = 0;
-    /* Mark every differing pixel red on a dimmed copy, so a human can see
-       where rather than just how much. */
     const diff = Buffer.alloc(total * 3);
 
     for (let i = 0, p = 0; i < total; i++, p += channels) {

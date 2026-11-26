@@ -2,8 +2,6 @@ import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { SWEEP_SPECS } from "./classify-paths.mjs";
 
-// The report shape is Playwright's --list --reporter=json output; suites retain
-// their file and nested suites, while specs carry their tags.
 export function checkSweepTags(report, sweepSpecs = SWEEP_SPECS) {
   const files = new Map();
   function visit(suite, path) {

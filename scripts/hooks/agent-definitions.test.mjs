@@ -1,7 +1,3 @@
-// Guard (from adc-website's lesson L-042): a subagent that sets `omitClaudeMd: true` never receives
-// CLAUDE.md, so its definition must say so and must not tell the agent to follow
-// CLAUDE.md. A mention is allowed only in the description (a pointer for Claude)
-// or as an on-demand Read ("Open `CLAUDE.md` with Read only when …").
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,9 +16,6 @@ test("finds the agent definitions", () => {
   assert.ok(files.length > 0);
 });
 
-// Phrases that tell the agent to follow CLAUDE.md. A pointer ("a workflow file
-// (`CLAUDE.md`, …)") or an on-demand Read ("Open `CLAUDE.md` with Read only when")
-// is fine.
 const FOLLOW = /\b(read|follow|see|per|according to|as)\s+`?CLAUDE\.md`?(?!\s+with Read only when)/i;
 
 for (const name of files) {

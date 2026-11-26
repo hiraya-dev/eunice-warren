@@ -37,9 +37,6 @@ export const SWEEP_SPECS = new Set([
   "tests/preloader.spec.ts",
 ]);
 
-// Agent instructions and agent tooling config are operational code: .mcp.json
-// wires tools into every session, and t3.json (T3 Code's host settings) runs
-// setup scripts.
 const WORKFLOW_FILES = new Set([
   "AGENTS.md",
   "CLAUDE.md",
@@ -47,15 +44,11 @@ const WORKFLOW_FILES = new Set([
   ".mcp.json",
   "t3.json",
   ".markdownlint-cli2.jsonc",
-  // The lessons ledger is read by Codex and the reviewer as rules, and
-  // scripts/lessons/select.mjs --check validates it in the workflow job.
   ".agents/lessons.md",
   ".agents/lessons-archive.md",
-  // The skills CLI manifest for vendored skills.
   "skills-lock.json",
 ]);
 
-// Skills live in .agents/skills (linked into .claude/skills).
 const WORKFLOW_DIRECTORIES = [
   ".agents/skills",
   ".claude",
@@ -63,9 +56,6 @@ const WORKFLOW_DIRECTORIES = [
   "scripts/ci",
   "scripts/hooks",
   "scripts/lessons",
-  // Retired with the move to T3 Code (2026-11-13): Conductor settings, the codex
-  // exec launcher, and the old skills/ directory. Kept so the deletion, or a
-  // stray re-add, routes workflow instead of runtime.
   ".conductor",
   "scripts/codex",
   "skills",
@@ -73,11 +63,6 @@ const WORKFLOW_DIRECTORIES = [
 
 const DOCS_FILES = new Set([".gitignore", ".gitkeep"]);
 
-// Content collection data (wording, names, list order). A diff of
-// only these files is still runtime, so build and e2e run, but it routes
-// `content`: CI runs the smoke tier on every event and the PR merges on PASS
-// with no Local review (CLAUDE.md **Roles**). Anything else in the diff,
-// images and schemas included, makes it plain runtime.
 const CONTENT_DATA = /^src\/content\/[^/].*\.json$/;
 
 export function isContentData(path) {
@@ -101,8 +86,6 @@ export function classifyPaths(files) {
   const reasons = [];
 
   for (const file of paths) {
-    // Runtime is checked first, so Markdown under src/ (content collections)
-    // routes runtime: it is rendered by the build, not just read.
     if (
       RUNTIME_DIRECTORIES.some((directory) => isUnder(file, directory)) ||
       RUNTIME_FILES.has(file)

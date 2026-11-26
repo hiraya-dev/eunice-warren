@@ -2,9 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { checkSweepTags } from "./check-sweep-tags.mjs";
 
-// This shape is trimmed from .context/adc-ci/playwright-list.sample.json:
-// Playwright puts each file suite's specs inside nested describe suites, and
-// each spec retains title, file, line, column, tags, and tests fields.
 function spec(title, tags = [], file = "tests/rail.spec.ts") {
   return {
     title,

@@ -95,15 +95,12 @@ test("API errors fail closed", async () => {
     async () => {
       throw new Error("fixture API failure");
     },
-    // A one-parent commit, so the API is reached even in CI's shallow checkout.
     () => "HEAD PARENT",
   );
   assert.equal(result.tested, false);
   assert.match(result.reason, /fixture API failure/);
 });
 
-// These are deliberately trimmed from .context/adc-ci/gh-commit-pulls.sample.json,
-// gh-commit.sample.json, gh-runs.sample.json, and gh-jobs.sample.json.
 const env = {
   GITHUB_EVENT_NAME: "push",
   GITHUB_REF: "refs/heads/main",

@@ -10,7 +10,6 @@ const script = fileURLToPath(new URL("./guard-git.mjs", import.meta.url));
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
 const blocked = [
-  // merge-flags
   ["gh pr merge 12 --delete-branch", "merge-flags"],
   ["gh pr merge 12 --squash --delete-branch", "merge-flags"],
   ["gh pr merge 12 -d", "merge-flags"],
@@ -20,7 +19,6 @@ const blocked = [
   ["gh pr merge 12 -r", "merge-flags"],
   ["gh pr merge 12 -sd", "merge-flags"],
   ["cd /tmp && gh pr merge 12 --merge --admin", "merge-flags"],
-  // checkout-main
   ["git checkout main", "checkout-main"],
   ["git switch main", "checkout-main"],
   ["git checkout -f main", "checkout-main"],
@@ -32,10 +30,8 @@ const blocked = [
   ["/usr/bin/git switch main", "checkout-main"],
   ["git checkout -t origin/main", "checkout-main"],
   ["git switch --track origin/main", "checkout-main"],
-  // worktree-add
   ["git worktree add ../x origin/main", "worktree-add"],
   ["git worktree add -b feat ../x", "worktree-add"],
-  // co-author
   ['git commit -m "fix: x\n\nCo-authored-by: A <a@b.c>"', "co-author"],
   ["git commit -m 'fix' --trailer 'co-authored-by: A <a@b.c>'", "co-author"],
   ["git commit -m fix --trailer=Co-authored-by=A", "co-author"],
@@ -44,7 +40,6 @@ const blocked = [
     "git commit -F - <<'EOF'\nfix: thing\n\nCo-Authored-By: Bot <bot@example.com>\nEOF",
     "co-author",
   ],
-  // push-protected
   ["git push origin main", "push-protected"],
   ["git push origin HEAD:main", "push-protected"],
   ["git push origin HEAD:refs/heads/main", "push-protected"],
@@ -56,13 +51,11 @@ const blocked = [
   ["git push --all origin", "push-protected"],
   ["git push --mirror origin", "push-protected"],
   ["npm run build && git push origin main 2>&1 | tail -5", "push-protected"],
-  // pipe-commit
   ["npx playwright test x | tail -20 && git commit -m \"m\"", "pipe-commit"],
   ["npm run build && npx playwright test | tee log && git commit -m \"m\"", "pipe-commit"],
   ["cmd | tail && echo ok && git commit -m \"m\"", "pipe-commit"],
   ["cmd |& tail && git commit -m m", "pipe-commit"],
   ["cmd | tail && set -o pipefail && git commit -m m", "pipe-commit"],
-  // A pipeline anywhere in the same and/or list also counts across `||`.
   ["cmd | tail || git commit -m m", "pipe-commit"],
   ['bash -c "cmd | tail && git commit -m m"', "pipe-commit"],
   ['zsh -c "cmd | tail && git commit -m m"', "pipe-commit"],
@@ -73,7 +66,6 @@ const blocked = [
   ["set -o pipefail; set +o pipefail; cmd | tail && git commit -m m", "pipe-commit"],
   ["setopt pipefail; unsetopt pipe_fail; cmd | tail && git commit -m m", "pipe-commit"],
   ['bash +o pipefail -c "cmd | tail && git commit -m m"', "pipe-commit"],
-  // pipe-push
   ["npm run prepush 2>&1 | tail -1 && git push", "pipe-push"],
   ["npm run prepush | tail && git push -u origin HEAD", "pipe-push"],
   ["cmd | tee log && git -C dir push", "pipe-push"],
@@ -85,7 +77,6 @@ const blocked = [
   ["set -o pipefail; set +o pipefail; cmd | tail && git push", "pipe-push"],
   ["npm run prepush | tail && git push origin main", "pipe-push"],
   ["echo $(git push origin main)", "push-protected"],
-  // wrappers
   ['bash -c "git push origin main"', "push-protected"],
   ["GIT_TRACE=1 git push origin main", "push-protected"],
   ["env FOO=1 git checkout main", "checkout-main"],
