@@ -145,6 +145,11 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
   new or changed spec with no recorded run is a finding. Before the review, Claude
   performs browser and responsive verification where the diff reaches them,
   comparing against the Paper artboard for visual work, and records it in `task.md`.
+- **Content (`content`)** — only `src/content/**/*.json`. One focused review: the
+  wording matches the request, nothing was dropped or reordered by accident, names
+  and dates are consistent with the rest of the site, any visibility change is the
+  one asked for, and the copy follows `.agents/product-marketing.md`. No browser check
+  and no Local review.
 - **Workflow (`workflow`)** — `AGENTS.md`, `CLAUDE.md`, `SETUP.md`, `.agents/skills/**`,
   `.agents/lessons*.md`, `.claude/**`, `.github/**`, `scripts/ci/**`,
   `scripts/hooks/**`, `scripts/lessons/**`, `.mcp.json`, `.markdownlint-cli2.jsonc`,
@@ -231,7 +236,7 @@ doing anything else with it:
 gh pr comment <pr> --body "$(cat <<'EOF'
 ## Review — <PASS|CHANGES_REQUIRED|BLOCKED> @ <head sha>
 
-- Tier: <full|workflow|docs|trivial>
+- Tier: <full|content|workflow|docs|trivial>
 - Axes judged: ...
 - CI: gate <result>, jobs run: <list>
 - Findings: <none | path:line — problem — fix | N/A — blocker — required input, one per line>
@@ -360,6 +365,10 @@ song store, so nothing a reviewer submits reaches the guest sheet.
   `gate` authorizes Claude to merge, without asking the user, once the branch is up
   to date with `main`. A PR opened as a draft is marked ready first
   (`gh pr ready <pr>`), and the run that starts must pass `gate` too.
+- **`content`**: a posted `PASS` on the head plus a green smoke-tier `gate` on it
+  authorizes Claude to merge without asking, once the branch is up to date with
+  `main` (user, 2026-11-26). Open it ready; the merge push to `main` runs the
+  smoke tier again, since only a full-tier run counts as already tested.
 - **`runtime`**: the merge needs the user's "ship it" **and** a posted `PASS` on
   the current head, **and** a green `gate` from the full tier on that head
   (`e2e (full)` plus both `sweeps` jobs; a smoke-tier `gate` never authorizes a

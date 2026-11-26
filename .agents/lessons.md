@@ -630,3 +630,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** each changed locator in the diff resolves to one element in the spec run, and no replacement assertion is only `toHaveRole` on markup that sets the role statically.
 - **Guard:** none
 - **Paths:** `tests/**`
+
+### L-069 — A new CI route or tier name updates every list that enumerates them
+- **Date:** 2026-11-26
+- **Trigger:** #144, CHANGES_REQUIRED (adding the `content` route missed the review-pr verdict template's tier list and the QA fixer's "green full `gate`" rule, split the local-checks `runtime` bullet, and named a `hidden` field that no schema had)
+- **Symptom:** the rules disagree about a new route: one file lists it, another template or merge rule still names only the old ones.
+- **Root cause:** routes and tiers are enumerated in several places (`CLAUDE.md` **Roles**, **Approval**, **Git**; `local-checks` **CI routes**; `review-pr` **Review tiers**, **Merging** and the verdict template; `pr-reviewer.md` TIER), and the edit was made from memory of where they live.
+- **Rule:** before pushing a route or tier change, grep the workflow files for every existing route name and update each hit; describe only fields that exist in `src/content.config.ts`.
+- **Check:** `grep -rnE 'trivial|workflow\|docs|full tier|full .gate' CLAUDE.md .agents/skills .claude/agents` shows the new name wherever the old ones are listed.
+- **Guard:** none
+- **Paths:** `scripts/ci/classify-paths.mjs`, `.github/workflows/ci.yml`, `CLAUDE.md`, `.agents/skills/review-pr/**`, `.agents/skills/local-checks/**`, `.claude/agents/pr-reviewer.md`

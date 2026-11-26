@@ -133,6 +133,11 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
 
   CI retries a failed test once. Tests that pass only on the retry are listed as
   flaky in the job summary: treat each as a lesson to capture, not as green.
+- **`content`** is a `runtime` diff of **only** `src/content/**/*.json`: the same
+  `build` and `e2e` jobs, but always the smoke tier, on a ready PR and on the push
+  to `main` too (no `sweeps`, no `webkit`). The schemas in `src/content.config.ts`
+  catch a malformed file in `astro check` and the build. Any other path in the diff,
+  an image or a schema change included, makes it plain `runtime`.
 - **`workflow`** (the paths in `WORKFLOW_FILES` and `WORKFLOW_DIRECTORIES`) and
   **`docs`** run one `checks` job: markdownlint, plus the routing, CI-script, hook
   and lessons tests, the lessons ledger and actionlint when a workflow path
