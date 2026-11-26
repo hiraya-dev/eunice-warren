@@ -832,10 +832,14 @@ const {
                     renderSeats();
                   }
                 }
-                submitError.textContent =
-                  isInputError(result.error)
-                    ? copy.copy.nameTooLong
-                    : result.error.message;
+                if (isInputError(result.error)) {
+                  submitError.textContent =
+                    result.error.fields.name || result.error.fields.seats
+                      ? copy.copy.nameTooLong
+                      : copy.copy.checkDetails;
+                } else {
+                  submitError.textContent = result.error.message;
+                }
                 submitError.hidden = false;
                 return;
               }

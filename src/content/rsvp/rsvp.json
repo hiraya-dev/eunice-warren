@@ -86,6 +86,7 @@
     "plansChange": "Plans change? You can update your RSVP any time before {deadline}.",
     "onList": "You're on the list, {name}.",
     "thanks": "Thanks for letting us know, {name}.",
-    "nameTooLong": "That name is a little long. Please use 120 characters or fewer."
+    "nameTooLong": "That name is a little long. Please use 120 characters or fewer.",
+    "checkDetails": "Please check your details and try again."
   }
 }

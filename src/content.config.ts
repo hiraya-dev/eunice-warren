@@ -238,6 +238,7 @@ const rsvp = defineCollection({
       onList: z.string(),
       thanks: z.string(),
       nameTooLong: z.string(),
+      checkDetails: z.string(),
     }) }),
 });
 

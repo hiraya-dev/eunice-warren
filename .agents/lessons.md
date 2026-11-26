@@ -680,3 +680,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** for every symbol an ADR names, open it and confirm the sentence; no date in an ADR without a source in the repo.
 - **Guard:** none
 - **Paths:** `docs/decisions/**`
+
+### L-076 — An input-error message names the field that failed
+- **Date:** 2026-11-27
+- **Trigger:** #172 CHANGES_REQUIRED (the RSVP submit mapped every `isInputError` to "That name is a little long", so a Zod-rejected email showed a name message)
+- **Symptom:** a friendly sentence that replaced raw validation JSON blamed the wrong field.
+- **Root cause:** the mapping was written for the field in the bug report (the name), but the action's schema validates several fields.
+- **Rule:** when a client maps an Astro Actions input error to copy, read `error.fields` and show a field-specific sentence only for the fields it names; any other field gets a neutral sentence. Map only `isInputError`, never every `BAD_REQUEST`, since the server's own `BAD_REQUEST` messages are already written for guests.
+- **Check:** for each action schema the form submits, list its fields; a spec covers one non-name input error and asserts the name copy is not shown (`tests/rsvp.spec.ts` "uses neutral copy for a non-name RSVP input error").
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/content/**`

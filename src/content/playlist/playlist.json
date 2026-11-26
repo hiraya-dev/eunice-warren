@@ -23,7 +23,7 @@
     "dedicationLabel": "Dedication (optional)",
     "submit": "Add it to Side A",
     "searchCount": "suggestions",
-    "fieldsTooLong": "Please keep each field to 120 characters or fewer.",
+    "fieldsTooLong": "Please shorten your entries and try again.",
     "error": "Something went wrong. Please try again."
   }
 }
