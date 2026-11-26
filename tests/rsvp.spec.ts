@@ -214,8 +214,9 @@ test.describe("RSVP section", () => {
       mateoInvite.members.at(-1)!,
     );
     await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText(
-      `${mateoInvite.members.length} of ${mateoInvite.seats} seats`,
+      `0 of ${mateoInvite.seats} seats`,
     );
+    await expect(rsvp(page).locator("[data-rsvp-seat-list] input[type='checkbox']:checked")).toHaveCount(0);
     await expect(
       rsvp(page).getByRole("button", {
         name: `Add name for seat ${mateoInvite.seats}`,
@@ -225,6 +226,22 @@ test.describe("RSVP section", () => {
     await firstSeat.focus();
     await page.keyboard.press("Space");
     await expect.poll(() => rsvp(page).locator("#rsvp-seat-0").evaluate((element) => document.activeElement === element)).toBe(true);
+  });
+
+  test("requires a guest selection before accepting", { tag: ["@single"] }, async ({ page }) => {
+    let submitRequests = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.url().includes("/_actions/rsvp.submit")) submitRequests += 1;
+    });
+    await rsvp(page).locator("[data-rsvp-name]").fill("Mateo Cruz");
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await expect(rsvp(page).locator("[data-rsvp-seat-list] input[type='checkbox']:checked")).toHaveCount(0);
+    await expect(rsvp(page).locator("[data-rsvp-count]")).toHaveText(`0 of ${mateoInvite.seats} seats`);
+    await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+    await expect(rsvp(page).locator("[data-rsvp-guest-error]")).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-guests]")).toHaveClass(/has-error/);
+    await expect(rsvp(page).locator("[data-rsvp-panel='2']")).toBeVisible();
+    expect(submitRequests).toBe(0);
   });
 
   test("restores a dedicated returning guest without exposing private details", async ({ page }, testInfo) => {
@@ -238,6 +255,7 @@ test.describe("RSVP section", () => {
       await rsvp(page).locator("[aria-label='Name for seat 3']").fill(uniqueName);
       await seatThree.getByRole("button", { name: /^Done editing / }).click();
       const seatThreeCheckbox = rsvp(page).locator("#rsvp-seat-2");
+      for (const index of [0, 1]) await rsvp(page).locator(`#rsvp-seat-${index}`).check();
       if (!(await seatThreeCheckbox.isChecked())) await seatThreeCheckbox.check();
       await rsvp(page).getByRole("button", { name: /Continue/ }).click();
       await chooseSlippers(page);
@@ -265,6 +283,7 @@ test.describe("RSVP section", () => {
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
       .click();
+    await rsvp(page).locator("#rsvp-seat-0").check();
     await rsvp(page)
       .getByRole("button", { name: /Continue/ })
       .click();
@@ -291,6 +310,7 @@ test.describe("RSVP section", () => {
     await rsvp(page)
       .getByRole("button", { name: /Find my invite/ })
       .click();
+    await rsvp(page).locator("#rsvp-seat-0").check();
     await rsvp(page)
       .getByRole("button", { name: /Continue/ })
       .click();
@@ -321,6 +341,7 @@ test.describe("RSVP section", () => {
   test("refreshes an expired edit token before sending", { tag: ["@single"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Luna Toledo");
     await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await rsvp(page).locator("#rsvp-seat-0").check();
     await rsvp(page).getByRole("button", { name: /Continue/ }).click();
     await rsvp(page).locator("#rsvp-email").fill("luna@example.com");
     await rsvp(page).locator("#rsvp-note").fill("Vegetarian meal, please");
