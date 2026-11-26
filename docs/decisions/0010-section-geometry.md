@@ -1,4 +1,4 @@
-# 0012: Geometry the gallery, attire, preloader and marquee depend on
+# 0010: Geometry the gallery, attire, preloader and marquee depend on
 
 - **Status:** accepted
 - **Date:** 2026-11-26
