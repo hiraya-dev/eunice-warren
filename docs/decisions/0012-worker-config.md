@@ -22,8 +22,8 @@ in both files.
 - The `ratelimits` bindings take an options object, `limit({ key })`, not a bare
   key. `RateLimiter` in `src/lib/rsvp/logic.ts` types it that way, and the fake in
   `rsvp-unit.test.ts` throws on a bare string (ADR 0004).
-- The custom domain is attached in the Cloudflare dashboard (2026-11-24), not with
-  a `routes` entry.
+- The custom domain is attached in the Cloudflare dashboard, not with a `routes`
+  entry.
 
 ### `assets.run_worker_first`
 

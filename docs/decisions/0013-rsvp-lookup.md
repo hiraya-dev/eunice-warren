@@ -5,7 +5,7 @@
 
 ## Context
 
-Guests find their invitation by typing their name (no autocomplete, at most one
+Guests find their invitation by typing their name (no suggestion list, at most one
 "Did you mean"). Before ADR 0002 the lookup rules lived as comments in
 `src/lib/rsvp/lookup.ts`, `src/lib/rsvp/logic.ts`, `src/actions/index.ts` and
 `src/lib/guest.ts`.
@@ -20,9 +20,11 @@ Guests find their invitation by typing their name (no autocomplete, at most one
   exactly one distinct, safe near match exists; otherwise the guest gets none.
 - Lookup uses `name_key` and `surname_key`, which follow the invited name; a host
   rename does not change them (ADR 0011).
-- The guard in `src/actions/index.ts` (Turnstile and rate limit) catches every
-  platform error and answers with its own `FORBIDDEN` or `TOO_MANY_REQUESTS`
-  message. A platform error message never reaches a guest.
+- `guard` in `src/actions/index.ts` catches any platform error from Turnstile or
+  the rate limiter and answers with the generic `INTERNAL_SERVER_ERROR` ("Something
+  went wrong. Please try again."), so a platform error message never reaches a
+  guest. `FORBIDDEN` and `TOO_MANY_REQUESTS` are only for an unverified token or
+  an exceeded limit.
 - `src/lib/guest.ts` swallows `localStorage` errors: storage may be disabled, and
   the page works without the remembered guest.
 
