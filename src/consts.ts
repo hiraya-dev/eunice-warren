@@ -15,8 +15,8 @@ export const BACKGROUND_MUSIC = {
   artist: "Music Travel Love & Marsha Milan",
   cover: musicCover,
 } as const;
-export const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
-export const RSVP_DEADLINE_LABEL = "December 12";
+export const RSVP_DEADLINE = "2026-12-14T23:59:59+08:00";
+export const RSVP_DEADLINE_LABEL = "December 14";
 export const WEDDING_CALENDAR_PATH = "/eunice-warren-wedding.ics";
 export const MESSAGE_US_HREF = "sms:+639362300525";
 export const CHURCH_MAP_URL = "https://maps.app.goo.gl/hdagou9oAemHt2Mu5";

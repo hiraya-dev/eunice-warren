@@ -71,6 +71,7 @@ const [{ data }] = await getCollection("hero");
     <p class="hero_date" data-hero-text-item>
       <span class="hero_date-full">{data.dateFull}</span>
       <span class="hero_date-short">{data.dateShort}</span>
+      <span class="hero_venue"><span class="hero_venue-full">{data.venueFull}</span><span class="hero_venue-short">{data.venueShort}</span></span>
     </p>
     <h1 class="hero_title" data-hero-text-item><span>{data.titleFirst}</span> <span>{data.titleSecond}</span></h1>
     <p class="hero_subtitle" data-hero-text-item>{data.subtitle}</p>
@@ -201,8 +202,10 @@ const [{ data }] = await getCollection("hero");
     .hero_note-text { position: absolute; top: 0; left: 0; }
     .hero_note-arrow { position: absolute; bottom: -0.15em; left: 12%; width: 62%; height: auto; overflow: visible; }
     .hero_content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); text-align: center; }
-    .hero_date { margin: 0; color: var(--dark-700); font: var(--primary-regular) var(--eyebrow) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .hero_date { margin: 0; color: var(--dark-700); font: var(--primary-regular) clamp(0.9375rem, calc(0.2915rem + 1.345vw), 1.125rem) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
     .hero_date-short { display: none; }
+    .hero_venue { display: block; margin-top: var(--space-2); font-size: var(--eyebrow); }
+    .hero_venue-short { display: none; }
     .hero_title { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--dark-900); font: var(--secondary-ultralight) var(--display) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tighter); }
     .hero_title span { display: inline; }
     .hero_subtitle { margin: 0; color: var(--dark-900); font: italic var(--secondary-ultralight) clamp(1.5rem, calc(1.1429rem + 1.984vw), 2.5rem) / 1.1 var(--secondary-family); }
@@ -218,8 +221,14 @@ const [{ data }] = await getCollection("hero");
     .hero_title { font-size: min(var(--display), 8.9vw); }
   }
 
+  @media (max-width: 61.999rem) {
+    .hero_venue-full { display: none; }
+    .hero_venue-short { display: inline; }
+  }
+
   @media (min-width: 48rem) and (max-width: 61.999rem) {
     .hero_postmark { top: 47.5cqw; }
+    .hero_content { gap: var(--space-3); padding-top: 1.25rem; }
   }
 
   @media (min-width: 62rem) {
@@ -244,11 +253,12 @@ const [{ data }] = await getCollection("hero");
     .hero_paraw { top: auto; bottom: 1.75rem; left: 1.125rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); }
     .hero_postmark { top: auto; right: 1rem; bottom: 2.5rem; left: auto; width: 8.125rem; height: 5rem; transform: rotate(-10deg); }
     .hero_date-full { display: none; }
+    .hero_date { font-size: min(1.125rem, calc((100vw - 3rem) / 18.2)); letter-spacing: var(--eyebrow-letter-spacing); white-space: nowrap; }
     .hero_date-short { display: inline; }
     .hero_title { line-height: var(--line-height-tight); }
     .hero_title span { display: block; }
     .hero_actions { flex-direction: column; gap: var(--space-4); }
-    .hero_rsvp :global(.button-016__inner) { padding: var(--space-4) var(--space-5); }
+    .hero_rsvp :global(.button-016__inner) { padding: var(--space-4); }
     .hero_weekend { font-size: var(--eyebrow); }
   }
 

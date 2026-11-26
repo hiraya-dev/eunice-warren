@@ -1,8 +1,8 @@
 {
   "hidden": false,
-  "titleFirst": "Make it a",
-  "titleSecond": "weekend",
-  "description": "Three days, one island. Here’s how to get here. The field notes below cover what to do once you land.",
+  "titleFirst": "Make it to",
+  "titleSecond": "Boracay",
+  "description": "Here’s how to get here. The field notes below cover what to do once you land.",
   "directionsTitle": "Getting there",
   "compass": {
     "north": "N",
@@ -28,7 +28,7 @@
     {
       "number": "3",
       "title": "Ride to your hotel",
-      "body": "Grab an e-trike from Cagban straight to your hotel. Most of us stay in Newcoast, near the wedding, from Jan 13 to 15. Then we move to the main beach (Stations 1 to 3) for Jan 15 to 17.",
+      "body": "Grab an e-trike from Cagban straight to your hotel. Or message us or our family to arrange a hassle-free transfer from the airport to your hotel and back. Most of us stay in Newcoast, near the wedding, from Jan 13 to 15. Then we move to the main beach (Stations 1 to 3) for Jan 15 to 17.",
       "detail": "Newcoast Jan 13–15 · Main beach Jan 15–17"
     }
   ]

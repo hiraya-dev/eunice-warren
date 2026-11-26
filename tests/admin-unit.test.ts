@@ -564,10 +564,10 @@ test("presentation helpers format members, plus-one chips, rename notes, relativ
   assert.equal(relativeTime("2026-11-21T02:00:00Z", now), "2h ago");
   assert.equal(relativeTime("2026-11-20T04:00:00Z", now), "Yesterday");
   assert.equal(relativeTime("2026-11-19T04:00:00Z", now), "Nov 19");
-  assert.match(deadlineStamp(new Date("2026-12-10T04:00:00Z")).text, /^2 days/);
-  assert.match(deadlineStamp(new Date("2026-12-11T04:00:00Z")).text, /^1 day/);
-  assert.match(deadlineStamp(new Date("2026-12-12T04:00:00Z")).text, /^Today/);
-  assert.equal(deadlineStamp(new Date("2026-12-13T04:00:00Z")).closed, true);
+  assert.match(deadlineStamp(new Date("2026-12-12T04:00:00Z")).text, /^2 days/);
+  assert.match(deadlineStamp(new Date("2026-12-13T04:00:00Z")).text, /^1 day/);
+  assert.match(deadlineStamp(new Date("2026-12-14T04:00:00Z")).text, /^Today/);
+  assert.equal(deadlineStamp(new Date("2026-12-15T04:00:00Z")).closed, true);
   assert.match(greeting(now, "Eunice"), /Good afternoon/);
 });
 

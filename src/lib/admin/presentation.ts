@@ -1,8 +1,8 @@
 import { displaySurname, duplicateNameKey } from "./names.ts";
 
 const manila = "Asia/Manila";
-const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
-const RSVP_DEADLINE_LABEL = "December 12";
+const RSVP_DEADLINE = "2026-12-14T23:59:59+08:00";
+const RSVP_DEADLINE_LABEL = "December 14";
 export function manilaParts(now = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: manila,
@@ -44,7 +44,7 @@ export function deadlineStamp(now = new Date()) {
     ? { closed: true, text: `Closed · ${RSVP_DEADLINE_LABEL} · 11:59 PM` }
     : {
         closed: false,
-        text: `${days === 0 ? "Today" : `${days} day${days === 1 ? "" : "s"}`} to RSVP deadline · Dec 12`,
+        text: `${days === 0 ? "Today" : `${days} day${days === 1 ? "" : "s"}`} to RSVP deadline · Dec 14`,
       };
 }
 export function relativeTime(value: string, now = new Date()) {
