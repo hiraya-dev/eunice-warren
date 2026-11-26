@@ -1,4 +1,4 @@
-# 0004: Guest list naming rules and the admin stylesheet
+# 0009: Guest list naming rules and the admin stylesheet
 
 - **Status:** accepted
 - **Date:** 2026-11-26

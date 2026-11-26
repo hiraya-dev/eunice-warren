@@ -1,4 +1,4 @@
-# 0006: Reveals hide with opacity and open their pre-paint gate once tweens own the start
+# 0011: Reveals hide with opacity and open their pre-paint gate once tweens own the start
 
 - **Status:** accepted
 - **Date:** 2026-11-26

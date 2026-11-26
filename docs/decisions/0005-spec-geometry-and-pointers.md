@@ -20,7 +20,7 @@ the rules lived as comments in the specs.
    card, `playlist.spec.ts` postcard inputs, `rsvp.spec.ts` field positions).
    Layout shift is read from a fixed, stable frame: `preloader.spec.ts` measures
    from the overlay, not the centred form. Layout offsets round to whole pixels
-   while transforms do not (`ribbons.spec.ts`).
+   while transforms do not.
 2. **Sweep the breakpoints (L-018).** Overflow is judged against the page itself.
    The widths include the odd ones around each swap: the guest and song tables at
    84rem (1344px), the sidebar at 64rem (`admin.spec.ts`), the menu that sits

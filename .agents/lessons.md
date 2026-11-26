@@ -660,3 +660,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** `ls .agents/skills` and the bullets under `AGENTS.md` **Skills** name the same skills.
 - **Guard:** none
 - **Paths:** `.agents/skills/**`, `.claude/skills/**`, `AGENTS.md`
+
+### L-072 — ADR numbers are taken after merging origin/main
+- **Date:** 2026-11-26
+- **Trigger:** #166 CHANGES_REQUIRED (it and #157 both added ADRs 0003 to 0005 in parallel; the merge left two files per number)
+- **Symptom:** `docs/decisions/` held `0003-admin-drawers.md` and `0003-spec-timing-and-motion.md`, and so on, so "ADR 0003" pointed at two decisions.
+- **Root cause:** each branch took the next free number from its own base, and git does not flag a clash between files with different names.
+- **Rule:** an ADR's number is the next free one on `origin/main` at the time of the push. After any merge of `origin/main`, renumber a branch's new ADRs that share a number, and update every citation in the same commit.
+- **Check:** `ls docs/decisions | cut -c1-4 | uniq -d` prints nothing.
+- **Guard:** none
+- **Paths:** `docs/decisions/**`

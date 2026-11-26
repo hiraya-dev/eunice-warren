@@ -55,10 +55,10 @@ This ADR collects them.
 6. **Budgets for a busy runner (L-023).** The 0.8 s tween in `reveal()` gets a
    far longer timeout, because a page under eight workers can get a few frames a
    second. Specs that loop over many wheel or sample round trips raise their
-   timeout (`ribbons.spec.ts`), WebKit guards that answer on a frame wait long and
+   timeout, WebKit guards that answer on a frame wait long and
    assert what they find (`music.spec.ts`), and `rsvp.spec.ts` marks the Garcia
    test `test.slow()`. An in-page cap may get a test-side backstop whose clock
-   starts later (`ribbons.spec.ts`).
+   starts later.
 7. **Counting network work.** `route.continue()` resolves when the request is
    sent, not when it finishes. So `gallery.spec.ts` keeps each pre-open photo
    request in its set until the response body arrives, and counts only requests

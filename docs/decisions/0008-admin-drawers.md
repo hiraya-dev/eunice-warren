@@ -1,4 +1,4 @@
-# 0003: Admin drawers work without JavaScript and re-render in place
+# 0008: Admin drawers work without JavaScript and re-render in place
 
 - **Status:** accepted
 - **Date:** 2026-11-26

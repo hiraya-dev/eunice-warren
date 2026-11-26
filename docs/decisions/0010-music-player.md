@@ -1,4 +1,4 @@
-# 0005: How the music player moves, hides and scrolls its title
+# 0010: How the music player moves, hides and scrolls its title
 
 - **Status:** accepted
 - **Date:** 2026-11-26
