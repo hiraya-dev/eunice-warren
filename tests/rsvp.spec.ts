@@ -330,6 +330,21 @@ test.describe("RSVP section", () => {
     await expect(rsvp(page).locator(".rsvp_intro")).toBeVisible();
   });
 
+  test("refreshes an expired edit token before sending", { tag: ["@single"] }, async ({ page }) => {
+    await rsvp(page).locator("[data-rsvp-name]").fill("Luna Toledo");
+    await rsvp(page).getByRole("button", { name: /Find my invite/ }).click();
+    await rsvp(page).getByRole("button", { name: /Continue/ }).click();
+    await rsvp(page).locator("#rsvp-email").fill("luna@example.com");
+    await rsvp(page).locator("#rsvp-note").fill("Vegetarian meal, please");
+    await chooseSlippers(page);
+    await rsvp(page).evaluate((element) => { element.dataset.rsvpToken = "expired.token"; });
+    await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
+    await expect(page.locator("#rsvp-ticket-modal")).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-panel='sent']")).toBeVisible();
+    await expect(rsvp(page).locator("[data-rsvp-email-summary]")).toHaveText("luna@example.com");
+    await expect(rsvp(page).locator("#rsvp-note")).toHaveValue("Vegetarian meal, please");
+  });
+
   test("declines without a guest summary row", { tag: ["@smoke"] }, async ({ page }) => {
     await rsvp(page).locator("[data-rsvp-name]").fill("Ana Reyes");
     await rsvp(page)
