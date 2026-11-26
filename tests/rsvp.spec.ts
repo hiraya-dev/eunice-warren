@@ -178,7 +178,6 @@ test.describe("RSVP section", () => {
     await name.fill("Matoe Cruz");
     await rsvp(page).locator("[data-rsvp-find] button.rsvp_primary").click();
     await expect(rsvp(page).locator("[data-rsvp-name-error]")).toBeVisible();
-    await expect(rsvp(page).locator("[data-rsvp-name-error]")).toBeVisible();
     await expect(rsvp(page).locator("[data-rsvp-name-error]")).toContainText("Mateo Cruz");
     const confirm = rsvp(page).getByRole("button", { name: "Yes, that's me" });
     await expect(confirm).toBeVisible();

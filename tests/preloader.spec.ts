@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { fakeFixtures } from "../src/lib/rsvp/store.ts";
+
+// The ask-state title, read from the component so a copy edit updates both (L-017).
+const askTitle = readFileSync(new URL("../src/components/global/Preloader.astro", import.meta.url), "utf8")
+  .match(/const setAskState[\s\S]*?title\.textContent = "([^"]+)"/)![1];
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -19,7 +24,7 @@ test.describe("guest preloader", () => {
     await page.evaluate(() => localStorage.setItem("ew-guest-v2", JSON.stringify({ skipped: true, at: "2026-01-01T00:00:00.000Z" })));
     await page.reload();
     await expect(preloader(page)).toBeVisible();
-    await expect(preloader(page).getByRole("heading")).toBeVisible();
+    await expect(preloader(page).getByRole("heading")).toHaveText(askTitle);
     await expect(preloader(page).locator("[data-preloader-name]")).toHaveValue("");
   });
 
@@ -45,7 +50,7 @@ test.describe("guest preloader", () => {
     await page.reload();
     const overlay = preloader(page);
     await overlay.locator("[data-preloader-reset]").click();
-    await expect(overlay.getByRole("heading")).toBeVisible();
+    await expect(overlay.getByRole("heading")).toHaveText(askTitle);
     await expect(overlay.locator("[data-preloader-name]")).toHaveValue("");
     await expect(overlay.locator("[data-preloader-name]")).not.toHaveAttribute("readonly", "");
     await expect(overlay.locator("[data-preloader-name]")).not.toHaveClass(/is-found/);
@@ -97,7 +102,7 @@ test.describe("guest preloader", () => {
     await name.fill("Nobody Example");
     await expect(hint).toHaveText(initialHint!);
     release!();
-    await expect(overlay.getByRole("heading")).toBeVisible();
+    await expect(overlay.getByRole("heading")).toHaveText(askTitle);
     await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeEnabled();
   });
 
@@ -194,7 +199,6 @@ test.describe("guest preloader", () => {
   test("suggests one safe near match before revealing the invitation", { tag: ["@single"] }, async ({ page }) => {
     await preloader(page).locator("[data-preloader-name]").fill("Matoe Cruz");
     await preloader(page).getByRole("button", { name: "Open my letter" }).click();
-    await expect(preloader(page).getByRole("heading")).toBeVisible();
     await expect(preloader(page).getByRole("heading", { name: "Did you mean Mateo Cruz?" })).toBeVisible();
     await expect(preloader(page).locator("[data-preloader-hint]")).not.toHaveClass(/is-error/);
     await expect(preloader(page)).not.toContainText("Cruz Family");
@@ -210,7 +214,7 @@ test.describe("guest preloader", () => {
     await preloader(page).getByRole("button", { name: "No, let me try again" }).click();
     await expect(name).toHaveValue("");
     await expect(name).toBeFocused();
-    await expect(preloader(page).getByRole("heading")).toBeVisible();
+    await expect(preloader(page).getByRole("heading")).toHaveText(askTitle);
   });
 
   test("returns to the ask state when a suggestion is edited", { tag: ["@single"] }, async ({ page }) => {
@@ -218,9 +222,9 @@ test.describe("guest preloader", () => {
     const name = overlay.locator("[data-preloader-name]");
     await name.fill("Matoe Cruz");
     await overlay.getByRole("button", { name: "Open my letter" }).click();
-    await expect(overlay.getByRole("heading")).toBeVisible();
+    await expect(overlay.getByRole("heading")).toContainText("Mateo Cruz");
     await name.fill("Nobody Example");
-    await expect(overlay.getByRole("heading")).toBeVisible();
+    await expect(overlay.getByRole("heading")).toHaveText(askTitle);
     await expect(overlay.getByRole("button", { name: "Open my letter" })).toBeVisible();
   });
 

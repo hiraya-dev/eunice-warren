@@ -72,10 +72,12 @@ export function findViolations({ rootDirectory = root } = {}) {
   return violations;
 }
 
-const violations = findViolations();
-if (violations.length) {
-  for (const violation of violations) console.error(`${violation.file}:${violation.line}: ${violation.value}`);
-  process.exitCode = 1;
-} else {
-  console.log("check-spec-copy: no couple copy literals found in specs");
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const violations = findViolations();
+  if (violations.length) {
+    for (const violation of violations) console.error(`${violation.file}:${violation.line}: ${violation.value}`);
+    process.exitCode = 1;
+  } else {
+    console.log("check-spec-copy: no couple copy literals found in specs");
+  }
 }

@@ -31,7 +31,7 @@ const archiveByPrefix = async (page: Page, prefix: string) => {
       .first();
     if (!(await row.count())) return;
     await row.locator("summary").click();
-    await row.locator("a[href*='archive=']").click();
+    await row.locator("a[href*='archive=']:visible").click();
     await page
       .locator("[data-admin-archive-confirm]")
       .getByRole("button", { name: "Archive" })
