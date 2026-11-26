@@ -10,7 +10,6 @@
   flex: none;
 }
 
-/* Padding — all sides */
 .padding-0 {
   padding: 0;
 }
@@ -67,7 +66,6 @@
   padding: var(--section-space-large);
 }
 
-/* Padding — block (top + bottom) */
 .padding-block-0 {
   padding-block: 0;
 }
@@ -124,7 +122,6 @@
   padding-block: var(--section-space-large);
 }
 
-/* Padding — inline (left + right) */
 .padding-inline-0 {
   padding-inline: 0;
 }
@@ -169,7 +166,6 @@
   padding-inline: var(--site-gutter);
 }
 
-/* Padding — top */
 .padding-top-0 {
   padding-top: 0;
 }
@@ -230,7 +226,6 @@
   padding-top: var(--section-space-nav-overlap);
 }
 
-/* Padding — bottom */
 .padding-bottom-0 {
   padding-bottom: 0;
 }
@@ -291,7 +286,6 @@
   padding-bottom: var(--section-space-nav-overlap);
 }
 
-/* Padding — left */
 .padding-left-0 {
   padding-left: 0;
 }
@@ -336,7 +330,6 @@
   padding-left: var(--site-gutter);
 }
 
-/* Padding — right */
 .padding-right-0 {
   padding-right: 0;
 }
@@ -381,7 +374,6 @@
   padding-right: var(--site-gutter);
 }
 
-/* Margin */
 .margin-top-auto {
   margin-top: auto;
 }
@@ -545,7 +537,6 @@
   -webkit-line-clamp: 4;
 }
 
-/* Gap */
 .gap-inherit {
   grid-column-gap: inherit;
   grid-row-gap: inherit;
@@ -673,7 +664,6 @@
   grid-row-gap: var(--site-gutter);
 }
 
-/* Align & justify */
 .alignment-start {
   --_alignment: start;
   text-align: start;
@@ -753,7 +743,6 @@
   justify-content: inherit;
 }
 
-/* Sizing */
 .width-full {
   width: 100%;
 }
@@ -795,7 +784,6 @@
   min-height: 100svh;
 }
 
-/* Aspect ratio & object fit */
 .ratio-auto {
   aspect-ratio: auto;
 }
@@ -836,7 +824,6 @@
   object-fit: contain;
 }
 
-/* Typography */
 .line-height-small {
   line-height: var(--line-height-small);
 }
@@ -912,7 +899,6 @@
   color: color-mix(in srgb, currentColor 70%, transparent);
 }
 
-/* Background & radius */
 .background-transparent {
   background-color: transparent;
 }
@@ -949,7 +935,6 @@
   border-radius: var(--radius-round);
 }
 
-/* Display */
 .display-block {
   display: block;
 }
@@ -974,7 +959,6 @@
   display: none;
 }
 
-/* Overflow */
 .overflow-visible {
   overflow: visible;
 }
@@ -999,7 +983,6 @@
   clip-path: polygon(0 0, calc(100% + 100vw) 0, calc(100% + 100vw) 100%, 0% 100%);
 }
 
-/* Position & z-index */
 .position-static {
   position: static;
 }
@@ -1051,7 +1034,6 @@
   position: relative;
 }
 
-/* Interaction & order */
 .pointer-on {
   pointer-events: auto;
 }
@@ -1068,7 +1050,6 @@
   order: 1;
 }
 
-/* Accessibility */
 .sr-only {
   white-space: nowrap;
   clip: rect(0, 0, 0, 0);
