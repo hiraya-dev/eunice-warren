@@ -12,6 +12,7 @@ import postmark from "@/assets/images/hero/postmark-received.png";
 import Button from "@/components/Button.astro";
 import { BACKGROUND_MUSIC } from "@/consts";
 import MusicTicker from "@/components/global/MusicTicker.astro";
+import { countdownState } from "@/scripts/hero-countdown";
 
 interface Props extends HTMLAttributes<"section"> {
   /** RSVP destination. */
@@ -22,6 +23,7 @@ interface Props extends HTMLAttributes<"section"> {
 
 const { rsvpHref = "#rsvp", weekendHref = "#wedding", class: className, ...rest } = Astro.props;
 const [{ data }] = await getCollection("hero");
+const initialCountdown = countdownState(Date.now());
 ---
 
 {!data.hidden && <section id="hero" class:list={["hero", className]} {...rest}>
@@ -68,13 +70,40 @@ const [{ data }] = await getCollection("hero");
   </div>
 
   <div class="hero_content">
-    <p class="hero_date" data-hero-text-item>
-      <span class="hero_date-full">{data.dateFull}</span>
-      <span class="hero_date-short">{data.dateShort}</span>
-      <span class="hero_venue"><span class="hero_venue-full">{data.venueFull}</span><span class="hero_venue-short">{data.venueShort}</span></span>
-    </p>
     <h1 class="hero_title" data-hero-text-item><span>{data.titleFirst}</span> <span>{data.titleSecond}</span></h1>
     <p class="hero_subtitle" data-hero-text-item>{data.subtitle}</p>
+    <p class="hero_countdown" data-hero-text-item data-hero-countdown data-target="2027-01-14T15:00:00+08:00" role="timer" aria-label={data.countdownAria}>
+      <span class="hero_countdown-counting" hidden={initialCountdown.state !== "counting"}>
+        <span data-countdown-unit="days"><span data-countdown-value>{initialCountdown.state === "counting" ? initialCountdown.days : 0}</span> {data.countdownDays}</span>
+        <span aria-hidden="true"> · </span>
+        <span data-countdown-unit="hours"><span data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.hours).padStart(2, "0") : "00"}</span> {data.countdownHours}</span>
+        <span aria-hidden="true"> · </span>
+        <span data-countdown-unit="minutes"><span data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.minutes).padStart(2, "0") : "00"}</span> {data.countdownMinutes}</span>
+        <span class="hero_countdown-seconds" data-countdown-unit="seconds"><span aria-hidden="true"> · </span><span data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.seconds).padStart(2, "0") : "00"}</span> {data.countdownSeconds}</span>
+      </span>
+      <span class="hero_countdown-today" hidden={initialCountdown.state !== "today"}>{data.countdownToday}</span>
+    </p>
+    <script is:inline>
+      (() => {
+        const countdown = document.querySelector("[data-hero-countdown]");
+        if (!countdown) return;
+        const target = Date.parse(countdown.dataset.target ?? "");
+        const todayStart = Date.parse("2027-01-14T00:00:00+08:00");
+        const after = Date.parse("2027-01-15T00:00:00+08:00");
+        const now = Date.now();
+        const counting = countdown.querySelector(".hero_countdown-counting");
+        const today = countdown.querySelector(".hero_countdown-today");
+        if (now >= after) countdown.hidden = true;
+        else if (now >= todayStart) { countdown.hidden = false; if (counting) counting.hidden = true; if (today) today.hidden = false; }
+        else {
+          const total = Math.max(0, Math.floor((target - now) / 1000));
+          const values = [Math.floor(total / 86400), Math.floor(total / 3600) % 24, Math.floor(total / 60) % 60, total % 60];
+          countdown.querySelectorAll("[data-countdown-value]").forEach((element, index) => { element.textContent = index === 0 ? String(values[index]) : String(values[index]).padStart(2, "0"); });
+          countdown.hidden = false; if (counting) counting.hidden = false; if (today) today.hidden = true;
+        }
+      })();
+    </script>
+    <p class="hero_when" data-hero-text-item><span class="hero_when-line">{data.when}</span><span class="hero_venue"><span class="hero_venue-full">{data.venueFull}</span><span class="hero_venue-short">{data.venueShort}</span></span></p>
     <div class="hero_actions" data-hero-text-item>
       <Button class="hero_rsvp" element="link" href={rsvpHref} shape="pill">{data.rsvp}</Button>
       <a class="hero_weekend" data-button-016 href={weekendHref} aria-label={data.weekendAria}>
@@ -86,6 +115,45 @@ const [{ data }] = await getCollection("hero");
     </div>
   </div>
 </section>}
+
+<script>
+  import { countdownState } from "@/scripts/hero-countdown";
+
+  const initHeroCountdown = () => {
+    const countdown = document.querySelector<HTMLElement>("[data-hero-countdown]");
+    if (!countdown || countdown.dataset.heroCountdownInitialized === "true") return;
+    countdown.dataset.heroCountdownInitialized = "true";
+    const counting = countdown.querySelector<HTMLElement>(".hero_countdown-counting");
+    const today = countdown.querySelector<HTMLElement>(".hero_countdown-today");
+    const values = [...countdown.querySelectorAll<HTMLElement>("[data-countdown-value]")];
+    let timer: number | null = null;
+    let last = "";
+    const render = (nowMs: number) => {
+      const state = countdownState(nowMs);
+      if (state.state === "after") { countdown.hidden = true; if (timer !== null) window.clearTimeout(timer); timer = null; return state; }
+      countdown.hidden = false;
+      const key = state.state === "today" ? "today" : `${state.days}:${state.hours}:${state.minutes}:${state.seconds}`;
+      if (key !== last) {
+        last = key;
+        const isToday = state.state === "today";
+        if (counting) counting.hidden = isToday;
+        if (today) today.hidden = !isToday;
+        if (!isToday) [state.days, state.hours, state.minutes, state.seconds].forEach((value, index) => { const text = index === 0 ? String(value) : String(value).padStart(2, "0"); if (values[index].textContent !== text) values[index].textContent = text; });
+      }
+      return state;
+    };
+    const tick = () => {
+      const state = render(Date.now());
+      if (state.state !== "after") timer = window.setTimeout(tick, 1000 - (Date.now() % 1000));
+    };
+    tick();
+    const cleanup = () => { if (timer !== null) window.clearTimeout(timer); timer = null; countdown.removeAttribute("data-hero-countdown-initialized"); };
+    document.addEventListener("astro:before-swap", cleanup, { once: true });
+  };
+
+  initHeroCountdown();
+  document.addEventListener("astro:page-load", initHeroCountdown);
+</script>
 
 <script is:inline>
   if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
@@ -202,8 +270,10 @@ const [{ data }] = await getCollection("hero");
     .hero_note-text { position: absolute; top: 0; left: 0; }
     .hero_note-arrow { position: absolute; bottom: -0.15em; left: 12%; width: 62%; height: auto; overflow: visible; }
     .hero_content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); text-align: center; }
-    .hero_date { margin: 0; color: var(--dark-700); font: var(--primary-regular) clamp(0.9375rem, calc(0.2915rem + 1.345vw), 1.125rem) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
-    .hero_date-short { display: none; }
+    .hero_countdown, .hero_when { margin: 0; color: var(--dark-700); font: var(--primary-regular) clamp(0.9375rem, calc(0.2915rem + 1.345vw), 1.125rem) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .hero_countdown[hidden], .hero_countdown-today[hidden], .hero_countdown-counting[hidden] { display: none; }
+    .hero_when { margin-top: calc(var(--space-2) - var(--space-4)); }
+    .hero_when-line { display: block; }
     .hero_venue { display: block; margin-top: var(--space-2); font-size: var(--eyebrow); }
     .hero_venue-short { display: none; }
     .hero_title { --_trim-top: 0.5lh; --_trim-bottom: 0.5lh; margin: 0; color: var(--dark-900); font: var(--secondary-ultralight) var(--display) / var(--line-height-medium) var(--secondary-family); letter-spacing: var(--letter-spacing-tighter); }
@@ -227,8 +297,13 @@ const [{ data }] = await getCollection("hero");
   }
 
   @media (min-width: 48rem) and (max-width: 61.999rem) {
-    .hero_postmark { top: 47.5cqw; }
+    .hero_postmark { top: 49.5cqw; }
     .hero_content { gap: var(--space-3); padding-top: 1.25rem; }
+  }
+
+  @media (min-width: 62rem) and (max-width: 74.999rem) {
+    .hero_content { gap: var(--space-3); }
+    .hero_postmark { top: 47.5cqw; }
   }
 
   @media (min-width: 62rem) {
@@ -252,9 +327,8 @@ const [{ data }] = await getCollection("hero");
     .hero_music { display: none; }
     .hero_paraw { top: auto; bottom: 1.75rem; left: 1.125rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); }
     .hero_postmark { top: auto; right: 1rem; bottom: 2.5rem; left: auto; width: 8.125rem; height: 5rem; transform: rotate(-10deg); }
-    .hero_date-full { display: none; }
-    .hero_date { font-size: min(1.125rem, calc((100vw - 3rem) / 18.2)); letter-spacing: var(--eyebrow-letter-spacing); white-space: nowrap; }
-    .hero_date-short { display: inline; }
+    .hero_countdown, .hero_when-line { font-size: min(1.125rem, calc((100vw - 3rem) / 18.2)); letter-spacing: var(--eyebrow-letter-spacing); white-space: nowrap; }
+    .hero_countdown-seconds { display: none; }
     .hero_title { line-height: var(--line-height-tight); }
     .hero_title span { display: block; }
     .hero_actions { flex-direction: column; gap: var(--space-4); }

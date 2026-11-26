@@ -80,6 +80,10 @@ export const SPEC_SOURCES = {
     "src/components/sections/Gallery.astro",
     "src/scripts/gallery/teaser.ts",
   ],
+  "tests/hero-countdown.spec.ts": [
+    "src/components/sections/Hero.astro",
+    "src/scripts/hero-countdown.ts",
+  ],
   "tests/hero.spec.ts": [
     "src/components/sections/Hero.astro",
     "src/pages/style-guide.astro",
