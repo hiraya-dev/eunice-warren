@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-// How far (px) a pill's background layer sits from the pill's own edges. Runs in the page.
 const bgOffset = (element: Element) => {
   const pill = element.getBoundingClientRect();
   const bg = element.querySelector(".button-016__bg")!.getBoundingClientRect();
@@ -27,7 +26,6 @@ test.describe("Button 016 hover controls", () => {
   test("keeps each background flush with its pill", { tag: ["@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    // Pills only: the weekend link uses the roll without a background layer.
     for (const pill of await page.locator("[data-button-016].pill").all()) {
       await expect.poll(() => pill.evaluate(bgOffset)).toBeLessThanOrEqual(1);
     }
@@ -96,7 +94,6 @@ test("rolls the weekend link's text on fine-pointer hover without a background",
   const text = link.locator(".button-016__text");
   await link.hover();
   const lineHeight = await text.evaluate((element) => Number.parseFloat(getComputedStyle(element).lineHeight));
-  // The roll moves the label up by two line heights, onto its text-shadow copy.
   const expected = supportsHover ? -2 * lineHeight : 0;
   await expect.poll(() => text.evaluate((element) => {
     const translate = getComputedStyle(element).translate;

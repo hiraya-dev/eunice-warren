@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fakeFixtures } from "../src/lib/rsvp/store.ts";
 
-// The ask-state title, read from the component so a copy edit updates both (L-017).
 const askTitle = readFileSync(new URL("../src/components/global/Preloader.astro", import.meta.url), "utf8")
   .match(/const setAskState[\s\S]*?title\.textContent = "([^"]+)"/)![1];
 
@@ -97,7 +96,6 @@ test.describe("guest preloader", () => {
     const name = overlay.locator("[data-preloader-name]");
     await name.fill("Mateo Cruz");
     await overlay.getByRole("button", { name: "Open my letter" }).click();
-    // Pending swaps in its own hint; editing the name restores the previous one.
     await expect(hint).not.toHaveText(initialHint!);
     await name.fill("Nobody Example");
     await expect(hint).toHaveText(initialHint!);
@@ -273,17 +271,12 @@ test.describe("guest preloader", () => {
     expect(animationName).toBe("none");
   });
 
-  // The Turnstile widget is prefetched at envelope open. Its iframe must land in space that is already
-  // reserved, or the centred column slides up and the input and button jump under the guest's hands.
   test("keeps the input and button still when the Turnstile iframe appears", { tag: ["@single"] }, async ({ page }) => {
-    // Tall enough that the envelope column is centred; a shorter window scrolls and hides the shift.
     await page.setViewportSize({ width: 1440, height: 1080 });
     await page.goto("/");
     const overlay = preloader(page);
     await expect(overlay.locator("[data-preloader-name]")).toBeFocused();
     await expect(overlay.locator(".preloader_stage")).toHaveCSS("transform", "none");
-    // Measured from the overlay (the fixed, stable frame). The form itself is centred, so its own top
-    // moves with the column and form-relative offsets would read zero even when everything jumps.
     const measure = () => overlay.evaluate((root) => {
       const frame = root.getBoundingClientRect();
       const top = (selector: string) => root.querySelector(selector)!.getBoundingClientRect().top - frame.top + root.scrollTop;
@@ -291,19 +284,15 @@ test.describe("guest preloader", () => {
     });
     const before = await measure();
     await page.evaluate(() => {
-      // The live widget grows the box to 72px (the 65px iframe plus its wrapper), measured on production at 390x844.
       const iframe = document.createElement("iframe");
       iframe.style.cssText = "display:block;width:300px;height:72px;border:0";
       document.querySelector("[data-preloader-turnstile]")!.append(iframe);
     });
     const after = await measure();
-    // With the old `:has(iframe) { min-height: 4.0625rem }` rule both moved by about 30px.
     expect(Math.abs(after.input - before.input)).toBeLessThanOrEqual(2);
     expect(Math.abs(after.button - before.button)).toBeLessThanOrEqual(2);
   });
 
-  // The envelope picks its layout by its own width, so a window just above the phone breakpoint
-  // must not stack the stamp, postmark, label, input and button on top of each other.
   test("keeps the envelope parts from overlapping at every width", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     const parts = [
       ".preloader_par-avion",
@@ -338,7 +327,6 @@ test.describe("guest preloader", () => {
       await page.goto("/");
       const overlay = preloader(page);
       await expect(overlay.locator("[data-preloader-name]")).toBeFocused();
-      // Wait for the settle to finish and the webfonts to load, so every box is final.
       await expect(overlay.locator(".preloader_stage")).toHaveCSS("transform", "none");
       await page.evaluate(() => document.fonts.ready);
       await assertNoOverlap(overlay, width);

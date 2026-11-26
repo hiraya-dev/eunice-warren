@@ -17,7 +17,6 @@ test.describe("smoke", { tag: ["@smoke"] }, () => {
 
   test("renders every section in order with an id", async ({ page }) => {
     await page.goto("/");
-    // Ribbons is commented out in src/pages/index.astro.
     const ids = await page.locator("main > section").evaluateAll((sections) => sections.map((section) => section.id));
     expect(ids).toEqual([
       "hero",

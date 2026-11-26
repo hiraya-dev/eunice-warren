@@ -14,8 +14,6 @@ const photoCount = readdirSync(galleryDirectory).filter((file) =>
   file.endsWith(".jpg"),
 ).length;
 
-// The site-wide reduced-motion rule (src/styles/base.css) shortens every transition to
-// 0.01ms rather than removing it, so count only animations a person could see (> 1ms).
 const perceptibleAnimations = (element: Element) =>
   element
     .getAnimations({ subtree: true })
@@ -33,11 +31,9 @@ const perceptibleAnimations = (element: Element) =>
           : `animation:${animation.id}`,
     );
 
-// The teaser copy fades in as the section arrives (data-fade-in), so reach it before clicking.
 const openGallery = async (page: Page) => {
   const open = page.locator("[data-gallery-open]");
   await open.scrollIntoViewIfNeeded();
-  // Wait for the fade-in (and its 24px rise) to finish, so the click lands and does not re-scroll (L-029).
   await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
   await open.click();
 };
@@ -66,7 +62,6 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
 
       const open = page.locator("[data-gallery-open]");
       await open.scrollIntoViewIfNeeded();
-      // Let the copy finish fading in (it also moves 24px), so the click does not re-scroll.
       await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
       const scrollBefore = await page.evaluate(() => window.scrollY);
       await open.click();
@@ -82,7 +77,6 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
         )
         .toBe(true);
 
-      // Mobile WebKit has no mouse wheel; the other projects cover the wheel lock.
       if (!isMobile) {
         await page.mouse.move(300, 300);
         await page.mouse.wheel(0, 600);
@@ -140,11 +134,7 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
       window.__galleryTextureRequests = [];
       window.__galleryTexturePriorities = {};
     });
-    // Gallery photos are webp variants under /_astro/. Count only requests that start
-    // after the overlay opens: the old queue fetched them strictly one at a time.
     let opened = false;
-    // Pre-open photo requests stay in this set until their response body has arrived
-    // (route.continue() resolves when the request is sent, not when it finishes).
     const preOpenInFlight = new Set<Request>();
     const settle = (request: Request) => preOpenInFlight.delete(request);
     page.on("requestfinished", settle);
@@ -169,7 +159,6 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     const open = page.locator("[data-gallery-open]");
     await open.scrollIntoViewIfNeeded();
     await expect(page.locator(".gallery_actions")).toHaveCSS("opacity", "1");
-    // Let the section's own images and the intent prefetch settle before counting.
     await expect.poll(() => preOpenInFlight.size).toBe(0);
     opened = true;
     await open.click();
@@ -199,12 +188,10 @@ test.describe("photo gallery", { tag: ["@single"] }, () => {
     await openGallery(page);
     const overlay = page.locator("#gallery-overlay");
     await expect(overlay).toHaveAttribute("data-gallery-state", "canvas");
-    // The no-WebGL fallback has no canvas to pan.
     test.skip(
       await page.locator("[data-gallery-grid]").isVisible(),
       "WebGL unavailable: fallback grid has no keyboard panning",
     );
-    // The canvas module loads on first open; its key listener binds once it runs.
     await expect(page.locator("[data-gallery-stage] canvas")).toBeAttached();
     await expect
       .poll(() =>

@@ -6,9 +6,6 @@ import { expect, test } from "@playwright/test";
 import { fakeFixtures } from "../src/lib/rsvp/store.ts";
 import { reveal } from "./helpers/reveal.ts";
 
-// The fake store keeps one Garcia answer per server run, shared by every worker
-// and both projects. A directory lock, keyed by checkout, keeps one writer
-// between submit and read-back. A lock older than a minute is stale.
 const garciaLock = join(
   tmpdir(),
   `eunice-warren-garcia-${createHash("sha1").update(process.cwd()).digest("hex").slice(0, 12)}`,
@@ -22,7 +19,6 @@ const withGarciaLock = async (run: () => Promise<void>) => {
       try {
         if (Date.now() - statSync(garciaLock).mtimeMs > 60_000) rmSync(garciaLock, { recursive: true, force: true });
       } catch {
-        // Released between the two calls; retry.
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -88,8 +84,6 @@ test.describe("RSVP section", () => {
       await nameInput.evaluate((input) => input.blur());
       await reveal(nameInput);
 
-      // Positions are read in the card's own frame (L-035): a scroll or a late shift above
-      // the card moves viewport coordinates without the field changing.
       const measure = () =>
         page.evaluate(() => {
           const input = document.querySelector<HTMLInputElement>("[data-rsvp-name]")!;
@@ -120,8 +114,6 @@ test.describe("RSVP section", () => {
     }
   });
 
-  // Turnstile loads on submit. Its box is held from the start, so the buttons do not jump under the
-  // guest's finger when the 72px widget (measured on production) appears.
   test("keeps the Find my invite button still when the Turnstile widget appears", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
@@ -236,10 +228,7 @@ test.describe("RSVP section", () => {
   });
 
   test("restores a dedicated returning guest without exposing private details", async ({ page }, testInfo) => {
-    // Waiting on the Garcia lock counts against the timeout under heavy parallelism.
     test.slow();
-    // Seat 3 may already hold a name from an earlier run; a unique name proves
-    // this run's write is the one restored.
     const uniqueName = `Nico Garcia ${testInfo.project.name}-${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${testInfo.retry}-${Date.now()}`;
     await withGarciaLock(async () => {
       await rsvp(page).locator("[data-rsvp-name]").fill("Paolo Garcia");
@@ -255,7 +244,6 @@ test.describe("RSVP section", () => {
       await rsvp(page).locator("#rsvp-email").fill("paolo@example.com");
       await rsvp(page).locator("#rsvp-note").fill("private note");
       await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
-      // The ticket opens only once the store has the answer; reload after that.
       await expect(page.locator("#rsvp-ticket-modal")).toBeVisible({ timeout: 15_000 });
       await page.keyboard.press("Escape");
       await page.reload();
@@ -450,7 +438,6 @@ test.describe("RSVP section", () => {
       await expect(rsvp(page)).not.toContainText(fixture.id);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const bounds = await rsvp(page).evaluate((section) => {
-        // The invitation name sits on the invitation stub, not inside the form card.
         const card = section.querySelector<HTMLElement>("[data-rsvp-invitation]")!.getBoundingClientRect();
         const name = section.querySelector<HTMLElement>("[data-rsvp-household]")!.getBoundingClientRect();
         const admits = section.querySelector<HTMLElement>(".rsvp_admits")!.getBoundingClientRect();

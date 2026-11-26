@@ -89,7 +89,6 @@ const sampleWhileWheeling = async (
   const deadline = new Promise<never>((_, reject) => {
     deadlineId = setTimeout(
       () => reject(new Error("marquee sampling did not resolve after its 4s cap")),
-      // A backstop behind the in-page cap, whose clock starts later.
       maximumDuration + 2000,
     );
   });
@@ -157,7 +156,6 @@ const localCoverage = (element: Element) => {
     return [left, left + collection.offsetWidth] as const;
   }).sort(([leftA], [leftB]) => leftA - leftB);
   const hasNoInteriorGap = ranges.every(
-    // offsetLeft/offsetWidth round to whole pixels while transforms do not.
     ([left], index) => index === 0 || left <= ranges[index - 1][1] + 2,
   );
   return ranges[0][0] <= 0 &&
@@ -165,7 +163,6 @@ const localCoverage = (element: Element) => {
     hasNoInteriorGap;
 };
 
-// Skipped while the section is hidden from the home page (src/pages/index.astro); un-skip when it returns.
 test.describe.skip("ribbon marquee", () => {
   test("hides duplicated collections from assistive tech", { tag: ["@single"] }, async ({ page }) => {
     await page.goto("/");
@@ -179,7 +176,6 @@ test.describe.skip("ribbon marquee", () => {
   });
 
   test("moves in each base direction and reverses while scrolling up", { tag: ["@sweep", "@single"] }, async ({ page }) => {
-    // Many wheel/sample round trips; under parallel load each one can take hundreds of ms.
     test.slow();
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
@@ -235,7 +231,6 @@ test.describe.skip("ribbon marquee", () => {
   test("stays static, has no JS clones, and remains filled with reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    // Each ribbon renders two collections in the markup, and the script adds no clones.
     const ribbonCount = await page.locator("#ribbons .ribbons_ribbon").count();
     await expect(page.locator("#ribbons [data-marquee-collection-target]")).toHaveCount(ribbonCount * 2);
     expect(await page.locator(".ribbons_ribbon-navy").evaluate(localCoverage)).toBeTruthy();

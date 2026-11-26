@@ -30,7 +30,6 @@ const installSpotify = async (page: import("@playwright/test").Page) => {
 
 const loadSpotify = async (page: import("@playwright/test").Page) => {
   await page.locator("#playlist").scrollIntoViewIfNeeded();
-  // The player rises 24px as it fades in (L-029); let it settle before any spec measures the record.
   await reveal(page.locator(".playlist_player"));
   await expect
     .poll(() =>
@@ -243,7 +242,6 @@ test.describe("Playlist section", () => {
       );
       await page.waitForTimeout(200);
     }
-    // Angles are degrees; the record spins at 200deg/s, so 11.5deg (the old 0.2rad) is a floor.
     expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan(11.5);
     const beforePause = samples.at(-1)!;
     await page.evaluate(() =>
@@ -471,7 +469,6 @@ test.describe("Playlist section", () => {
       expect(focused.borderLeft).toBe("none");
       expect(focused.borderRight).toBe("none");
       expect(focused.borderBottom).toBe("none");
-      // The line is an inset shadow so thickening it never shifts layout.
       expect(blurred.boxShadow).toMatch(/0px -1\.5px 0px 0px inset/);
       expect(focused.boxShadow).toMatch(/0px -3px 0px 0px inset/);
     }
@@ -547,12 +544,9 @@ test.describe("Playlist section", () => {
       await song.press("ArrowDown");
       await expect(form.locator('[role="option"][aria-selected="true"]')).toHaveCount(1);
       const popup = form.locator("[data-song-search-popup]");
-      // Let the 150ms rise settle before measuring.
       await expect(popup).toHaveCSS("opacity", "1");
-      // The old postcard inputs were capped at 200px; they now span the card's content box.
       const geometry = await page.evaluate(() => {
         const card = document.querySelector(".playlist_postcard") as HTMLElement;
-        // The postcard is rotated, so read untransformed layout offsets relative to it.
         const rect = (element: Element) => {
           let left = 0;
           let top = 0;

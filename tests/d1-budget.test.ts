@@ -131,11 +131,9 @@ test("D1 query budgets with Miniflare", async (t) => {
     meter.reset();
     await songs.add({ name: "Lucia Target", song: "A Test Song" });
     assert(meter.budget().rowsRead <= 525, `song submit read ${meter.budget().rowsRead} rows`);
-    // D1 counts each index entry as a written row: the song row plus its index entries.
     assert(meter.budget().rowsWritten <= 3, `song submit wrote ${meter.budget().rowsWritten} rows`);
 
     meter.reset();
-    // 99 filler plus-ones; the target's plus-one was freed by its RSVP above.
     assert.equal(await getUnnamedPlusOneCount(meter.database), 99);
     assert(meter.budget().rowsRead <= 300, `unnamed plus-one count read ${meter.budget().rowsRead} rows`);
   } finally {

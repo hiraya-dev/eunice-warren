@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { reveal } from "./helpers/reveal";
 
-// The visual column, each schedule row and the footer reveal through the shared fade-in (L-029).
-// Scroll to the section, then wait for every one of them so a tab click or a measurement
-// never lands on a hidden or still-rising item.
 const revealWedding = async (page: import("@playwright/test").Page) => {
   await page.locator("#wedding").scrollIntoViewIfNeeded();
   await reveal(page.locator(".wedding_visual-column"));
@@ -92,7 +89,6 @@ test.describe("wedding schedule tabs", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await revealWedding(page);
-    // Autoplay would drive the active tab's progress bar from scaleX(0); sample it over 500ms of wall-clock time (10% of the 5s duration).
     const scales = await page.evaluate(
       () =>
         new Promise<number[]>((resolve) => {

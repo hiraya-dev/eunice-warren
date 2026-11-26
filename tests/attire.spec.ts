@@ -11,7 +11,6 @@ const attireContent = JSON.parse(readFileSync("src/content/attire/attire.json", 
 const lookGroupCount = attireContent.looks.length;
 const lookItemCount = attireContent.looks[0].items.length;
 
-// The viewport width at which the row switches from the swipe slider to two clotheslines.
 const twoLineRem = Number(
   attireSource.match(/@media \(min-width: ([\d.]+)rem\) \{(?:(?!@media)[\s\S])*?--slider-status: off/)?.[1],
 );
@@ -33,7 +32,6 @@ test.describe("attire section", () => {
     const swatches = attire.locator(".attire_colours .attire_swatch");
     await expect(swatches).toHaveCount(4);
     for (const swatch of await swatches.all()) {
-      // The label is the list item's visible text.
       await expect(swatch.locator("..")).toHaveText(/\S/);
       const fill = await swatch.evaluate((element) => {
         const { backgroundColor, backgroundImage } = getComputedStyle(element);
@@ -54,7 +52,6 @@ test.describe("attire section", () => {
       const items = row.locator("[data-gsap-slider-item]");
       await expect(items).toHaveCount(lookItemCount);
       for (const item of await items.all()) {
-        // The colour is a dot now; its name stays in the accessible text.
         await expect(item.locator(".attire_caption-name .sr-only")).toHaveText(/\S/);
         await expect(item.locator(".attire_caption-dot")).toHaveAttribute("aria-hidden", "true");
       }
@@ -106,7 +103,6 @@ test.describe("attire section", () => {
     const lastTrack = lastRow.locator("[data-gsap-slider-list]");
     const lastCounter = lastRow.locator("[data-gsap-slider-counter]");
     const pad = pad2;
-    // Click and wait for each move to land; the buttons settle after the tween.
     for (let index = 2; index <= lookItemCount; index += 1) {
       await expect(lastNext).toBeEnabled();
       await lastNext.click();
@@ -121,7 +117,6 @@ test.describe("attire section", () => {
     })).toBeGreaterThanOrEqual(-1);
   });
 
-  // Mouse drag, like the Explore drag test: desktop Chromium only.
   test("snaps to the next look after a settled drag", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
@@ -153,7 +148,6 @@ test.describe("attire section", () => {
       await expect(row.locator("[data-gsap-slider-controls]")).toBeHidden();
       const items = row.locator("[data-gsap-slider-item]");
       await expect(items).toHaveCount(lookItemCount);
-      // The looks themselves stay readable; their decorations (pegs) are aria-hidden.
       await expect(row.locator('[data-gsap-slider-item][aria-hidden="true"]')).toHaveCount(0);
       for (const item of await items.all()) {
         await expect(item.locator("img")).toBeVisible();
@@ -235,13 +229,11 @@ test.describe("attire section", () => {
         );
         const firstLine = boxes.slice(0, 4);
         const secondLine = boxes.slice(4);
-        // Cards stay at least ~220px wide and never exceed the 276px design size.
         for (const box of boxes) {
           expect(box.width).toBeGreaterThanOrEqual(220);
           expect(box.width).toBeLessThanOrEqual(276.5);
         }
         expect(secondLine).toHaveLength(lookItemCount - 4);
-        // Line 1 sits above line 2, each in reading order with no overlap.
         const firstBottom = Math.max(...firstLine.map((box) => box.bottom));
         for (const box of secondLine) expect(box.top).toBeGreaterThan(firstBottom - 1);
         for (const line of [firstLine, secondLine]) {
@@ -249,13 +241,11 @@ test.describe("attire section", () => {
             expect(line[index].left).toBeGreaterThanOrEqual(line[index - 1].right - 0.5);
           }
         }
-        // Line 2 is centred on the viewport.
         const lineLeft = secondLine[0].left;
         const lineRight = secondLine[secondLine.length - 1].right;
         expect((lineLeft + lineRight) / 2).toBeCloseTo(width / 2, 0);
         expect(firstLine[0].left).toBeGreaterThanOrEqual(0);
         expect(firstLine[3].right).toBeLessThanOrEqual(width);
-        // Each line has its own string, and every card peg sits on its string.
         const strings = row.locator(".attire_string:visible");
         await expect(strings).toHaveCount(2);
         const stringBoxes = [await strings.nth(0).boundingBox(), await strings.nth(1).boundingBox()];
@@ -269,14 +259,12 @@ test.describe("attire section", () => {
           expect(peg!.y).toBeLessThan(string.y + string.height);
           expect(box.top).toBeGreaterThan(string.y);
         }
-        // The group heading is stacked and centred on the page.
         const title = await group.locator(".attire_looks-title").boundingBox();
         const copy = await group.locator(".attire_looks-copy").boundingBox();
         expect(title!.x + title!.width / 2).toBeCloseTo(width / 2, -1);
         expect(copy!.x + copy!.width / 2).toBeCloseTo(width / 2, -1);
         expect(copy!.y).toBeGreaterThanOrEqual(title!.y + title!.height - 1);
         expect(copy!.width).toBeLessThanOrEqual(480);
-        // Both strings run edge to edge.
         for (const box of stringBoxes) {
           expect(box!.x).toBeCloseTo(0, 0);
           expect(box!.x + box!.width).toBeCloseTo(width, 0);
@@ -286,7 +274,6 @@ test.describe("attire section", () => {
     });
   }
 
-  // The handwriting sits on the ruled lines of the notebook card, like writing on lined paper.
   for (const width of [320, 375, 390, 481, 488, 632, 767, 768, 968, 1023, 1024, 1032, 1150, 1440, 1920]) {
     test(`sets the notebook text on the ruled lines at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
@@ -296,7 +283,6 @@ test.describe("attire section", () => {
       await page.evaluate(() => document.fonts.ready);
 
       const measured = await note.evaluate((card) => {
-        // Measure in the card's own frame: the rotation turns text and rules together.
         (card as HTMLElement).style.rotate = "none";
         const cardTop = card.getBoundingClientRect().top;
         const length = (value: string) => {
@@ -329,11 +315,9 @@ test.describe("attire section", () => {
             previous = rect.top;
           }
           const words = (text.textContent ?? "").trim().slice(0, 12);
-          // Insert from the end so earlier offsets stay valid.
           for (const index of starts.reverse()) {
             const marker = document.createElement("span");
             marker.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
-            // Keep the marker on the line it measures: wrap it with the line's first character.
             const keep = document.createElement("span");
             keep.style.whiteSpace = "nowrap";
             range.setStart(text, index);
@@ -357,7 +341,6 @@ test.describe("attire section", () => {
       expect(measured.pitch).toBeGreaterThan(0);
       expect(measured.lines.length).toBeGreaterThan(0);
 
-      // The postmark scales with its box: its 340:254 ratio holds and it is never cropped.
       const stamp = await note.evaluate((card) => {
         (card as HTMLElement).style.rotate = "none";
         const image = card.querySelector<HTMLElement>(".attire_postmark")!;
@@ -372,14 +355,12 @@ test.describe("attire section", () => {
       expect(Math.abs(stamp.width / stamp.height / (340 / 254) - 1), `postmark ${stamp.width}x${stamp.height}`).toBeLessThanOrEqual(0.01);
       expect(stamp.width, "postmark stays inside its box").toBeLessThanOrEqual(stamp.sealWidth - stamp.margin + 0.5);
       for (const line of measured.lines) {
-        // Rules sit at the bottom edge of each row, one pixel thick.
         const rows = Math.max(1, Math.round((line.baseline - measured.start) / measured.pitch));
         const rule = measured.start + rows * measured.pitch - 0.5;
         expect(Math.abs(line.baseline - rule), `"${line.text}" baseline ${line.baseline.toFixed(1)} vs rule ${rule.toFixed(1)}`).toBeLessThanOrEqual(2);
       }
 
       if (width >= 768) {
-        // The columns share one label line, and every first item sits on the line after it.
         const labels = measured.lines.filter((line) => line.role === "label");
         expect(labels.length).toBeGreaterThan(1);
         for (const label of labels) {
@@ -393,7 +374,6 @@ test.describe("attire section", () => {
     });
   }
 
-  // The global `svg { max-width: 100% }` once capped the string at the content width.
   for (const width of [320, 390, 768, 1151, 1152, 1440, 1920, 2560]) {
     test(`runs the clothesline string edge to edge at ${width}px`, { tag: ["@sweep"] }, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
@@ -403,7 +383,6 @@ test.describe("attire section", () => {
       for (const row of await rows.all()) {
         await reveal(row);
         const strings = row.locator(".attire_string:visible");
-        // One string in the slider, one per clothesline on desktop.
         await expect(strings).toHaveCount(width >= twoLinePx ? 2 : 1);
         for (const string of await strings.all()) {
           const box = await string.boundingBox();

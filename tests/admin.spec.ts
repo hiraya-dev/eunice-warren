@@ -65,8 +65,6 @@ test.describe("admin dashboard", () => {
     });
   });
 
-  // Overflow is judged against the page itself: the stamp is rotated and the
-  // guest table swaps layout at 84rem (1344px), so odd widths are in the list (L-018).
   for (const path of [
     "/admin",
     "/admin/guests",
@@ -94,8 +92,6 @@ test.describe("admin dashboard", () => {
     });
   }
 
-  // User feedback on #96: the phone greeting wrapped to 3 lines beside the
-  // stamp (old CSS: 3 lines at 390). Use the longest greeting the helper makes.
   test("keeps the greeting to two lines on phones @sweep @single", async ({
     page,
   }) => {
@@ -127,7 +123,6 @@ test.describe("admin dashboard", () => {
       .locator("main section")
       .first()
       .evaluate((el) => el.getBoundingClientRect().bottom);
-    // Padding clears the fixed bar: the old failure hides the last row under it.
     expect(last).toBeLessThanOrEqual(tabbar!.y + 6);
     await page.setViewportSize({ width: 1440, height: 900 });
     await expect(page.locator("[data-admin-sidebar]")).toBeVisible();
@@ -137,8 +132,6 @@ test.describe("admin dashboard", () => {
   });
 });
 
-// Slipper order and song requests. Counts come from the fake store the build
-// uses, never from rendered text.
 const fakeStore = createFakeAdminStore();
 
 test.describe("admin slippers and songs", () => {
@@ -165,8 +158,6 @@ test.describe("admin slippers and songs", () => {
   test("charts every slipper size with the fake store's counts @smoke", async ({
     page,
   }) => {
-    // Host RSVP specs save replies on temporary households under this lock;
-    // reading the chart under it keeps their sizes out of the totals (L-022).
     await withAdminLock(async () => {
     const order = await fakeStore.getSlipperOrder();
     await page.goto("/admin/slippers");
@@ -210,7 +201,6 @@ test.describe("admin slippers and songs", () => {
         );
         expect(box!.width).toBeGreaterThan(8);
       }
-      // A counted size still draws a real bar.
       const counted = await page
         .locator('li[data-size]:not([data-count="0"]) i')
         .first()
@@ -284,7 +274,6 @@ test.describe("admin slippers and songs", () => {
     }
   });
 
-  // The song table swaps layout at 84rem (1344px) and the sidebar at 64rem.
   test("has no horizontal overflow on slippers and songs @sweep @single", async ({
     page,
   }) => {
@@ -379,7 +368,6 @@ test.describe("admin list cards", () => {
       expect(widths.at(-1)).toBe("0px");
       expect(widths.slice(0, -1).every((width) => width !== "0px")).toBe(true);
     }
-    // Searching hides the households after a match; the match ends the card.
     await page.goto("/admin/guests");
     await page
       .locator("[data-admin-search]")

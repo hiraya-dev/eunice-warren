@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
-// consts.ts imports an image asset, which node cannot load, so read the kill switch from its text.
 const MUSIC = /BACKGROUND_MUSIC\s*=\s*\{\s*enabled:\s*true/.test(readFileSync("src/consts.ts", "utf8"));
 
 test.describe("keepsakes hero", () => {
@@ -18,7 +17,6 @@ test.describe("keepsakes hero", () => {
         };
         const hero = document.querySelector<HTMLElement>("#hero")!.getBoundingClientRect();
         const text = [...document.querySelectorAll<HTMLElement>(".hero_date, .hero_title, .hero_subtitle, .hero_actions")].map(box);
-        // Only the keepsakes shown at this width: .hero_music joins from 64rem, and replaces the sunset there.
         const keepsakes = [...document.querySelectorAll<HTMLElement>("[data-hero-keepsake]")].filter((element) => element.getClientRects().length > 0).map(box);
         const rsvp = box(document.querySelector<HTMLElement>(".hero_rsvp")!);
         const weekend = box(document.querySelector<HTMLElement>(".hero_weekend")!);
@@ -34,7 +32,6 @@ test.describe("keepsakes hero", () => {
         };
       });
 
-      // 48rem to 63.99rem keeps the sunset polaroid; the song polaroid is a wide-screen keepsake.
       for (const keepsake of await page.locator("[data-hero-keepsake]:not(.hero_music)").all()) await expect(keepsake).toBeVisible();
       if (MUSIC) await expect(page.locator(".hero_music")).toBeHidden();
       expect(metrics.keepsakes).toHaveLength(7);
@@ -53,7 +50,6 @@ test.describe("keepsakes hero", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await expect(page.locator("h1")).toHaveText("Warren & Eunice");
-    // With the song on, its polaroid replaces the sunset from 64rem: one more keepsake in the DOM, the same number shown.
     await expect(page.locator("[data-hero-keepsake]")).toHaveCount(MUSIC ? 8 : 7);
     if (MUSIC) {
       await expect(page.locator(".hero_sunset")).toBeHidden();
@@ -123,7 +119,6 @@ test.describe("keepsakes hero", () => {
         };
       });
 
-      // The hand font's line box differs a few px across platforms; 6px still fails the old down-pointing arrow by far.
       expect(metrics.arrowBottom).toBeLessThanOrEqual(metrics.textTop + 6);
       expect(metrics.arrowTop).toBeLessThanOrEqual(metrics.coupleBottom + 2);
       expect(metrics.verticalScale).toBeCloseTo(-1, 2);
@@ -147,7 +142,6 @@ test.describe("keepsakes hero", () => {
       return { heroTop: hero.top, heroHeight: hero.height, titleHeight: title.getBoundingClientRect().height, titleFontSize: Number.parseFloat(getComputedStyle(title).fontSize), contentCentre: content.top + content.height / 2 };
     });
     expect(metrics.titleHeight).toBeGreaterThanOrEqual(metrics.titleFontSize * 1.05);
-    // Paper centres the text block below 40px of top padding, so its centre sits ~20px under the section's.
     expect(Math.abs(metrics.contentCentre - (metrics.heroTop + metrics.heroHeight / 2 + 20))).toBeLessThan(24);
   });
 });
