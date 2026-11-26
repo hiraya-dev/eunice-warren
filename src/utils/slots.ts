@@ -3,7 +3,6 @@ type Slots = {
   render(name: string): Promise<string>;
 };
 
-/** Ignores empty and comment-only slots. Used by Button, NavLink, and slotted form, interactive, typography, and wrapper components. */
 export async function slotContent(
   slots: Slots,
   name = "default",

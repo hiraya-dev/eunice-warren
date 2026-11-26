@@ -17,8 +17,6 @@ export function initFadeIn() {
 
     sections.forEach((section) => {
       section.dataset.fadeInInitialized = "true";
-      // An element carrying both attributes reveals as one piece: it is its own trigger and item.
-      // That is how widgets that drive their own children (sliders, accordion, card) reveal.
       const items = [
         ...(section.hasAttribute("data-fade-in-item") ? [section] : []),
         ...section.querySelectorAll<HTMLElement>("[data-fade-in-item]"),
@@ -26,8 +24,6 @@ export function initFadeIn() {
       if (!items.length) return;
 
       const context = gsap.context(() => {
-        // Fade with opacity only: `visibility: hidden` (what autoAlpha adds) would take every
-        // link and button out of the tab order and the accessibility tree until the section is reached.
         gsap.set(items, { opacity: 0, y: 24 });
         const reveal = gsap.to(items, {
           opacity: 1,
@@ -41,8 +37,6 @@ export function initFadeIn() {
             once: true,
           },
         });
-        // Focus landing on an item that has not revealed yet finishes the reveal at once,
-        // so a focus ring never sits on invisible content.
         const finish = () => {
           reveal.scrollTrigger?.kill();
           reveal.progress(1);

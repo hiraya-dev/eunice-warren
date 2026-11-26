@@ -197,8 +197,6 @@ const generateChunkPlanes = (
 
   const planes: PlaneSeed[] = [];
   const seed = hashString(`${chunkX},${chunkY},${chunkZ}`);
-  // Face-adjacent chunks move by at least eleven album positions, so their five-photo runs do
-  // not repeat. The coprime x stride eventually visits every photo in the album.
   const photoBase = modulo(chunkX * 11 + chunkY * 23 + chunkZ * 41, photoCount);
   const photoRotation = seed % PLANES_PER_CHUNK;
   for (let index = 0; index < PLANES_PER_CHUNK; index += 1) {

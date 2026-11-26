@@ -7,12 +7,6 @@ const FLIGHT_DURATION = 0.7;
 const FLIGHT_EASE = "power3.inOut";
 const FADE_DURATION = 0.2;
 
-/**
- * Keeps the docked tag off a control. Watches `target` against the tag's band at the bottom of the
- * viewport (tag height + bottom offset + 16) and sets `attribute`, a hide reason, on the tag while
- * the target is in it. One reason per attribute, so reasons never fight. One observer, rebuilt on
- * resize; nothing reads layout on scroll. `below` also counts a target still below the fold.
- */
 function watchBand(
   container: HTMLElement,
   surface: HTMLElement,
@@ -32,12 +26,9 @@ function watchBand(
     const styles = getComputedStyle(container);
     const bottom = parseFloat(styles.bottom) || 0;
     const right = parseFloat(styles.right) || 0;
-    // The band follows what the player covers now: the tag, or on a phone the disc, or the open pill.
     const shape = footprint();
     const bandHeight = shape.offsetHeight + bottom + 16;
     const bandWidth = shape.offsetWidth + right + 16;
-    // The root becomes the band: its top edge is the band's, and `below` drops its bottom edge far
-    // past the fold. "Intersecting" then means some part of the target is in the band.
     const left = horizontal ? -Math.max(0, window.innerWidth - bandWidth) : 0;
     observer = new IntersectionObserver(([entry]) => set(entry.isIntersecting), {
       rootMargin: `-${Math.max(0, window.innerHeight - bandHeight)}px 0px ${below ? window.innerHeight * 10 : 0}px ${left}px`,
@@ -55,16 +46,6 @@ function watchBand(
   };
 }
 
-/**
- * Moves the song between its two homes: the polaroid in the hero (desktop) and the luggage tag
- * docked bottom-right. `data-music-docked` on the container is the state signal; while a flight
- * runs, `data-music-flying` keeps both homes visible. The two cards never share an element, and
- * the <audio> is not touched.
- *
- * From 64rem up, scroll drives it: past the polaroid the tag takes its place with a Flip, and
- * scrolling back reverses it. Reduced motion swaps the Flip for a 200ms crossfade. Below 64rem
- * the tag is simply docked.
- */
 export function initMusicTeleport(container: HTMLElement) {
   const tag = container.querySelector<HTMLElement>("[data-music-tag]");
   const pill = container.querySelector<HTMLElement>("[data-music-pill]");
@@ -90,8 +71,6 @@ export function initMusicTeleport(container: HTMLElement) {
   let openedAt = 0;
   let interacted = false;
   let keyboardOpen = false;
-  // The site-wide reduced-motion rule makes every CSS transition and animation instant, and it sits in
-  // an earlier layer, so a component cannot lift it. The 150ms crossfade is a Web Animation instead.
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const crossfade = (opening: boolean) => {
     if (!reduceMotion.matches) return;
@@ -112,8 +91,6 @@ export function initMusicTeleport(container: HTMLElement) {
     window.clearTimeout(introTimer);
     scheduleGuards();
   };
-  // The pill is wider than the disc: opening it where a control sits in its band would hide the whole
-  // player a frame later. The same band the guards watch, read now, so it simply stays a disc.
   const blocked = () => {
     const shape = pill.getBoundingClientRect();
     return ([["#rsvp .rsvp_card", false], ["#hero .hero_actions", true], ["[data-playlist-embed]", false], [".footer_top-link", false]] as const).some(([selector, below]) => {
@@ -174,8 +151,6 @@ export function initMusicTeleport(container: HTMLElement) {
   disc.addEventListener("click", onDiscClick);
   const hiddenObserver = new MutationObserver(() => { if (hidden()) close(false); });
   hiddenObserver.observe(container, { attributes: true, subtree: true });
-  // The tap that closes the preloader can land while a field's hide reason is still up (it clears a
-  // task after the release), so a refusal for that reason is tried again shortly.
   let introRetry = 0;
   const startIntro = (attempt = 0) => {
     if (!mobile.matches || !document.documentElement.classList.contains("ew-preloader-pending") || interacted) return;
@@ -216,8 +191,6 @@ export function initMusicTeleport(container: HTMLElement) {
 
   const parts = () => [tag, card, string, ...Array.from(tag.children), ...Array.from(card.children)].filter(Boolean) as HTMLElement[];
   const lift = (on: boolean) => {
-    // The card flies in from the tag, which can be well outside the hero's own box and behind its
-    // text; open the hero up for the flight only.
     hero.style.overflowY = on ? "visible" : "";
     hero.style.zIndex = on ? "5" : "";
     if (collage) collage.style.zIndex = on ? "2" : "";
@@ -265,7 +238,6 @@ export function initMusicTeleport(container: HTMLElement) {
         rotation: Number(gsap.getProperty(flier, "rotation")),
       };
       tl.fromTo(flier, from, { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation, duration: FLIGHT_DURATION, ease: FLIGHT_EASE }, 0);
-      // Squashed contents would read as a glitch; let them arrive once the paper has its shape.
       tl.fromTo(Array.from(flier.children), { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, FLIGHT_DURATION * 0.55);
     }
   };
@@ -305,9 +277,6 @@ export function initMusicTeleport(container: HTMLElement) {
     };
   });
 
-  // Below 48rem the tag is docked from the start and could sit on the hero's RSVP buttons on a short
-  // phone. Step aside while the CTA group is in the tag's band (or still below it), and return once
-  // it has scrolled above.
   const teardown = () => {
     clearMobile();
     cancelAnimationFrame(guardRefresh);

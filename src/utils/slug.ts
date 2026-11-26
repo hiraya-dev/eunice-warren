@@ -1,4 +1,3 @@
-/** Creates field-name slugs. Used by Choice, Input, Range, Select, and Textarea. */
 export function slug(text: string): string {
   return text
     .trim()

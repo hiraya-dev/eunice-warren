@@ -9,13 +9,7 @@ import BackgroundMusic from "@/components/global/BackgroundMusic.astro";
 import type { SeoProps } from "@/types.ts";
 
 type Props = SeoProps & {
-  /** Theme for the whole page. `inherit` leaves the root defaults in place. */
   theme?: "inherit" | "light" | "dark" | "brand";
-  /**
-   * Fix the nav over the page rather than letting it stick in flow, so the
-   * first section starts underneath it. Give that section
-   * `paddingTop="navoverlap"` to clear the bar.
-   */
   overlap?: boolean;
 };
 
