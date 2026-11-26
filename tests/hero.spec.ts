@@ -16,7 +16,7 @@ test.describe("keepsakes hero", () => {
           return { top, right, bottom, left, height };
         };
         const hero = document.querySelector<HTMLElement>("#hero")!.getBoundingClientRect();
-        const text = [...document.querySelectorAll<HTMLElement>(".hero_date, .hero_title, .hero_subtitle, .hero_actions")].map(box);
+        const text = [...document.querySelectorAll<HTMLElement>(".hero_countdown, .hero_when, .hero_title, .hero_subtitle, .hero_actions")].map(box);
         const keepsakes = [...document.querySelectorAll<HTMLElement>("[data-hero-keepsake]")].filter((element) => element.getClientRects().length > 0).map(box);
         const rsvp = box(document.querySelector<HTMLElement>(".hero_rsvp")!);
         const weekend = box(document.querySelector<HTMLElement>(".hero_weekend")!);
@@ -35,8 +35,8 @@ test.describe("keepsakes hero", () => {
       for (const keepsake of await page.locator("[data-hero-keepsake]:not(.hero_music)").all()) await expect(keepsake).toBeVisible();
       if (MUSIC) await expect(page.locator(".hero_music")).toBeHidden();
       expect(metrics.keepsakes).toHaveLength(7);
-      await expect(page.locator(".hero_date-full")).toBeVisible();
-      await expect(page.locator(".hero_date-short")).toBeHidden();
+      await expect(page.locator(".hero_when-line")).toBeVisible();
+      await expect(page.locator(".hero_venue-short")).toBeVisible();
       expect(metrics.actionsCentreDelta).toBeLessThanOrEqual(4);
       expect(metrics.titleSingleLine).toBe(true);
       expect(metrics.intersectsText).toBe(false);
