@@ -68,5 +68,7 @@ This ADR collects them.
 
 - A new motion spec follows these rules, and its author proves it with
   `--repeat-each 20 --workers 8` or `flake-check.yml` (L-009 **Check**).
-- Tests that cannot meet them yet are skipped with an issue, never with a comment:
-  #153 (nav on Linux WebKit), #152 (ticket release velocity).
+- A test that cannot meet them yet gets an issue, never a comment. It is either
+  skipped with a reason string (#153, nav on Linux WebKit), or kept running as a
+  known flake until it is fixed (#152, the ticket release velocity in
+  `rsvp-ticket.spec.ts`).

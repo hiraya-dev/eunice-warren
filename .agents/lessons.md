@@ -170,7 +170,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Trigger:** red CI job, #75: three WebKit @smoke tests (nav, RSVP ticket, wedding tabs) timed out in `e2e (full)`, all passing on the Mac's WebKit
 - **Symptom:** WebKit tests hang in Playwright's actionability wait ("visible, enabled and stable", "scrolling into view") or on `press`, then hit the 30 s test timeout; no page error in the trace.
 - **Root cause:** WebKit on the Linux runner renders in software. Sharing the four-vCPU e2e container with two Chromium workers starved it of frames (the trace's screencast had 4–15 s gaps between paints), and actionability checks wait on frames.
-- **Rule:** run WebKit in its own CI job at one worker (`webkit` in `ci.yml`), never alongside the Chromium projects' workers. Before blaming the site or the test for a WebKit-only CI timeout, read the trace's screencast gaps and the click's "attempting" to "done" times. Even alone, WebKit there is slow (nav toggle clicks took 6-10 s), so a test with a fixed short poll for a transition gets a narrow, commented `webkit` skip that names the reason, never a longer poll for every project.
+- **Rule:** run WebKit in its own CI job at one worker (`webkit` in `ci.yml`), never alongside the Chromium projects' workers. Before blaming the site or the test for a WebKit-only CI timeout, read the trace's screencast gaps and the click's "attempting" to "done" times. Even alone, WebKit there is slow (nav toggle clicks took 6-10 s), so a test with a fixed short poll for a transition gets a narrow `webkit` skip whose reason string and `debt:` issue name the reason (ADR 0002), never a longer poll for every project.
 - **Check:** `ci.yml`'s e2e job passes `--project=chromium --project=mobile`, and the `webkit` job runs `--project=webkit` with no `--workers` (`scripts/ci/ci-triggers.test.mjs` asserts both).
 - **Guard:** none
 - **Paths:** `.github/workflows/**`, `playwright.config.ts`, `tests/**`
@@ -393,7 +393,7 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Symptom:** a new layout spec passed locally and in the draft's `@smoke` tier, then failed in the full tier on "ship it", which cost another CI run before the merge.
 - **Root cause:** the tolerance was set at the measured local gap. Text line boxes, especially Delicious Handrawn's, differ by a few px between macOS and the Linux runner.
 - **Rule:** a geometry assertion that involves a text box gets a tolerance well inside the regression it guards (the old bug is tens of px off, so allow ~6px), never the local measurement plus a hair. Record the old-CSS value next to the tolerance so the margin is visible.
-- **Check:** the spec's comment or the PR body states the tolerance and the old-CSS failure value; the old value exceeds the tolerance by at least 5×.
+- **Check:** the test name, an ADR or the PR body states the tolerance and the old-CSS failure value; the old value exceeds the tolerance by at least 5×.
 - **Guard:** none
 - **Paths:** `tests/**`
 
