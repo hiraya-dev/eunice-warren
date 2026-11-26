@@ -523,11 +523,11 @@ Maintenance rules (`--check` enforces the mechanical ones):
 
 ### L-019 — Build a parser's test fixtures from the real output
 - **Date:** 2026-11-13
-- **Trigger:** carried over from adc-website (its L-034: a hand-written Playwright JSON fixture hid a bug with nested `describe` titles); on this branch, Codex's first `check-sweep-tags` fixtures were flat and hand-written
+- **Trigger:** carried over from adc-website (its L-034: a hand-written Playwright JSON fixture hid a bug with nested `describe` titles); on this branch, Codex's first `check-sweep-tags` fixtures were flat and hand-written; #170: the comment cleanup deleted the fixtures' source notes as Stale
 - **Symptom:** a script's unit tests pass on a fixture shaped from memory, and the script fails on the tool's real output.
 - **Root cause:** the fixture left out fields or nesting the real output carries at every level.
 - **Rule:** shape fixtures for code that reads a tool's output (Playwright JSON, the GitHub API, Workers Builds) from a real sample of that output, trimmed; key on structure the format documents, not on a field's absence.
-- **Check:** each fixture in a `scripts/**/*.test.mjs` that models tool output names where its shape came from and keeps the real nesting.
+- **Check:** each fixture in a `scripts/**/*.test.mjs` that models tool output keeps the real nesting, and its source is named in ADR 0001 **Check scripts** (code carries no comments, ADR 0002). A comment cleanup moves a fixture's source note there; it is never Stale.
 - **Guard:** none
 - **Paths:** `scripts/**`
 

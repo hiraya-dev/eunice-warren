@@ -206,6 +206,17 @@ gh workflow run flake-check.yml --ref <branch> -f grep='<test title or spec file
 - `select-specs.mjs` walks each importer branch up to the spec source that owns
   it. Reaching a layout or page no spec owns means the changed module is shared by
   the whole runtime, so the selection widens to `broad`.
+- **Fixtures come from real output (L-019).** The fixtures in
+  `scripts/ci/check-sweep-tags.test.mjs` are trimmed from a real
+  `playwright test --list --reporter=json` report (adc-website's
+  `.context/adc-ci/playwright-list.sample.json`): each file suite holds its specs in
+  nested describe suites, and each spec keeps `title`, `file`, `line`, `column`,
+  `tags` and `tests`. The `env` fixtures in `scripts/ci/already-tested.test.mjs` are
+  trimmed from real `gh api` responses for a commit's pulls, the commit, the
+  workflow runs and a run's jobs (`gh-commit-pulls`, `gh-commit`, `gh-runs` and
+  `gh-jobs.sample.json` in the same folder). Its API-failure test stubs the parent
+  lookup as `"HEAD PARENT"`, a one-parent commit, so the API is reached even in CI's
+  shallow checkout. A new fixture for tool output names its source here.
 - `scripts/hooks/agent-definitions.test.mjs` carries adc-website's lesson L-042: a
   subagent with `omitClaudeMd: true` never receives `CLAUDE.md`, so its definition
   must say so and must not tell the agent to follow it. A pointer in the

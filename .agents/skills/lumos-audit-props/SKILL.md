@@ -18,6 +18,9 @@ This is an occasional sweep, not a rule to enforce on every change.
 node .agents/skills/lumos-audit-props/audit-props.mjs
 ```
 
+It reads `src/components` unless you pass another folder first, and `--json`
+prints the findings as JSON.
+
 Reports and exits non-zero when it finds something; it never rewrites a file.
 Every fix is a judgement about wording or intent, and belongs to a person.
 
