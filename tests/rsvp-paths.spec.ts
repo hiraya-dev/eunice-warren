@@ -63,6 +63,13 @@ async function submitRsvp(
   await section.getByRole("button", { name: "Send RSVP" }).click();
 }
 
+async function checkSeats(
+  section: import("@playwright/test").Locator,
+  count: number,
+) {
+  for (let index = 0; index < count; index += 1) await section.locator(`#rsvp-seat-${index}`).check();
+}
+
 test.describe("RSVP paths", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -73,6 +80,7 @@ test.describe("RSVP paths", () => {
   test("unticks a seat before submitting", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, cruz.members[0], cruz);
+    await checkSeats(section, cruz.members.length);
 
     const count = section.locator("[data-rsvp-count]");
     const initialCount = cruz.members.length;
@@ -102,6 +110,7 @@ test.describe("RSVP paths", () => {
   test("rebuilds after-party rows from the checked seats", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, cruz.members[0], cruz);
+    await checkSeats(section, cruz.members.length);
     await section.locator("#rsvp-seat-1").uncheck();
     await section.getByRole("button", { name: "Continue" }).click();
     await expect(section.locator("[data-rsvp-slipper-list] .rsvp_after-party-row")).toHaveCount(cruz.members.length - 1);
@@ -113,6 +122,7 @@ test.describe("RSVP paths", () => {
   test("requires a slipper size before submitting", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, santos.members[0], santos);
+    await section.locator("#rsvp-seat-0").check();
     await section.getByRole("button", { name: "Continue" }).click();
     await expect(section.locator("[data-rsvp-not-coming]")).toBeHidden();
     await section.locator("#rsvp-email").fill("liza-size@example.com");
@@ -131,6 +141,7 @@ test.describe("RSVP paths", () => {
   test("renames a member via Edit before submitting", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, cruz.members[0], cruz);
+    await checkSeats(section, cruz.members.length);
 
     const oldName = cruz.members[1];
     const newName = "Marisol Renamed";
@@ -166,6 +177,7 @@ test.describe("RSVP paths", () => {
   test("opens a blank plus-one name and blocks Next until it is named", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, santos.members[0], santos);
+    await section.locator("#rsvp-seat-0").check();
     await section.locator("#rsvp-seat-1").check();
     const name = section.locator("[aria-label='Name for seat 2']");
     await expect(name).toBeVisible();
@@ -185,6 +197,7 @@ test.describe("RSVP paths", () => {
       if (request.method() === "POST" && request.url().includes("/_actions/")) actionRequests += 1;
     });
     await findInvite(page, santos.members[0], santos);
+    await section.locator("#rsvp-seat-0").check();
     const actionRequestsAfterFind = actionRequests;
     await section.locator("#rsvp-seat-1").check();
     const name = section.locator("[aria-label='Name for seat 2']");
@@ -210,6 +223,7 @@ test.describe("RSVP paths", () => {
     const fixture = fakeFixtures.find((invite) => invite.id === "seat-change-test")!;
     const section = rsvp(page);
     await findInvite(page, fixture.members[0], fixture);
+    await checkSeats(section, fixture.members.length);
     await section.getByRole("button", { name: `Edit ${fixture.members[0]}` }).click();
     await section.locator("[aria-label='Name for seat 1']").fill("Kept Typed Value");
     await section.getByRole("button", { name: `Done editing ${fixture.members[0]}` }).click();
@@ -224,6 +238,7 @@ test.describe("RSVP paths", () => {
   test("edits an accepted RSVP and resubmits a decline", async ({ page }) => {
     const section = rsvp(page);
     await findInvite(page, santos.members[0], santos);
+    await section.locator("#rsvp-seat-0").check();
     await submitRsvp(page, "liza-edit@example.com");
 
     const ticket = page.locator("#rsvp-ticket-modal");
@@ -243,7 +258,7 @@ test.describe("RSVP paths", () => {
     await expect(section.locator("[data-rsvp-guests-summary]")).toBeHidden();
   });
 
-  test("starts members ticked when a declined guest returns and refreshes remembered invite details", async ({ page }) => {
+  test("leaves seats unticked when a declined guest returns and refreshes remembered invite details", async ({ page }) => {
     test.slow();
     await withLimLock(async () => {
       const section = rsvp(page);
@@ -263,7 +278,7 @@ test.describe("RSVP paths", () => {
       });
       await section.locator("input[name='attending'][value='yes']").check();
       for (let index = 0; index < lim.members.length; index += 1) {
-        await expect(section.locator(`#rsvp-seat-${index}`)).toBeChecked();
+        await expect(section.locator(`#rsvp-seat-${index}`)).not.toBeChecked();
       }
       await expect(section.locator(`#rsvp-seat-${lim.seats - 1}`)).not.toBeChecked();
     });

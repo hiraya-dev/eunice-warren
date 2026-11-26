@@ -908,6 +908,8 @@ test.describe("background music tag and the RSVP card, desktop", { tag: ["@singl
     const proceed = page.locator("#rsvp [data-rsvp-attending] button[type='submit']");
     await expect(proceed).toBeVisible(SLOW);
     await stepFocused(page, "2");
+    await page.locator("#rsvp-seat-0").check();
+    await page.locator("#rsvp-seat-0").blur();
 
     await toViewportBottom(proceed);
     await expect(containerOf(page)).toHaveAttribute("data-music-docked", "");

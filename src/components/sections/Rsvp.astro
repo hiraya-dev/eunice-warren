@@ -667,8 +667,8 @@ const {
               seats = (invite.seatList ?? invite.members.map((member, index) => ({ seatId: index + 1, kind: "member" as const, invitedName: member, name: member }))).map((seat): Seat => {
                 const saved = savedBySeat.get(seat.seatId);
                 return saved
-                  ? { seatId: seat.seatId, original: seat.invitedName, shownName: saved.shownName ?? seat.name, name: saved.name, attending: previous?.attending ? saved.attending : seat.kind === "member", slipperSize: saved.slipperSize }
-                  : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: seat.kind === "member" };
+                  ? { seatId: seat.seatId, original: seat.invitedName, shownName: saved.shownName ?? seat.name, name: saved.name, attending: previous?.attending ? saved.attending : false, slipperSize: saved.slipperSize }
+                  : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: false };
               });
               attending = previous?.attending ?? true;
               root.querySelector("[data-rsvp-first-name]")!.textContent =
@@ -827,7 +827,7 @@ const {
                       const old = typed.get(seat.seatId);
                       return old
                         ? { ...old, original: seat.invitedName, shownName: old.shownName ?? seat.name }
-                        : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: seat.kind === "member" };
+                        : { seatId: seat.seatId, original: seat.invitedName, shownName: seat.name, name: seat.name ?? "", attending: false };
                     });
                     renderSeats();
                   }

@@ -58,6 +58,8 @@ const hero = defineCollection({
     note: z.string(),
     dateFull: z.string(),
     dateShort: z.string(),
+    venueFull: z.string(),
+    venueShort: z.string(),
     titleFirst: z.string(),
     titleSecond: z.string(),
     subtitle: z.string(),

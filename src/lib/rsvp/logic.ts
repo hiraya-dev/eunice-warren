@@ -3,7 +3,7 @@ import { normalizeGuestName } from "./store.ts";
 import { SLIPPER_SIZES } from "./slippers.ts";
 import { MAX_SEATS } from "./limits.ts";
 
-export const RSVP_DEADLINE = "2026-12-12T23:59:59+08:00";
+export const RSVP_DEADLINE = "2026-12-14T23:59:59+08:00";
 export const RSVP_DEADLINE_TIME = new Date(RSVP_DEADLINE).getTime();
 
 const damerauLevenshteinDistance = (a: string, b: string) => {

@@ -13,10 +13,12 @@ const accept = async (
   await reveal(rsvp.locator("[data-rsvp-name]"));
   await rsvp.locator("[data-rsvp-name]").fill("Liza Santos");
   await rsvp.getByRole("button", { name: /Find my invite/ }).click();
+  await rsvp.locator("#rsvp-seat-0").check();
   if (companion) {
     await rsvp.getByRole("button", { name: "Add name for seat 2" }).click();
     await rsvp.locator("[aria-label='Name for seat 2']").fill("Marco Santos");
     await rsvp.getByRole("button", { name: /Done editing seat 2/ }).click();
+    await rsvp.locator("#rsvp-seat-1").check();
   }
   await rsvp.getByRole("button", { name: /Continue/ }).click();
   for (const select of await rsvp.locator("[data-rsvp-slipper-list] select").all()) await select.selectOption("W 7");
