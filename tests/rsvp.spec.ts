@@ -337,9 +337,12 @@ test.describe("RSVP section", () => {
     await rsvp(page).locator("#rsvp-email").fill("luna@example.com");
     await rsvp(page).locator("#rsvp-note").fill("Vegetarian meal, please");
     await chooseSlippers(page);
-    await rsvp(page).evaluate((element) => { element.dataset.rsvpToken = "expired.token"; });
+    const submits: number[] = [];
+    page.on("response", (response) => { if (response.url().includes("/_actions/rsvp.submit")) submits.push(response.status()); });
+    await rsvp(page).locator("[data-rsvp-init]").evaluate((element: HTMLElement) => { element.dataset.rsvpToken = "expired.token"; });
     await rsvp(page).getByRole("button", { name: /Send RSVP/ }).click();
     await expect(page.locator("#rsvp-ticket-modal")).toBeVisible();
+    expect(submits).toEqual([401, 200]);
     await expect(rsvp(page).locator("[data-rsvp-panel='sent']")).toBeVisible();
     await expect(rsvp(page).locator("[data-rsvp-email-summary]")).toHaveText("luna@example.com");
     await expect(rsvp(page).locator("#rsvp-note")).toHaveValue("Vegetarian meal, please");
