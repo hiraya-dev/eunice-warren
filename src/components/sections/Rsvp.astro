@@ -714,6 +714,22 @@ const {
               root.querySelector<HTMLElement>(`[data-seat-index="${seats.indexOf(blankAttending)}"] [data-rsvp-seat-action]`)?.focus();
               return;
             }
+            const attendingNames = new Map<string, Seat>();
+            const duplicateAttending = attending && seats.find((seat) => {
+              if (!seat.attending || !seat.name.trim()) return false;
+              const normalizedName = normalizeGuestName(seat.name);
+              if (attendingNames.has(normalizedName)) return true;
+              attendingNames.set(normalizedName, seat);
+              return false;
+            });
+            if (duplicateAttending) {
+              const error = root.querySelector<HTMLElement>("[data-rsvp-guest-error]")!;
+              error.textContent = `${duplicateAttending.name} is on two seats. Change one of them.`;
+              error.hidden = false;
+              root.querySelector<HTMLElement>("[data-rsvp-guests]")!.classList.add("has-error");
+              root.querySelector<HTMLElement>(`[data-seat-index="${seats.indexOf(duplicateAttending)}"] [data-rsvp-seat-action]`)?.focus();
+              return;
+            }
             setStep("3");
           });
         root
