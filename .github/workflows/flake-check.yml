@@ -1,13 +1,5 @@
 name: Flake check
 
-# Proves a spec stable under load, or reproduces a load flake, on a CI runner
-# instead of the user's Mac (L-009, L-010). Run it by hand:
-#   gh workflow run flake-check.yml --ref <branch> -f grep='<test title or spec file name>' -f repeat=20
-# The grep matches the title path, which starts at the spec file name: pass
-# footer.spec.ts, not tests/footer.spec.ts (that matches nothing).
-# It runs in the same Playwright image as the CI e2e job (which runs 2 workers;
-# the @sweep job 1), with 4 workers on the runner's 4 vCPUs and no retries, so a
-# flake fails the run instead of being absorbed. It gates nothing and never runs on its own.
 on:
   workflow_dispatch:
     inputs:
@@ -32,8 +24,6 @@ jobs:
       playwright: ${{ steps.playwright.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      # The container tag. Read from the lockfile, which npm ci installs, so the
-      # image's browsers always match @playwright/test (as in ci.yml).
       - name: Read the Playwright version
         id: playwright
         run: |
@@ -52,7 +42,6 @@ jobs:
     timeout-minutes: 60
     container:
       image: mcr.microsoft.com/playwright:v${{ needs.version.outputs.playwright }}-noble
-      # Chromium runs out of shared memory in Docker's default 64 MB /dev/shm.
       options: --ipc=host
     steps:
       - uses: actions/checkout@v4
@@ -62,8 +51,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      # Inputs go through env, never inline in the script, so a pattern with
-      # shell syntax in it stays a string.
       - name: Repeat the matching tests under load
         shell: bash
         env:

@@ -21,7 +21,6 @@ function collectJsonStrings(value, strings = new Set()) {
 }
 
 function collectComponentText(source, strings = new Set()) {
-  // Deliberately simple: only static text between tags, excluding Astro expressions.
   for (const match of source.matchAll(/>([^<>{}]+)</g)) {
     const text = match[1].replace(/\s+/g, " ").trim();
     if (text.length >= minimumLength && /\S/.test(text)) strings.add(text);

@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-// Pins the CI contract the workflow docs rely on (local-checks **CI routes**,
-// review-pr **Local review**).
 const ci = readFileSync(new URL("../../.github/workflows/ci.yml", import.meta.url), "utf8");
 const flake = readFileSync(new URL("../../.github/workflows/flake-check.yml", import.meta.url), "utf8");
 
@@ -16,9 +14,6 @@ function jobBlock(name) {
 }
 
 test("pull_request also runs when a PR is marked ready", () => {
-  // Marking a runtime PR ready starts the full tier. The ready run supersedes the
-  // draft's run on the same head (cancel-in-progress), so the head's last gate is
-  // the full tier's.
   const types = ci.match(/^ {4}types: \[(.*)\]$/m);
   assert.ok(types);
   assert.deepEqual(types[1].split(",").map((type) => type.trim()), [
@@ -60,8 +55,6 @@ test("a content-only diff stays on the smoke tier on every event", () => {
   const classify = jobBlock("classify");
   assert.match(classify, /content: \$\{\{ steps\.paths\.outputs\.content \}\}/);
   assert.match(classify, /CONTENT: \$\{\{ steps\.paths\.outputs\.content \}\}/);
-  // The content check comes before the event and draft checks, so neither a
-  // ready PR nor a push to main promotes a content diff to the full tier.
   const tier = classify.slice(classify.indexOf("Decide the test tier"));
   const contentAt = tier.indexOf('"$CONTENT" == "true"');
   assert.notEqual(contentAt, -1);

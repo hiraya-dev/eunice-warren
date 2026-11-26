@@ -2,7 +2,6 @@ import { access, appendFile, readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 function flakyTestsFromSuite(suite, parents = [], isTopLevel = false) {
-  // Only omit the title of report.suites entries; nested describes also carry file.
   const titles = suite.title && !isTopLevel ? [...parents, suite.title] : parents;
   const tests = (suite.specs ?? []).flatMap((spec) =>
     (spec.tests ?? [])

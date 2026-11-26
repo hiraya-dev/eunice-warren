@@ -295,8 +295,6 @@ function walkImporters(file, graph, root, specSources) {
   const selected = new Set();
   let broad = false;
 
-  // Each importer branch stops at its owning spec source. Reaching an unowned
-  // layout or page means the changed module is shared by the whole runtime.
   function visit(current) {
     if (seen.has(current) || broad) return;
     seen.add(current);

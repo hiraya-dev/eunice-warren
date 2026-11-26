@@ -1,7 +1,5 @@
 import { spawn } from "node:child_process";
 
-// `npm run prepush`: the one local gate before every push (local-checks skill).
-// It binds no port and opens no browser.
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const steps = ["check:lessons", "test:ci-scripts", "test:hooks", "test:unit", "lint:md", "check", "check:spec-copy", "check:comments"];
 
