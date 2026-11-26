@@ -1,38 +1,21 @@
 ---
+import { getCollection } from "astro:content";
 import type { HTMLAttributes } from "astro/types";
 
 interface Props extends HTMLAttributes<"section"> {}
 
 const { class: className, ...rest } = Astro.props;
 
-const steps = [
-  {
-    number: "1",
-    title: "Fly to Caticlan",
-    body: "Caticlan (MPH) is the closest airport, about 1 hr from Manila or Cebu. Kalibo (KLO) has more flights but adds ~2 hrs by van to the jetty port.",
-    detail: "~1 hr flight · MNL / CEB → MPH",
-  },
-  {
-    number: "2",
-    title: "Cross by boat",
-    body: "From Caticlan Jetty Port, take the 15-min boat to Cagban Port. Pay the terminal and environmental fees at the counter, and bring a valid ID.",
-    detail: "~15 min · Boats run 5 AM – 7 PM",
-  },
-  {
-    number: "3",
-    title: "Ride to your hotel",
-    body: "Grab an e-trike from Cagban straight to your hotel. Most of us stay in Newcoast, near the wedding, from Jan 13 to 15. Then we move to the main beach (Stations 1 to 3) for Jan 15 to 17.",
-    detail: "Newcoast Jan 13–15 · Main beach Jan 15–17",
-  },
-];
+const [{ data }] = await getCollection("stay");
+const steps = data.steps;
 ---
 
-<section id="stay" class:list={["stay_wrap", "theme-dark", className]} {...rest}>
+{!data.hidden && <section id="stay" class:list={["stay_wrap", "theme-dark", className]} {...rest}>
   <div class="stay_layout">
     <header class="stay_header" data-fade-in>
       <div class="stay_intro">
-        <h2 class="stay_title" data-fade-in-item>Make it a<br />weekend</h2>
-        <p class="stay_description" data-fade-in-item>Three days, one island. Here’s how to get here. The field notes below cover what to do once you land.</p>
+        <h2 class="stay_title" data-fade-in-item>{data.titleFirst}<br />{data.titleSecond}</h2>
+        <p class="stay_description" data-fade-in-item>{data.description}</p>
       </div>
       <div class="stay_compass_wrap" aria-hidden="true">
         <svg class="stay_compass" width="460" height="480" viewBox="0 0 460 480" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
@@ -50,14 +33,14 @@ const steps = [
             <circle cx="230" cy="240" r="6" fill="#1F2F5C" stroke="#E3B5AC" stroke-width="1.6" />
           </g>
           <path class="stay_compass-heart" d="M302.7 71.1s-11-7-11-15c0-4.4 3.4-7 6.6-7 2.2 0 3.7 1.3 4.4 2.8.7-1.5 2.2-2.8 4.4-2.8 3.2 0 6.6 2.6 6.6 7 0 8-11 15-11 15Z" fill="#E3B5AC" />
-          <g font-family="var(--mono-family)" font-size="13" letter-spacing="1.6" text-anchor="middle"><text x="230" y="40" fill="#F5EFE3">N</text><text x="230" y="450" fill="#BCD3E8">S</text><text x="432" y="244.5" fill="#BCD3E8">E</text><text x="28" y="244.5" fill="#BCD3E8">W</text></g>
-          <g font-family="var(--mono-family)" font-size="11" letter-spacing="1.6"><text x="320.7" y="56.1" fill="#E3B5AC">WHITE BEACH</text><text x="320.7" y="72.1" fill="#BCD3E8">BEARING 022°</text></g>
+          <g font-family="var(--mono-family)" font-size="13" letter-spacing="1.6" text-anchor="middle"><text x="230" y="40" fill="#F5EFE3">{data.compass.north}</text><text x="230" y="450" fill="#BCD3E8">{data.compass.south}</text><text x="432" y="244.5" fill="#BCD3E8">{data.compass.east}</text><text x="28" y="244.5" fill="#BCD3E8">{data.compass.west}</text></g>
+          <g font-family="var(--mono-family)" font-size="11" letter-spacing="1.6"><text x="320.7" y="56.1" fill="#E3B5AC">{data.compass.whiteBeach}</text><text x="320.7" y="72.1" fill="#BCD3E8">{data.compass.bearing}</text></g>
         </svg>
       </div>
     </header>
 
     <div class="stay_directions" data-fade-in>
-      <h2 class="stay_directions-title" data-fade-in-item>Getting there</h2>
+      <h2 class="stay_directions-title" data-fade-in-item>{data.directionsTitle}</h2>
       <ol class="stay_steps">
         {steps.map((step, index) => (
           <li class="stay_step" data-fade-in-item>
@@ -74,7 +57,7 @@ const steps = [
     </div>
   </div>
   <div class="stay_scallop" aria-hidden="true"></div>
-</section>
+</section>}
 
 <style>
   @layer components {
