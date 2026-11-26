@@ -783,7 +783,7 @@ const {
             submit.setAttribute("aria-busy", "true");
             submitError.hidden = true;
             try {
-              const result = await actions.rsvp.submit({
+              const submitRsvp = async () => actions.rsvp.submit({
                 token: root.dataset.rsvpToken ?? "",
                 name: matchedName,
                 attending,
@@ -793,11 +793,20 @@ const {
                   (form.elements.namedItem("note") as HTMLTextAreaElement)
                     .value || undefined,
                 turnstileToken: await turnstile.getToken(
-                  root.querySelectorAll<HTMLElement>(
-                    "[data-rsvp-turnstile]",
-                  )[1],
+                  root.querySelectorAll<HTMLElement>("[data-rsvp-turnstile]")[1],
                 ),
               });
+              let result = await submitRsvp();
+              if (result.error?.code === "UNAUTHORIZED") {
+                const refreshed = await actions.rsvp.find({
+                  name: matchedName,
+                  turnstileToken: await turnstile.getToken(root.querySelectorAll<HTMLElement>("[data-rsvp-turnstile]")[0]),
+                });
+                if (refreshed.data?.invite && refreshed.data.token) {
+                  root.dataset.rsvpToken = refreshed.data.token;
+                  result = await submitRsvp();
+                }
+              }
               if (result.error) {
                 if (result.error.code === "CONFLICT") {
                   const typed = new Map(seats.map((seat) => [seat.seatId, { ...seat }]));
