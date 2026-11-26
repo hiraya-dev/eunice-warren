@@ -54,6 +54,5 @@ export const clearGuest = (): void => {
   try {
     window.localStorage.removeItem(GUEST_STORAGE_KEY);
   } catch {
-    // Storage may be disabled; the page remains usable without it.
   }
 };

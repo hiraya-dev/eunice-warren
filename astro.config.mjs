@@ -24,7 +24,6 @@ const cloudflareHeaders = {
           current = await readFile(candidate, "utf8");
           break;
         } catch {
-          // The adapter and this integration can run in either order.
         }
       }
       if (!SITE_INDEXABLE && !current.includes("X-Robots-Tag:")) {

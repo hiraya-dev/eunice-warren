@@ -35,7 +35,6 @@ const damerauLevenshteinDistance = (a: string, b: string) => {
   return matrix[a.length][b.length];
 };
 
-/** Returns a name only when one distinct, safe near match exists. */
 export function findNearGuestName(
   query: string,
   invites: Invite[],
@@ -97,7 +96,6 @@ export interface SubmissionProblem {
   message: string;
 }
 
-/** Cloudflare's Workers rate-limit binding takes an options object, not a bare key. */
 export type RateLimiter = {
   limit: (options: { key: string }) => Promise<{ success: boolean }>;
 };

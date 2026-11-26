@@ -6,13 +6,10 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "RSVP_STORE": "d1",
-    // Cloudflare Access "Guest ledger" app on thefisheswedding.com/admin (and www).
-    // Set here, not in the dashboard: deploys overwrite dashboard vars.
     "ACCESS_TEAM_DOMAIN": "warren-eunice.cloudflareaccess.com",
     "ACCESS_AUD": "7622f360d30408b0c41a184357254a5a548fd6e31b8cf433ecf6483cb1719202",
   },
 
-  // Sends only to verified Email Routing destinations on the free plan; recipients come from the NOTIFY_TO secret.
   "send_email": [{ "name": "RSVP_EMAIL" }],
 
   "d1_databases": [{
@@ -22,15 +19,9 @@
     "migrations_dir": "migrations",
   }],
 
-  // The adapter entrypoint serves static assets and runs Astro actions on demand.
-  // Production uses D1; the test environment selects fake fixtures.
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "404-page",
-    // Browser navigations to a missing asset get 404.html without reaching the
-    // Worker, which would hide /admin from a real browser. A pattern list also
-    // sends every other non-listed POST to the asset service (405 locally), so
-    // the Worker's own routes (actions, API) are listed too.
     "run_worker_first": ["/admin", "/admin/*", "/_actions/*", "/api/*"],
   },
 
@@ -55,21 +46,14 @@
     },
   },
 
-  // Previews share the Worker's production bindings, so explicitly use the fake
-  // stores and client mode when `npx wrangler preview` publishes a branch.
   "previews": {
     "vars": {
       "RSVP_STORE": "fake",
       "PUBLIC_RSVP_STORE": "fake",
-      // Blank so preview /admin shows the sample host for Local review, even
-      // if previews inherit the production ADMIN_HOSTS secret.
       "ACCESS_TEAM_DOMAIN": "",
       "ACCESS_AUD": "",
     },
   },
-
-  // Add a `routes` entry to serve this on your own domain. Until then it is
-  // reachable at https://eunice-warren.<your-subdomain>.workers.dev.
 
   "observability": {
     "enabled": true,

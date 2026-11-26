@@ -153,7 +153,6 @@ export const createD1RsvpStore = (database: D1Database, queryCounter?: D1QueryCo
         .orderBy(desc(responses.submittedAt), desc(responses.id))
         .limit(1))[0]?.note;
       const now = new Date().toISOString();
-      // A collision needs two submissions in the same millisecond with the same 1-of-1000 suffix; the primary key rejects it rather than overwriting history.
       const responseId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
       const response = db.insert(responses).values({ id: responseId, householdId: submission.inviteId, submittedAt: now, respondentName: submission.name, attending: submission.attending, guestCount: submission.guests, email: submission.email, note: submission.note?.trim() ? submission.note : previousNote ?? null, source: "guest", editedBy: null });
       const seatRows = db.insert(responseSeats).values(submission.seats.map((seat) => ({ responseId, seatId: seat.seatId!, kind: byId.get(seat.seatId!)!.kind, name: seat.name, attending: seat.attending, slipperSize: seat.slipperSize ?? null })));

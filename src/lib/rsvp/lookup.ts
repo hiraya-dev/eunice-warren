@@ -2,11 +2,6 @@ import { findNearGuestName } from "./logic.ts";
 import { normalizeGuestName } from "./store.ts";
 import type { Invite, InviteLookup } from "./store.ts";
 
-/**
- * Shared exact/near lookup rules for the fake and D1 stores. An exact name is
- * usable only when it identifies one household and one seat; this prevents a
- * duplicate name from accidentally selecting the first invite returned by SQL.
- */
 export function lookupInvite(name: string, invites: Invite[]): InviteLookup {
   const wanted = normalizeGuestName(name);
   const nameCounts = new Map<string, number>();

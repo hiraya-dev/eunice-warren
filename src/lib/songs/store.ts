@@ -23,7 +23,6 @@ export const createD1SongStore = (database: D1Database): SongStore => {
   const db = getDb(database);
   return { async add(input) {
     const nameKey = normalizeGuestName(input.name);
-    // Drizzle cannot express SQLite's conditional INSERT ... SELECT cap atomically.
     const result = await db.run(sql`insert into songs (name, name_key, song, artist, dedication, spotify_track_id, cover_url, created_at)
       select ${input.name}, ${nameKey}, ${input.song}, ${input.artist ?? null}, ${input.dedication ?? null}, ${input.spotifyTrackId ?? null}, ${input.coverUrl ?? null}, ${new Date().toISOString()}
       where (select count(*) from songs) < 500 and (select count(*) from songs where name_key = ${nameKey}) < 20`);
