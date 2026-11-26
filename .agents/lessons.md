@@ -205,14 +205,14 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `tests/**`, `src/scripts/gallery/**`
 
-### L-029 — The shared fade-in hides a section's controls until it is reached
+### L-029 — The shared fade-in fades with opacity only, never visibility
 - **Date:** 2026-11-16
-- **Trigger:** #80 Local review fix round (teaser reveal): putting `data-fade-in` on the gallery copy made "Step inside" `visibility: hidden` until the section scrolled into view, and three existing specs that clicked it straight after `goto` timed out. #89 CHANGES_REQUIRED: the reveal was added to seven sections but only the specs that failed once got the wait; faq, wedding, rsvp and rsvp-paths still focused or measured fading elements, and an attire drag failed 5 of 20 under load.
+- **Trigger:** #80 Local review fix round (teaser reveal): putting `data-fade-in` on the gallery copy made "Step inside" `visibility: hidden` until the section scrolled into view, and three existing specs that clicked it straight after `goto` timed out. #89 CHANGES_REQUIRED: the reveal was added to seven sections but only the specs that failed once got the wait; faq, wedding, rsvp and rsvp-paths still focused or measured fading elements, and an attire drag failed 5 of 20 under load. #125 (QA pass, fixed #143): the `autoAlpha` hide took every faded link and button out of the tab order and the accessibility tree, so Tab jumped from the hero to the footer.
 - **Symptom:** a spec that clicks or focuses an element inside a fade-in section fails with a timeout or an unexpected re-scroll, though the element exists.
-- **Root cause:** `src/scripts/fade-in.ts` sets `autoAlpha: 0` (visibility hidden) on every `[data-fade-in-item]` until its ScrollTrigger fires, and the fade's 24px rise moves the element after Playwright scrolls to it.
-- **Rule:** when a section gains `data-fade-in`, its specs reach the section first and wait for the item's opacity to reach 1 before clicking, focusing or sampling positions, using `reveal()` from `tests/helpers/reveal.ts`. Grep every spec that touches any newly faded element, not only the ones that fail once, and read positions relative to the fade item rather than the viewport. Keyboard users reach it the same way, so this is the intended behaviour, not something to work around in the component.
-- **Check:** each spec for a section that gains `data-fade-in` calls `reveal()` before its first interaction or measurement, and the changed specs pass `--repeat-each 20 --workers 4`.
-- **Guard:** none
+- **Root cause:** `src/scripts/fade-in.ts` hid every `[data-fade-in-item]` until its ScrollTrigger fired (with `autoAlpha`, which also set `visibility: hidden`, until #143), and the fade's 24px rise moves the element after Playwright scrolls to it.
+- **Rule:** when a section gains `data-fade-in`, its specs reach the section first and wait for the item's opacity to reach 1 before clicking, focusing or sampling positions, using `reveal()` from `tests/helpers/reveal.ts`. Grep every spec that touches any newly faded element, not only the ones that fail once, and read positions relative to the fade item rather than the viewport. A reveal never uses `visibility` or `display` (no `autoAlpha`): faded content stays focusable and in the accessibility tree, and focus entering a section finishes its reveal at once.
+- **Check:** each spec for a section that gains `data-fade-in` calls `reveal()` before its first interaction or measurement, and the changed specs pass `--repeat-each 20 --workers 4`; `tests/invitation.spec.ts` "keeps faded links focusable before the section is reached" fails if a reveal hides with `visibility`.
+- **Guard:** none (the spec in **Check** covers only the visibility half; the `reveal()` rule for specs is unguarded)
 - **Paths:** `tests/**`, `src/scripts/fade-in.ts`
 
 ### L-032 — Every new validation rule gets a test that fails without it

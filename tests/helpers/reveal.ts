@@ -1,8 +1,8 @@
 import { expect, type Locator } from "@playwright/test";
 
 /**
- * The shared fade-in (src/scripts/fade-in.ts) keeps an item hidden until its section is
- * reached (L-029). Scroll the element into view, then wait until the fade item that holds
+ * The shared fade-in (src/scripts/fade-in.ts) keeps an item transparent until its section is
+ * reached or focus enters it (L-029). Scroll the element into view, then wait until the fade item that holds
  * it (or the element itself) is fully opaque, so a spec can click or measure it.
  */
 export async function reveal(target: Locator) {
@@ -12,5 +12,4 @@ export async function reveal(target: Locator) {
   // The tween is clock-timed (0.8s), but under 8 workers a page can get a few frames a second,
   // so allow far longer than the tween before calling it stuck.
   await expect(item).toHaveCSS("opacity", "1", { timeout: 20_000 });
-  await expect(item).toHaveCSS("visibility", "visible", { timeout: 20_000 });
 }
