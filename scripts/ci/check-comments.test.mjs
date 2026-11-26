@@ -48,6 +48,10 @@ test("tool directives and component prop docs are allowed", () => {
   const component = "---\ninterface Props {\n  /** Disable the button. */\n  disabled?: boolean;\n}\n/** Not a prop. */\nconst x = 1;\n---";
   assert.deepEqual(texts(component, "src/components/Button.astro"), ["/** Not a prop. */"]);
   assert.deepEqual(texts(component, "src/pages/index.astro"), ["/** Disable the button. */", "/** Not a prop. */"]);
+  const loose = "---\ninterface Props {\n  /** Gap above. */\n\n  gap?: string;\n}\nconst styles = {\n  /** Not a prop either. */\n  color: \"red\",\n};\n---";
+  assert.deepEqual(texts(loose, "src/components/Card.astro"), ["/** Gap above. */", "/** Not a prop either. */"]);
+  const union = "---\ntype Tag =\n  | (A & {\n      /** Rendered element. */\n      element?: \"button\";\n    })\n  | { href: string };\nconst x = { /** Not a prop. */\n  y: 1 };\n---";
+  assert.deepEqual(texts(union, "src/components/Button.astro"), ["/** Not a prop. */"]);
 });
 
 test("reports the line a comment starts on", () => {
@@ -83,6 +87,12 @@ function repo(files) {
   execFileSync("git", ["add", "."], { cwd: rootDirectory });
   return rootDirectory;
 }
+
+test("an untracked new file is counted", () => {
+  const rootDirectory = repo({ "src/a.ts": "const a = 1;\n", [BASELINE]: "{}" });
+  writeFileSync(join(rootDirectory, "src/new.ts"), "// new\n");
+  assert.equal(main([], rootDirectory), 1);
+});
 
 test("the check fails on a new comment and passes once it is deleted", () => {
   const rootDirectory = repo({ "src/a.ts": "// old\nconst a = 1;\n", [BASELINE]: JSON.stringify({ "src/a.ts": 1 }) });

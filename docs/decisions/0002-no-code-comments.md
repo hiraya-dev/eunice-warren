@@ -5,8 +5,8 @@
 
 ## Context
 
-An audit found 1,249 comments in 140 source files, about 1,550 lines. They fell
-into four kinds:
+A raw audit found 1,249 comments in 140 source files, about 1,550 lines. They
+fell into four kinds:
 
 - **Tautology:** repeats what the code already says.
 - **Excuse:** explains away a hack, so the next change copies the hack.
@@ -29,11 +29,14 @@ permission.
   may hold. A file above its count fails; a file below it fails until
   `npm run check:comments -- --update` lowers the baseline. The baseline never
   rises; a new file starts at zero.
+- The first baseline holds 1,010 comments in 110 files: the raw count less the
+  exemptions below.
 - The check runs in `npm run prepush` and in CI's `build` and `checks` jobs.
 - Not counted: tool directives (`@ts-check`, `@ts-expect-error`, `@type`,
-  `eslint-*`, `prettier-ignore`, `/// <reference>`), the JSDoc directly above a
-  prop in `src/components/**/*.astro` (Lumos prop docs, which become editor
-  tooltips and which `lumos-audit-props` checks), and `migrations/**`, since
+  `eslint-*`, `prettier-ignore`, `/// <reference>`), the JSDoc on the line directly
+  above a property in a `type` or `interface` in `src/components/**/*.astro`
+  (the Lumos prop docs, which become editor tooltips and which
+  `lumos-audit-props` checks), and `migrations/**`, since
   applied migrations are never edited.
 - The `delete-comment` skill (`.agents/skills/delete-comment/SKILL.md`) repeats
   the audit on an area and lowers the baseline.

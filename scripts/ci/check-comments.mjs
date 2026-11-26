@@ -147,16 +147,38 @@ export function scanComments(source, file) {
   if (/\.astro$/.test(file)) scanAstro(source, spans);
   else if (/\.ya?ml$/.test(file)) scanYaml(source, spans);
   else scanScript(source, 0, source.length, spans, { css: /\.css$/.test(file) });
+  const types = typeBlocks(source);
   return spans.map(([start, end]) => ({
     line: source.slice(0, start).split("\n").length,
     text: source.slice(start, end),
-    next: source.slice(end).replace(/^\s*\n/, "").split("\n")[0],
+    next: source.slice(end).replace(/^[ \t]*\n/, "").split("\n")[0],
+    inType: types.some(([from, to]) => start > from && end < to),
   }));
+}
+
+function typeBlocks(source) {
+  const blocks = [];
+  for (const match of source.matchAll(/\b(interface\s+\w+[^{=;]*\{|type\s+\w+(?:<[^=]*>)?\s*=)/g)) {
+    const from = match.index + match[0].length;
+    if (match[1].startsWith("interface")) {
+      blocks.push([from - 1, skipExpression(source, from, source.length)]);
+      continue;
+    }
+    let depth = 0;
+    let i = from;
+    while (i < source.length && !(depth === 0 && (source[i] === ";" || source.startsWith("\n\n", i)))) {
+      if ("([{".includes(source[i])) depth++;
+      if (")]}".includes(source[i])) depth--;
+      i++;
+    }
+    blocks.push([from, i]);
+  }
+  return blocks;
 }
 
 export function isAllowed(comment, file) {
   if (DIRECTIVE.test(comment.text)) return true;
-  return /^src\/components\/.*\.astro$/.test(file) && comment.text.startsWith("/**") && PROP.test(comment.next ?? "");
+  return /^src\/components\/.*\.astro$/.test(file) && comment.inType && comment.text.startsWith("/**") && PROP.test(comment.next ?? "");
 }
 
 export function countedComments(source, file) {
@@ -164,7 +186,7 @@ export function countedComments(source, file) {
 }
 
 export function trackedFiles(rootDirectory = root) {
-  return execFileSync("git", ["ls-files"], { cwd: rootDirectory, encoding: "utf8" })
+  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { cwd: rootDirectory, encoding: "utf8" })
     .split("\n")
     .filter((file) => SOURCE.test(file) && !EXCLUDED.some((pattern) => pattern.test(file)));
 }
