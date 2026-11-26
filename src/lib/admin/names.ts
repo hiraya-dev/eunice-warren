@@ -99,9 +99,9 @@ export function slugifyName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-// The host ID is a short slug of the invitation name: "The Toledo Family" →
-// "toledo", "Jay R Nearents & family" → "jay-r-nearents". A taken ID (compared
-// without case) gets -2, -3….
+// The host ID is the surname from the invitation name in uppercase letters plus
+// a two-digit counter: "The Toledo Family" → "TOLEDO-01". Taken IDs (compared
+// without case) use the next available counter.
 export function generateHostId(
   invitationName: string,
   taken: Iterable<string> = [],
@@ -110,10 +110,16 @@ export function generateHostId(
     .replace(/^the\s+/i, "")
     .replace(/\s*&\s*family$/i, "")
     .replace(/\s+family$/i, "");
-  const base = slugifyName(core).slice(0, 72).replace(/-+$/, "") || "household";
+  const base =
+    displaySurname(core)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z]/g, "")
+      .slice(0, 72) || "HOUSEHOLD";
   const used = new Set([...taken].map((value) => value.toLowerCase()));
-  if (!used.has(base)) return base;
-  let suffix = 2;
-  while (used.has(`${base}-${suffix}`)) suffix += 1;
-  return `${base}-${suffix}`;
+  let suffix = 1;
+  while (used.has(`${base}-${String(suffix).padStart(2, "0")}`.toLowerCase()))
+    suffix += 1;
+  return `${base}-${String(suffix).padStart(2, "0")}`;
 }
