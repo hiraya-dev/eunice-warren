@@ -173,7 +173,6 @@ test.describe("RSVP ticket popup", () => {
         pointerEvents: getComputedStyle(
           element.querySelector<HTMLElement>("[data-ticket-confetti]")!,
         ).pointerEvents,
-        // The burst spans the viewport, not just the ticket.
         spansViewport:
           Math.max(...pieceBoxes.map((piece) => piece.right)) -
             Math.min(...pieceBoxes.map((piece) => piece.left)) >
@@ -188,7 +187,6 @@ test.describe("RSVP ticket popup", () => {
   });
 
   test("fits the viewport at every target size", { tag: ["@sweep", "@single"] }, async ({ page }) => {
-    // Four full RSVP flows in one test.
     test.setTimeout(90_000);
     await page.emulateMedia({ reducedMotion: "reduce" });
     for (const size of [
@@ -200,7 +198,6 @@ test.describe("RSVP ticket popup", () => {
       await page.setViewportSize(size);
       await page.goto("/");
       const dialog = await accept(page, false);
-      // Measure once the dialog has opened and its entrance transition settled.
       await expect(dialog.locator("[data-ticket-popup]")).toHaveAttribute(
         "data-stage",
         "released",

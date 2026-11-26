@@ -373,7 +373,6 @@ test("appends response rows as RAW values", async () => {
 
 test("calls the rate limiter with an options object, as Cloudflare requires", async () => {
   const calls: unknown[] = [];
-  // Mirrors the Workers binding, which throws when given a bare string.
   const limiter = {
     async limit(options: { key: string }) {
       if (typeof options !== "object" || typeof options?.key !== "string")

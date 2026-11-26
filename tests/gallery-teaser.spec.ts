@@ -1,9 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// Motion in the #gallery teaser: the polaroids settle in once on scroll, and on a fine
-// pointer they drift with the mouse by depth tier. Waits are by the clock (expect.poll with
-// a timeout), never by frames (L-009).
-
 const polaroids = "#gallery .gallery_slot .gallery_polaroid";
 
 const scrollSectionIn = async (page: Page, top = 60) => {
@@ -51,7 +47,6 @@ const expectSettled = async (page: Page) => {
   );
   expect(state.length).toBeGreaterThan(5);
   for (const item of state) expect(item).toEqual({ opacity: "1", transform: "none" });
-  // The slot keeps its resting opacity and tilt.
   const slots = await page.locator("#gallery .gallery_slot").evaluateAll((items) =>
     items.filter((item) => item.getClientRects().length).map((item) => ({
       tier: ["near", "mid", "far"].find((name) => item.classList.contains(name)),
@@ -72,7 +67,6 @@ test.describe("gallery teaser, fine pointer", { tag: ["@single", "@sweep"] }, ()
 
   test("polaroids settle in once the section scrolls into view", async ({ page }) => {
     await page.goto("/");
-    // Hidden until the section is reached.
     await expect
       .poll(() => page.locator(polaroids).first().evaluate((item) => getComputedStyle(item).opacity))
       .toBe("0");
@@ -106,13 +100,11 @@ test.describe("gallery teaser, fine pointer", { tag: ["@single", "@sweep"] }, ()
     expect(far.x).toBeGreaterThan(0.5);
     expect(far.x).toBeLessThanOrEqual(5);
 
-    // The copy column stays put, and the reveal layer stays clear.
     expect(await copyBox(page)).toEqual(copyBefore);
     expect(
       await page.locator(polaroids).evaluateAll((items) => items.map((item) => getComputedStyle(item).transform)),
     ).toEqual(Array(await page.locator(polaroids).count()).fill("none"));
 
-    // Leaving the section eases everything back.
     await page.mouse.move(720, 20, { steps: 4 });
     await expect
       .poll(async () => Math.max(...(await Promise.all((["near", "mid", "far"] as const).map(async (tier) => Math.abs((await slotShift(page, tier)).x)))))
@@ -121,7 +113,6 @@ test.describe("gallery teaser, fine pointer", { tag: ["@single", "@sweep"] }, ()
   });
 
   test("Step inside still opens the canvas right after the section arrives", async ({ page }) => {
-    // Deliberately clicks while the copy may still be fading in: the button must work during the reveal.
     await page.goto("/");
     await scrollSectionIn(page);
     await page.locator("[data-gallery-open]").click();

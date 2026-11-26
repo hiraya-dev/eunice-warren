@@ -974,7 +974,6 @@ test("host IDs use the invitation surname and a two-digit counter", () => {
   assert.equal(generateHostId("Jay R Nearents & family"), "NEARENTS-01");
   assert.equal(generateHostId("Sofía Peña"), "PENA-01");
   assert.equal(generateHostId(""), "HOUSEHOLD-01");
-  // "Theo" is a name, not the article.
   assert.equal(generateHostId("Theo Cruz"), "CRUZ-01");
   assert.equal(
     generateHostId(`First ${"A".repeat(80)}`),

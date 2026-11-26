@@ -12,7 +12,6 @@ test.describe("explore section", () => {
     await expect(page.locator("#explore [data-gsap-slider-item]")).toHaveCount(
       noteCount,
     );
-    // Previous and next, once in the header and once in the footer.
     await expect(
       page.locator("#explore .explore_controls-header [data-gsap-slider-control]"),
     ).toHaveCount(2);
@@ -153,7 +152,6 @@ test.describe("explore section", () => {
         });
       await expect.poll(readCounter).toMatchObject({ current: 1 });
       const total = (await readCounter()).total;
-      // One card per view at 390px, two at 768px.
       expect(total).toBe(width === 390 ? noteCount : noteCount - 1);
 
       let current = 1;
@@ -225,7 +223,6 @@ test.describe("explore section", () => {
   test("keeps every sticker off every card's text below the desktop layout", { tag: ["@sweep", "@single"] }, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    // The tilt turns card and sticker together, so compare in the card's own frame.
     await page.addStyleTag({ content: ".explore_card { rotate: none !important; }" });
     for (const width of [320, 375, 390, 481, 768, 991]) {
       await page.setViewportSize({ width, height: 844 });

@@ -53,7 +53,6 @@ test.describe("home page links", { tag: ["@smoke"] }, () => {
   });
 
   test.describe("preloader", () => {
-    // The default storage state skips the preloader; start without it.
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test("wires the preloader message link", async ({ page }) => {

@@ -1,8 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { reveal } from "./helpers/reveal";
 
-// The mobile timeline: one solid segment per gap between steps, each scrubbed with scaleY, and a
-// filled circle (.is-reached) for every step the line has reached.
 const readTimeline = (page: Page) => page.evaluate(() => {
   const lines = Array.from(document.querySelectorAll<HTMLElement>("#stay .stay_step-line")).map((line) => new DOMMatrix(getComputedStyle(line).transform).d);
   const reached = Array.from(document.querySelectorAll<HTMLElement>("#stay .stay_step")).map((step) => step.classList.contains("is-reached"));
@@ -128,9 +126,7 @@ test.describe("stay section", () => {
       expect(samples[index].progress).toBeGreaterThanOrEqual(samples[index - 1].progress - 0.001);
     }
     for (const sample of samples) {
-      // Circles fill in order: never a later circle without the earlier ones.
       expect(sample.reached.every((filled, index) => !filled || sample.reached.slice(0, index).every(Boolean))).toBe(true);
-      // A circle fills only once the line above it has been drawn.
       sample.reached.forEach((filled, index) => { if (index > 0 && filled) expect(sample.lines[index - 1]).toBeGreaterThan(0.95); });
     }
     expect(samples.some((sample) => sample.progress > 0.1 && sample.progress < 0.9)).toBe(true);
@@ -162,7 +158,6 @@ test.describe("stay section", () => {
       await expect(circle).toHaveCSS("background-color", "rgb(245, 239, 227)");
       await expect(circle).toHaveCSS("color", "rgb(31, 47, 92)");
     }
-    // Reduced motion shortens transitions to 0.01 ms; nothing perceptible may run (L-026).
     const running = await page.evaluate(() => Array.from(document.querySelectorAll("#stay .stay_steps, #stay .stay_steps *"))
       .flatMap((element) => element.getAnimations())
       .filter((animation) => {

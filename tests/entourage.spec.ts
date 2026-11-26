@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const { groups } = JSON.parse(readFileSync("src/content/entourage/entourage.json", "utf8")) as { groups: Array<{ id: string; title?: string }> };
-// The three titled groups in page order: principal sponsors, secondary sponsors, bridal party.
 const [principal, secondary, bridal] = groups.filter((group) => group.title).map((group) => `.entourage_${group.id}`);
 const selectors = { principal, secondary, bridal };
 
@@ -71,7 +70,6 @@ test.describe("entourage section", () => {
     expect(positions.maidOfHonor.top).toBeGreaterThan(positions.bestMan.bottom);
     expect(positions.bridesmaids.top).toBeGreaterThan(positions.groomsmen.bottom);
 
-    // Every entourage row is one centred column on mobile, so long names never share a line's width.
     const roles = await page.locator("#entourage .entourage_role").evaluateAll((elements) => elements.map((element) => {
       const box = element.getBoundingClientRect();
       return { centre: box.left + box.width / 2, top: box.top };
@@ -96,7 +94,6 @@ test.describe("entourage section", () => {
         ));
         return {
           visible: getComputedStyle(element).display !== "none",
-          // The faint postmark sits in the gap between rows by design; only its empty rotated corners reach the text boxes.
           clearOfText: element.classList.contains("entourage_postmark") || !overlapsText,
           distanceFromGroup: Math.abs(box.top - groupBox.top),
         };
