@@ -23,6 +23,7 @@
     "dedicationLabel": "Message to the couple (optional)",
     "submit": "Add it to Side A",
     "searchCount": "suggestions",
+    "fieldsTooLong": "Please shorten your entries and try again.",
     "error": "Something went wrong. Please try again."
   }
 }
