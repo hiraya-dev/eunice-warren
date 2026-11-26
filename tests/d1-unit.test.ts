@@ -167,7 +167,7 @@ test("server validation rejects an attending blank name and duplicate normalized
   assert.equal(validateSubmission({ attending: true, invite, seats: base.map((seat) => ({ ...seat, attending: true, name: "  LIZA SANTOS  ", slipperSize: "W 7" })) }), false);
 });
 
-test("submit action rejects an attending seat with an empty name", async () => {
+test("submit action returns a validation error for an attending seat with an empty name", async () => {
   const fixture = fakeFixtures.find(({ id }) => id === "santos")!;
   let submitted = false;
   const store: RsvpStore = {
@@ -176,8 +176,31 @@ test("submit action rejects an attending seat with an empty name", async () => {
     submit: async () => { submitted = true; },
   };
   const token = await signRsvpToken(fixture.ticketCode, Date.now() + 60_000, "secret");
-  await assert.rejects(() => runSubmitAction(store, { token, name: fixture.members[0], attending: true, email: "liza@example.com", seats: fixture.seatList!.map((seat) => ({ seatId: seat.seatId, name: "", attending: true, slipperSize: "W 7" })) }, "secret"), (error: unknown) => error instanceof GuestActionFailure && error.code === "CONFLICT");
+  await assert.rejects(() => runSubmitAction(store, { token, name: fixture.members[0], attending: true, email: "liza@example.com", seats: fixture.seatList!.map((seat) => ({ seatId: seat.seatId, name: "", attending: true, slipperSize: "W 7" })) }, "secret"), (error: unknown) => error instanceof GuestActionFailure && error.code === "BAD_REQUEST" && error.message === "Add a name to tick this seat.");
   assert.equal(submitted, false);
+});
+
+test("submit action returns the duplicate normalized name validation error", async () => {
+  const fixture = fakeFixtures.find(({ id }) => id === "santos")!;
+  const store: RsvpStore = {
+    findInvite: async () => null,
+    findInviteByTicketCode: async () => ({ invite: fixture, householdId: fixture.id, matchedName: fixture.members[0], previous: null }),
+    submit: async () => { throw new Error("must not submit"); },
+  };
+  const token = await signRsvpToken(fixture.ticketCode, Date.now() + 60_000, "secret");
+  await assert.rejects(() => runSubmitAction(store, { token, name: fixture.members[0], attending: true, email: "liza@example.com", seats: fixture.seatList!.map((seat, index) => ({ seatId: seat.seatId, name: index === 0 ? "Liza Santos" : "LÍZA   SANTOS", attending: true, slipperSize: "W 7" })) }, "secret"), (error: unknown) => error instanceof GuestActionFailure && error.code === "BAD_REQUEST" && error.message === "LÍZA   SANTOS is on two seats. Change one of them.");
+});
+
+test("submit action keeps a seat-count mismatch as an invite change", async () => {
+  const fixture = fakeFixtures.find(({ id }) => id === "santos")!;
+  const invite = { ...fixture, seats: fixture.seatList!.length + 1 };
+  const store: RsvpStore = {
+    findInvite: async () => null,
+    findInviteByTicketCode: async () => ({ invite, householdId: fixture.id, matchedName: fixture.members[0], previous: null }),
+    submit: async () => { throw new Error("must not submit"); },
+  };
+  const token = await signRsvpToken(fixture.ticketCode, Date.now() + 60_000, "secret");
+  await assert.rejects(() => runSubmitAction(store, { token, name: fixture.members[0], attending: true, email: "liza@example.com", seats: fixture.seatList!.map((seat, index) => ({ seatId: seat.seatId, name: `Guest ${index}`, attending: true, slipperSize: "W 7" })) }, "secret"), (error: unknown) => error instanceof GuestActionFailure && error.code === "CONFLICT" && error.message === "Your invite changed. Check the seats before sending.");
 });
 
 test("D1 submit batches response rows and writes a nonblank changed name without touching invited lookup keys", async () => {

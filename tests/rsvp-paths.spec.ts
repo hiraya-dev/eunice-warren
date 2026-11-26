@@ -183,6 +183,34 @@ test.describe("RSVP paths", () => {
     await expect(error).toBeHidden();
   });
 
+  test("blocks duplicate attending names until one seat is renamed", async ({ page }) => {
+    const section = rsvp(page);
+    let actionRequests = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.url().includes("/_actions/")) actionRequests += 1;
+    });
+    await findInvite(page, santos.members[0], santos);
+    const actionRequestsAfterFind = actionRequests;
+    await section.locator("#rsvp-seat-1").check();
+    const name = section.locator("[aria-label='Name for seat 2']");
+    await name.fill(santos.members[0]);
+    await section.getByRole("button", { name: "Done editing seat 2" }).click();
+    await section.getByRole("button", { name: "Continue" }).click();
+
+    const error = section.locator("[data-rsvp-guest-error]");
+    await expect(error).toBeVisible();
+    await expect(error).toContainText(`${santos.members[0]} is on two seats. Change one of them.`);
+    await expect(section.locator("[data-rsvp-panel='2']")).toBeVisible();
+    expect(actionRequests).toBe(actionRequestsAfterFind);
+
+    await section.getByRole("button", { name: `Edit ${santos.members[0]}` }).nth(1).click();
+    await section.locator("[aria-label='Name for seat 2']").fill("Fictional Companion");
+    await section.getByRole("button", { name: `Done editing ${santos.members[0]}` }).click();
+    await expect(error).toBeHidden();
+    await section.getByRole("button", { name: "Continue" }).click();
+    await expect(section.locator("[data-rsvp-panel='3']")).toBeVisible();
+  });
+
   test("reloads a changed seat set and keeps typed values for surviving seat ids", { tag: ["@single"] }, async ({ page }) => {
     const fixture = fakeFixtures.find((invite) => invite.id === "seat-change-test")!;
     const section = rsvp(page);

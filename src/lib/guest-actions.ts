@@ -1,11 +1,11 @@
 import { isD1LimitError } from "./db/errors.ts";
 import { InviteChangedError } from "./rsvp/d1.ts";
-import { signRsvpToken, validateSubmission, verifyRsvpToken } from "./rsvp/logic.ts";
+import { signRsvpToken, validateSubmissionProblems, verifyRsvpToken } from "./rsvp/logic.ts";
 import type { RsvpNotificationData } from "./rsvp/notify.ts";
 import type { InviteLookup, RsvpSeat, RsvpStore } from "./rsvp/store.ts";
 import { SongCapError, SongRateLimitError, type SongInput, type SongStore } from "./songs/store.ts";
 
-export type GuestActionCode = "CONFLICT" | "INTERNAL_SERVER_ERROR" | "SERVICE_UNAVAILABLE" | "TOO_MANY_REQUESTS" | "UNAUTHORIZED";
+export type GuestActionCode = "BAD_REQUEST" | "CONFLICT" | "INTERNAL_SERVER_ERROR" | "SERVICE_UNAVAILABLE" | "TOO_MANY_REQUESTS" | "UNAUTHORIZED";
 
 export class GuestActionFailure extends Error {
   readonly code: GuestActionCode;
@@ -121,9 +121,15 @@ export async function runSubmitAction(
     const submittedSeatIds = input.seats.map((seat) => seat.seatId).filter((id): id is number => typeof id === "number").sort((a, b) => a - b);
     if (
       !result || !result.invite || result.invite.ticketCode !== tokenData.inviteId ||
-      expectedSeatIds.length !== submittedSeatIds.length || expectedSeatIds.some((id, index) => submittedSeatIds[index] !== id) ||
-      !validateSubmission({ attending: input.attending, seats: input.seats, invite: result.invite })
+      expectedSeatIds.length !== submittedSeatIds.length || expectedSeatIds.some((id, index) => submittedSeatIds[index] !== id)
     ) throw new GuestActionFailure("CONFLICT", inviteChanged);
+    const firstProblem = validateSubmissionProblems({ attending: input.attending, seats: input.seats, invite: result.invite })[0];
+    if (firstProblem) {
+      if (firstProblem.field === "seats" && firstProblem.message.startsWith("The invite changed")) {
+        throw new GuestActionFailure("CONFLICT", inviteChanged);
+      }
+      throw new GuestActionFailure("BAD_REQUEST", firstProblem.message);
+    }
     const submission = {
       inviteId: result.householdId,
       name: result.matchedName,
