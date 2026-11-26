@@ -2091,7 +2091,10 @@ test.describe("host ID from the invitation name", () => {
     page,
   }, testInfo) => {
     const surname = uniqueSurname(testInfo);
-    const slug = surname.toLowerCase();
+    const slug = `${surname.toUpperCase()}-01`;
+    // A different surname, so the ID must follow the invitation name in add
+    // and must not follow it in edit.
+    const renamed = `${surname.toUpperCase()}Q-01`;
     await withAdminLock(async () => {
       await page.goto("/admin/guests?new=1");
       const form = page.locator("[data-new-household]");
@@ -2099,29 +2102,29 @@ test.describe("host ID from the invitation name", () => {
         await form.locator("[data-add-name]").fill(name);
         await form.locator("[data-add-name]").press("Enter");
       }
-      // "<S> Family" → "<s>"
+      // "<S> Family" → "<S>-01"
       await expect(form.locator("[data-host-id]")).toHaveText(slug);
-      await form.locator("[name='display_name']").fill(`Casa ${surname}`);
-      await expect(form.locator("[data-host-id]")).toHaveText(`casa-${slug}`);
+      await form.locator("[name='display_name']").fill(`Casa ${surname}q`);
+      await expect(form.locator("[data-host-id]")).toHaveText(renamed);
       await form.getByRole("button", { name: "Save", exact: true }).click();
       const row = page
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
-      await expect(row.locator(".admin-guests_id")).toHaveText(`casa-${slug}`);
+      await expect(row.locator(".admin-guests_id")).toHaveText(renamed);
 
       // Renaming in edit keeps the ID.
       const id = await row.getAttribute("data-household-id");
       await page.goto(`/admin/guests?edit=${id}`);
       const edit = page.locator("[data-edit-household]");
       await edit.locator("[name='display_name']").fill(`Villa ${surname}`);
-      await expect(edit.locator("[data-host-id]")).toHaveText(`casa-${slug}`);
+      await expect(edit.locator("[data-host-id]")).toHaveText(renamed);
       await edit.getByRole("button", { name: "Save", exact: true }).click();
       await expect(
         page
           .locator("[data-admin-household]")
           .filter({ hasText: surname })
           .locator(".admin-guests_id"),
-      ).toHaveText(`casa-${slug}`);
+      ).toHaveText(renamed);
 
       await page.goto("/admin/guests");
       const saved = page
