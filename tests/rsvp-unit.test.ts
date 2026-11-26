@@ -234,12 +234,12 @@ test("RSVP submit input rejects seat arrays outside one through MAX_SEATS", () =
 
 test("keeps the deadline boundary exact", () => {
   assert.equal(
-    new Date("2026-12-12T23:59:59+08:00").getTime(),
+    new Date("2026-12-14T23:59:59+08:00").getTime(),
     RSVP_DEADLINE_TIME,
   );
   assert.equal(
     RSVP_DEADLINE_TIME + 1000,
-    new Date("2026-12-13T00:00:00+08:00").getTime(),
+    new Date("2026-12-15T00:00:00+08:00").getTime(),
   );
 });
 

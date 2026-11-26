@@ -48,7 +48,7 @@ test.describe("RSVP section", () => {
 
   test("shows the RSVP deadline label", { tag: ["@single"] }, async ({ page }) => {
     await expect(rsvp(page).locator("[data-rsvp-intro]")).toContainText(
-      "December 12",
+      "December 14",
     );
   });
 
