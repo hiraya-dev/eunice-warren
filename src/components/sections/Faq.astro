@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
 import stamp from "@/assets/images/faq/stamp-plane.png";
+import avatar from "@/assets/images/faq/avatar-couple.jpg";
 
 const questions = (await getCollection("faq")).sort(
   (a, b) => a.data.order - b.data.order,
@@ -79,7 +80,7 @@ const questions = (await getCollection("faq")).sort(
       </ul>
 
       <div class="faq_contact">
-        <span class="faq_avatar" aria-hidden="true"></span>
+        <Image class="faq_avatar" src={avatar} alt="" aria-hidden="true" width={36} height={36} densities={[1, 2]} loading="lazy" />
         <div class="faq_contact-copy">
           <p>Still unsure? Ask <span>Warren or Eunice</span></p>
           <a href="tel:+639362300525">Warren · 0936 230 0525 <span aria-hidden="true">↗</span></a>
@@ -304,6 +305,7 @@ const questions = (await getCollection("faq")).sort(
       flex-shrink: 0;
       border-radius: 50%;
       background: #8fa9c8;
+      object-fit: cover;
     }
 
     .faq_contact-copy {
