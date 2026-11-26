@@ -2,10 +2,10 @@ import { ActionError, defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { env } from "cloudflare:workers";
 import {
-  isRsvpClosed,
+  isRsvpActionClosed,
   isWithinRateLimit,
 } from "@/lib/rsvp/logic";
-import type { RateLimiter } from "@/lib/rsvp/logic";
+import type { RateLimiter, RsvpAction } from "@/lib/rsvp/logic";
 import type { RsvpStore } from "@/lib/rsvp/store";
 import { createFakeRsvpStore } from "@/lib/rsvp/store";
 import { createD1RsvpStore } from "@/lib/rsvp/d1";
@@ -38,8 +38,8 @@ const tokenSecret =
     : storeName === "fake"
       ? TEST_SECRET
       : "";
-const closed = () => {
-  if (isRsvpClosed())
+const closed = (action: RsvpAction) => {
+  if (isRsvpActionClosed(action))
     throw new ActionError({
       code: "GONE",
       message: "RSVPs closed on December 12.",
@@ -127,7 +127,7 @@ export const server = {
         let result: Awaited<ReturnType<typeof runFindAction>> | undefined;
         let caught: unknown;
         try {
-          closed();
+          closed("find");
           await guard(input.turnstileToken, context, true, "RSVP_LOOKUP_LIMITER", "Too many tries. Wait a minute and try again.", timing);
           if (!tokenSecret) fail("Something went wrong. Please try again.");
           result = await runFindAction(getStore(queryCounter), input.name, tokenSecret, Date.now(), timing);
@@ -154,7 +154,7 @@ export const server = {
         let result: Awaited<ReturnType<typeof runGreetAction>> | undefined;
         let caught: unknown;
         try {
-          closed();
+          closed("greet");
           await guard(input.turnstileToken, context, true, "RSVP_LOOKUP_LIMITER", "Too many tries. Wait a minute and try again.", timing);
           result = await runGreetAction(getStore(queryCounter), input.name, timing);
           return result;
@@ -174,7 +174,7 @@ export const server = {
     submit: defineAction({
       input: rsvpSubmitInput,
       handler: async (input, context) => {
-        closed();
+        closed("submit");
         await guard(input.turnstileToken, context, true, "RSVP_SUBMIT_LIMITER");
         try {
           return await runSubmitAction(getStore(), input, tokenSecret, (data) => {

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   isWithinRateLimit,
+  isRsvpActionClosed,
   findNearGuestName,
   parseGuestRows,
   RSVP_DEADLINE_TIME,
@@ -15,6 +16,7 @@ import { createFakeRsvpStore, fakeFixtures } from "../src/lib/rsvp/store.ts";
 import { SLIPPER_SIZES } from "../src/lib/rsvp/slippers.ts";
 import { rsvpSubmitInput } from "../src/lib/rsvp/input.ts";
 import { MAX_SEATS } from "../src/lib/rsvp/limits.ts";
+import { runGreetAction } from "../src/lib/guest-actions.ts";
 import {
   buildResponseRow,
   createSheetsRsvpStore,
@@ -239,6 +241,17 @@ test("keeps the deadline boundary exact", () => {
     RSVP_DEADLINE_TIME + 1000,
     new Date("2026-12-13T00:00:00+08:00").getTime(),
   );
+});
+
+test("keeps guest greeting available after the RSVP deadline", async () => {
+  const afterDeadline = RSVP_DEADLINE_TIME + 1000;
+  assert.equal(isRsvpActionClosed("greet", afterDeadline), false);
+  assert.equal(isRsvpActionClosed("find", afterDeadline), true);
+  assert.equal(isRsvpActionClosed("submit", afterDeadline), true);
+  assert.deepEqual(await runGreetAction(createFakeRsvpStore(), "Liza Santos"), {
+    invite: { householdName: "Santos Family", seats: 2 },
+    matchedName: "Liza Santos",
+  });
 });
 
 test("parses guest rows and detects duplicate ids and names", () => {
