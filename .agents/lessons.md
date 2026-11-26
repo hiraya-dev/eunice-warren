@@ -680,3 +680,23 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** for every symbol an ADR names, open it and confirm the sentence; no date in an ADR without a source in the repo.
 - **Guard:** none
 - **Paths:** `docs/decisions/**`
+
+### L-074 — Hero button copy sits under the music disc's corner band
+- **Date:** 2026-11-27
+- **Trigger:** #171 red `e2e (full)` (`music.spec.ts:769`: "RSVP by December" became "RSVP by December 14", the mobile pill grew 14px and its right edge entered the disc's band by 2.4px)
+- **Symptom:** on a 375×667 phone the background music disc stayed hidden on first load.
+- **Root cause:** `music-teleport.ts` hides the disc while `#hero .hero_actions` intersects the bottom-right band (x ≥ viewport − 88px, and everything below its top), so a wider hero button is a disc regression, not just a copy change.
+- **Rule:** a change to hero button copy, padding or the hero text block runs `tests/music.spec.ts` once before the push, and keeps `.hero_actions` right edge left of `innerWidth − 88` at 375.
+- **Check:** `env -u CLAUDECODE npx playwright test tests/music.spec.ts:769 --project=chromium` passes.
+- **Guard:** none
+- **Paths:** `src/components/sections/Hero.astro`, `src/content/hero/**`
+
+### L-075 — A changed RSVP default reaches every spec that walks the form
+- **Date:** 2026-11-27
+- **Trigger:** #171 red `e2e (full)` (seats now start unticked; `music.spec.ts:892` pressed Continue with nobody ticked and never reached step 3)
+- **Symptom:** a music spec failed on an RSVP change because it walks the RSVP form to test the docked tag.
+- **Root cause:** the author updated the `rsvp*.spec.ts` files only; `music.spec.ts` also submits step 2.
+- **Rule:** when an RSVP default or required field changes, grep every spec for `data-rsvp-attending`, `Continue` and `Send RSVP`, not only the RSVP specs, and run each match once.
+- **Check:** `grep -ln "data-rsvp-attending\|Send RSVP" tests/*.spec.ts` lists only files that were run.
+- **Guard:** none
+- **Paths:** `src/components/sections/Rsvp.astro`, `tests/**`
