@@ -144,6 +144,7 @@ const playlist = defineCollection({
       dedicationLabel: z.string(),
       submit: z.string(),
       searchCount: z.string(),
+      fieldsTooLong: z.string(),
       error: z.string(),
     }) }),
 });
@@ -236,6 +237,7 @@ const rsvp = defineCollection({
       plansChange: z.string(),
       onList: z.string(),
       thanks: z.string(),
+      nameTooLong: z.string(),
     }) }),
 });
 

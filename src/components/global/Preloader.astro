@@ -14,6 +14,7 @@ import stampPalm from "@/assets/images/stamps/palm.jpg";
 import stampParaw from "@/assets/images/stamps/paraw.jpg";
 import shell from "@/assets/images/explore/sticker-shell.svg";
 import { MESSAGE_US_HREF } from "@/consts";
+import { getCollection } from "astro:content";
 
 interface Props {
   /** Message destination for guests who cannot find an invite. */
@@ -21,12 +22,14 @@ interface Props {
 }
 
 const { messageHref = MESSAGE_US_HREF } = Astro.props;
+const [{ data: rsvpData }] = await getCollection("rsvp");
 ---
 
 <div
   class="preloader_wrap"
   data-preloader
   data-message-href={messageHref}
+  data-validation-error={rsvpData.copy.nameTooLong}
   role="dialog"
   aria-modal="true"
   aria-labelledby="preloader-title"
@@ -57,7 +60,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
             <Image class="preloader_postmark" src={postmark} alt="" width={176} height={134} widths={[176, 352]} sizes="176px" loading="eager" aria-hidden="true" />
             <div class="preloader_address">
               <label for="preloader-name" data-preloader-label>To · Who's visiting?</label>
-              <input id="preloader-name" name="name" autocomplete="name" required data-preloader-name />
+              <input id="preloader-name" name="name" autocomplete="name" maxlength="120" required data-preloader-name />
               <p class="preloader_hint" data-preloader-hint role="status" aria-live="polite">Write your name as it's on your invitation.</p>
               <p class="preloader_not-you" data-preloader-not-you hidden>
                 Not you? <button type="button" data-preloader-reset>Write your own name</button>
@@ -79,7 +82,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
 </div>
 
 <script>
-  import { actions } from "astro:actions";
+  import { actions, isInputError } from "astro:actions";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
   import { getGuest, setGuest, type RememberedGuest } from "@/lib/guest";
   import { lenis } from "@/scripts/scroll.ts";
@@ -95,6 +98,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
 
     const form = overlay.querySelector<HTMLFormElement>("[data-preloader-form]")!;
     const input = overlay.querySelector<HTMLInputElement>("[data-preloader-name]")!;
+    const validationError = overlay.dataset.validationError ?? "Please use 120 characters or fewer.";
     const title = overlay.querySelector<HTMLElement>("#preloader-title")!;
     const hint = overlay.querySelector<HTMLElement>("[data-preloader-hint]")!;
     const mobileHint = overlay.querySelector<HTMLElement>("[data-preloader-hint-mobile]")!;
@@ -271,7 +275,10 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
         }
         if (input.value !== submittedValue) { clearPendingStatus(); return; }
         clearPendingStatus();
-        if (result.error || !result.data) throw new Error(result.error?.message || "Something went wrong. Please try again.");
+        if (result.error || !result.data) {
+          if (isInputError(result.error)) throw new Error(validationError);
+          throw new Error(result.error?.message || "Something went wrong. Please try again.");
+        }
         if (!result.data.invite) {
           if (result.data.suggestion) {
             state = "suggest";

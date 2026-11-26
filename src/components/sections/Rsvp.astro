@@ -102,6 +102,7 @@ const {
                     name="name"
                     autocomplete="name"
                     required
+                    maxlength="120"
                     data-rsvp-name
                   /><p class="rsvp_help">
                     {copy.nameHelp}
@@ -172,6 +173,7 @@ const {
                     name="email"
                     type="email"
                     autocomplete="email"
+                    maxlength="254"
                     required
                   /><p
                     class="rsvp_error"
@@ -198,6 +200,7 @@ const {
                   ><textarea
                     id="rsvp-note"
                     name="note"
+                    maxlength="1000"
                     placeholder={copy.notePlaceholder}
                   ></textarea>
                 </div>
@@ -255,7 +258,7 @@ const {
 <RsvpTicketPrinter />
 
 <script>
-  import { actions } from "astro:actions";
+  import { actions, isInputError } from "astro:actions";
   import type { Invite } from "@/lib/rsvp/store";
   import { normalizeGuestName } from "@/lib/rsvp/store";
   import { SLIPPER_SIZES } from "@/lib/rsvp/slippers";
@@ -481,6 +484,7 @@ const {
               const input = document.createElement("input");
               input.value = seat.name;
               input.id = `rsvp-seat-name-${index}`;
+              input.maxLength = 120;
               input.setAttribute("aria-label", copy.copy.nameForSeat.replace("{number}", () => String(index + 1)));
               const done = document.createElement("button");
               done.type = "button";
@@ -617,8 +621,9 @@ const {
                 suggestion = "";
                 setFindLabel(copy.copy.find);
                 error.textContent =
-                  result.error?.message ||
-                  copy.copy.genericError;
+                  isInputError(result.error)
+                    ? copy.copy.nameTooLong
+                    : result.error?.message || copy.copy.genericError;
                 error.hidden = false;
                 nameInput.setAttribute("aria-invalid", "true");
                 nameInput.setAttribute("aria-describedby", "rsvp-name-error");
@@ -827,7 +832,10 @@ const {
                     renderSeats();
                   }
                 }
-                submitError.textContent = result.error.message;
+                submitError.textContent =
+                  isInputError(result.error)
+                    ? copy.copy.nameTooLong
+                    : result.error.message;
                 submitError.hidden = false;
                 return;
               }
