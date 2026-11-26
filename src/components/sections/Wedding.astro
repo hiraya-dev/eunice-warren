@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import ceremony from "@/assets/images/wedding/schedule-ceremony.jpg";
@@ -14,65 +15,40 @@ interface Props extends HTMLAttributes<"section"> {
 
 const { calendarHref = WEDDING_CALENDAR_PATH, class: className, ...rest } = Astro.props;
 
-const schedule = [
+const scheduleMeta = [
   {
     number: "01",
-    title: "Ceremony",
-    time: "3:00 PM",
-    location: "Holy Rosary Parish",
-    mapLabel: "Map for Ceremony",
     mapHref: CHURCH_MAP_URL,
     image: ceremony,
-    alt: "A small white parish church among palm trees and bougainvillea",
-    caption: "Where we'll say yes · Holy Rosary Parish, 3 PM",
     tilt: -3,
   },
   {
     number: "02",
-    title: "Sunset",
-    italic: "cocktails",
-    time: "5:00 PM",
-    location: "Belmont Hotel",
-    mapLabel: "Map for Sunset cocktails",
     mapHref: BELMONT_MAP_URL,
     image: cocktails,
-    alt: "Two cocktails on a terrace railing above the sea at sunset",
-    caption: "Where we'll toast · Belmont Hotel, 5 PM",
     tilt: 2.5,
   },
   {
     number: "03",
-    title: "Reception &",
-    italic: "dancing",
-    time: "6:30 PM",
-    location: "Belmont Hotel",
-    mapLabel: "Map for Reception and dancing",
     mapHref: BELMONT_MAP_URL,
     image: reception,
-    alt: "Candlelit reception tables and a dance floor under string lights by the sea at dusk",
-    caption: "Where we'll dance · Belmont Hotel, 6:30 PM",
     tilt: -1.5,
   },
   {
     number: "04",
-    title: "After",
-    italic: "party",
-    time: "10:00 PM",
-    location: "Savoy Hotel",
-    mapLabel: "Map for After party",
     mapHref: SAVOY_MAP_URL,
     image: afterParty,
-    alt: "A glowing hotel pool under string lights at night",
-    caption: "Where we'll keep going · Savoy Hotel, around 10 PM",
     tilt: 2,
   },
 ];
+const [{ data }] = await getCollection("wedding");
+const schedule = data.schedule.map((item, index) => ({ ...item, ...scheduleMeta[index] }));
 ---
 
-<section id="wedding" class:list={["wedding_wrap", className]} {...rest}>
+{!data.hidden && <section id="wedding" class:list={["wedding_wrap", className]} {...rest}>
   <div class="wedding_layout">
     <header class="wedding_header" data-fade-in>
-      <h2 class="wedding_title" data-fade-in-item>One day<br />by the sea</h2>
+      <h2 class="wedding_title" data-fade-in-item>{data.titleFirst}<br />{data.titleSecond}</h2>
     </header>
 
     <div class="wedding_body" data-tabs="wrapper" data-tabs-autoplay="true" data-tabs-autoplay-duration="5000">
@@ -89,7 +65,7 @@ const schedule = [
 
       <div class="wedding_content">
         <div class="wedding_schedule" data-fade-in>
-          <div class="wedding_tablist" role="tablist" aria-label="Wedding schedule">
+          <div class="wedding_tablist" role="tablist" aria-label={data.scheduleAria}>
             {schedule.map((item, index) => (
               <div class:list={["wedding_row", index === 0 && "is-active"]} data-tabs="content-item" data-fade-in-item>
                 <button class="wedding_tab" id={`wedding-tab-${index + 1}`} type="button" role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`wedding-panel-${index + 1}`} tabindex={index === 0 ? 0 : -1}>
@@ -98,22 +74,22 @@ const schedule = [
                 </button>
                 <div class="wedding_meta">
                   <span class="wedding_time">{item.time}</span>
-                  <span class="wedding_location">{item.location} · <a href={item.mapHref} target="_blank" rel="noopener" aria-label={item.mapLabel}>Map <span aria-hidden="true">↗</span></a></span>
+                  <span class="wedding_location">{item.location} · <a href={item.mapHref} target="_blank" rel="noopener" aria-label={item.mapLabel}>{data.mapText} <span aria-hidden="true">↗</span></a></span>
                 </div>
                 <span class="wedding_progress" data-tabs="item-progress" aria-hidden="true"></span>
               </div>
             ))}
           </div>
           <div class="wedding_footer" data-fade-in-item>
-            <span>All times Philippine Time (GMT+8)</span>
-            <a href={calendarHref}>ADD THE DAY TO YOUR CALENDAR <span aria-hidden="true">↗</span></a>
+            <span>{data.footer}</span>
+            <a href={calendarHref}>{data.calendar} <span aria-hidden="true">↗</span></a>
           </div>
         </div>
       </div>
     </div>
   </div>
   <div class="wedding_scallop" aria-hidden="true"></div>
-</section>
+</section>}
 
 <style>
   @layer components {

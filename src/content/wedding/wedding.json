@@ -1,0 +1,50 @@
+{
+  "hidden": false,
+  "titleFirst": "One day",
+  "titleSecond": "by the sea",
+  "scheduleAria": "Wedding schedule",
+  "schedule": [
+    {
+      "number": "01",
+      "title": "Ceremony",
+      "time": "3:00 PM",
+      "location": "Holy Rosary Parish",
+      "mapLabel": "Map for Ceremony",
+      "alt": "A small white parish church among palm trees and bougainvillea",
+      "caption": "Where we'll say yes · Holy Rosary Parish, 3 PM"
+    },
+    {
+      "number": "02",
+      "title": "Sunset",
+      "italic": "cocktails",
+      "time": "5:00 PM",
+      "location": "Belmont Hotel",
+      "mapLabel": "Map for Sunset cocktails",
+      "alt": "Two cocktails on a terrace railing above the sea at sunset",
+      "caption": "Where we'll toast · Belmont Hotel, 5 PM"
+    },
+    {
+      "number": "03",
+      "title": "Reception &",
+      "italic": "dancing",
+      "time": "6:30 PM",
+      "location": "Belmont Hotel",
+      "mapLabel": "Map for Reception and dancing",
+      "alt": "Candlelit reception tables and a dance floor under string lights by the sea at dusk",
+      "caption": "Where we'll dance · Belmont Hotel, 6:30 PM"
+    },
+    {
+      "number": "04",
+      "title": "After",
+      "italic": "party",
+      "time": "10:00 PM",
+      "location": "Savoy Hotel",
+      "mapLabel": "Map for After party",
+      "alt": "A glowing hotel pool under string lights at night",
+      "caption": "Where we'll keep going · Savoy Hotel, around 10 PM"
+    }
+  ],
+  "footer": "All times Philippine Time (GMT+8)",
+  "calendar": "ADD THE DAY TO YOUR CALENDAR",
+  "mapText": "Map"
+}

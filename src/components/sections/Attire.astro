@@ -1,5 +1,6 @@
 ---
 import { Image } from "astro:assets";
+import { getCollection } from "astro:content";
 import Arrow from "@/assets/icons/arrow-full.svg";
 import ladies01OneShoulder from "@/assets/images/attire/ladies-01-one-shoulder.jpg";
 import ladies02HalterPleat from "@/assets/images/attire/ladies-02-halter-pleat.jpg";
@@ -17,70 +18,42 @@ import gents06LightSuit from "@/assets/images/attire/gents-06-light-suit.jpg";
 import gents07DressShirt from "@/assets/images/attire/gents-07-dress-shirt.jpg";
 import postmark from "@/assets/images/attire/postmark-no-white.png";
 
-const colours = [
-  { name: "Tiffany blue", key: "tiffany" },
-  { name: "Seafoam green", key: "seafoam" },
-  { name: "Champagne", key: "champagne" },
-  { name: "Gold", key: "gold" },
-];
-
-const looks = [
+const lookMeta = [
   {
     id: "ladies",
-    label: "Looks for the ladies",
-    heading: "ladies",
-    lead: "Opt for solid-coloured, monochromatic dresses in elegant styles.",
-    rest: " Long, flowy dresses, draped silhouettes, slip dresses and sophisticated co-ord sets are welcome.",
     items: [
-      { caption: "One-shoulder", colour: "Tiffany", src: ladies01OneShoulder, alt: "Woman in a Tiffany blue one-shoulder chiffon gown with a draped cape sleeve and a side slit" },
-      { caption: "Halter pleat", colour: "Seafoam", src: ladies02HalterPleat, alt: "Woman in a seafoam green halter-neck pleated maxi dress, holding a cream clutch" },
-      { caption: "Tiered", colour: "Champagne", src: ladies03Tiered, alt: "Woman in a champagne strappy maxi dress with a tiered ruffled skirt" },
-      { caption: "Flutter wrap", colour: "Gold", src: ladies04FlutterWrap, alt: "Woman in a gold flutter-sleeve wrap maxi dress with a side slit" },
-      { caption: "Flutter sleeve", colour: "Tiffany", src: ladies05FlutterSleeve, alt: "Woman in a Tiffany blue V-neck pleated maxi dress with sheer flutter sleeves" },
-      { caption: "Co-ord set", colour: "Seafoam", src: ladies06Coord, alt: "Woman in a seafoam green halter top and wide-leg trouser co-ord set" },
-      { caption: "Ruffle cascade", colour: "Champagne", src: ladies07RuffleCascade, alt: "Woman in a champagne strappy maxi dress with a cascading ruffle skirt" },
+      { src: ladies01OneShoulder }, { src: ladies02HalterPleat }, { src: ladies03Tiered }, { src: ladies04FlutterWrap }, { src: ladies05FlutterSleeve }, { src: ladies06Coord }, { src: ladies07RuffleCascade },
     ],
   },
   {
     id: "gentlemen",
-    label: "Looks for the gentlemen",
-    heading: "gentlemen",
-    lead: "Think relaxed sophistication.",
-    rest: " Wear a long-sleeve or short-sleeve dress shirt, a refined co-ord or a Chinese-collared top in our wedding colours.",
     items: [
-      { caption: "Long sleeves", colour: "Champagne", src: gents01LongSleeves, alt: "Man in a champagne long-sleeve linen shirt and cream trousers, a sage blazer over his arm" },
-      { caption: "Camp collar", colour: "Tiffany", src: gents02CampCollar, alt: "Man in a Tiffany blue short-sleeve camp-collar shirt with matching trousers" },
-      { caption: "Chinese collar", colour: "Champagne", src: gents03ChineseCollar, alt: "Man in a champagne Chinese-collared long-sleeve shirt with matching trousers" },
-      { caption: "Rolled sleeves", colour: "Seafoam", src: gents04RolledSleeves, alt: "Man in a seafoam green dress shirt with rolled sleeves and cream trousers" },
-      { caption: "Short sleeves", colour: "Gold", src: gents05ShortSleeves, alt: "Man in a gold short-sleeve shirt with cream trousers" },
-      { caption: "Light suit", colour: "Tiffany", src: gents06LightSuit, alt: "Man in a Tiffany blue suit over an open-collar champagne shirt" },
-      { caption: "Dress shirt", colour: "Seafoam", src: gents07DressShirt, alt: "Man in a seafoam green long-sleeve dress shirt with beige trousers" },
+      { src: gents01LongSleeves }, { src: gents02CampCollar }, { src: gents03ChineseCollar }, { src: gents04RolledSleeves }, { src: gents05ShortSleeves }, { src: gents06LightSuit }, { src: gents07DressShirt },
     ],
   },
 ];
 
-const notes = [
-  { label: "Tops", crossed: true, items: ["No T-shirts", "No polo shirts", "No multi-coloured", "No floral"] },
-  { label: "Bottoms", crossed: true, items: ["No shorts", "No black pants"] },
-  { label: "Footwear", crossed: false, items: ["Wear something appropriate for the church."] },
-];
+const [{ data }] = await getCollection("attire");
+const colours = data.colours;
+const looks = data.looks.map((look, index) => ({ ...look, items: look.items.map((item, itemIndex) => ({ ...item, ...lookMeta[index].items[itemIndex] })) }));
+const notes = data.notes;
 
 const holes = Array.from({ length: 8 });
 ---
 
-<section id="attire" class="attire_wrap">
+{!data.hidden && <section id="attire" class="attire_wrap">
   <div class="attire_layout">
     <header class="attire_header" data-fade-in>
-      <p class="attire_eyebrow" data-fade-in-item>Wedding attire guide</p>
+      <p class="attire_eyebrow" data-fade-in-item>{data.eyebrow}</p>
       <div class="attire_title-wrap" data-fade-in-item>
-        <h2 class="attire_title">Island <em>formal</em></h2>
+        <h2 class="attire_title">{data.titleBefore} <em>{data.titleEm}</em></h2>
         <p class="attire_accent">
           <svg class="attire_accent-arrow" viewBox="0 0 40 28" focusable="false" aria-hidden="true"><path d="M38 23 C27 23 12 18 5 5 M4 4 L6.5 15 M4 4 L15 7.5" fill="none" stroke="var(--accent-500)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-          <span class="attire_accent-text">Elegance meets<br />island charm.</span>
+          <span class="attire_accent-text">{data.accentBefore}<br />{data.accentAfter}</span>
         </p>
       </div>
-      <p class="attire_intro" data-fade-in-item>We invite you to dress in elevated, elegant attire with a relaxed island feel.</p>
-      <ul class="attire_colours" aria-label="Wedding colours" data-fade-in-item>
+      <p class="attire_intro" data-fade-in-item>{data.intro}</p>
+      <ul class="attire_colours" aria-label={data.coloursLabel} data-fade-in-item>
         {colours.map((colour) => (
           <li class="attire_colour">
             <span class={`attire_swatch attire_swatch-${colour.key}`} aria-hidden="true"></span>
@@ -88,13 +61,13 @@ const holes = Array.from({ length: 8 });
           </li>
         ))}
       </ul>
-      <p class="attire_suggestions" data-fade-in-item>The looks below are suggestions to inspire you. Any elegant style in our colours is welcome.</p>
+      <p class="attire_suggestions" data-fade-in-item>{data.suggestions}</p>
     </header>
 
     {looks.map((group) => (
       <div class="attire_looks" data-fade-in>
         <div class="attire_looks-header" data-fade-in-item>
-          <h3 class="attire_looks-title">For the <em>{group.heading}</em></h3>
+          <h3 class="attire_looks-title">{data.titlePrefix} <em>{group.heading}</em></h3>
           <p class="attire_looks-copy"><span>{group.lead}</span>{group.rest}</p>
         </div>
 
@@ -126,7 +99,7 @@ const holes = Array.from({ length: 8 });
                       />
                     </div>
                     <figcaption class="attire_caption">
-                      <span class="attire_caption-name">{look.caption}<span class="sr-only">, {look.colour}</span></span>
+                      <span class="attire_caption-name">{look.caption}<span class="sr-only">{data.colourSeparator}{look.colour}</span></span>
                       <span class={`attire_caption-dot attire_caption-dot-${look.colour.toLowerCase()}`} aria-hidden="true"></span>
                     </figcaption>
                   </figure>
@@ -140,10 +113,10 @@ const holes = Array.from({ length: 8 });
           <div class="attire_controls-row">
             <span class="attire_counter" data-gsap-slider-counter aria-live="polite">01 / {String(group.items.length).padStart(2, "0")}</span>
             <div class="attire_controls" data-gsap-slider-controls>
-              <button class="attire_control attire_control-prev" type="button" data-gsap-slider-control="prev" aria-label="Previous look">
+              <button class="attire_control attire_control-prev" type="button" data-gsap-slider-control="prev" aria-label={data.previous}>
                 <span class="attire_control-icon" aria-hidden="true"><Arrow /></span>
               </button>
-              <button class="attire_control attire_control-next" type="button" data-gsap-slider-control="next" aria-label="Next look">
+              <button class="attire_control attire_control-next" type="button" data-gsap-slider-control="next" aria-label={data.next}>
                 <span class="attire_control-icon" aria-hidden="true"><Arrow /></span>
               </button>
             </div>
@@ -156,7 +129,7 @@ const holes = Array.from({ length: 8 });
       <div class="attire_note">
         <span class="attire_note-tape" aria-hidden="true"></span>
         <span class="attire_note-holes" aria-hidden="true">{holes.map(() => <i></i>)}</span>
-        <h3 class="attire_note-title">Please take note</h3>
+        <h3 class="attire_note-title">{data.noteTitle}</h3>
         <div class="attire_note-groups">
           {notes.map((group) => (
             <div class="attire_note-group">
@@ -178,18 +151,18 @@ const holes = Array.from({ length: 8 });
           <Image
             class="attire_postmark"
             src={postmark}
-            alt="Strictly no white"
+            alt={data.postmarkAlt}
             width={340}
             height={254}
             densities={[1, 2]}
             loading="lazy"
           />
-          <p class="attire_note-sentence">Please reserve this colour for the newlyweds so they stand out in the crowd.</p>
+          <p class="attire_note-sentence">{data.noteSentence}</p>
         </div>
       </div>
     </div>
   </div>
-</section>
+</section>}
 
 <style>
   @layer components {

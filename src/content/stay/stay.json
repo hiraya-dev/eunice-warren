@@ -1,0 +1,35 @@
+{
+  "hidden": false,
+  "titleFirst": "Make it a",
+  "titleSecond": "weekend",
+  "description": "Three days, one island. Here’s how to get here. The field notes below cover what to do once you land.",
+  "directionsTitle": "Getting there",
+  "compass": {
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "W",
+    "whiteBeach": "WHITE BEACH",
+    "bearing": "BEARING 022°"
+  },
+  "steps": [
+    {
+      "number": "1",
+      "title": "Fly to Caticlan",
+      "body": "Caticlan (MPH) is the closest airport, about 1 hr from Manila or Cebu. Kalibo (KLO) has more flights but adds ~2 hrs by van to the jetty port.",
+      "detail": "~1 hr flight · MNL / CEB → MPH"
+    },
+    {
+      "number": "2",
+      "title": "Cross by boat",
+      "body": "From Caticlan Jetty Port, take the 15-min boat to Cagban Port. Pay the terminal and environmental fees at the counter, and bring a valid ID.",
+      "detail": "~15 min · Boats run 5 AM – 7 PM"
+    },
+    {
+      "number": "3",
+      "title": "Ride to your hotel",
+      "body": "Grab an e-trike from Cagban straight to your hotel. Most of us stay in Newcoast, near the wedding, from Jan 13 to 15. Then we move to the main beach (Stations 1 to 3) for Jan 15 to 17.",
+      "detail": "Newcoast Jan 13–15 · Main beach Jan 15–17"
+    }
+  ]
+}

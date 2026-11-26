@@ -3,13 +3,13 @@ import { expect, test } from "@playwright/test";
 import { reveal } from "./helpers/reveal";
 
 const attireSource = readFileSync("src/components/sections/Attire.astro", "utf8");
-const looksSource = attireSource.slice(
-  attireSource.indexOf("const looks ="),
-  attireSource.indexOf("const notes ="),
-);
-const lookGroupCount = (looksSource.match(/id: /g) ?? []).length;
-const lookItemCount =
-  (looksSource.match(/caption: /g) ?? []).length / lookGroupCount;
+const attireContent = JSON.parse(readFileSync("src/content/attire/attire.json", "utf8")) as {
+  looks: { items: unknown[] }[];
+  notes: { label: string; items: string[] }[];
+  postmarkAlt: string;
+};
+const lookGroupCount = attireContent.looks.length;
+const lookItemCount = attireContent.looks[0].items.length;
 
 // The viewport width at which the row switches from the swipe slider to two clotheslines.
 const twoLineRem = Number(
@@ -19,10 +19,7 @@ const twoLinePx = twoLineRem * 16;
 const pad2 = (value: number) => String(value).padStart(2, "0");
 
 function sourceListCount(label: string) {
-  const block = attireSource.match(
-    new RegExp(`label: "${label}"[\\s\\S]*?items: \\[([^\\]]+)\\]`),
-  )?.[1];
-  return block?.match(/"[^"]+"/g)?.length ?? 0;
+  return attireContent.notes.find((note) => note.label === label)?.items.length ?? 0;
 }
 
 test.describe("attire section", () => {
@@ -80,7 +77,7 @@ test.describe("attire section", () => {
       await expect(items).toHaveCount(count);
       await expect(items.locator("svg[aria-hidden=true]")).toHaveCount(count);
     }
-    await expect(note.locator(".attire_postmark")).toHaveAttribute("alt", "Strictly no white");
+    await expect(note.locator(".attire_postmark")).toHaveAttribute("alt", attireContent.postmarkAlt);
   });
 
   test("advances the mobile slider and updates its counter", { tag: ["@sweep"] }, async ({ page }) => {

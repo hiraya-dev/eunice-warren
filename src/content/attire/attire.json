@@ -1,0 +1,148 @@
+{
+  "hidden": false,
+  "eyebrow": "Wedding attire guide",
+  "titleBefore": "Island",
+  "titleEm": "formal",
+  "accentBefore": "Elegance meets",
+  "accentAfter": "island charm.",
+  "intro": "We invite you to dress in elevated, elegant attire with a relaxed island feel.",
+  "coloursLabel": "Wedding colours",
+  "colours": [
+    {
+      "name": "Tiffany blue",
+      "key": "tiffany"
+    },
+    {
+      "name": "Seafoam green",
+      "key": "seafoam"
+    },
+    {
+      "name": "Champagne",
+      "key": "champagne"
+    },
+    {
+      "name": "Gold",
+      "key": "gold"
+    }
+  ],
+  "suggestions": "The looks below are suggestions to inspire you. Any elegant style in our colours is welcome.",
+  "looks": [
+    {
+      "id": "ladies",
+      "label": "Looks for the ladies",
+      "heading": "ladies",
+      "lead": "Opt for solid-coloured, monochromatic dresses in elegant styles.",
+      "rest": " Long, flowy dresses, draped silhouettes, slip dresses and sophisticated co-ord sets are welcome.",
+      "items": [
+        {
+          "caption": "One-shoulder",
+          "colour": "Tiffany",
+          "alt": "Woman in a Tiffany blue one-shoulder chiffon gown with a draped cape sleeve and a side slit"
+        },
+        {
+          "caption": "Halter pleat",
+          "colour": "Seafoam",
+          "alt": "Woman in a seafoam green halter-neck pleated maxi dress, holding a cream clutch"
+        },
+        {
+          "caption": "Tiered",
+          "colour": "Champagne",
+          "alt": "Woman in a champagne strappy maxi dress with a tiered ruffled skirt"
+        },
+        {
+          "caption": "Flutter wrap",
+          "colour": "Gold",
+          "alt": "Woman in a gold flutter-sleeve wrap maxi dress with a side slit"
+        },
+        {
+          "caption": "Flutter sleeve",
+          "colour": "Tiffany",
+          "alt": "Woman in a Tiffany blue V-neck pleated maxi dress with sheer flutter sleeves"
+        },
+        {
+          "caption": "Co-ord set",
+          "colour": "Seafoam",
+          "alt": "Woman in a seafoam green halter top and wide-leg trouser co-ord set"
+        },
+        {
+          "caption": "Ruffle cascade",
+          "colour": "Champagne",
+          "alt": "Woman in a champagne strappy maxi dress with a cascading ruffle skirt"
+        }
+      ]
+    },
+    {
+      "id": "gentlemen",
+      "label": "Looks for the gentlemen",
+      "heading": "gentlemen",
+      "lead": "Think relaxed sophistication.",
+      "rest": " Wear a long-sleeve or short-sleeve dress shirt, a refined co-ord or a Chinese-collared top in our wedding colours.",
+      "items": [
+        {
+          "caption": "Long sleeves",
+          "colour": "Champagne",
+          "alt": "Man in a champagne long-sleeve linen shirt and cream trousers, a sage blazer over his arm"
+        },
+        {
+          "caption": "Camp collar",
+          "colour": "Tiffany",
+          "alt": "Man in a Tiffany blue short-sleeve camp-collar shirt with matching trousers"
+        },
+        {
+          "caption": "Chinese collar",
+          "colour": "Champagne",
+          "alt": "Man in a champagne Chinese-collared long-sleeve shirt with matching trousers"
+        },
+        {
+          "caption": "Rolled sleeves",
+          "colour": "Seafoam",
+          "alt": "Man in a seafoam green dress shirt with rolled sleeves and cream trousers"
+        },
+        {
+          "caption": "Short sleeves",
+          "colour": "Gold",
+          "alt": "Man in a gold short-sleeve shirt with cream trousers"
+        },
+        {
+          "caption": "Light suit",
+          "colour": "Tiffany",
+          "alt": "Man in a Tiffany blue suit over an open-collar champagne shirt"
+        },
+        {
+          "caption": "Dress shirt",
+          "colour": "Seafoam",
+          "alt": "Man in a seafoam green long-sleeve dress shirt with beige trousers"
+        }
+      ]
+    }
+  ],
+  "previous": "Previous look",
+  "next": "Next look",
+  "noteTitle": "Please take note",
+  "notes": [
+    {
+      "label": "Tops",
+      "crossed": true,
+      "items": [
+        "No T-shirts",
+        "No polo shirts",
+        "No multi-coloured",
+        "No floral"
+      ]
+    },
+    {
+      "label": "Bottoms",
+      "crossed": true,
+      "items": ["No shorts", "No black pants"]
+    },
+    {
+      "label": "Footwear",
+      "crossed": false,
+      "items": ["Wear something appropriate for the church."]
+    }
+  ],
+  "postmarkAlt": "Strictly no white",
+  "noteSentence": "Please reserve this colour for the newlyweds so they stand out in the crowd.",
+  "titlePrefix": "For the",
+  "colourSeparator": ", "
+}
