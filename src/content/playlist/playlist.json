@@ -1,0 +1,28 @@
+{
+  "hidden": false,
+  "copy": {
+    "titleBefore": "What gets",
+    "titleAfter": "you dancing?",
+    "eyebrow": "SIDE A · LISTEN ALONG",
+    "listenTitle": "Side A · Boracay ’27",
+    "listenBody": "Press play below and the needle drops. Every song you send lands on it.",
+    "spotifyLabel": "Spotify playlist",
+    "unavailable": "Playlist unavailable right now.",
+    "success": "It's on Side A. See you on the dance floor!",
+    "requestTitle": "Request a song",
+    "requestBody": "Tell our DJ the song that gets you on the dance floor. We'll play as many requests as we can at the reception.",
+    "nameLabel": "Your name",
+    "songLabel": "Song",
+    "songPlaceholder": "Song title",
+    "suggestionsLabel": "Song suggestions",
+    "notListed": "Not listed? Just keep typing.",
+    "spotifyLink": "Open on Spotify",
+    "spotifyBrand": "SPOTIFY",
+    "artistLabel": "Artist (optional)",
+    "artistPlaceholder": "Who sings it",
+    "dedicationLabel": "Dedication (optional)",
+    "submit": "Add it to Side A",
+    "searchCount": "suggestions",
+    "error": "Something went wrong. Please try again."
+  }
+}

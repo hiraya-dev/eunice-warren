@@ -640,3 +640,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** `grep -rnE 'trivial|workflow\|docs|full tier|full .gate' CLAUDE.md .agents/skills .claude/agents` shows the new name wherever the old ones are listed.
 - **Guard:** none
 - **Paths:** `scripts/ci/classify-paths.mjs`, `.github/workflows/ci.yml`, `CLAUDE.md`, `.agents/skills/review-pr/**`, `.agents/skills/local-checks/**`, `.claude/agents/pr-reviewer.md`
+
+### L-070 — Moving copy to JSON gives each string its own key
+- **Date:** 2026-11-26
+- **Trigger:** #147 CHANGES_REQUIRED
+- **Symptom:** In the copy-to-JSON move, two different client-script messages ("Add a name or untick this seat." and "Please enter a name.") shared one key, so the blank-seat error changed wording. A duplicate `"done"` key also made "3 of 3 · Done" render "Done", and a new `body` key overwrote an existing one. The rendered-HTML compare missed all three, because client scripts write those strings after an interaction, or because the last duplicate wins without an error.
+- **Root cause:** Keys were picked by meaning rather than by string, JSON allows duplicate keys silently, and `z.record` schemas accept any key.
+- **Rule:** Give every moved string its own key, even when two strings look alike. Name each collection's keys in a strict `z.object` (never `z.record`). For client-script strings, diff each old literal against its new JSON value, because the HTML compare cannot see them. Pass dynamic values to `.replace` with a function (`() => name`), so a `$` in a guest's name stays literal.
+- **Check:** Every string literal removed in the diff appears verbatim in the JSON. A duplicate-key scan of `src/content/**/*.json` finds none. No schema in `src/content.config.ts` uses `z.record` for copy.
+- **Guard:** none
+- **Paths:** `src/content/**`, `src/content.config.ts`, `src/components/**`

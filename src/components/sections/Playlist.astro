@@ -7,9 +7,13 @@ import Textarea from "@/components/form/Textarea.astro";
 import stamp from "@/assets/images/stamps/paraw.jpg";
 import postcardPaper from "@/assets/textures/postcard-paper.jpg";
 import { PLAYLIST_URI } from "@/settings/playlist.ts";
+import { getCollection } from "astro:content";
+
+const [{ data }] = await getCollection("playlist");
+const copy = data.copy;
 ---
 
-<section
+{!data.hidden && <section
   id="playlist"
   class="playlist_wrap theme-light"
   style="scroll-margin-top: var(--nav-height)"
@@ -17,7 +21,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
   <div class="playlist_layout">
     <div class="playlist_left">
       <header class="playlist_header" data-fade-in>
-        <h2 class="playlist_title" data-fade-in-item>What gets<br />you dancing?</h2>
+        <h2 class="playlist_title" data-fade-in-item>{copy.titleBefore}<br />{copy.titleAfter}</h2>
       </header>
       <div class="playlist_player" data-fade-in data-fade-in-item>
         <div class="playlist_player-row">
@@ -127,19 +131,16 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
           </div>
           <div class="playlist_listen-copy">
             <div class="playlist_eyebrow">
-              <span aria-hidden="true"></span>SIDE A · LISTEN ALONG
-            </div><h3>Side A · Boracay ’27</h3><p>
-              Press play below and the needle drops. Every song you send lands
-              on it.
-            </p>
+              <span aria-hidden="true"></span>{copy.eyebrow}
+            </div><h3>{copy.listenTitle}</h3><p>{copy.listenBody}</p>
           </div>
           <div
             class="playlist_embed"
             data-playlist-embed
             data-uri={PLAYLIST_URI}
-            aria-label="Spotify playlist"
+            aria-label={copy.spotifyLabel}
           >
-            <span>Playlist unavailable right now.</span>
+            <span>{copy.unavailable}</span>
             <div data-playlist-embed-target></div>
           </div>
         </div>
@@ -147,7 +148,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
     </div>
     <Form
       name="song-request"
-      successMessage="It's on Side A. See you on the dance floor!"
+      successMessage={copy.success}
       class="playlist_form-wrap"
       data-fade-in
       data-fade-in-item
@@ -160,53 +161,53 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       >
         <div class="playlist_stamp"><Stamp><Image src={stamp} alt="" width={72} height={93} densities={[1, 2]} aria-hidden="true" /></Stamp></div><div class="playlist_postcard-intro">
           <h3 class="playlist_postcard-title" id="playlist-postcard-title">
-            Request a song
+            {copy.requestTitle}
           </h3>
           <p class="playlist_postcard-text">
-            Tell our DJ the song that gets you on the dance floor. We'll play as
-            many requests as we can at the reception.
+            {copy.requestBody}
           </p>
         </div><Input
           appearance="postcard"
-          label="Your name"
+          label={copy.nameLabel}
           name="name"
           placeholder=""
           required
         /><div class="song-search_field"><Input
           appearance="postcard"
-          label="Song"
+          label={copy.songLabel}
           name="song"
           id="song-request-song"
           required
-          placeholder="Song title"
+          placeholder={copy.songPlaceholder}
           autocomplete="off"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded="false"
           aria-controls="song-request-suggestions"
-        /><div class="song-search_popup" data-song-search-popup hidden><div id="song-request-suggestions" class="song-search_list" role="listbox" aria-label="Song suggestions"></div><div class="song-search_footer"><span>Not listed? Just keep typing.</span><a class="song-search_credit" href="https://open.spotify.com/" target="_blank" rel="noopener" aria-label="Open on Spotify" data-song-search-credit><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 9.5c3.8-1 7.1-.5 10 1M7.5 13c3.1-.7 5.8-.3 8.4 1M8.5 16c2.2-.3 4.1.1 5.9 1"/></svg><span>SPOTIFY</span></a></div></div><div class="sr-only" aria-live="polite" data-song-search-live></div></div><input type="hidden" name="spotifyTrackId" /><input type="hidden" name="coverUrl" /><Input
+        /><div class="song-search_popup" data-song-search-popup hidden><div id="song-request-suggestions" class="song-search_list" role="listbox" aria-label={copy.suggestionsLabel}></div><div class="song-search_footer"><span>{copy.notListed}</span><a class="song-search_credit" href="https://open.spotify.com/" target="_blank" rel="noopener" aria-label={copy.spotifyLink} data-song-search-credit><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 9.5c3.8-1 7.1-.5 10 1M7.5 13c3.1-.7 5.8-.3 8.4 1M8.5 16c2.2-.3 4.1.1 5.9 1"/></svg><span>{copy.spotifyBrand}</span></a></div></div><div class="sr-only" aria-live="polite" data-song-search-live></div></div><input type="hidden" name="spotifyTrackId" /><input type="hidden" name="coverUrl" /><Input
           appearance="postcard"
-          label="Artist (optional)"
+          label={copy.artistLabel}
           name="artist"
-          placeholder="Who sings it"
+          placeholder={copy.artistPlaceholder}
         /><Textarea
           appearance="postcard"
-          label="Dedication (optional)"
+          label={copy.dedicationLabel}
           name="dedication"
           minLines={4}
           maxLines={6}
-        /><button class="playlist_submit" type="submit">Add it to Side A</button
+        /><button class="playlist_submit" type="submit">{copy.submit}</button
         ><div class="playlist_turnstile" data-playlist-turnstile></div>
       </div>
     </Form>
   </div>
   <div class="playlist_scallop" aria-hidden="true"></div>
-</section>
+</section>}
 
 <script>
   import { getGuest } from "@/lib/guest";
   import { actions } from "astro:actions";
   import { createTurnstileController, isFakeTurnstileMode } from "@/scripts/turnstile";
+  import copy from "@/content/playlist/playlist.json";
   const initPlaylist = () => {
     const section = document.querySelector<HTMLElement>("#playlist");
     if (!section || section.dataset.playlistInitialized === "true") return;
@@ -238,7 +239,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
       });
       if (suggestions.length) {
         if (credit) credit.href = `https://open.spotify.com/track/${suggestions[highlighted >= 0 ? highlighted : 0].id}`;
-        if (popup) popup.hidden = false; songInput.setAttribute("aria-expanded", "true"); if (highlighted >= 0) songInput.setAttribute("aria-activedescendant", `song-search-option-${highlighted}`); live && (live.textContent = `${suggestions.length} suggestions`);
+        if (popup) popup.hidden = false; songInput.setAttribute("aria-expanded", "true"); if (highlighted >= 0) songInput.setAttribute("aria-activedescendant", `song-search-option-${highlighted}`); live && (live.textContent = `${suggestions.length} ${copy.copy.searchCount}`);
       } else { closeSuggestions(); if (live) live.textContent = ""; }
     };
     // Bumping the sequence makes any pending search response stale, so a closed list never reopens.
@@ -270,7 +271,7 @@ import { PLAYLIST_URI } from "@/settings/playlist.ts";
         form.reset(); clearPicked(); dismissSuggestions();
       } catch (error) {
         if (wrap) wrap.dataset.state = "failed";
-        if (failed) { failed.textContent = error instanceof Error ? error.message : "Something went wrong. Please try again."; failed.hidden = false; }
+        if (failed) { failed.textContent = error instanceof Error ? error.message : copy.copy.error; failed.hidden = false; }
       } finally { turnstile.reset(); submit.disabled = false; }
     });
     const onGuest = (event: Event) => {

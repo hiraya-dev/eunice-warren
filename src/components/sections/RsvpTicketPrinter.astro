@@ -2,11 +2,15 @@
 import Modal from "@/components/interactive/Modal.astro";
 import postcardPaper from "@/assets/textures/postcard-paper.jpg";
 import { RSVP_EVENT } from "@/lib/rsvp/event";
+import { getCollection } from "astro:content";
+
+const [{ data }] = await getCollection("rsvpTicket");
+const copy = data.copy;
 ---
 
-<Modal
+{!data.hidden && <Modal
   id="rsvp-ticket-modal"
-  label="Your Boracay admission ticket"
+  label={copy.modalLabel}
   variant="full-screen"
 >
   <div
@@ -16,15 +20,15 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
   >
     <div class="ticket-popup_bar">
       <span
-        >✓ RSVP RECEIVED <span class="ticket-popup_number">· Nº 011427</span
+        >{copy.received} <span class="ticket-popup_number">{copy.number}</span
         ></span
       >
       <button
         class="ticket-popup_close"
         type="button"
         data-modal-close
-        aria-label="Close ticket"
-        ><span aria-hidden="true">CLOSE</span><i aria-hidden="true">×</i
+        aria-label={copy.close}
+        ><span aria-hidden="true">{copy.closeText}</span><i aria-hidden="true">×</i
         ></button
       >
     </div>
@@ -32,15 +36,14 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       <div class="ticket-popup_message">
         <h2 data-ticket-heading></h2>
         <p data-ticket-body>
-          Your ticket is fresh off the press. Save it for the big day, and
-          change your answer any time before December 12.
+          {copy.body}
         </p>
         <div class="ticket-popup_actions">
           <button type="button" class="ticket-popup_save" data-ticket-save
-            >Save my ticket ↓</button
+            >{copy.save}</button
           >
-          <button type="button" data-ticket-calendar>ADD TO CALENDAR ↗</button>
-          <button type="button" data-ticket-edit>EDIT MY RSVP</button>
+          <button type="button" data-ticket-calendar>{copy.calendar}</button>
+          <button type="button" data-ticket-edit>{copy.edit}</button>
         </div>
         <p class="ticket-popup_error" data-ticket-error hidden></p>
       </div>
@@ -49,16 +52,16 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
           <div class="ticket-popup_machine">
             <div class="ticket-popup_machine-head">
               <div class="ticket-popup_machine-brand">
-                <div class="ticket-popup_postmark">W&amp;E</div><div>
-                  <b>BORACAY TICKET OFFICE</b><span>EST. 14 · 01 · 2027</span>
+                <div class="ticket-popup_postmark">{copy.coupleFirst[0]}&amp;{copy.coupleSecond[0]}</div><div>
+                  <b>{copy.office}</b><span>{copy.established}</span>
                 </div>
-              </div><div class="ticket-popup_on">ON <i></i></div>
+              </div><div class="ticket-popup_on">{copy.on} <i></i></div>
             </div>
             <div class="ticket-popup_screen">
               <div class="ticket-popup_guest">
                 <div>
                   <strong data-ticket-names></strong><span
-                    >JOYFULLY ACCEPTS</span>
+                    >{copy.accepts}</span>
                 </div><strong class="ticket-popup_count" data-ticket-count
                 ></strong>
               </div><div
@@ -78,7 +81,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
                 class="ticket-popup_ticket-body"
               >
                 <div class="ticket-popup_ticket-top">
-                  <span>RSVP Nº 011427</span><span>BORACAY · PH</span>
+                  <span>{copy.rsvpNumber}</span><span>{copy.location}</span>
                 </div><svg viewBox="0 0 196 150" aria-hidden="true"
                   ><g
                     fill="none"
@@ -100,19 +103,19 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
                     r="13"
                     fill="var(--light-100)"></circle></svg
                 ><div class="ticket-popup_ticket-names">
-                  <strong>Warren<br />&amp; Eunice</strong><span
+                  <strong>{copy.coupleFirst}<br />&amp; {copy.coupleSecond}</strong><span
                     data-ticket-names-line></span>
                 </div><div class="ticket-popup_ticket-meta">
-                  <span><small>DATE</small><b>{RSVP_EVENT.dateLabel}</b></span
-                  ><span><small>VOWS</small><b>{RSVP_EVENT.vowsLabel}</b></span
+                  <span><small>{copy.date}</small><b>{RSVP_EVENT.dateLabel}</b></span
+                  ><span><small>{copy.vows}</small><b>{RSVP_EVENT.vowsLabel}</b></span
                   ><span
-                    ><small>DRESS</small><b>{RSVP_EVENT.dressLabel}</b></span>
+                    ><small>{copy.dress}</small><b>{RSVP_EVENT.dressLabel}</b></span>
                 </div>
               </div><div class="ticket-popup_stub">
                 <div>
-                  <span>ADMIT</span><strong data-ticket-admit></strong>
+                  <span>{copy.admit}</span><strong data-ticket-admit></strong>
                 </div><div>
-                  <span>REFERENCE</span><strong data-ticket-reference></strong>
+                  <span>{copy.reference}</span><strong data-ticket-reference></strong>
                 </div><div class="ticket-popup_barcode"></div>
               </div>
             </div>
@@ -126,7 +129,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       aria-hidden="true"
     ></div>
   </div>
-</Modal>
+</Modal>}
 
 <script>
   import {
@@ -136,6 +139,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
     ticketNames,
     ticketReference,
   } from "@/lib/rsvp/event";
+  import copy from "@/content/rsvp-ticket/rsvp-ticket.json";
   type TicketDetail = {
     inviteId: string;
     matchedName: string;
@@ -229,10 +233,10 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       popup.dataset.stage = name;
       status.textContent =
         name === "processing"
-          ? "SAVING TO THE GUEST LIST"
+          ? copy.copy.saving
           : name === "printing"
-            ? "PRINTING YOUR TICKET"
-            : "TICKET PRINTED · SEE YOU THERE";
+            ? copy.copy.printing
+            : copy.copy.printed;
       icon.innerHTML =
         name === "printed"
           ? '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m4 7.2 2.2 2L10 5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
@@ -314,13 +318,15 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
       detail = (event as CustomEvent<TicketDetail>).detail;
       if (!detail) return;
       const names = ticketNames(detail.names);
+      const firstName = detail.matchedName.split(" ")[0];
+      const deadline = detail.deadline;
       modal.querySelector("[data-ticket-heading]")!.textContent =
-        `See you in Boracay, ${detail.matchedName.split(" ")[0]}.`;
+        copy.copy.headingTemplate.replace("{name}", () => firstName);
       modal.querySelector("[data-ticket-body]")!.textContent =
-        `Your ticket is fresh off the press. Save it for the big day, and change your answer any time before ${detail.deadline}.`;
+        copy.copy.bodyTemplate.replace("{deadline}", () => deadline);
       modal.querySelector("[data-ticket-names]")!.textContent = names;
       modal.querySelector("[data-ticket-names-line]")!.textContent =
-        `${names} · Joyfully accepts`;
+        copy.copy.namesLine.replace("{names}", () => names);
       modal.querySelector("[data-ticket-count]")!.textContent =
         `×${detail.guests}`;
       modal.querySelector("[data-ticket-admit]")!.textContent = seatWord(
@@ -372,7 +378,7 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
           modal.querySelector<HTMLButtonElement>("[data-ticket-save]")!;
         const error = modal.querySelector<HTMLElement>("[data-ticket-error]")!;
         button.disabled = true;
-        button.textContent = "Saving…";
+        button.textContent = copy.copy.savingButton;
         error.hidden = true;
         ticket.classList.add("is-capture");
         try {
@@ -419,12 +425,12 @@ import { RSVP_EVENT } from "@/lib/rsvp/event";
           link.download = ticketFilename(detail.inviteId);
           link.click();
         } catch {
-          error.textContent = "Couldn't save. Try a screenshot instead.";
+          error.textContent = copy.copy.saveError;
           error.hidden = false;
         } finally {
           ticket.classList.remove("is-capture");
           button.disabled = false;
-          button.textContent = "Save my ticket ↓";
+          button.textContent = copy.copy.save;
         }
       });
     let tiltEvent: PointerEvent | null = null;

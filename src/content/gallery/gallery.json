@@ -1,0 +1,28 @@
+{
+  "hidden": false,
+  "copy": {
+    "eyebrow": "The photos",
+    "titleBefore": "Wander through",
+    "titleEm": "our album",
+    "bodyBefore": "Every photo we couldn't choose between, scattered like polaroids on a desk. ",
+    "fineAction": "Drag",
+    "coarseAction": "Swipe",
+    "bodyAfter": " around and get a little lost.",
+    "open": "Step inside",
+    "note": "Opens full screen",
+    "noteExtra": " · drag, scroll or pinch",
+    "overlayLabel": "Photo gallery",
+    "logo": "W & E",
+    "countLong": "The photos ·",
+    "countShort": "photos",
+    "back": "Back to the site",
+    "fineHint": "Drag or scroll to wander · Tap a photo to open",
+    "coarseHint": "Swipe to wander · Tap to open",
+    "hover": "Open · 000",
+    "controls": "Photo controls",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "save": "Save",
+    "close": "Close photo"
+  }
+}
