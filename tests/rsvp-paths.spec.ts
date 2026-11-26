@@ -23,7 +23,6 @@ const withLimLock = async (run: () => Promise<void>) => {
       try {
         if (Date.now() - statSync(limLock).mtimeMs > 60_000) rmSync(limLock, { recursive: true, force: true });
       } catch {
-        // Released between calls; retry.
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -34,7 +33,6 @@ const withLimLock = async (run: () => Promise<void>) => {
     rmSync(limLock, { recursive: true, force: true });
   }
 };
-// The ticket prints first names only (RsvpTicketPrinter.astro).
 const firstName = (name: string) => name.split(" ")[0];
 
 async function findInvite(
@@ -77,8 +75,6 @@ test.describe("RSVP paths", () => {
     await findInvite(page, cruz.members[0], cruz);
 
     const count = section.locator("[data-rsvp-count]");
-    // Every named member starts ticked; open seats do not (L-021: the expected
-    // count comes from the fixture, never from the async label).
     const initialCount = cruz.members.length;
     await expect(count).toHaveText(`${initialCount} of ${cruz.seats} seats`);
 
@@ -143,7 +139,6 @@ test.describe("RSVP paths", () => {
       .click();
     await section.locator("[aria-label='Name for seat 2']").fill(newName);
     const done = section.getByRole("button", { name: `Done editing ${oldName}` });
-    // Escape #82: the label sat flush against the button's left edge.
     const inset = await done.evaluate((button) => {
       const range = document.createRange();
       range.selectNodeContents(button);

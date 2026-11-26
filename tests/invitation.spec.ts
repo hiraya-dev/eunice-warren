@@ -6,7 +6,6 @@ test.describe("invitation section", () => {
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
-      // The title rises 24px as it fades in (L-029); measure it once it has settled.
       await reveal(page.locator(".invitation_title"));
       const positions = await page.evaluate(() => {
         const title = document.querySelector<HTMLElement>(".invitation_title")!.getBoundingClientRect();
@@ -26,15 +25,12 @@ test.describe("invitation section", () => {
     await page.goto("/");
     const link = page.locator("#invitation a").first();
     const item = link.locator("xpath=ancestor-or-self::*[@data-fade-in-item][1]");
-    // No scroll: the section has not reached its trigger, so its items are still faded out.
     await expect(link).toBeAttached();
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     expect(await item.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(1);
 
-    // Faded items must stay in the tab order and the accessibility tree (no visibility: hidden).
     await link.focus();
     await expect(link).toBeFocused();
-    // Focus finishes that section's reveal at once, so the focus ring never sits on invisible content.
     await expect(item).toHaveCSS("opacity", "1", { timeout: 2_000 });
   });
 
@@ -52,7 +48,6 @@ test.describe("invitation section", () => {
       await page.goto("/");
       await reveal(page.locator(".invitation_ticket-wrap"));
       const metrics = await page.evaluate(() => {
-        // offsetTop is layout position, unaffected by the ticket's -1.5deg rotation.
         const airports = [...document.querySelectorAll<HTMLElement>(".invitation_airport")].map((element) => element.offsetTop);
         const stubLabel = document.querySelector<HTMLElement>(".invitation_ticket-stub span")!.getBoundingClientRect();
         return { airportTopDelta: Math.abs(airports[0] - airports[1]), stubLabelHeight: stubLabel.height };
@@ -108,8 +103,6 @@ test.describe("invitation section", () => {
       return dashLength / path.getTotalLength();
     });
 
-    // Start with the calendar just below the viewport so the samples span the whole draw
-    // on every layout (the one-column page is much taller than 36 wheel steps).
     await page.evaluate(() => {
       const top = document.querySelector(".invitation_calendar")!.getBoundingClientRect().top + window.scrollY;
       window.scrollTo(0, Math.max(0, top - window.innerHeight));

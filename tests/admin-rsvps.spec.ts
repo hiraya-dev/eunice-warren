@@ -53,8 +53,6 @@ const withTemporaryRsvpHousehold = async (
     try {
       await page.goto(`/admin/guests?new=1&q=${encodeURIComponent(prefix)}`);
       const form = page.locator("[data-new-household]");
-      // Save takes a name still in the input, with or without JS (the no-JS
-      // "Add" button doesn't exist once the chips script runs).
       await form.locator("[name='member_input']").fill(`Ari ${prefix}`);
       await form.getByRole("button", { name: "Save", exact: true }).click();
       const row = page
@@ -147,7 +145,6 @@ test.describe("admin RSVPs", () => {
     let widths = await borders();
     expect(widths.at(-1)).toBe("0px");
     expect(widths.slice(0, -1).every((width) => width !== "0px")).toBe(true);
-    // Search hides the rows after a match; the match becomes the last one.
     await page.locator("[data-admin-search]").fill("liza@example.com");
     widths = await borders();
     expect(widths).toEqual(["0px"]);
@@ -183,9 +180,6 @@ test.describe("admin RSVPs", () => {
     await expect(drawer.locator("h2")).toBeFocused();
     const focusable =
       "a,button:not([disabled]),input:not([type='hidden']):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])";
-    // Tab until focus comes back to the first element it reached: that is the
-    // wrap. Every step must stay inside the dialog (L-050). The bound is the
-    // number of candidates, hidden ones included, plus one.
     const assertWrap = async (direction: "forward" | "backward") => {
       const key = direction === "forward" ? "Tab" : "Shift+Tab";
       const count = await drawer.locator(focusable).count();
@@ -307,7 +301,6 @@ test.describe("admin RSVPs", () => {
       document.querySelectorAll<HTMLElement>("[data-admin-rsvp-link]")[1]?.click();
     });
     await expect(page.locator("[data-admin-drawer]:not([data-closing])")).toHaveCount(1);
-    // Past the closing drawer's 300ms fallback (wall clock, L-009).
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
     await expect(page.locator("[data-admin-drawer]")).toHaveCount(1);
     await expect(page.locator("html")).toHaveAttribute("data-admin-drawer-open", "");
@@ -431,13 +424,10 @@ test.describe("admin RSVPs", () => {
     };
     page.on("dialog", accept);
     try {
-      // The scrim covers the sidebar while the drawer is open, so the link is
-      // clicked from script, as a keyboard shortcut or extension would.
       await page
         .locator('[data-admin-nav] a[href="/admin/guests"]')
         .evaluate((link: HTMLAnchorElement) => link.click());
       await expect(page).toHaveURL(/\/admin\/guests/);
-      // One confirm, and no second "Leave site?" (beforeunload) prompt.
       expect(types).toEqual(["confirm"]);
     } finally {
       page.off("dialog", accept);
@@ -473,9 +463,6 @@ test.describe("admin RSVPs", () => {
   test("shows Saving while a dirty reply is submitting without a guard", async ({ page }) => {
     await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
     await page.locator('input[name="seat_name_1"]').fill("Changed and saved");
-    // Stop the browser's own submission at the form, so the page stays put and
-    // nothing is saved; the page's submit listener still runs (it sits on
-    // document). The real save path is covered by the save specs above.
     await page.evaluate(() => {
       document
         .querySelector(".admin-drawer_edit-form")!
@@ -513,7 +500,6 @@ test.describe("admin RSVPs", () => {
   });
 
   test("presses Save reply in to 0.97 and back on release", { tag: "@single" }, async ({ page }) => {
-    // Read-only: the pointer leaves the button before release, so nothing saves.
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
     const save = page.locator(".admin-drawer_edit-footer button");
@@ -528,7 +514,6 @@ test.describe("admin RSVPs", () => {
   });
 
   test("pins the edit footer to the sheet and keeps Save reply under no other layer",{ tag: "@single" }, async ({ page }) => {
-    // Read-only: opens the form and measures, never saves.
     const measure = () =>
       page.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
@@ -581,7 +566,6 @@ test.describe("admin RSVPs", () => {
   });
 
   test("shows a refused Save reply in place and still slides out when it closes", async ({ page }) => {
-    // A refused save writes nothing, so it needs no temporary household.
     page.on("dialog", (dialog) => void dialog.accept());
     await page.goto("/admin/rsvps?household=hh-ramos&edit=1");
     await page.locator('input[name="attending"][value="yes"]').check();
@@ -590,7 +574,6 @@ test.describe("admin RSVPs", () => {
     await page.getByRole("button", { name: "Save reply" }).click();
     await expect(page.locator(".admin-drawer_error").filter({ hasText: "Pick a slipper size" })).toBeVisible();
     await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(1);
-    // Read by the clock (L-009, L-026): nothing perceptible animates.
     const settled = await page.evaluate(() => {
       const perceptible = (selector: string) =>
         document
@@ -607,7 +590,6 @@ test.describe("admin RSVPs", () => {
       };
     });
     expect(settled).toEqual({ panel: 0, scrim: 0, name: "none" });
-    // The settled drawer still plays its 180ms exit.
     const exit = await page.evaluate(() => {
       const panel = document.querySelector<HTMLElement>(".admin-drawer_panel")!;
       document.querySelector<HTMLElement>(".admin-drawer_scrim")!.click();
@@ -658,8 +640,6 @@ test.describe("admin RSVPs", () => {
 
   test("Cancel, Escape, and Back return to the read view with filter and search", async ({ page }) => {
     await page.goto("/admin/rsvps?filter=attending&q=maria");
-    // Each step waits for the drawer swap to land before the next key or click
-    // (L-055: a key pressed before the swap acts on the previous drawer).
     const editForm = page.locator(".admin-drawer_edit-form");
     await page.locator("[data-admin-rsvp-link]").first().click();
     await expect(page.locator("[data-admin-drawer] h2")).toBeFocused();
@@ -702,7 +682,6 @@ test.describe("admin RSVPs", () => {
         await expect(page.locator('input[name="seat_name_1"]')).toHaveValue(`Stale draft ${prefix}`);
         await page.getByRole("button", { name: "Save reply" }).click();
         await expect(page.locator(".admin-drawer_stale")).toBeVisible();
-        // Nothing was written: the read view still holds only the other host's version.
         await page.goto(`/admin/rsvps?household=${id}`);
         await expect(page.locator("[data-admin-host-edit]")).toHaveCount(1);
       } finally {
@@ -721,7 +700,6 @@ test.describe("admin RSVPs", () => {
         await page.locator(`input[name="seat_attending_${seatId}"]`).check();
         await page.locator(`select[name="slipper_size_${seatId}"]`).selectOption("W 7");
       }
-      // Hidden inputs can't be filled; set them the way a crafted POST would.
       await page.evaluate((token) => {
         const form = document.querySelector<HTMLFormElement>(".admin-drawer_edit-form")!;
         form.querySelector<HTMLInputElement>('input[name="id"]')!.value = "hh-admin-editor";

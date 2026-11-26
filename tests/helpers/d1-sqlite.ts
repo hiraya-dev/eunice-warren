@@ -62,7 +62,6 @@ export class SqliteD1 implements D1Database {
     } catch { return { rows_read: 0, rows_written: 0 }; }
   }
   applyMigration(path = "migrations/0000_init.sql") {
-    // The default applies every migration in order, so tests see the current schema.
     const paths = path === "migrations/0000_init.sql"
       ? readdirSync("migrations").filter((name) => name.endsWith(".sql")).sort().map((name) => `migrations/${name}`)
       : [path];

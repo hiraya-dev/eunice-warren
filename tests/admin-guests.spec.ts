@@ -34,8 +34,6 @@ const twoMemberFixture = fakeAdminFixtures.find(
   (row) => row.id === "hh-merly-ben",
 )!;
 
-// The fake store outlives a project run and refuses a repeat name as already
-// invited, so each test saves a surname of its own (letters only).
 const uniqueSurname = (
   testInfo: Pick<TestInfo, "project" | "workerIndex" | "retry">,
 ) =>
@@ -173,7 +171,6 @@ test.describe("guest list rows", () => {
     await page.goto("/admin/guests");
     const tabbar = page.locator("[data-admin-tabbar]");
     const menu = page.locator("[data-admin-household]:visible").last().locator("details");
-    // The numbered fixture labels end before the three editor/activity fixtures.
     for (const query of ["", "-0"]) {
       await page.locator("[data-admin-search]").fill(query);
       if (query) {
@@ -211,8 +208,6 @@ test.describe("guest list rows", () => {
   test("keeps every row menu button clear of its RSVP pill", async ({
     page,
   }) => {
-    // The pill carries the seat count now, so it is wider; at 1344 and up the
-    // menu sits absolutely at the cell's right edge and must not sit under it.
     for (const width of [390, 1344, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/admin/guests");
@@ -237,8 +232,6 @@ test.describe("guest list rows", () => {
 
   test("opens a row menu with a 140ms opacity and scale entrance from the button", { tag: ["@single"] }, async ({ page }) => {
     const ease = "cubic-bezier(0.23, 1, 0.32, 1)";
-    // Open in the same turn that reads the transitions (L-060), then read where
-    // the popover scales from once the page script has decided up or down.
     const open = (last: boolean) =>
       page.evaluate((useLast) => {
         const rows = [...document.querySelectorAll<HTMLElement>("[data-admin-household]")].filter(
@@ -299,7 +292,6 @@ test.describe("guest list rows", () => {
       const where = await origin(last);
       expect(where.x, label).toBeCloseTo(1, 1);
       expect(where.y, label).toBeCloseTo(y, 1);
-      // Settled: the entrance leaves nothing behind.
       await expect
         .poll(
           () =>
@@ -381,7 +373,6 @@ test.describe("guest list rows", () => {
     await add.hover();
     await page.mouse.down();
     await expect.poll(scale).toBe("0.97");
-    // Leave the button before release so the press does not open the drawer.
     const parent = (await add.locator("..").boundingBox())!;
     await page.mouse.move(parent.x + 2, parent.y + 2);
     await page.mouse.up();
@@ -608,7 +599,6 @@ test.describe("guest list drawer", () => {
         await page.goto("/admin/guests?new=1");
         const panel = page.locator(".admin_guests_panel");
         await expect(panel).toBeVisible();
-        // The slide-in settles before the box is read.
         await expect
           .poll(async () => (await panel.boundingBox())?.x, {
             message: `${width}px panel position`,
@@ -665,8 +655,6 @@ test.describe("guest list drawer", () => {
         await expect(
           page.locator("[data-admin-drawer]:not([data-closing])"),
         ).toHaveCount(1);
-        // Past the closing drawer's 300ms fallback: its timer must not unlock
-        // the page under the new drawer (wall clock, L-009).
         await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
         await expect(page.locator("[data-admin-drawer]:not([data-closing])")).toHaveCount(1);
         await expect(page.locator("html")).toHaveAttribute("data-admin-drawer-open", "");
@@ -674,8 +662,6 @@ test.describe("guest list drawer", () => {
     },
   );
 
-  // The panel's perceptible animations by the clock (L-009, L-026): the
-  // entrance of a drawer the page just rendered, or the exit once it closes.
   const drawerMotion = (page: Page) =>
     page.evaluate(() => {
       const panel = document.querySelector<HTMLElement>(".admin_guests_panel");
@@ -729,7 +715,6 @@ test.describe("guest list drawer", () => {
         await page.setViewportSize({ width, height: 844 });
         await page.goto("/admin/guests");
 
-        // Opened by a click, the drawer still slides in (280ms phone, 240ms docked).
         const entrance = await page.evaluate(
           () =>
             new Promise<{ name: string; ms: number }[]>((resolve) => {
@@ -754,7 +739,6 @@ test.describe("guest list drawer", () => {
         ]);
         await expect(page.locator("[data-admin-drawer-settled]")).toHaveCount(0);
 
-        // An empty invitation name is refused: the server renders the same drawer again.
         for (const save of ["save_and_add", "save"]) {
           await page.goto("/admin/guests?new=1");
           const form = page.locator("[data-new-household]");
@@ -772,7 +756,6 @@ test.describe("guest list drawer", () => {
           else expect(Math.round(settled.top)).toBe(0);
         }
 
-        // The same for an edit form refused with an empty invitation name.
         await page.goto(`/admin/guests?edit=${editor.id}`);
         await page.locator("[name='display_name']").fill("");
         await page
@@ -784,14 +767,12 @@ test.describe("guest list drawer", () => {
         expect(edit.panel).toEqual([]);
         expect(edit.scrim).toEqual([]);
 
-        // The redirect after Save and add another continues the open drawer.
         await page.goto("/admin/guests?new=1&added=Someone");
         await expect(page.locator("[data-admin-added]")).toBeVisible();
         const added = await drawerMotion(page);
         expect(added.panel).toEqual([]);
         expect(added.scrim).toEqual([]);
 
-        // A settled drawer still plays its 180ms exit.
         const exit = await closeDrawer(page);
         expect(exit).toEqual([
           { name: docked ? "admin-drawer-out" : "admin-drawer-down", ms: 180 },
@@ -824,7 +805,6 @@ test.describe("guest list drawer", () => {
         await names.press("Enter");
       }
       await expect(page.locator("[data-name-chip]")).toHaveCount(8);
-      // The chips can be ready while the sheet is still sliding up.
       await expect
         .poll(async () => (await panel.boundingBox())?.y, {
           message: "phone sheet reaches the top of the viewport",
@@ -847,7 +827,6 @@ test.describe("guest list drawer", () => {
       expect(Math.abs(footerBox.y + footerBox.height - 844)).toBeLessThanOrEqual(
         6,
       );
-      // The page behind the sheet does not scroll.
       expect(
         await page.evaluate(
           () => getComputedStyle(document.documentElement).overflow,
@@ -872,7 +851,6 @@ test.describe("guest list drawer", () => {
       );
       expect(smallInputs).toEqual([]);
 
-      // Save and add another ends the body; the footer drops it.
       await expect(
         footer.locator("button[name='save_and_add']:visible"),
       ).toBeHidden();
@@ -888,7 +866,6 @@ test.describe("guest list drawer", () => {
       expect(copyBox.y + copyBox.height).toBeLessThanOrEqual(
         (await footer.boundingBox())!.y + 1,
       );
-      // The header stays put while the body scrolls under it.
       const titleBefore = (await title.boundingBox())!.y;
       await scroll.evaluate((el) => {
         el.scrollTop = el.scrollHeight;
@@ -1070,7 +1047,6 @@ test.describe("guest list drawer", () => {
       expect(dialog.message()).toBe(message);
       void dialog.dismiss();
     });
-    // The header × on the docked drawer; the phone sheet has Cancel instead.
     await edit.locator("[data-admin-drawer-close]:visible").first().click();
     await expect(edit).toBeVisible();
     await expect(name).toHaveValue("Changed for the guest guard test");
@@ -1110,8 +1086,6 @@ test.describe("guest list drawer", () => {
       expect(dialog.message()).toBe("Discard your changes to this household?");
       await dialog.dismiss();
     });
-    // On the phone layout the sheet covers most of the scrim, so a pointer
-    // click can land on the panel; click the scrim from script instead.
     await page
       .locator(".admin-drawer_scrim")
       .evaluate((scrim: HTMLElement) => scrim.click());
@@ -1181,7 +1155,6 @@ test.describe("guest list drawer", () => {
       const add = page.locator("[data-new-household]");
       await add.locator("[data-add-name]").fill(`Lead ${surname}`);
       await add.locator("[data-add-name]").press("Enter");
-      // A made-up name the fake store already has, saved with Add anyway.
       await add.locator("[data-add-name]").fill("Antonio Santos");
       await add.locator("[data-add-name]").press("Enter");
       await add.locator("[data-confirm-duplicate]").click();
@@ -1202,7 +1175,6 @@ test.describe("guest list drawer", () => {
         await page.goto(`/admin/guests?edit=${id}`);
         const drawer = page.locator("[data-admin-drawer]");
         await expect(drawer.locator("h2")).toBeFocused();
-        // The script shows the shared-name warning; that alone is no change.
         await expect(drawer.locator("[data-duplicate-warning]")).toBeVisible();
         await page.keyboard.press("Escape");
         await expect(drawer).toHaveCount(0);
@@ -1235,14 +1207,11 @@ test.describe("guest list drawer", () => {
     await expect(drawer.locator("h2")).toBeFocused();
     await drawer.locator("[name='notes']").fill("Swap guard");
 
-    // Archive household is a full navigation: dismissing keeps the draft.
     page.once("dialog", (dialog) => dialog.dismiss());
     await drawer.locator("a[href*='archive=']:visible").click();
     await expect(page).toHaveURL(new RegExp(`edit=${editor.id}`));
     await expect(drawer.locator("[name='notes']")).toHaveValue("Swap guard");
 
-    // OK on a row link swaps the drawer in place; the scrim covers the list,
-    // so click from script.
     const types: string[] = [];
     page.once("dialog", async (dialog) => {
       types.push(dialog.type());
@@ -1257,7 +1226,6 @@ test.describe("guest list drawer", () => {
     );
     expect(types).toEqual(["confirm"]);
 
-    // A stepper change fires no input event; reload must still warn.
     await drawer.locator("summary").filter({ hasText: "More seats" }).click();
     await drawer.locator("[data-seat-plus]").click();
     const unload = page.waitForEvent("dialog");
@@ -1296,8 +1264,6 @@ test.describe("guest list drawer", () => {
     await editPage.goto(`/admin/guests?edit=${openSeatFixture.id}`);
     const edit = editPage.locator("[data-edit-household]");
     await edit.locator("[data-remove-open-seat]").click();
-    // The edit form is dirty now, so leaving this page would rightly warn
-    // (beforeunload). Tick Archive on a fresh page instead.
     const archivePage = await browser.newPage();
     archivePage.on("dialog", unexpected);
     await archivePage.goto(`/admin/guests?edit=${editor.id}`);
@@ -1330,8 +1296,6 @@ test.describe("guest list drawer", () => {
       await dialog.dismiss();
     });
     const save = form.locator("button.primary");
-    // The footer's copy, and the one the phone sheet shows at the end of the
-    // body: Saving… disables both.
     const saveAndAdd = form.locator(
       ".admin_guests_drawer_footer button[name='save_and_add']",
     );
@@ -1448,7 +1412,6 @@ test.describe("guest list drawer", () => {
       await page.goto(`/admin/guests?edit=${id}`);
       const edit = page.locator("[data-edit-household]");
       await edit.locator("[data-archive-seat]").last().check();
-      // The summary is separate spans, so textContent reads "1seat· 1 name…".
       await expect(edit.locator("[data-seat-summary]")).toHaveText(
         /^\s*1\s*seat\b/,
       );
@@ -1510,7 +1473,6 @@ test.describe("guest list drawer", () => {
     await withAdminLock(async () => {
       await page.goto(`/admin/guests?new=1&filter=waiting&q=${surname}`);
       const form = page.locator("[data-new-household]");
-      // A new household's one seat is for its first name, not a plus-one.
       await expect(form.locator("[data-plus-one-toggle]")).toHaveAttribute(
         "aria-pressed",
         "false",
@@ -1555,9 +1517,7 @@ test.describe("guest list drawer", () => {
           .filter({ hasText: `Sage ${surname}` }),
       ).toHaveCount(1);
 
-      // Archive what the test added: other specs count the active households.
       await page.goto(`/admin/guests?filter=waiting&q=${surname}`);
-      // The suggestion follows the names, so find the row by its surname.
       const added = page
         .locator("[data-admin-household]")
         .filter({ hasText: surname });
@@ -1617,12 +1577,9 @@ test.describe("guest list drawer", () => {
     await expect(form.locator("[data-seat-summary]")).toContainText(
       "2 names + 0",
     );
-    // The suggestion is built from the invited members only.
     await expect(form.locator("[data-restore-suggestion]")).not.toContainText(
       "Jonas",
     );
-    // Edit hides the switch (Admin 12 has none); its handler still guards
-    // named plus-ones, so drive it directly.
     const toggle = form.locator("[data-plus-one-toggle]");
     await toggle.evaluate((button: HTMLButtonElement) => button.click());
     await toggle.evaluate((button: HTMLButtonElement) => button.click());
@@ -1724,8 +1681,6 @@ test.describe("guest list drawer", () => {
       await other.goto(
         `/admin/guests?edit=${editor.id}&filter=waiting&q=stale-archive`,
       );
-      // Open the confirm first, then change the household elsewhere, so the
-      // confirm's token is stale and the archive is refused.
       await page
         .locator("[data-edit-household]")
         .locator("a[href*='archive=']:visible")
@@ -1743,8 +1698,6 @@ test.describe("guest list drawer", () => {
         .locator("[data-admin-archive-confirm]")
         .getByRole("button", { name: "Archive" })
         .click();
-      // Archive household closes the drawer for #99's confirm row (until PR 4),
-      // so a stale archive is refused with the page-level notice and Reload.
       await expect(page.locator("[data-admin-drawer]")).toHaveCount(0);
       await expect(page.locator("[data-admin-write-error]")).toContainText(
         "Reload",
@@ -1799,7 +1752,6 @@ test.describe("guest list drawer", () => {
       const seats = rowById(page, openSeatFixture.id);
       await expectRsvpSeatCount(seats, 1);
 
-      // Put the open seat back so the next project finds the fixture as it was.
       await page.goto(`/admin/guests?edit=${openSeatFixture.id}`);
       const again = page.locator("[data-edit-household]");
       await again.locator("[name='member_input']").fill("+1");
@@ -1824,7 +1776,6 @@ test.describe("guest list drawer", () => {
         openSeats,
       );
       await form.locator("button[name='remove_seat']").first().click();
-      // The round trip drops the row and carries the removal to Save.
       await expect(
         noJs.locator("[data-edit-household] button[name='remove_seat']"),
       ).toHaveCount(openSeats - 1);
@@ -1841,7 +1792,6 @@ test.describe("guest list drawer", () => {
       );
       await noJs.close();
 
-      // Put the open seat back so the next project finds the fixture as it was.
       await page.goto(`/admin/guests?edit=${openSeatFixture.id}`);
       const again = page.locator("[data-edit-household]");
       await again.locator("[name='member_input']").fill("+1");
@@ -1918,7 +1868,6 @@ test.describe("guest list drawer", () => {
       await form.getByRole("button", { name: "Add", exact: true }).click();
       await expect(form.locator("[data-duplicate-warning]")).toBeVisible();
       await form.getByRole("button", { name: "Add anyway" }).click();
-      // The round trip keeps the confirmed name in the draft; Save then adds it.
       const draft = page.locator("[data-new-household]");
       await expect(draft.locator("[data-duplicate-warning]")).toBeHidden();
       await expect(draft.locator("input[name='confirmed_name']")).toHaveCount(
@@ -1942,9 +1891,6 @@ test.describe("guest list drawer", () => {
   });
 });
 
-// L-053: every secondary submit without JavaScript ends in a real save, and
-// the JS plus-one "off" drops open and draft-only seats. Each test adds its own
-// household (unique surname) and archives it, so fixtures stay untouched.
 test.describe("guest drawer round trips without JavaScript", () => {
   test.describe.configure({ mode: "serial" });
 
@@ -1978,7 +1924,6 @@ test.describe("guest drawer round trips without JavaScript", () => {
       const page = await browser.newPage({ javaScriptEnabled: false });
       await page.goto("/admin/guests?new=1");
       const form = page.locator("[data-new-household]");
-      // The stepper never goes below one seat, even with no names yet.
       await form.locator("summary").filter({ hasText: "More seats" }).click();
       await form.locator("[data-seat-minus]").click();
       await expect(
@@ -2002,7 +1947,6 @@ test.describe("guest drawer round trips without JavaScript", () => {
         .click();
       await expectRsvpSeatCount(rowFor(page, surname), 2);
 
-      // Edit: the stepper's "−" takes the open seat off and Save stores it.
       const id = await rowFor(page, surname).getAttribute("data-household-id");
       await page.goto(`/admin/guests?edit=${id}`);
       const edit = page.locator("[data-edit-household]");
@@ -2066,7 +2010,6 @@ test.describe("guest drawer round trips without JavaScript", () => {
       await edit.locator("[data-archive-seat]").last().check();
       await edit.locator("summary").filter({ hasText: "More seats" }).click();
       await edit.locator("[data-seat-minus]").click();
-      // The round trip keeps the archive mark on the last member.
       await expect(
         page.locator("[data-edit-household] [data-archive-seat]").last(),
       ).toBeChecked();
@@ -2092,8 +2035,6 @@ test.describe("host ID from the invitation name", () => {
   }, testInfo) => {
     const surname = uniqueSurname(testInfo);
     const slug = `${surname.toUpperCase()}-01`;
-    // A different surname, so the ID must follow the invitation name in add
-    // and must not follow it in edit.
     const renamed = `${surname.toUpperCase()}Q-01`;
     await withAdminLock(async () => {
       await page.goto("/admin/guests?new=1");
@@ -2102,7 +2043,6 @@ test.describe("host ID from the invitation name", () => {
         await form.locator("[data-add-name]").fill(name);
         await form.locator("[data-add-name]").press("Enter");
       }
-      // "<S> Family" → "<S>-01"
       await expect(form.locator("[data-host-id]")).toHaveText(slug);
       await form.locator("[name='display_name']").fill(`Casa ${surname}q`);
       await expect(form.locator("[data-host-id]")).toHaveText(renamed);
@@ -2112,7 +2052,6 @@ test.describe("host ID from the invitation name", () => {
         .filter({ hasText: surname });
       await expect(row.locator(".admin-guests_id")).toHaveText(renamed);
 
-      // Renaming in edit keeps the ID.
       const id = await row.getAttribute("data-household-id");
       await page.goto(`/admin/guests?edit=${id}`);
       const edit = page.locator("[data-edit-household]");
@@ -2168,7 +2107,6 @@ test.describe("guest drawer plus-one off with JavaScript", () => {
       await expect(
         edit.locator("[data-seat-kind='plus_one'][data-seat-row]"),
       ).toHaveCount(1);
-      // A draft-only seat from the stepper, then the switch off: both go.
       await edit.locator("summary").filter({ hasText: "More seats" }).click();
       await edit.locator("[data-seat-plus]").click();
       await expect(edit.locator("[data-seat-number]")).toHaveText("3");
