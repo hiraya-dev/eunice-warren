@@ -148,7 +148,6 @@ test("CLI prints matching entries, brief lines, and a no-match note", () => {
   assert.match(brief.stdout, /^- L-011 — .+ Rule: .+ Check: /m);
   assert.doesNotMatch(brief.stdout, /\*\*Symptom/);
 
-  // L-007 applies to every path (`**`), so a docs file matches it and nothing else.
   const docs = run([], "docs/notes.md\n").stdout;
   assert.match(docs, /^### L-007 — /m);
   assert.doesNotMatch(docs, /^### L-011 — /m);

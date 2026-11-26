@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-// Reads the lessons ledger (.agents/lessons.md) and prints the entries whose
-// Paths globs match a list of changed files, one path per line on stdin.
-//
-//   git diff --name-only origin/main...HEAD | node scripts/lessons/select.mjs
-//   printf '%s\n' src/components/Button.astro | node scripts/lessons/select.mjs --brief
-//   node scripts/lessons/select.mjs --check    # validate both ledger files
-//   node scripts/lessons/select.mjs --check --base origin/main # catch an ID both sides added
-//
-// --brief prints one line per entry (for Codex handoffs); the default prints
-// whole entries (for the pr-reviewer checklist). --archive also searches
-// .agents/lessons-archive.md.
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -38,7 +27,7 @@ export function parseLedger(text) {
     }
     if (!current) continue;
     if (/^#{1,3} /.test(line)) {
-      current = null; // a non-entry heading ends the entry
+      current = null;
       continue;
     }
     current.lines.push(line);
@@ -64,7 +53,6 @@ export function globToRegExp(glob) {
   for (let i = 0; i < glob.length; i += 1) {
     const ch = glob[i];
     if (ch === "*" && glob[i + 1] === "*") {
-      // `**/` matches zero or more directories; a bare `**` matches anything.
       if (glob[i + 2] === "/") {
         source += "(?:.*/)?";
         i += 2;
