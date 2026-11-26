@@ -29,7 +29,7 @@ permission.
   may hold. A file above its count fails; a file below it fails until
   `npm run check:comments -- --update` lowers the baseline. The baseline never
   rises; a new file starts at zero.
-- The first baseline holds 1,010 comments in 110 files: the raw count less the
+- The first baseline holds 1,012 comments in 110 files: the raw count less the
   exemptions below.
 - The check runs in `npm run prepush` and in CI's `build` and `checks` jobs.
 - Not counted: tool directives (`@ts-check`, `@ts-expect-error`, `@type`,

@@ -77,7 +77,7 @@
   "src/utils/slots.ts": 1,
   "src/utils/slug.ts": 1,
   "src/utils/unique-id.ts": 1,
-  "tests/admin-guests.spec.ts": 60,
+  "tests/admin-guests.spec.ts": 62,
   "tests/admin-rsvps.spec.ts": 22,
   "tests/admin-slippers-songs.test.ts": 1,
   "tests/admin-unit.test.ts": 1,
