@@ -81,8 +81,6 @@ const hasImage = variant !== "default" && !!image;
 const hasContent = !!(eyebrow || heading || text || buttonLabel);
 const hasTheme = variant !== "stacked" && theme !== "inherit";
 
-/* The button each variant closes with, so a set of cards reads as one system.
-   A link carries no emphasis of its own, so the two are picked together. */
 const buttonKind =
   variant === "stacked"
     ? ({ variant: "link" } as const)
@@ -198,16 +196,11 @@ if (import.meta.env.DEV && render) {
       }
     }
 
-    /* Media fills its box, be that the whole card or the band across its top.
-       The component layer puts this above the `height: auto` every image and
-       video starts from. */
     .card_visual > :is(.image, .video) {
       width: 100%;
       height: 100%;
     }
 
-    /* Buttons closing a card sit on its floor, however tall the row around it
-       grows. This outranks the margin `.button-wrapper` sets for itself. */
     .card_content > .button-wrapper:last-child {
       margin-top: auto;
       padding-top: var(--space-6);

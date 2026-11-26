@@ -12,7 +12,6 @@ interface Props extends HTMLAttributes<"section"> {}
 
 const { class: className, ...rest } = Astro.props;
 
-/** Every photo in the album; the real count drives the overlay label. */
 const album = import.meta.glob<ImageMetadata>("@/assets/images/gallery/*.jpg", {
   eager: true,
   import: "default",
@@ -74,7 +73,6 @@ type Slot = {
   m?: ["l" | "r", number, "t" | "b", number, number, number];
 };
 
-/** Teaser polaroids, fixed picks from the album. Landscape slots are 5:4, the rest 4:5. */
 const slots: Slot[] = [
   { name: "img-4462", tier: "near", d: [64, 72, 224, -6], m: ["l", -20, "t", 36, 128, -7] },
   { name: "img-2505", tier: "near", landscape: true, d: [1130, 64, 270, 5], m: ["r", 2, "t", 28, 150, 6] },
@@ -92,10 +90,8 @@ const slots: Slot[] = [
   { name: "img-1963", tier: "far", d: [650, -36, 72, -3] },
 ];
 
-/** Photo window width per tier, about twice the largest rendered window (0.88 of the polaroid). */
 const source = { near: 480, mid: 340, far: 200 } as const;
 
-/** Photo window as a share of the polaroid width: 0.88 wide, 0.92 tall (portrait) or 0.57 tall (landscape). */
 const windowHeight = (width: number, landscape?: boolean) => Math.round(width * (landscape ? 57 : 92) / 88);
 
 const slotStyle = ({ d, m }: Slot) =>
@@ -252,7 +248,6 @@ const slotStyle = ({ d, m }: Slot) =>
 <style>
   @layer components {
     .gallery_wrap {
-      /* Mobile artboard scale: 1 unit = 1px at 390, held at 480 and above. */
       --_cv: min(100vw, 30rem);
       --_dv: min(100vw, 108rem);
       position: relative;
@@ -268,9 +263,6 @@ const slotStyle = ({ d, m }: Slot) =>
       inset: 0;
       pointer-events: none;
     }
-    /* Instant-photo polaroid, shared by the teaser and the fallback grid. Borders are shares of the
-       polaroid's own width: 6% left, right and top, a deep bottom strip. The photo window is 0.88W wide
-       and 0.92W (portrait, 4:5) or 0.57W (landscape, 5:4) tall. */
     :global(.gallery_polaroid) {
       position: relative;
       display: block;
@@ -289,8 +281,6 @@ const slotStyle = ({ d, m }: Slot) =>
     }
     :global(.gallery_polaroid-photo) {
       position: absolute;
-      /* Percentage margins resolve against the polaroid's width (a percentage top would use its
-         height), so the top border matches the 6% sides and the WebGL polaroids. */
       top: 0;
       left: 0;
       margin: 6%;
@@ -397,7 +387,6 @@ const slotStyle = ({ d, m }: Slot) =>
     }
     .gallery_note-extra { display: none; }
 
-    /* Overlay */
     .gallery_overlay {
       --gallery-lightbox-duration: 680ms;
       position: fixed;
@@ -430,7 +419,6 @@ const slotStyle = ({ d, m }: Slot) =>
       overscroll-behavior: contain;
       &[hidden] { display: none; }
     }
-    /* Fallback grid cards: portrait 4:5 polaroids, every photo cover-cropped to the window. */
     :global(.gallery_grid-item) {
       cursor: pointer;
       transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -561,10 +549,7 @@ const slotStyle = ({ d, m }: Slot) =>
       text-transform: uppercase;
     }
 
-    /* Photo open */
     .gallery_lightbox {
-      /* Polaroid, count and controls are one centred column; the polaroid gets the height the
-         count and controls leave (capped at 74% of the screen), so no gap opens between them. */
       --_height: max(12.5rem, min(74dvh, calc(100dvh - 14rem)));
       position: absolute;
       inset: 0;
@@ -587,7 +572,6 @@ const slotStyle = ({ d, m }: Slot) =>
       display: grid;
       place-items: center;
       width: 100%;
-      /* Hugs the polaroid; the script sizes it to fit within this max-height. */
       max-height: var(--_height);
       pointer-events: none;
     }
@@ -663,7 +647,6 @@ const slotStyle = ({ d, m }: Slot) =>
       outline-offset: var(--focus-offset);
     }
 
-    /* States: closed shows nothing, canvas the stage, top bar and hint, open adds the lightbox. */
     .gallery_stage,
     .gallery_bar,
     .gallery_hint {
@@ -712,7 +695,6 @@ const slotStyle = ({ d, m }: Slot) =>
       .gallery_open :global(.button-016__inner) { padding: 1rem 1.75rem; }
     }
 
-    /* Desktop: the 1440 artboard, scaled with the viewport. */
     @media (min-width: 80rem) {
       .gallery_wrap {
         min-height: calc(var(--_dv) * 1000 / 1440);

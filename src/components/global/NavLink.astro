@@ -11,7 +11,6 @@ type Props = HTMLAttributes<"a"> & {
 
 const { render = true, href, class: className, ...rest } = Astro.props;
 
-/** Marks the link for the page being viewed. Trailing slashes are ignored. */
 const current =
   Astro.url.pathname.replace(/\/+$/, "") === href.replace(/\/+$/, "")
     ? "page"

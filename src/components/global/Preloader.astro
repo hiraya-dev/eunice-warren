@@ -333,7 +333,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
   if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
     const overlay = document.querySelector("[data-preloader]");
     overlay?.setAttribute("data-preloader-motion", "");
-    // Fail-safe: if the motion module is slow or never runs, show the form and props without motion.
     window.setTimeout(() => overlay?.removeAttribute("data-preloader-motion"), 2000);
   }
 </script>
@@ -341,7 +340,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
 <script>
   import { gsap } from "gsap";
 
-  /** Flat-lay motion: props settle in, drift with a fine pointer, and the close is CSS (`.is-closing`). */
   const initTable = () => {
     const overlay = document.querySelector<HTMLElement>("[data-preloader]");
     const table = overlay?.querySelector<HTMLElement>("[data-preloader-table]");
@@ -349,7 +347,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     if (!document.documentElement.classList.contains("ew-preloader-pending")) return;
     table.dataset.tableReady = "true";
     const stage = overlay.querySelector<HTMLElement>(".preloader_stage");
-    // Lower depths first; equal depths keep their paint order.
     const floats = [...table.querySelectorAll<HTMLElement>("[data-depth]")]
       .map((prop, index) => ({ prop, index, depth: Number(prop.dataset.depth) }))
       .sort((a, b) => a.depth - b.depth || a.index - b.index)
@@ -360,7 +357,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     let stopPointer = () => {};
 
     media.add("(prefers-reduced-motion: no-preference)", () => {
-      // The fail-safe already revealed everything: skip the entrance so nothing hides and replays.
       if (!overlay.hasAttribute("data-preloader-motion")) { settled = true; return; }
       const props = visible();
       const timeline = gsap.timeline({
@@ -373,7 +369,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
         { autoAlpha: 1, y: 0, scale: 1, rotation: 0, duration: 0.9, stagger: 0.07, ease: "power3.out", clearProps: "visibility,opacity,transform" },
         stage ? "<0.1" : 0,
       );
-      // The tweens have rendered their hidden start state inline, so the CSS pre-paint gate can go.
       overlay.removeAttribute("data-preloader-motion");
       return () => timeline.kill();
     });
@@ -411,7 +406,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       return stop;
     });
 
-    // Stop listening as soon as the close starts; the exit itself is CSS.
     const closing = new MutationObserver(() => {
       if (overlay.classList.contains("is-closing")) { stopPointer(); closing.disconnect(); }
     });
@@ -456,10 +450,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     .preloader_primary:disabled { opacity: .6; cursor: wait; }
     .preloader_browse { padding: 0 0 .25rem; border: 0; border-bottom: .0625rem solid var(--dark-900); background: none; color: var(--dark-900); cursor: pointer; font: var(--eyebrow) / 1rem var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
     .preloader_admits { margin: 0; font: .875rem / 1.25rem var(--primary-family); }
-    /* Reserve the widget's height from the start so the prefetched iframe never moves the centred column. */
     .preloader_turnstile { display: flex; justify-content: center; width: 100%; min-height: 4.5rem; }
-    /* Flat-lay table. Every length is a multiple of --u (1px at the 1440 artboard, 1px per px on a 390 phone),
-       so props scale with the viewport; anchors are the nearest edges. */
     .preloader_table { --u: min(0.069444cqw, 0.0625rem); --v: 0.0625rem; position: absolute; z-index: -1; inset: 0; overflow: clip; container-type: size; pointer-events: none; }
     .preloader_prop { position: absolute; translate: 0 0; }
     .preloader_float, .preloader_body { display: block; }
@@ -490,7 +481,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       .preloader_ticket { scale: .8; }
       .preloader_sunset { right: calc(-50 * var(--u)); }
     }
-    /* Narrow screens keep only props that fit the free bands above and below the centre stack. */
     @media (max-width: 61.999rem) {
       .preloader_table { --u: min(0.25641cqw, 0.078125rem); }
       .preloader_prop { display: none; }
@@ -503,8 +493,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
     @media (max-width: 30rem) {
       .preloader_table { --u: min(0.25641cqw, 0.0625rem); }
     }
-    /* Props show only when the free bands above and below the centre stack can hold them. The compact envelope
-       grows with the window (up to 640px wide), so from 35rem the centre stack needs a taller window. */
     @media (max-width: 30rem) and (min-height: 53rem), (min-width: 30rem) and (max-width: 34.999rem) and (min-height: 62rem), (min-width: 35rem) and (max-width: 46.8rem) and (min-height: 69rem), (min-width: 46.8125rem) and (max-width: 61.999rem) and (min-height: 60rem) {
       .preloader_ribbon, .preloader_couple, .preloader_ticket, .preloader_sunset, .preloader_shell { display: block; }
     }
@@ -512,11 +500,7 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       .preloader_layout { gap: 1.75rem; padding: 2.5rem 1.25rem; }
       .preloader_title { margin-top: -.75rem; font-size: 2rem; line-height: 2.25rem; }
     }
-    /* The envelope picks its layout by its own width: the desktop face (absolute stamps, postmark and button)
-       needs about 44rem, so anything narrower stacks the button under a compact envelope. */
     @container preloader-form (max-width: 43.999rem) {
-      /* The stage fills the form up to 40rem. --c is 1px at a 350px envelope and grows with it, so every
-         envelope internal below equals the phone value at 350px and scales in proportion up to the cap. */
       .preloader_stage { container: preloader-stage / inline-size; --c: max(.0625rem, .285714cqw); width: min(100%, 40rem); gap: 1.25rem; }
       .preloader_envelope { aspect-ratio: 7 / 5; padding: calc(9 * var(--c)); transform: rotate(-2deg); }
       .preloader_face { padding: calc(22 * var(--c)); }
@@ -535,7 +519,6 @@ const { messageHref = MESSAGE_US_HREF } = Astro.props;
       .preloader_par-avion { top: 1.25rem; left: 1.25rem; width: 5rem; }
       .preloader_stamp-ew { width: 3.25rem; }
     }
-    /* The found and not-found states add a line under the input; a slightly taller envelope keeps it clear of the stamps. */
     @container preloader-form (max-width: 18.75rem) {
       .preloader_envelope { aspect-ratio: 7 / 5.6; }
     }

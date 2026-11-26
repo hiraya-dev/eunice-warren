@@ -112,15 +112,12 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     updateProgress();
     setState("idle");
 
-    // A title that overflows its box scrolls as a ticker (CSS reads data-ticker); one that fits stays still.
-    // The speed is constant, so the duration follows the measured loop length. Re-measured on resize and font load.
     const TICKER_PX_PER_SECOND = 30;
     const titles = [...document.querySelectorAll<HTMLElement>("[data-music-ticker]")];
     const measureTitle = (title: HTMLElement) => {
       const text = title.querySelector<HTMLElement>(".music-ticker_text");
       const track = text?.parentElement;
       if (!text || !track) return;
-      // Both reads leave out the padding the running ticker adds, so the verdict is the same either way.
       const room = title.clientWidth - parseFloat(getComputedStyle(title).paddingLeft);
       const natural = text.offsetWidth - parseFloat(getComputedStyle(text).paddingRight);
       const overflows = room > 0 && natural > room + 0.5;
@@ -139,15 +136,11 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     const pending = document.documentElement.classList.contains("ew-preloader-pending");
     if (pending) surfaces.forEach((surface) => surface.removeAttribute("data-music-visible"));
     document.addEventListener("ew:preloader-close", () => surfaces.forEach((surface) => surface.setAttribute("data-music-visible", "")), { once: true });
-    // The tag hides as soon as a form field takes focus, but returns only once no pointer is down.
-    // Pressing a button blurs the field before the release: a tag that came back in between would
-    // sit under the pointer, take the release, and the button would never get its click.
     let fieldFocused = false;
     let held = false;
     const isField = (target: EventTarget | null) => target instanceof HTMLElement && target.matches("input, select, textarea");
     const syncFieldHide = () => { if (fieldFocused || !held) surfaces.forEach((surface) => surface.toggleAttribute("data-music-hidden-for-input", fieldFocused)); };
     const press = () => { held = true; };
-    // In a new task, so the click this release dispatches has gone to its target first.
     const release = () => { held = false; setTimeout(syncFieldHide); };
     const listeners = new AbortController();
     const whilePressing = { capture: true, passive: true, signal: listeners.signal };
@@ -165,7 +158,6 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     .music-player_root { position: fixed; z-index: 80; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); width: 16rem; height: 4.375rem; visibility: hidden; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
     .music-player_root:has([data-music-visible]) { visibility: visible; }
     .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) { visibility: hidden; opacity: 0; transform: translateY(0.75rem); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s; }
-    /* Visibility waits for the fade; clicks must not. */
     .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) .music-player_tag { pointer-events: none; }
     .music-player_tag { position: relative; display: flex; align-items: center; gap: 0.75rem; width: 100%; height: 100%; padding: 0 0.75rem 0 0.875rem; overflow: clip; border-radius: 0.375rem 0.875rem 0.875rem 0.375rem; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 1px 0 rgb(31 47 92 / 6%), 0 0.75rem 1.75rem rgb(31 47 92 / 22%); color: var(--dark-900); transform: rotate(-2deg); transform-origin: 0 100%; cursor: pointer; pointer-events: auto; }
     .music-player_tag[data-state="error"] { cursor: default; }
@@ -197,13 +189,10 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
     .music-player_string path { fill: none; stroke: var(--accent-500); stroke-linecap: round; stroke-width: 2; }
     .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) { pointer-events: none; }
     @media (max-width: 47.999rem) {
-      /* The root is the closed disc. The pill is as wide as it gets and always there; the wipe uncovers it. */
       .music-player_root { width: 3.5rem; height: 3.5rem; }
       .music-player_tag, .music-player_string { display: none; }
       .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) :is(.music-player_disc, .music-player_controls) { pointer-events: none; }
       .music-player_pill { position: absolute; right: 0; bottom: 0; display: flex; width: min(22.375rem, calc(100vw - 2rem)); height: 3.5rem; align-items: center; gap: 0.5rem; padding-left: 1.375rem; color: var(--dark-900); pointer-events: none; }
-      /* clip-path would cut a box-shadow off, so the shadow is a filter on a shell that holds the paper:
-         it follows whatever the wipe has uncovered. Only transform, opacity and clip-path animate. */
       .music-player_shell { position: absolute; inset: 0; filter: drop-shadow(0 1px 0 rgb(31 47 92 / 6%)) drop-shadow(0 0.75rem 1.75rem rgb(31 47 92 / 22%)); pointer-events: none; }
       .music-player_paper, .music-player_wipe { position: absolute; background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; }
       .music-player_paper { right: 0; bottom: 0; width: 3.5rem; height: 3.5rem; border-radius: 50%; }
@@ -232,7 +221,6 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
         .music-player_pill [data-music-mute]:not(:disabled):hover { background: rgb(31 47 92 / 6%); }
       }
       @media (prefers-reduced-motion: reduce) {
-        /* Shorter, not absent: the pill crossfades in; nothing wipes, slides, presses or spins. */
         .music-player_wipe, .music-player_root[data-music-open] .music-player_wipe { clip-path: inset(0 round 1.75rem); }
         .music-player_wipe { opacity: 0; transition: opacity 150ms linear; }
         .music-player_root[data-music-open] .music-player_wipe { opacity: 1; transition: opacity 150ms linear; }
@@ -243,17 +231,12 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
         .music-player_disc img { animation: none; }
       }
     }
-    /* The title ticker: two copies of the title side by side, the track slides left by exactly one copy and
-       repeats. Only transform animates. The script sets data-ticker while the title overflows and
-       --ticker-duration from its length, so the speed is the same for any title. Reduced motion keeps the ellipsis. */
     .music-ticker_text { display: inline; }
     .music-ticker_text + .music-ticker_text { display: none; }
     @keyframes music-ticker { to { transform: translateX(-50%); } }
     @media (prefers-reduced-motion: no-preference) {
       [data-music-ticker][data-ticker] {
         --ticker-fade: 0.625rem;
-        /* The padding and the matching negative margin put the text's first letter where it rests today,
-           so the left fade sits beside it and only dims letters as they leave. */
         margin-left: calc(-1 * var(--ticker-fade));
         padding-left: var(--ticker-fade);
         -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--ticker-fade), #000 calc(100% - var(--ticker-fade)), transparent);
@@ -267,10 +250,8 @@ const songName = `${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`;
       :root:has([data-music-mute][aria-pressed="true"]) [data-music-surface] [data-music-ticker][data-ticker] .music-ticker_track { animation-play-state: paused; }
     }
     @media (min-width: 64rem) {
-      /* The polaroid in the hero is the player until the page scrolls past it. */
       .music-player_root:not([data-music-docked]):not([data-music-flying]) :is(.music-player_tag, .music-player_string) { visibility: hidden; }
       :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap { visibility: hidden; pointer-events: none; }
-      /* A surface that is not on screen holds its title still. */
       .music-player_root:not([data-music-docked]):not([data-music-flying]) .music-player_tag [data-music-ticker] .music-ticker_track,
       .music-player_root:has([data-music-hidden-for-input], [data-music-hidden-for-cta], [data-music-hidden-for-form], [data-music-hidden-for-embed], [data-music-hidden-for-footer]) .music-player_tag [data-music-ticker] .music-ticker_track,
       :root:has(.music-player_root[data-music-docked]:not([data-music-flying])) .music-polaroid_wrap [data-music-ticker] .music-ticker_track { animation-play-state: paused !important; }
