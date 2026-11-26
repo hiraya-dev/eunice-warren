@@ -74,7 +74,7 @@ const WORKFLOW_DIRECTORIES = [
 
 const DOCS_FILES = new Set([".gitignore", ".gitkeep"]);
 
-// Content collection data (wording, names, list order, hidden flags). A diff of
+// Content collection data (wording, names, list order). A diff of
 // only these files is still runtime, so build and e2e run, but it routes
 // `content`: CI runs the smoke tier on every event and the PR merges on PASS
 // with no Local review (CLAUDE.md **Roles**). Anything else in the diff,

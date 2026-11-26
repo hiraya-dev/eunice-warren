@@ -37,7 +37,7 @@ Four change classes, read from the diff (`local-checks` **CI routes**):
 - **Trivial**: the `docs` and `workflow` routes. A ready PR, `pr-reviewer`, merge on
   PASS. No Local review.
 - **Content**: the `content` route, a diff of only `src/content/**/*.json` (wording,
-  names, list order, `hidden` flags). A ready PR, `pr-reviewer`, merge on PASS and a
+  names, list order). A ready PR, `pr-reviewer`, merge on PASS and a
   green smoke-tier `gate`. No Local review (user, 2026-11-26). A new image or schema
   field makes it **Normal**.
 - **Normal**: `runtime`. A draft PR, `pr-reviewer` in parallel with CI, Local review.
@@ -114,7 +114,7 @@ for the user's OK. A new section or visual feature: recommend an approach first 
 stop. Once approved, the chain runs without check-ins, except Local review on
 `runtime`; after "ship it", the rest runs without asking. **QA fixer**: an open
 `qa-auto` issue is pre-approved (user, 2026-11-26); its scheduled run merges on PASS
-and a green full `gate`, no Local review, unless **Risky** → draft, `needs-human`.
+and a green full `gate` (smoke-tier for `content`), no Local review, unless **Risky** → draft, `needs-human`.
 
 **Local review**: a `runtime` change waits for the user on its draft PR's Cloudflare
 preview (`https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`).

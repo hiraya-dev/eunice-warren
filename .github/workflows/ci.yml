@@ -17,7 +17,7 @@ name: CI
 #           webkit: the @smoke tests on WebKit (iPhone 14 Safari) in a job of
 #           its own at one worker; full tier only.
 # content   a runtime diff of only src/content/**/*.json (wording, names, list
-#           order, hidden flags): build and the smoke tier on every event, never
+#           order): build and the smoke tier on every event, never
 #           the full tier. The schemas in src/content.config.ts reject a bad
 #           file at build time, and specs never pin site copy (L-017).
 # workflow  checks: Markdown lint, routing, CI-script, hook and lessons tests,

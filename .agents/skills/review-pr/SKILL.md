@@ -147,8 +147,8 @@ git diff --name-only origin/main...HEAD | node scripts/ci/classify-paths.mjs
   comparing against the Paper artboard for visual work, and records it in `task.md`.
 - **Content (`content`)** — only `src/content/**/*.json`. One focused review: the
   wording matches the request, nothing was dropped or reordered by accident, names
-  and dates are consistent with the rest of the site, `hidden` flags are the ones
-  asked for, and the copy follows `.agents/product-marketing.md`. No browser check
+  and dates are consistent with the rest of the site, any visibility change is the
+  one asked for, and the copy follows `.agents/product-marketing.md`. No browser check
   and no Local review.
 - **Workflow (`workflow`)** — `AGENTS.md`, `CLAUDE.md`, `SETUP.md`, `.agents/skills/**`,
   `.agents/lessons*.md`, `.claude/**`, `.github/**`, `scripts/ci/**`,
@@ -236,7 +236,7 @@ doing anything else with it:
 gh pr comment <pr> --body "$(cat <<'EOF'
 ## Review — <PASS|CHANGES_REQUIRED|BLOCKED> @ <head sha>
 
-- Tier: <full|workflow|docs|trivial>
+- Tier: <full|content|workflow|docs|trivial>
 - Axes judged: ...
 - CI: gate <result>, jobs run: <list>
 - Findings: <none | path:line — problem — fix | N/A — blocker — required input, one per line>
