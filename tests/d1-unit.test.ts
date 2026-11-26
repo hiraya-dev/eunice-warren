@@ -70,9 +70,37 @@ test("D1 lookup returns only the public invite shape and restores previous value
   database.db.exec(`INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES ('toledo','plus_one',4,'active',NULL,NULL,NULL,NULL,'${now}','${now}')`);
   const previous = await createD1RsvpStore(database).findInvite("Mara Toledo");
   assert(previous && previous.invite && previous.previous);
+  assert.equal("note" in previous.previous, false);
   assert.equal(previous.previous.seats.find((seat) => seat.seatId === 1)?.slipperSize, "W 7");
   assert.equal(previous.previous.seats.find((seat) => seat.seatId === 2)?.attending, false);
   assert.equal(previous.previous.seats.find((seat) => seat.seatId === 4)?.attending, false);
+  database.close();
+});
+
+test("D1 submit carries forward a prior note only when the new note is blank", async () => {
+  const database = setup();
+  database.db.exec("INSERT INTO responses (household_id,submitted_at,respondent_name,attending,guest_count,email,note) VALUES ('toledo','2026-11-20T00:00:00.000Z','Luna Toledo',1,1,'old@example.com','private note')");
+  const store = createD1RsvpStore(database);
+  const seats = [
+    { seatId: 1, name: "Luna Toledo", shownName: "Luna Toledo", attending: true },
+    { seatId: 2, name: "Mara Toledo", shownName: "Mara Toledo", attending: true },
+    { seatId: 3, name: "", shownName: "", attending: false },
+  ];
+  await store.submit({ inviteId: "toledo", name: "Luna Toledo", attending: true, guests: 2, email: "blank@example.com", note: "  ", seats });
+  assert.equal(database.db.prepare("SELECT note FROM responses ORDER BY id DESC LIMIT 1").get()?.note, "private note");
+  await store.submit({ inviteId: "toledo", name: "Luna Toledo", attending: true, guests: 2, email: "new@example.com", note: "new note", seats });
+  assert.equal(database.db.prepare("SELECT note FROM responses ORDER BY id DESC LIMIT 1").get()?.note, "new note");
+  database.close();
+});
+
+test("D1 first-time submit with no note stores null", async () => {
+  const database = setup();
+  await createD1RsvpStore(database).submit({ inviteId: "toledo", name: "Luna Toledo", attending: true, guests: 1, email: "luna@example.com", seats: [
+    { seatId: 1, name: "Luna Toledo", shownName: "Luna Toledo", attending: true },
+    { seatId: 2, name: "Mara Toledo", shownName: "Mara Toledo", attending: false },
+    { seatId: 3, name: "", shownName: "", attending: false },
+  ] });
+  assert.equal(database.db.prepare("SELECT note FROM responses").get()?.note, null);
   database.close();
 });
 

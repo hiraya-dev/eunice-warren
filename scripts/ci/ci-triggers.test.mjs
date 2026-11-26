@@ -72,6 +72,7 @@ test("runtime runs the build, and e2e names its tier and runs it on two workers"
   const build = jobBlock("build");
   assert.match(build, /npm run check/);
   assert.match(build, /npm run test:unit/);
+  assert.match(build, /npm run check:comments/);
   assert.match(build, /npm run build/);
   assert.match(build, /select-specs\.mjs --check/);
   const e2e = jobBlock("e2e");
@@ -110,7 +111,7 @@ test("an already-tested tree skips every check job", () => {
 
 test("checks covers docs and workflow, and gate needs every job and fails closed", () => {
   const checks = jobBlock("checks");
-  for (const step of ["lint:md", "test:ci-scripts", "test:hooks", "check:lessons", "actionlint", "select-specs\\.mjs --check"]) {
+  for (const step of ["lint:md", "check:comments", "test:ci-scripts", "test:hooks", "check:lessons", "actionlint", "select-specs\\.mjs --check"]) {
     assert.match(checks, new RegExp(step.replace(":", "\\:")));
   }
   const gate = jobBlock("gate");

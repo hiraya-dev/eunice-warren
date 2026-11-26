@@ -64,6 +64,8 @@ any scripts they need.
 - `lumos-audit-props` — check prop order and tooltip consistency.
 - `lumos-scaling-graphic` — build an editable graphic that scales as one piece.
 - `lumos-upgrade-version` — upgrade Lumos without losing customizations.
+- `delete-comment` — sort and delete code comments one area at a time, move
+  decisions into ADRs, and lower the comment baseline (ADR 0002).
 
 `.agents/skills/` is the source of truth. Claude Code loads the same skills from
 relative symlinks in `.claude/skills/`. For each new skill, add

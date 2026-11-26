@@ -650,3 +650,13 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Check:** Every string literal removed in the diff appears verbatim in the JSON. A duplicate-key scan of `src/content/**/*.json` finds none. No schema in `src/content.config.ts` uses `z.record` for copy.
 - **Guard:** none
 - **Paths:** `src/content/**`, `src/content.config.ts`, `src/components/**`
+
+### L-071 — A new skill is named in the AGENTS.md skills list
+- **Date:** 2026-11-26
+- **Trigger:** #148 CHANGES_REQUIRED (the `delete-comment` skill and its `.claude/skills` link landed without an `AGENTS.md` **Skills** bullet)
+- **Symptom:** Claude Code loads the new skill, but Codex never hears of it, because Codex reads skills only through the list in `AGENTS.md`.
+- **Root cause:** a skill has three homes (`.agents/skills/<name>/`, the `.claude/skills/<name>` link, the `AGENTS.md` list), and the edit covered the two that make it load.
+- **Rule:** a PR that adds, renames or removes `.agents/skills/<name>/` updates the `.claude/skills` link and the `AGENTS.md` **Skills** list in the same commit.
+- **Check:** `ls .agents/skills` and the bullets under `AGENTS.md` **Skills** name the same skills.
+- **Guard:** none
+- **Paths:** `.agents/skills/**`, `.claude/skills/**`, `AGENTS.md`

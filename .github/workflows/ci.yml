@@ -164,6 +164,8 @@ jobs:
         run: npm ci
       - name: Type-check
         run: npm run check
+      - name: Hold code comments at the baseline
+        run: npm run check:comments
       - name: Run the unit tests
         run: npm run test:unit
       # A runtime-only PR can add a spec, so the map is checked here as well as
@@ -334,6 +336,8 @@ jobs:
           node-version-file: .nvmrc
       - name: Lint markdown
         run: npm run lint:md
+      - name: Hold code comments at the baseline
+        run: npm run check:comments
       - name: Test path routing and CI scripts
         if: env.WORKFLOW == 'true'
         run: npm run test:ci-scripts
