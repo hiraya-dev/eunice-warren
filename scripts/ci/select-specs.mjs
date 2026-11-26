@@ -129,10 +129,6 @@ export const SPEC_SOURCES = {
     "src/lib/guest.ts",
     "src/scripts/turnstile.ts",
   ],
-  "tests/ribbons.spec.ts": [
-    "src/components/sections/Ribbons.astro",
-    "src/components/interactive/Marquee.astro",
-  ],
   "tests/rsvp-ticket.spec.ts": [
     "src/components/sections/RsvpTicketPrinter.astro",
     "src/lib/rsvp/",
