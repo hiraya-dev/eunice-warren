@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import PassageTicket from "@/components/media/PassageTicket.astro";
@@ -20,9 +21,11 @@ interface Props extends HTMLAttributes<"section"> {
   rsvpHref?: string;
 }
 
+const [{ data }] = await getCollection("invitation");
+
 const {
-  venue = "Our Lady of the Most Holy Rosary Parish",
-  deadline = "Dec 12, 2026",
+  venue = data.facts[1].value,
+  deadline = data.facts[2].value,
   calendarHref = WEDDING_CALENDAR_PATH,
   mapsHref = CHURCH_MAP_URL,
   rsvpHref = "#rsvp",
@@ -30,61 +33,57 @@ const {
   ...rest
 } = Astro.props;
 
-const welcomeParagraphs = [
-  "We're getting married, and the day wouldn't be complete without you there to share it.",
-  "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love.",
-];
 
 ---
 
-<section id="invitation" class:list={["invitation_wrap", className]} {...rest}>
+{!data.hidden && <section id="invitation" class:list={["invitation_wrap", className]} {...rest}>
   <div class="invitation_layout">
     <div class="invitation_left">
-      <h2 class="invitation_title" data-fade-in data-fade-in-item>Pack light. Bring your dancing shoes.</h2>
+      <h2 class="invitation_title" data-fade-in data-fade-in-item>{data.title}</h2>
 
       <div class="invitation_facts" data-fade-in data-fade-in-item>
         <div class="invitation_fact">
-          <span class="invitation_fact-label">WHEN</span>
+          <span class="invitation_fact-label">{data.facts[0].label}</span>
           <div class="invitation_fact-content">
-            <span class="invitation_fact-value">Thu, Jan 14, 2027</span>
-            <span class="invitation_fact-detail">Ceremony at 3:00 PM</span>
-            <a class="invitation_fact-link" href={calendarHref}>ADD TO CALENDAR <span aria-hidden="true">↗</span></a>
+            <span class="invitation_fact-value">{data.facts[0].value}</span>
+            <span class="invitation_fact-detail">{data.facts[0].detail}</span>
+            <a class="invitation_fact-link" href={calendarHref}>{data.facts[0].link} <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="invitation_fact">
-          <span class="invitation_fact-label">WHERE</span>
+          <span class="invitation_fact-label">{data.facts[1].label}</span>
           <div class="invitation_fact-content">
             <span class="invitation_fact-value">{venue}</span>
-            <span class="invitation_fact-detail">Boracay Island, Malay, Aklan</span>
-            <a class="invitation_fact-link" href={mapsHref} target="_blank" rel="noopener">OPEN IN MAPS <span aria-hidden="true">↗</span></a>
+            <span class="invitation_fact-detail">{data.facts[1].detail}</span>
+            <a class="invitation_fact-link" href={mapsHref} target="_blank" rel="noopener">{data.facts[1].link} <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="invitation_fact">
-          <span class="invitation_fact-label">RSVP BY</span>
+          <span class="invitation_fact-label">{data.facts[2].label}</span>
           <div class="invitation_fact-content">
             <span class="invitation_fact-value">{deadline}</span>
-            <span class="invitation_fact-detail">Takes about a minute</span>
-            <a class="invitation_fact-link" href={rsvpHref}>RSVP NOW <span aria-hidden="true">↘</span></a>
+            <span class="invitation_fact-detail">{data.facts[2].detail}</span>
+            <a class="invitation_fact-link" href={rsvpHref}>{data.facts[2].link} <span aria-hidden="true">↘</span></a>
           </div>
         </div>
       </div>
 
       <div class="invitation_calendar" data-draw-scroll-wrap data-fade-in data-fade-in-item>
-        <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>13</strong><span>WED · JAN</span></div>
+        <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>{data.calendarPrevious.day}</strong><span>{data.calendarPrevious.label}</span></div>
         <div class="invitation_date invitation_date-current" aria-hidden="true">
-          <strong>14</strong><span>THU · JAN</span>
+          <strong>{data.calendarCurrent.day}</strong><span>{data.calendarCurrent.label}</span>
           <svg class="invitation_circle" data-draw-scroll-desktop viewBox="0 0 900 780" fill="none" aria-hidden="true" focusable="false">
             <path data-draw-scroll-path d="M835 232C800 175 740 120 600 102C470 92 330 125 240 175C170 215 130 290 122 380C112 470 120 560 175 610C240 670 330 688 410 688C520 688 640 620 720 545C800 470 855 390 857 300C860 220 800 120 700 85C620 58 480 68 380 98C270 130 190 190 150 260C138 285 130 310 128 335" stroke="var(--accent-500)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>15</strong><span>FRI · JAN</span></div>
-        <span class="sr-only">January 13–15, 2027</span>
+        <div class="invitation_date invitation_date-muted" aria-hidden="true"><strong>{data.calendarNext.day}</strong><span>{data.calendarNext.label}</span></div>
+        <span class="sr-only">{data.calendarSrOnly}</span>
       </div>
     </div>
 
     <div class="invitation_right">
       <div class="invitation_note" data-fade-in>
-        {welcomeParagraphs.map((paragraph) => (
+        {data.welcomeParagraphs.map((paragraph) => (
           <p data-fade-in-item>{paragraph}</p>
         ))}
       </div>
@@ -103,7 +102,7 @@ const welcomeParagraphs = [
   </div>
 
   <div class="invitation_scallop" aria-hidden="true"></div>
-</section>
+</section>}
 
 <style>
   @layer components {

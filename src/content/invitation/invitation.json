@@ -1,0 +1,41 @@
+{
+  "hidden": false,
+  "title": "Pack light. Bring your dancing shoes.",
+  "facts": [
+    {
+      "label": "WHEN",
+      "value": "Thu, Jan 14, 2027",
+      "detail": "Ceremony at 3:00 PM",
+      "link": "ADD TO CALENDAR"
+    },
+    {
+      "label": "WHERE",
+      "value": "Our Lady of the Most Holy Rosary Parish",
+      "detail": "Boracay Island, Malay, Aklan",
+      "link": "OPEN IN MAPS"
+    },
+    {
+      "label": "RSVP BY",
+      "value": "Dec 12, 2026",
+      "detail": "Takes about a minute",
+      "link": "RSVP NOW"
+    }
+  ],
+  "calendarPrevious": {
+    "day": "13",
+    "label": "WED · JAN"
+  },
+  "calendarCurrent": {
+    "day": "14",
+    "label": "THU · JAN"
+  },
+  "calendarNext": {
+    "day": "15",
+    "label": "FRI · JAN"
+  },
+  "calendarSrOnly": "January 13–15, 2027",
+  "welcomeParagraphs": [
+    "We're getting married, and the day wouldn't be complete without you there to share it.",
+    "Come for the wedding, stay for the sunsets. One slow weekend by the sea, with everyone we love."
+  ]
+}

@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
 import type { HTMLAttributes } from "astro/types";
 import Stamp from "@/components/media/Stamp.astro";
@@ -20,13 +21,14 @@ interface Props extends HTMLAttributes<"section"> {
 }
 
 const { rsvpHref = "#rsvp", weekendHref = "#wedding", class: className, ...rest } = Astro.props;
+const [{ data }] = await getCollection("hero");
 ---
 
-<section id="hero" class:list={["hero", className]} {...rest}>
+{!data.hidden && <section id="hero" class:list={["hero", className]} {...rest}>
   <div class="hero_collage">
     <div class="hero_keepsake hero_couple" data-hero-keepsake>
       <div class="hero_polaroid">
-        <Image src={couple} alt="Warren and Eunice holding hands under the palms, looking out to sea" width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
+        <Image src={couple} alt={data.coupleAlt} width={206} height={230} widths={[206, 412]} sizes="(min-width: 48rem) 14.31vw, 160px" loading="eager" fetchpriority="high" />
       </div>
     </div>
     <div class="hero_keepsake hero_white-beach" data-hero-keepsake>
@@ -40,14 +42,14 @@ const { rsvpHref = "#rsvp", weekendHref = "#wedding", class: className, ...rest 
         <Image src={BACKGROUND_MUSIC.cover} alt={`Cover of ${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`} width={206} height={206} widths={[206, 412]} sizes="(min-width: 64rem) 14.31vw, 206px" loading="eager" fetchpriority="low" />
         <div class="music-polaroid_strip">
           <div class="music-polaroid_info">
-            <span class="music-polaroid_label">our song ♪</span>
+            <span class="music-polaroid_label">{data.musicLabel}</span>
             <MusicTicker class="music-polaroid_title" text={BACKGROUND_MUSIC.title} />
           </div>
           <div class="music-polaroid_controls">
-            <button type="button" data-music-mute aria-pressed="false" aria-label={`Mute ${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`}>
+            <button type="button" data-music-mute aria-pressed="false" aria-label={`${data.musicMute} ${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`}>
               <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 7h3l4-3v10l-4-3H3z" fill="currentColor" /><path class="music-polaroid_waves" d="M12.5 6.5c1 .8 1 4.2 0 5M14.5 4.5c2 1.8 2 7.2 0 9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>
             </button>
-            <button type="button" data-music-toggle aria-pressed="false" aria-label={`Play ${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`}>
+            <button type="button" data-music-toggle aria-pressed="false" aria-label={`${data.musicPlay} ${BACKGROUND_MUSIC.title} by ${BACKGROUND_MUSIC.artist}`}>
               <svg data-music-play-icon viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 1.8v10.4L12 7z" fill="currentColor" /></svg>
               <svg data-music-pause-icon viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="1.5" width="3" height="11" fill="currentColor" /><rect x="8.5" y="1.5" width="3" height="11" fill="currentColor" /></svg>
             </button>
@@ -60,29 +62,29 @@ const { rsvpHref = "#rsvp", weekendHref = "#wedding", class: className, ...rest 
     <div class="hero_keepsake hero_palm" data-hero-keepsake><Stamp><Image src={palm} alt="" width={860} height={1110} widths={[96, 192]} sizes="(min-width: 48rem) 6.67vw, 96px" loading="eager" fetchpriority="low" /></Stamp></div>
     <Image class="hero_keepsake hero_postmark" data-hero-keepsake src={postmark} alt="" width={195} height={120} widths={[195, 390]} sizes="(min-width: 48rem) 13.54vw, 130px" loading="eager" fetchpriority="low" />
     <p class="hero_keepsake hero_note" data-hero-keepsake aria-hidden="true">
-      <span class="hero_note-text">that’s us!</span>
+      <span class="hero_note-text">{data.note}</span>
       <svg class="hero_note-arrow" viewBox="0 0 100 56" focusable="false" aria-hidden="true"><path d="M97 3 C74 10 58 23 45 36 C34 45 19 47 8 44 M8 44 L19 36 M8 44 L19 52" fill="none" stroke="var(--accent-500)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </p>
   </div>
 
   <div class="hero_content">
     <p class="hero_date" data-hero-text-item>
-      <span class="hero_date-full">01 · 14 · 2027 · BORACAY, PHILIPPINES</span>
-      <span class="hero_date-short">01 · 14 · 2027 · BORACAY, PH</span>
+      <span class="hero_date-full">{data.dateFull}</span>
+      <span class="hero_date-short">{data.dateShort}</span>
     </p>
-    <h1 class="hero_title" data-hero-text-item><span>Warren</span> <span>&amp; Eunice</span></h1>
-    <p class="hero_subtitle" data-hero-text-item>are getting married by the sea</p>
+    <h1 class="hero_title" data-hero-text-item><span>{data.titleFirst}</span> <span>{data.titleSecond}</span></h1>
+    <p class="hero_subtitle" data-hero-text-item>{data.subtitle}</p>
     <div class="hero_actions" data-hero-text-item>
-      <Button class="hero_rsvp" element="link" href={rsvpHref} shape="pill">RSVP by December</Button>
-      <a class="hero_weekend" data-button-016 href={weekendHref} aria-label="See the weekend">
+      <Button class="hero_rsvp" element="link" href={rsvpHref} shape="pill">{data.rsvp}</Button>
+      <a class="hero_weekend" data-button-016 href={weekendHref} aria-label={data.weekendAria}>
         <span class="button-016__inner">
-          <span class="button-016__text">SEE THE WEEKEND</span>
+          <span class="button-016__text">{data.weekend}</span>
         </span>
         <span aria-hidden="true">↓</span>
       </a>
     </div>
   </div>
-</section>
+</section>}
 
 <script is:inline>
   if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
