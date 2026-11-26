@@ -105,11 +105,12 @@ and gates stay with Claude. A task with both halves runs them one after the othe
 
 ## Approval
 
-After classifying, state the classification, the lane and the acceptance criteria,
-then stop for the user's OK. For a new section or visual feature, recommend an
-approach first (options, trade-offs) and stop. Once approved, the chain runs without
-check-ins, except Local review on `runtime`; after "ship it", the rest runs without
-asking.
+After classifying, state the classification, lane and acceptance criteria, then stop
+for the user's OK. A new section or visual feature: recommend an approach first and
+stop. Once approved, the chain runs without check-ins, except Local review on
+`runtime`; after "ship it", the rest runs without asking. **QA fixer**: an open
+`qa-auto` issue is pre-approved (user, 2026-11-26); its scheduled run merges on PASS
+and a green full `gate`, no Local review, unless **Risky** → draft, `needs-human`.
 
 **Local review**: a `runtime` change waits for the user on its draft PR's Cloudflare
 preview (`https://<branch, / as ->-eunice-warren.warren-and-eunice.workers.dev`).
