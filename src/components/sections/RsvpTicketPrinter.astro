@@ -318,13 +318,15 @@ const copy = data.copy;
       detail = (event as CustomEvent<TicketDetail>).detail;
       if (!detail) return;
       const names = ticketNames(detail.names);
+      const firstName = detail.matchedName.split(" ")[0];
+      const deadline = detail.deadline;
       modal.querySelector("[data-ticket-heading]")!.textContent =
-        copy.copy.headingTemplate.replace("{name}", detail.matchedName.split(" ")[0]);
+        copy.copy.headingTemplate.replace("{name}", () => firstName);
       modal.querySelector("[data-ticket-body]")!.textContent =
-        copy.copy.bodyTemplate.replace("{deadline}", detail.deadline);
+        copy.copy.bodyTemplate.replace("{deadline}", () => deadline);
       modal.querySelector("[data-ticket-names]")!.textContent = names;
       modal.querySelector("[data-ticket-names-line]")!.textContent =
-        copy.copy.namesLine.replace("{names}", names);
+        copy.copy.namesLine.replace("{names}", () => names);
       modal.querySelector("[data-ticket-count]")!.textContent =
         `×${detail.guests}`;
       modal.querySelector("[data-ticket-admit]")!.textContent = seatWord(
