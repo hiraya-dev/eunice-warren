@@ -21,6 +21,23 @@ test.describe("invitation section", () => {
     }
   });
 
+  test("keeps faded links focusable before the section is reached", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const link = page.locator("#invitation a").first();
+    const item = link.locator("xpath=ancestor-or-self::*[@data-fade-in-item][1]");
+    // No scroll: the section has not reached its trigger, so its items are still faded out.
+    await expect(link).toBeAttached();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    expect(await item.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(1);
+
+    // Faded items must stay in the tab order and the accessibility tree (no visibility: hidden).
+    await link.focus();
+    await expect(link).toBeFocused();
+    // Focus finishes that section's reveal at once, so the focus ring never sits on invisible content.
+    await expect(item).toHaveCSS("opacity", "1", { timeout: 2_000 });
+  });
+
   test("keeps the heading upright", { tag: ["@single"] }, async ({ page }) => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });

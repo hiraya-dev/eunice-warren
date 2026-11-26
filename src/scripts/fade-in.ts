@@ -26,9 +26,11 @@ export function initFadeIn() {
       if (!items.length) return;
 
       const context = gsap.context(() => {
-        gsap.set(items, { autoAlpha: 0, y: 24 });
-        gsap.to(items, {
-          autoAlpha: 1,
+        // Fade with opacity only: `visibility: hidden` (what autoAlpha adds) would take every
+        // link and button out of the tab order and the accessibility tree until the section is reached.
+        gsap.set(items, { opacity: 0, y: 24 });
+        const reveal = gsap.to(items, {
+          opacity: 1,
           y: 0,
           duration: 0.8,
           ease: "power3.out",
@@ -39,6 +41,14 @@ export function initFadeIn() {
             once: true,
           },
         });
+        // Focus landing on an item that has not revealed yet finishes the reveal at once,
+        // so a focus ring never sits on invisible content.
+        const finish = () => {
+          reveal.scrollTrigger?.kill();
+          reveal.progress(1);
+        };
+        section.addEventListener("focusin", finish, { once: true });
+        return () => section.removeEventListener("focusin", finish);
       }, section);
       contexts.push(context);
     });
