@@ -257,6 +257,17 @@ test.describe("guest preloader", () => {
     await expect(heroTitle).toHaveCSS("opacity", "1");
   });
 
+  test("does not warn when hidden props skip their motion tween", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    const consoleMessages: string[] = [];
+    page.on("console", (message) => consoleMessages.push(message.text()));
+    await page.goto("/");
+    await preloader(page).getByRole("button", { name: "Just browsing" }).click();
+    await expect(preloader(page)).toHaveCount(0);
+    expect(consoleMessages.some((message) => /GSAP target .*not found/.test(message))).toBe(false);
+  });
+
   test("Escape closes it", { tag: ["@single"] }, async ({ page }) => {
     await page.keyboard.press("Escape");
     await expect(preloader(page)).toHaveCount(0);
