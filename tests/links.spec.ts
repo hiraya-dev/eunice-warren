@@ -20,7 +20,7 @@ test.describe("home page links", { tag: ["@smoke"] }, () => {
     await expect(page.locator(`a[href="${calendarPath}"]`)).toHaveCount(3);
     await expect(page.locator(".footer_top-link")).toHaveAttribute(
       "href",
-      "#hero",
+      "#main",
     );
   });
 

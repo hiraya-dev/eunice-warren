@@ -275,6 +275,16 @@ Maintenance rules (`--check` enforces the mechanical ones):
 - **Guard:** none
 - **Paths:** `src/pages/admin/**`, `src/components/admin/**`, `src/styles/admin.css`
 
+### L-077 — Grep every spec for a value you change
+- **Date:** 2026-11-27
+- **Trigger:** #175, red CI (`e2e (smoke)`: `tests/links.spec.ts` still expected the footer link's old `#hero` href)
+- **Symptom:** the footer spec was updated and passed locally, but a second spec in another file pinned the same attribute and failed on the runner.
+- **Root cause:** only the spec named after the component was searched and run; the search for other uses of `#hero` was a zsh `--include=*.ts` glob that errored, and the error went unread.
+- **Rule:** when a diff changes an href, id, class or attribute value, search all of `tests/` for the old value with a plain `grep -rn -- '<old value>' tests` and update or run every spec that hits, before the first push.
+- **Check:** the PR's `task.md` names that grep and its hits.
+- **Guard:** none
+- **Paths:** `src/components/**`, `src/layouts/**`, `tests/**`
+
 ## Content and layout
 
 ### L-031 — More items in a row means smaller photos; show the size before building

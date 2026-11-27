@@ -20,7 +20,7 @@ test.describe("Paper footer", () => {
     const images = await page.locator(".footer_stamp img, .footer_cluster img").all();
     expect(images).toHaveLength(4);
     for (const image of images) await expect(image).toHaveAttribute("alt", "");
-    await expect(page.getByRole("link", { name: "Back to top" })).toHaveAttribute("href", "#hero");
+    await expect(page.getByRole("link", { name: "Back to top" })).toHaveAttribute("href", "#main");
   });
 
   test("keeps the date inside the viewport at mobile widths", { tag: ["@single"] }, async ({ page }) => {
@@ -144,4 +144,36 @@ test.describe("Paper footer", () => {
     expect(desktop.parts[2].left).toBeGreaterThan(desktop.parts[1].left);
     for (const part of desktop.parts) expect(Math.abs(part.top - desktop.parts[0].top)).toBeLessThanOrEqual(2);
   });
+
+  test("separates the contact lead, people and separator with a visible gap on desktop", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/404");
+
+    const boxes = await page.locator(".footer_contact > span").evaluateAll((parts) =>
+      parts.map((part) => {
+        const box = part.getBoundingClientRect();
+        return { left: box.left, right: box.right, top: box.top };
+      }),
+    );
+    expect(boxes).toHaveLength(4);
+    for (let index = 1; index < boxes.length; index += 1) {
+      expect(Math.abs(boxes[index].top - boxes[0].top)).toBeLessThanOrEqual(2);
+      expect(boxes[index].left - boxes[index - 1].right).toBeGreaterThan(2);
+    }
+  });
+
+  for (const path of ["/404", "/"]) {
+    test(`scrolls the back to top link to the top of the page on ${path}`, { tag: ["@single"] }, async ({ page }) => {
+      await page.addInitScript(() => localStorage.setItem("ew-test-skip-preloader", "1"));
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(path);
+
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 5000 }).toBeGreaterThan(300);
+      await page.locator(".footer_top-link").click();
+
+      await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 10000 }).toBeLessThanOrEqual(3);
+      expect(await page.evaluate(() => location.hash)).not.toBe("#hero");
+    });
+  }
 });
