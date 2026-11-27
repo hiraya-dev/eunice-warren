@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createD1RsvpStore } from "../src/lib/rsvp/d1.ts";
 import { getPlusOneStates, getHouseholdSummary, getUnnamedPlusOneCount } from "../src/lib/db/summary.ts";
-import { createD1SongStore, SongCapError } from "../src/lib/songs/store.ts";
+import { createD1SongStore, SongCapError, SongGuestError } from "../src/lib/songs/store.ts";
 import { isD1LimitError } from "../src/lib/db/errors.ts";
 import { addSeat, removeTrailingSeat, retireSeat, setInvitedName, setSeatName } from "../src/lib/rsvp/d1.ts";
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
@@ -467,6 +467,15 @@ test("find action records store time when lookup throws and preserves error mapp
   );
   assert.equal(timing.storeMs > 0, true);
   assert.equal(timing.signMs, 0);
+});
+
+test("song guest errors map to a guest-safe BAD_REQUEST without names", async () => {
+  await assert.rejects(
+    () => runSongAction({ add: async () => { throw new SongGuestError(); } }, { name: "Unknown", song: "Song" }),
+    (error: unknown) => error instanceof GuestActionFailure && error.code === "BAD_REQUEST" && !fakeFixtures.some((fixture) => fixture.members.some((name) => error.message.includes(name))),
+  );
+  const result = await runSongAction({ add: async () => {} }, { name: fakeFixtures[0]!.members[0]!, song: "Song" });
+  assert.deepEqual(result, { ok: true });
 });
 
 test("D1 store and summary statements use indexes instead of table scans", async () => {

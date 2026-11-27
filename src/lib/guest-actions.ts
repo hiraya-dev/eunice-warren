@@ -3,7 +3,7 @@ import { InviteChangedError } from "./rsvp/d1.ts";
 import { signRsvpToken, validateSubmissionProblems, verifyRsvpToken } from "./rsvp/logic.ts";
 import type { RsvpNotificationData } from "./rsvp/notify.ts";
 import type { InviteLookup, RsvpSeat, RsvpStore } from "./rsvp/store.ts";
-import { SongCapError, SongRateLimitError, type SongInput, type SongStore } from "./songs/store.ts";
+import { SongCapError, SongGuestError, SongRateLimitError, type SongInput, type SongStore } from "./songs/store.ts";
 
 export type GuestActionCode = "BAD_REQUEST" | "CONFLICT" | "INTERNAL_SERVER_ERROR" | "SERVICE_UNAVAILABLE" | "TOO_MANY_REQUESTS" | "UNAUTHORIZED";
 
@@ -158,6 +158,8 @@ export async function runSongAction(store: SongStore, input: SongInput) {
     await store.add(input);
     return { ok: true as const };
   } catch (error) {
+    if (error instanceof SongGuestError)
+      throw new GuestActionFailure("BAD_REQUEST", "We couldn't find that name on the guest list. Use the name on your invitation.");
     if (error instanceof SongCapError && error.kind === "song-total-cap")
       throw new GuestActionFailure("CONFLICT", "Side A is full. Thank you for all the requests!");
     if (error instanceof SongCapError && error.kind === "song-name-cap")

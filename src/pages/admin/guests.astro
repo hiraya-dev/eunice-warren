@@ -18,11 +18,14 @@ import {
   suggestInvitationName,
 } from "@/lib/admin/names";
 import GuestHouseholdForm from "@/components/admin/GuestHouseholdForm.astro";
+import { parseFakeRemovedSongIds } from "@/lib/admin/song-cookie";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
+const storeName = (env as Record<string, unknown>).RSVP_STORE;
 const store = selectAdminStore(
-  (env as Record<string, unknown>).RSVP_STORE,
+  storeName,
   (env as Record<string, unknown>).DB as never,
+  { removedSongIds: storeName === "fake" ? parseFakeRemovedSongIds(Astro.request.headers.get("cookie")) : undefined },
 );
 let writeError = "";
 type DraftSeat = {

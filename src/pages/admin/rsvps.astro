@@ -22,14 +22,17 @@ import type {
   AdminRsvpList,
   AdminRsvpRow,
 } from "@/lib/admin/store";
+import { parseFakeRemovedSongIds } from "@/lib/admin/song-cookie";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
+const storeName = (env as Record<string, unknown>).RSVP_STORE;
 const hosts = parseAdminHosts(
   String((env as Record<string, unknown>).ADMIN_HOSTS ?? ""),
 ) ?? { [host.email]: host.firstName };
 const store = selectAdminStore(
-  (env as Record<string, unknown>).RSVP_STORE,
+  storeName,
   (env as Record<string, unknown>).DB as never,
+  { removedSongIds: storeName === "fake" ? parseFakeRemovedSongIds(Astro.request.headers.get("cookie")) : undefined },
 );
 let data: AdminRsvpList | null = null;
 let detail: AdminRsvpDetail | null = null;

@@ -10,8 +10,12 @@ import {
 } from "@/lib/admin/presentation";
 export const prerender = false;
 import type { AdminOverview } from "@/lib/admin/store";
+import { parseFakeRemovedSongIds } from "@/lib/admin/song-cookie";
 const host = Astro.locals.adminHost!;
-const store = selectAdminStore((env as Record<string, unknown>).RSVP_STORE, (env as Record<string, unknown>).DB as never);
+const storeName = (env as Record<string, unknown>).RSVP_STORE;
+const store = selectAdminStore(storeName, (env as Record<string, unknown>).DB as never, {
+  removedSongIds: storeName === "fake" ? parseFakeRemovedSongIds(Astro.request.headers.get("cookie")) : undefined,
+});
 let data: AdminOverview | null = null;
 let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
 let failed = false;

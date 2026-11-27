@@ -3,11 +3,14 @@ import { env } from "cloudflare:workers";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { mostCommonCaption, pairsCaption } from "@/lib/admin/presentation";
 import { selectAdminStore, type AdminSlipperOrder } from "@/lib/admin/store";
+import { parseFakeRemovedSongIds } from "@/lib/admin/song-cookie";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
+const storeName = (env as Record<string, unknown>).RSVP_STORE;
 const store = selectAdminStore(
-  (env as Record<string, unknown>).RSVP_STORE,
+  storeName,
   (env as Record<string, unknown>).DB as never,
+  { removedSongIds: storeName === "fake" ? parseFakeRemovedSongIds(Astro.request.headers.get("cookie")) : undefined },
 );
 let data: AdminSlipperOrder | null = null;
 let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
