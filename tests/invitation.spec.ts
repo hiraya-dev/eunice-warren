@@ -6,7 +6,9 @@ test.describe("invitation section", () => {
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
-      await reveal(page.locator(".invitation_title"));
+      const title = page.locator(".invitation_title");
+      await title.evaluate((element) => element.scrollIntoView({ block: "center" }));
+      await reveal(title);
       const positions = await page.evaluate(() => {
         const title = document.querySelector<HTMLElement>(".invitation_title")!.getBoundingClientRect();
         const note = document.querySelector<HTMLElement>(".invitation_note")!.getBoundingClientRect();
