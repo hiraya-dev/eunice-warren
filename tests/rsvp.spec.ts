@@ -350,6 +350,12 @@ test.describe("RSVP section", () => {
       .getByRole("button", { name: /Send RSVP/ })
       .click();
     await expect(rsvp(page).locator("[data-rsvp-email-error]")).toBeVisible();
+    await rsvp(page).locator("#rsvp-email").fill("qa@example.com");
+    await rsvp(page)
+      .getByRole("button", { name: /Send RSVP/ })
+      .click();
+    await expect(rsvp(page).locator("[data-rsvp-email-error]")).toBeHidden();
+    await expect(rsvp(page).locator(".rsvp_slipper-error")).toBeVisible();
     await rsvp(page).locator("#rsvp-email").fill("not-an-email");
     await rsvp(page)
       .getByRole("button", { name: /Send RSVP/ })

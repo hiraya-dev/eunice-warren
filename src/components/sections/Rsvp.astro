@@ -766,6 +766,9 @@ const {
               email.focus();
               return;
             }
+            email.removeAttribute("aria-invalid");
+            email.removeAttribute("aria-describedby");
+            error.hidden = true;
             const missingSeat = attending ? seats.find((seat) => seat.attending && !seat.slipperSize) : undefined;
             if (missingSeat) {
               const selectedIndex = seats.filter((seat) => seat.attending).indexOf(missingSeat);
@@ -776,9 +779,6 @@ const {
               select.focus();
               return;
             }
-            email.removeAttribute("aria-invalid");
-            email.removeAttribute("aria-describedby");
-            error.hidden = true;
             const submit =
               root.querySelector<HTMLButtonElement>("[data-rsvp-submit]")!;
             const submitError = root.querySelector<HTMLElement>(
