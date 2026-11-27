@@ -58,15 +58,31 @@ const [{ data }] = await getCollection("entourage");
             <Image class="entourage_keepsake entourage_barkada-polaroid" src={barkadaPolaroid} alt="" width={138} height={138} densities={[1, 2]} loading="lazy" aria-hidden="true" />
           )}
           <div class="entourage_rows">
-            {group.rows.map((row, rowIndex) => (
+            {group.rows.map((row, rowIndex) => {
+              const pairedRole = row.roles.length === 1 && row.roles[0] && "labels" in row.roles[0] ? row.roles[0] : null;
+              return (
               <div class="entourage_row" data-fade-in-item>
-                {row.roles.map((role, roleIndex) => {
+                {pairedRole ? (
+                  <div class="entourage_paired-row">
+                    {pairedRole.labels.map((label, roleIndex) => {
+                      const labelId = `${group.id}-row-${rowIndex}-role-${roleIndex}`;
+                      return (
+                        <div class="entourage_role">
+                          <h4 id={labelId}>{label}</h4>
+                          <ul aria-labelledby={labelId}>
+                            {pairedRole.pairs.map((pair) => <li>{pair[roleIndex] ?? pairedRole.emptyName}</li>)}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : row.roles.map((role, roleIndex) => {
                   const labelId = `${group.id}-row-${rowIndex}-role-${roleIndex}`;
                   return (
                     <div class="entourage_role">
-                      <h4 id={labelId}>{role.label}</h4>
+                      <h4 id={labelId}>{"label" in role && role.label}</h4>
                       <ul aria-labelledby={labelId}>
-                        {role.names.map((name) => <li>{name}</li>)}
+                        {"label" in role && role.names.map((name) => <li>{name}</li>)}
                       </ul>
                     </div>
                   );
@@ -75,7 +91,8 @@ const [{ data }] = await getCollection("entourage");
                   <div class="entourage_keepsake entourage_pawikan"><Stamp><Image src={pawikan} alt="" width={84} height={108} densities={[1, 2]} loading="lazy" aria-hidden="true" /></Stamp></div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
@@ -103,7 +120,14 @@ const [{ data }] = await getCollection("entourage");
     .entourage_officiant .entourage_row { grid-template-columns: 1fr; }
     .entourage_bridal-party .entourage_rows { gap: 3.5rem; }
     .entourage_secondary-sponsors .entourage_row { grid-template-columns: 1fr; gap: var(--space-5); }
-    .entourage_bridal-party .entourage_row:last-child { position: relative; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .entourage_bridal-party .entourage_row:last-child { position: relative; }
+    .entourage_bridal-party .entourage_row:nth-child(n + 4) { grid-template-columns: 1fr; }
+    .entourage_paired-row { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 0 var(--space-4); }
+    .entourage_paired-row .entourage_role { display: contents; }
+    .entourage_paired-row .entourage_role h4 { grid-row: 1; margin-bottom: var(--space-1); }
+    .entourage_paired-row .entourage_role:first-child h4, .entourage_paired-row .entourage_role:first-child li { grid-column: 1; }
+    .entourage_paired-row .entourage_role:last-child h4, .entourage_paired-row .entourage_role:last-child li { grid-column: 2; }
+    .entourage_paired-row .entourage_role ul { display: contents; }
     .entourage_role { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: var(--space-1); }
     .entourage_role h4 { margin: 0; color: var(--dark-700); font: italic 400 1.25rem / 1.4 var(--secondary-family); }
     .entourage_role ul { display: flex; margin: 0; padding: 0; flex-direction: column; list-style: none; color: var(--dark-900); font: var(--secondary-regular) var(--text-large) / 1.5 var(--secondary-family); }
@@ -132,6 +156,11 @@ const [{ data }] = await getCollection("entourage");
     .entourage_group-title { gap: var(--space-2); line-height: 1.125; }
     .entourage_rows { gap: var(--space-5); }
     .entourage_row { grid-template-columns: 1fr; gap: var(--space-5); }
+    .entourage_paired-row { display: contents; }
+    .entourage_paired-row .entourage_role { display: flex; }
+    .entourage_paired-row .entourage_role h4, .entourage_paired-row .entourage_role li { grid-column: auto; }
+    .entourage_paired-row .entourage_role h4 { margin-bottom: 0; }
+    .entourage_paired-row .entourage_role ul { display: flex; }
     .entourage_role h4 { font-size: 1rem; line-height: 1.5; }
     .entourage_role ul { font-size: 1.25rem; line-height: 1.6; }
   }
