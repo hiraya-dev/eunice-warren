@@ -207,7 +207,7 @@ test.describe("Playlist section", () => {
     await reveal(form);
     const name = form.locator('input[name="name"]');
     const song = form.locator('input[name="song"]');
-    await name.fill("Another Song Tester");
+    await name.fill(songGuestName);
     await song.fill("Dancing Queen");
     await form.locator("button[type=submit]").click();
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
@@ -217,7 +217,7 @@ test.describe("Playlist section", () => {
     await expect(form).toBeVisible();
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeHidden();
     await expect(another).toBeHidden();
-    await expect(name).toHaveValue("Another Song Tester");
+    await expect(name).toHaveValue(songGuestName);
     await expect(song).toHaveValue("");
     await expect(song).toBeFocused();
     await song.fill("Mamma Mia");
