@@ -616,7 +616,12 @@ export const fakeAdminReplies = fakeAdminFixtures
       .filter((seat) => seat.kind === "plus_one" && seat.namedBy)
       .map((seat) => ({ name: seat.name!, namedBy: seat.namedBy })),
   }));
-export function createFakeAdminStore(): AdminStore {
+export function createFakeAdminStore(options: { removedSongIds?: Set<number> } = {}): AdminStore {
+  const removedSongIds = options.removedSongIds ?? new Set<number>();
+  const isRemoved = (id: number) =>
+    id >= 1 && id <= fakeAdminSongs.length && removedSongIds.has(id);
+  const removedCount = () =>
+    fakeAdminSongs.reduce((count, _row, index) => count + (isRemoved(index + 1) ? 1 : 0), 0);
   async function getSlipperOrder(): Promise<AdminSlipperOrder> {
     const counts = new Map<string, number>();
     let missing = 0;
@@ -1088,7 +1093,7 @@ export function createFakeAdminStore(): AdminStore {
       dedication: row.dedication,
       spotifyTrackId: null,
       createdAt: row.submittedAt,
-    }));
+    })).filter((row) => !isRemoved(row.id));
     const counts = new Map<string, number>();
     for (const row of source) {
       const key = songKey(row.song, row.artist);
@@ -1118,7 +1123,7 @@ export function createFakeAdminStore(): AdminStore {
         .map(makeFakeRsvpRow)
         .filter((row) => row.state !== "waiting").length,
       slipperPairs: slippers.pairs,
-      songRequests: fakeAdminSongs.length,
+      songRequests: fakeAdminSongs.length - removedCount(),
     };
   }
   return {
@@ -1192,7 +1197,7 @@ export function createFakeAdminStore(): AdminStore {
             activeFixtures().length) *
             100,
         ),
-        songCount: fakeAdminSongs.length,
+        songCount: fakeAdminSongs.length - removedCount(),
         latestReplies: activeFixtures()
           .map((household) => ({ household, row: makeFakeRsvpRow(household) }))
           .filter(({ row }) => row.state !== "waiting")
@@ -1260,6 +1265,11 @@ export function createFakeAdminStore(): AdminStore {
     getSlipperOrder,
     getSongRequests,
     getNavCounts,
+    async removeSong(id: number, _hostEmail: string) {
+      if (id < 1 || id > fakeAdminSongs.length || isRemoved(id)) return false;
+      removedSongIds.add(id);
+      return true;
+    },
     saveHousehold,
     saveRsvp,
     addHousehold,

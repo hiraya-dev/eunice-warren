@@ -3,6 +3,7 @@ import {
   createFakeAdminStore,
   fakeAdminFixtures,
   fakeAdminReplies,
+  fakeAdminSongs,
 } from "../src/lib/admin/fake";
 import { djText, duplicateLabel } from "../src/lib/admin/presentation";
 import { withAdminLock } from "./helpers/admin-lock";
@@ -306,7 +307,7 @@ test.describe("admin slippers and songs", () => {
             nodes.map((node) => Math.round(node.getBoundingClientRect().left)),
           );
       const headers = await lefts('[role="columnheader"]');
-      expect(headers).toHaveLength(5);
+      expect(headers).toHaveLength(6);
       const row = page.locator("[data-song-row]").first();
       const cells = [
         "[data-song-no]",
@@ -346,6 +347,40 @@ test.describe("admin slippers and songs", () => {
         ).toBeLessThanOrEqual(1);
       }
     }
+  });
+
+  test("confirms and removes a song, or keeps it", async ({ page }) => {
+    await withAdminLock(async () => {
+      const targetId = fakeAdminSongs.length;
+      const expected = fakeAdminSongs.length - 1;
+      await page.goto("/admin/songs");
+      const row = page.locator(`[data-song-id="${targetId}"]`);
+      await row.locator("[data-song-remove]").click();
+      await expect(page.locator("[data-song-remove-confirm]")).toBeVisible();
+      await page.locator("[data-song-remove-confirm] a").click();
+      await expect(page.locator("[data-song-remove-confirm]")).toHaveCount(0);
+      await expect(row).toBeVisible();
+      await row.locator("[data-song-remove]").click();
+      await page.locator('[data-song-remove-confirm] button[type="submit"]').click();
+      await expect(page).toHaveURL(/removed=1/);
+      await expect(page.locator("[data-admin-song-removed]")).toBeVisible();
+      await expect(page.locator(`[data-song-id="${targetId}"]`)).toHaveCount(0);
+      await expect(page.locator("[data-admin-sidebar] a[href='/admin/songs']")).toContainText(String(expected));
+    });
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+    test("removes a song", async ({ page }) => {
+      await withAdminLock(async () => {
+        const targetId = fakeAdminSongs.length - 1;
+        await page.goto(`/admin/songs?remove=${targetId}`);
+        await expect(page.locator("[data-song-remove-confirm]")).toBeVisible();
+        await page.locator('[data-song-remove-confirm] button[type="submit"]').click();
+        await expect(page).toHaveURL(/removed=1/);
+        await expect(page.locator(`[data-song-id="${targetId}"]`)).toHaveCount(0);
+      });
+    });
   });
 });
 

@@ -17,7 +17,12 @@ import {
   songsEyebrow,
   spotifyTrackUrl,
 } from "../src/lib/admin/presentation.ts";
-import type { AdminStore } from "../src/lib/admin/store.ts";
+import { selectAdminStore, type AdminStore } from "../src/lib/admin/store.ts";
+import {
+  fakeRemovedSongsSetCookie,
+  parseFakeRemovedSongIds,
+  serializeFakeRemovedSongIds,
+} from "../src/lib/admin/song-cookie.ts";
 import { SLIPPER_SIZES } from "../src/lib/rsvp/slippers.ts";
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
 
@@ -364,4 +369,50 @@ test("fake admin store provides full slipper sizes, counts, songs, and nav count
     slipperPairs: slippers.pairs,
     songRequests: 8,
   });
+});
+
+test("D1 admin removal is a host-attributed soft delete everywhere", async () => {
+  const database = new SqliteD1(); database.applyMigration();
+  database.db.exec("INSERT INTO songs (name,name_key,song,created_at) VALUES ('A','a','Keep','2026-11-20T00:00:00Z'),('B','b','Remove','2026-11-20T01:00:00Z')");
+  const store = createD1AdminStore(database);
+  const id = Number(database.db.prepare("SELECT id FROM songs WHERE song='Remove'").get()?.id);
+  assert.equal(await store.removeSong(id, "host@example.com"), true);
+  assert.equal(await store.removeSong(id, "other@example.com"), false);
+  assert.equal(await store.removeSong(9999, "host@example.com"), false);
+  assert.equal(database.db.prepare("SELECT removed_by FROM songs WHERE id=?").get(id)?.removed_by, "host@example.com");
+  const songs = await store.getSongRequests();
+  assert.equal(songs.rows.some((row) => row.id === id), false);
+  assert.equal(songs.requests, 1); assert.equal(songs.songs, 1);
+  assert.equal((await store.getNavCounts()).songRequests, 1);
+  assert.equal((await store.getOverview()).songCount, 1);
+  assert.doesNotMatch(await (await buildSongCsv(store)).text(), /Remove/);
+  database.close();
+});
+
+test("fake admin song removal is isolated by store state and CSV", async () => {
+  const removedSongIds = new Set<number>();
+  const first = createFakeAdminStore({ removedSongIds });
+  const before = await first.getSongRequests();
+  const id = before.rows.at(-1)!.id;
+  assert.equal(await first.removeSong(id, "host@example.com"), true);
+  const second = selectAdminStore("fake", undefined, { removedSongIds: new Set() });
+  assert.equal((await second.getSongRequests()).rows.some((row) => row.id === id), true);
+  assert.doesNotMatch(await (await buildSongCsv(first)).text(), new RegExp(`,${before.rows.at(-1)!.name},`));
+  assert.equal((await second.getNavCounts()).songRequests, 8);
+});
+
+test("fake removed song cookie round-trips and rejects junk", () => {
+  const ids = parseFakeRemovedSongIds(
+    "other=1; ew-fake-removed-songs=3,1,3,0,-2,nope,9007199254740992",
+  );
+  assert.deepEqual([...ids], [3, 1]);
+  assert.equal(serializeFakeRemovedSongIds(ids), "1,3");
+  assert.deepEqual(
+    [...parseFakeRemovedSongIds("ew-fake-removed-songs=1,0,-2,nope")],
+    [1],
+  );
+  assert.equal(
+    fakeRemovedSongsSetCookie(new Set([3, 1])),
+    "ew-fake-removed-songs=1,3; Path=/admin; SameSite=Lax; HttpOnly",
+  );
 });

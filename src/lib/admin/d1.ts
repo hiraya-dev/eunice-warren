@@ -181,7 +181,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       comingCounts.map((r) => [r.response_id, r.coming]),
     );
     const songRows = await query<{ count: number }>(
-      `SELECT count(*) count FROM songs`,
+      `SELECT count(*) count FROM songs WHERE removed_at IS NULL`,
     );
     return {
       seatsOffered: summary.offered,
@@ -512,7 +512,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       spotify_track_id: string | null;
       created_at: string;
     }>(
-      `SELECT id,song,artist,name,dedication,spotify_track_id,created_at FROM songs ORDER BY created_at DESC,id DESC`,
+      `SELECT id,song,artist,name,dedication,spotify_track_id,created_at FROM songs WHERE removed_at IS NULL ORDER BY created_at DESC,id DESC`,
     );
     const counts = new Map<string, number>();
     for (const row of source) {
@@ -549,7 +549,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       song_requests: number;
       rsvp_replies: number;
     }>(
-      `WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT (SELECT count(DISTINCT h.id) FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active') households, (SELECT count(*) FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active' AND r.attending=1 AND rs.attending=1 AND rs.slipper_size IN (${allowedSizes})) slipper_pairs, (SELECT count(*) FROM songs) song_requests, (SELECT count(DISTINCT r.household_id) FROM responses r JOIN households h ON h.id=r.household_id AND h.status='active' WHERE EXISTS (SELECT 1 FROM invite_seats s WHERE s.household_id=h.id AND s.status='active')) rsvp_replies`,
+      `WITH latest AS (SELECT r.* FROM responses r WHERE NOT EXISTS (SELECT 1 FROM responses newer WHERE newer.household_id=r.household_id AND (newer.submitted_at>r.submitted_at OR (newer.submitted_at=r.submitted_at AND newer.id>r.id)))) SELECT (SELECT count(DISTINCT h.id) FROM households h JOIN invite_seats s ON s.household_id=h.id AND s.status='active' WHERE h.status='active') households, (SELECT count(*) FROM response_seats rs JOIN latest r ON r.id=rs.response_id JOIN invite_seats s ON s.id=rs.seat_id JOIN households h ON h.id=s.household_id WHERE h.status='active' AND s.status='active' AND r.attending=1 AND rs.attending=1 AND rs.slipper_size IN (${allowedSizes})) slipper_pairs, (SELECT count(*) FROM songs WHERE removed_at IS NULL) song_requests, (SELECT count(DISTINCT r.household_id) FROM responses r JOIN households h ON h.id=r.household_id AND h.status='active' WHERE EXISTS (SELECT 1 FROM invite_seats s WHERE s.household_id=h.id AND s.status='active')) rsvp_replies`,
     );
     return {
       households: Number(row?.households ?? 0),
@@ -557,6 +557,10 @@ export function createD1AdminStore(database: D1Database): AdminStore {
       slipperPairs: Number(row?.slipper_pairs ?? 0),
       songRequests: Number(row?.song_requests ?? 0),
     };
+  }
+  async function removeSong(id: number, hostEmail: string) {
+    const result = await database.prepare(`UPDATE songs SET removed_at=?, removed_by=? WHERE id=? AND removed_at IS NULL`).bind(new Date().toISOString(), hostEmail, id).run();
+    return Number(result.meta?.changes ?? 0) > 0;
   }
   const validationError = (message: string) => ({
     ok: false as const,
@@ -1165,6 +1169,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     getSlipperOrder,
     getSongRequests,
     getNavCounts,
+    removeSong,
     saveHousehold,
     saveRsvp,
     addHousehold,

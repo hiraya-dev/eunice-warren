@@ -230,6 +230,7 @@ export interface AdminStore {
   getSlipperOrder(): Promise<AdminSlipperOrder>;
   getSongRequests(): Promise<AdminSongRequests>;
   getNavCounts(): Promise<AdminNavCounts>;
+  removeSong(id: number, hostEmail: string): Promise<boolean>;
   saveHousehold(
     input: SaveHouseholdInput,
     actor: string,
@@ -248,11 +249,15 @@ export interface AdminStore {
     updatedAt?: string,
   ): Promise<void>;
 }
+export interface AdminStoreOptions {
+  removedSongIds?: Set<number>;
+}
 export function selectAdminStore(
   storeName: unknown,
   database: D1Database | undefined,
+  options: AdminStoreOptions = {},
 ): AdminStore {
   return storeName === "fake"
-    ? createFakeAdminStore()
+    ? createFakeAdminStore(options)
     : createD1AdminStore(database as D1Database);
 }

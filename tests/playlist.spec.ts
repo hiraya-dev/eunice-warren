@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 import { reveal } from "./helpers/reveal";
 import { fakeSongSearch } from "../src/lib/songs/fake";
 import { readFileSync } from "node:fs";
+import { fakeFixtures } from "../src/lib/rsvp/store";
+
+const songGuestName = fakeFixtures[0]!.members[0]!;
 
 const playlistContent = JSON.parse(readFileSync("src/content/playlist/playlist.json", "utf8")) as { copy: { success: string } };
 
@@ -55,7 +58,7 @@ test.describe("Playlist section", () => {
     await page.goto("/");
     const form = page.locator('form[name="song-request"]');
     await reveal(form);
-    await form.locator('input[name="name"]').fill("Playlist Tester");
+    await form.locator('input[name="name"]').fill(songGuestName);
     const song = form.locator('input[name="song"]');
     const artist = form.locator('input[name="artist"]');
     await song.fill("danc");
@@ -71,6 +74,17 @@ test.describe("Playlist section", () => {
     await form.locator("button[type=submit]").click();
     expect((await sent).postData() ?? "").toContain(picked.id);
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
+  test("rejects a made-up song-request name", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    await form.locator('input[name="name"]').fill("Not A Guest");
+    await form.locator('input[name="song"]').fill("A song");
+    await form.locator("button[type=submit]").click();
+    await expect(page.locator('.playlist_form-wrap .form_note-failed[role="alert"]')).toBeVisible();
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeHidden();
   });
 
   test("caps request fields and hides input validation details", { tag: ["@single"] }, async ({ page }) => {
@@ -100,7 +114,7 @@ test.describe("Playlist section", () => {
     await page.goto("/");
     const form = page.locator('form[name="song-request"]');
     await reveal(form);
-    await form.locator('input[name="name"]').fill("Song Edit Tester");
+    await form.locator('input[name="name"]').fill(songGuestName);
     const song = form.locator('input[name="song"]');
     await song.fill("danc");
     await expect(form.locator('[role="listbox"]')).toBeVisible();
@@ -117,7 +131,7 @@ test.describe("Playlist section", () => {
     await page.goto("/");
     const form = page.locator('form[name="song-request"]');
     await reveal(form);
-    await form.locator('input[name="name"]').fill("Artist Edit Tester");
+    await form.locator('input[name="name"]').fill(songGuestName);
     const song = form.locator('input[name="song"]');
     await song.fill("danc");
     await expect(form.locator('[role="listbox"]')).toBeVisible();
@@ -174,7 +188,7 @@ test.describe("Playlist section", () => {
     await page.goto("/");
     const form = page.locator('form[name="song-request"]');
     await reveal(form);
-    await form.locator('input[name="name"]').fill("Free Text Tester");
+    await form.locator('input[name="name"]').fill(songGuestName);
     const song = form.locator('input[name="song"]');
     await song.fill("danc");
     await expect(form.locator('[role="listbox"]')).toBeVisible();
@@ -437,7 +451,7 @@ test.describe("Playlist section", () => {
     await reveal(page.locator(".playlist_submit"));
     await page.locator(".playlist_submit").click();
     await expect(page.locator('.playlist_form-wrap input[name="name"]')).toBeFocused();
-    await page.locator('.playlist_form-wrap input[name="name"]').fill("Eunice");
+    await page.locator('.playlist_form-wrap input[name="name"]').fill(songGuestName);
     await expect(page.locator(".field-search-icon")).toHaveCount(0);
     await expect(page.locator('input[name="artist"]')).not.toHaveAttribute(
       "required",
@@ -460,7 +474,7 @@ test.describe("Playlist section", () => {
     for (const [song, message] of cases) {
       await page.goto("/");
       await reveal(page.locator(".playlist_submit"));
-      await page.locator('.playlist_form-wrap input[name="name"]').fill("Playlist Fixture");
+      await page.locator('.playlist_form-wrap input[name="name"]').fill(songGuestName);
       await page.locator('.playlist_form-wrap input[name="song"]').fill(song);
       await page.locator(".playlist_submit").click();
       await expect(page.locator('.playlist_form-wrap .form_note-failed[role="alert"]')).toBeVisible();

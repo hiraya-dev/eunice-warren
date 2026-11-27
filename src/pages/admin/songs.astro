@@ -9,15 +9,46 @@ import {
   spotifyTrackUrl,
 } from "@/lib/admin/presentation";
 import { selectAdminStore, type AdminSongRequests } from "@/lib/admin/store";
+import { isSameOriginPost } from "@/lib/admin/origin";
+import {
+  fakeRemovedSongsSetCookie,
+  parseFakeRemovedSongIds,
+} from "@/lib/admin/song-cookie";
 export const prerender = false;
 const host = Astro.locals.adminHost!;
+const storeName = (env as Record<string, unknown>).RSVP_STORE;
+const removedSongIds = storeName === "fake"
+  ? parseFakeRemovedSongIds(Astro.request.headers.get("cookie"))
+  : new Set<number>();
 const store = selectAdminStore(
-  (env as Record<string, unknown>).RSVP_STORE,
+  storeName,
   (env as Record<string, unknown>).DB as never,
+  { removedSongIds },
 );
 let data: AdminSongRequests | null = null;
 let counts = { households: 0, slipperPairs: 0, songRequests: 0 };
 let failed = false;
+let writeError = "";
+if (Astro.request.method === "POST") {
+  if (!isSameOriginPost(Astro.request, Astro.url)) {
+    Astro.response.status = 403;
+    writeError = "Forbidden";
+  } else {
+    const form = await Astro.request.formData();
+    if (String(form.get("action") ?? "") === "remove") {
+      try {
+        const changed = await store.removeSong(Number(form.get("id")), host.email);
+        const response = Astro.redirect(`/admin/songs?removed=${changed ? "1" : "0"}`, 303);
+        if (storeName === "fake" && changed)
+          response.headers.set("Set-Cookie", fakeRemovedSongsSetCookie(removedSongIds));
+        return response;
+      } catch {
+        Astro.response.status = 503;
+        writeError = "Couldn't remove that song. Try again.";
+      }
+    }
+  }
+}
 try {
   [data, counts] = await Promise.all([
     store.getSongRequests(),
@@ -55,6 +86,9 @@ const text = djText(view.rows);
         </div>
       ) : (
         <>
+          {writeError && <div class="admin_notice error" data-admin-error>{writeError}</div>}
+          {Astro.url.searchParams.get("removed") === "1" && <div class="admin_notice" data-admin-song-removed>Song removed.</div>}
+          {Astro.url.searchParams.get("removed") === "0" && <div class="admin_notice" data-admin-song-removed>That song was already removed.</div>}
           <header class="admin_pagehead admin-songs_header">
             <div>
               <p class="admin_label">
@@ -98,9 +132,11 @@ const text = djText(view.rows);
                 <span role="columnheader">From</span>
                 <span role="columnheader">Dedication</span>
                 <span role="columnheader">Sent ↓</span>
+                <span role="columnheader"><span class="sr-only">Actions</span></span>
               </div>
               {view.rows.map((row) => (
-                <div class="admin-songs_row" data-song-row role="row">
+                <Fragment>
+                <div class="admin-songs_row" data-song-row role="row" data-song-id={row.id}>
                   <span role="cell" data-song-no>
                     {row.no}
                   </span>
@@ -129,7 +165,24 @@ const text = djText(view.rows);
                   <time role="cell" data-song-sent datetime={row.createdAt}>
                     {relativeTime(row.createdAt)}
                   </time>
+                  <a class="admin_guests_btn" data-song-remove href={`/admin/songs?remove=${row.id}`}>Remove</a>
                 </div>
+                {Astro.url.searchParams.get("remove") === String(row.id) && (
+                  <div class="admin-songs_confirm" data-song-remove-confirm role="row">
+                    <div class="admin_guests_confirm" role="cell">
+                      <p>Remove “{row.song}” from {row.name}?</p>
+                      <form method="post">
+                        <input type="hidden" name="action" value="remove" />
+                        <input type="hidden" name="id" value={row.id} />
+                        <div class="admin_guests_form-actions">
+                          <button class="admin_button primary" type="submit">Remove song</button>
+                          <a class="admin_button outline" href="/admin/songs">Keep</a>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+                </Fragment>
               ))}
             </div>
           )}

@@ -2081,7 +2081,7 @@ label.admin_guests_host {
 }
 
 .admin-songs_table {
-  --_cols: 2.5rem 20rem 10rem minmax(0, 1fr) 4.5rem;
+  --_cols: 2.5rem 20rem 10rem minmax(0, 1fr) 4.5rem 5.5rem;
   position: relative;
   display: block;
   padding: 0.25rem 1.25rem;
@@ -2097,7 +2097,7 @@ label.admin_guests_host {
 .admin-songs_row {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
-  grid-template-areas: "song song song no" "from sent . ." "dedication dedication dedication dedication";
+  grid-template-areas: "song song song no" "from sent remove remove" "dedication dedication dedication dedication";
   align-items: start;
   row-gap: 0.25rem;
   padding-block: 1rem;
@@ -2201,6 +2201,16 @@ label.admin_guests_host {
       }
     }
   }
+  [data-song-remove] {
+    justify-self: end;
+    margin-block: -0.625rem;
+    margin-inline-end: -1rem;
+
+    @media (min-width: 84rem) {
+      margin-block: 0;
+      margin-inline-end: 0;
+    }
+  }
   [data-song-dedication] {
     margin-top: 0.25rem;
     font-family: var(--admin-display);
@@ -2238,9 +2248,25 @@ label.admin_guests_host {
     [data-song-sent] {
       grid-area: sent;
     }
+    [data-song-remove] {
+      grid-area: remove;
+    }
+    [data-song-from],
+    [data-song-sent] {
+      align-self: center;
+    }
     [data-song-dedication] {
       grid-area: dedication;
     }
+  }
+}
+
+.admin-songs_confirm {
+  padding-block: 0.75rem;
+  border-bottom: var(--border-width) solid var(--light-300);
+
+  &:last-child {
+    border-bottom: 0;
   }
 }
 
@@ -2272,7 +2298,7 @@ label.admin_guests_host {
     letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
     color: var(--dark-700);
-    &:last-child {
+    &:nth-child(5) {
       text-align: right;
     }
   }

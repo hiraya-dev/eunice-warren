@@ -93,6 +93,8 @@ export const songs = sqliteTable("songs", {
   spotifyTrackId: text("spotify_track_id"),
   coverUrl: text("cover_url"),
   createdAt: text("created_at").notNull(),
+  removedAt: text("removed_at"),
+  removedBy: text("removed_by"),
 }, (table) => [index("songs_name_key_idx").on(table.nameKey)]);
 
 export const seatingTables = sqliteTable("seating_tables", {

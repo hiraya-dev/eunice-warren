@@ -134,6 +134,10 @@ test("D1 query budgets with Miniflare", async (t) => {
     assert(meter.budget().rowsWritten <= 3, `song submit wrote ${meter.budget().rowsWritten} rows`);
 
     meter.reset();
+    await assert.rejects(() => songs.add({ name: "Made Up Guest", song: "A Refused Song" }));
+    assert(meter.budget().rowsRead <= 1250, `refused song submit read ${meter.budget().rowsRead} rows`);
+
+    meter.reset();
     assert.equal(await getUnnamedPlusOneCount(meter.database), 99);
     assert(meter.budget().rowsRead <= 300, `unnamed plus-one count read ${meter.budget().rowsRead} rows`);
   } finally {
