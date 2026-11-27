@@ -369,6 +369,56 @@ test.describe("admin slippers and songs", () => {
     });
   });
 
+  test("rejects a song removal without an Origin header", async ({ page }) => {
+    await withAdminLock(async () => {
+      const targetId = fakeAdminSongs.length - 2;
+      await page.goto("/admin/songs");
+      const response = await page.request.post("/admin/songs", {
+        form: { action: "remove", id: String(targetId) },
+        headers: {},
+      });
+      expect(response.status()).toBe(403);
+      await page.goto("/admin/songs");
+      await expect(page.locator(`[data-song-id="${targetId}"]`)).toBeVisible();
+    });
+  });
+
+  test("rejects a song removal from a foreign Origin", async ({ page }) => {
+    await withAdminLock(async () => {
+      const targetId = fakeAdminSongs.length - 3;
+      await page.goto("/admin/songs");
+      const response = await page.request.post("/admin/songs", {
+        form: { action: "remove", id: String(targetId) },
+        headers: { Origin: "https://evil.example" },
+      });
+      expect(response.status()).toBe(403);
+      await page.goto("/admin/songs");
+      await expect(page.locator(`[data-song-id="${targetId}"]`)).toBeVisible();
+    });
+  });
+
+  test("shows a calm notice when removing an already removed song", async ({ page }) => {
+    await withAdminLock(async () => {
+      const targetId = fakeAdminSongs.length - 4;
+      await page.goto("/admin/songs");
+      const origin = new URL(page.url()).origin;
+      const post = () =>
+        page.request.post("/admin/songs", {
+          form: { action: "remove", id: String(targetId) },
+          headers: { Origin: origin },
+          maxRedirects: 0,
+        });
+      expect((await post()).status()).toBe(303);
+      const second = await post();
+      expect(second.status()).toBe(303);
+      const location = second.headers().location;
+      expect(location).toMatch(/removed=0/);
+      await page.goto(location!);
+      await expect(page).toHaveURL(/removed=0/);
+      await expect(page.locator("[data-admin-song-removed]")).toBeVisible();
+    });
+  });
+
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
     test("removes a song", async ({ page }) => {

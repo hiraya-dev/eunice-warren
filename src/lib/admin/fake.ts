@@ -1266,7 +1266,7 @@ export function createFakeAdminStore(options: { removedSongIds?: Set<number> } =
     getSongRequests,
     getNavCounts,
     async removeSong(id: number, _hostEmail: string) {
-      if (id < 1 || id > fakeAdminSongs.length || isRemoved(id)) return false;
+      if (!Number.isInteger(id) || id < 1 || id > fakeAdminSongs.length || isRemoved(id)) return false;
       removedSongIds.add(id);
       return true;
     },

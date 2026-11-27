@@ -37,7 +37,9 @@ if (Astro.request.method === "POST") {
     const form = await Astro.request.formData();
     if (String(form.get("action") ?? "") === "remove") {
       try {
-        const changed = await store.removeSong(Number(form.get("id")), host.email);
+        const rawId = form.get("id");
+        const id = typeof rawId === "string" && /^\d+$/.test(rawId) ? Number(rawId) : NaN;
+        const changed = await store.removeSong(id, host.email);
         const response = Astro.redirect(`/admin/songs?removed=${changed ? "1" : "0"}`, 303);
         if (storeName === "fake" && changed)
           response.headers.set("Set-Cookie", fakeRemovedSongsSetCookie(removedSongIds));
@@ -165,7 +167,9 @@ const text = djText(view.rows);
                   <time role="cell" data-song-sent datetime={row.createdAt}>
                     {relativeTime(row.createdAt)}
                   </time>
-                  <a class="admin_guests_btn" data-song-remove href={`/admin/songs?remove=${row.id}`}>Remove</a>
+                  <span role="cell" class="admin-songs_remove">
+                    <a class="admin_guests_btn" data-song-remove href={`/admin/songs?remove=${row.id}`}>Remove</a>
+                  </span>
                 </div>
                 {Astro.url.searchParams.get("remove") === String(row.id) && (
                   <div class="admin-songs_confirm" data-song-remove-confirm role="row">

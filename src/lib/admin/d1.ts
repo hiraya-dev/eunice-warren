@@ -559,6 +559,7 @@ export function createD1AdminStore(database: D1Database): AdminStore {
     };
   }
   async function removeSong(id: number, hostEmail: string) {
+    if (!Number.isInteger(id) || id < 1) return false;
     const result = await database.prepare(`UPDATE songs SET removed_at=?, removed_by=? WHERE id=? AND removed_at IS NULL`).bind(new Date().toISOString(), hostEmail, id).run();
     return Number(result.meta?.changes ?? 0) > 0;
   }

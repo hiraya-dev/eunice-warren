@@ -515,6 +515,25 @@ test("fake admin store never touches DB", async () => {
   await store.getGuestList();
 });
 
+test("song removal rejects non-integer IDs without changing either store", async () => {
+  const fake = createFakeAdminStore();
+  const before = await fake.getSongRequests();
+  assert.equal(await fake.removeSong(Number.NaN, "host@example.com"), false);
+  assert.equal(await fake.removeSong(1.5, "host@example.com"), false);
+  assert.deepEqual(await fake.getSongRequests(), before);
+
+  const database = adminDatabase();
+  database.db.prepare("INSERT INTO songs (name,name_key,song,created_at) VALUES (?,?,?,?)")
+    .run("Alice Alpha", "alice alpha", "Test song", "2026-11-20T00:00:00Z");
+  const d1 = createD1AdminStore(database);
+  assert.equal(await d1.removeSong(Number.NaN, "host@example.com"), false);
+  assert.equal(await d1.removeSong(1.5, "host@example.com"), false);
+  const [song] = database.db.prepare("SELECT removed_at,removed_by FROM songs").all() as Array<{ removed_at: string | null; removed_by: string | null }>;
+  assert.equal(song?.removed_at, null);
+  assert.equal(song?.removed_by, null);
+  database.close();
+});
+
 test("presentation helpers format members, plus-one chips, rename notes, relative times, and deadlines", () => {
   assert.equal(
     memberLine(["Ana Dela Cruz", "Jose Dela Cruz", "Maria Dela Cruz"]),

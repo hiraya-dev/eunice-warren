@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { songInput } from "../src/lib/songs/input.ts";
 import { createD1SongStore, createFakeSongStore, SongGuestError } from "../src/lib/songs/store.ts";
-import { fakeFixtures } from "../src/lib/rsvp/store.ts";
+import { fakeFixtures, normalizeGuestName } from "../src/lib/rsvp/store.ts";
 import { SqliteD1 } from "./helpers/d1-sqlite.ts";
 
 const base = { name: "Ana Reyes", song: "Dancing Queen", turnstileToken: "token" };
@@ -60,8 +60,10 @@ const addHousehold = (database: SqliteD1, id: string, status = "active") => {
 
 const addSeat = (database: SqliteD1, householdId: string, kind: string, status: string, invitedName: string | null, name: string | null) => {
   const slot = Number(database.db.prepare("SELECT count(*) AS count FROM invite_seats WHERE household_id=?").get(householdId)?.count ?? 0) + 1;
+  const nameKey = kind === "member" && invitedName ? normalizeGuestName(invitedName) : null;
+  const surnameKey = nameKey?.split(" ").at(-1) || null;
   database.db.prepare("INSERT INTO invite_seats (household_id,kind,slot,status,invited_name,name_key,surname_key,name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
-    .run(householdId, kind, status === "active" ? slot : null, status, invitedName, invitedName ? "x" : null, invitedName ? "x" : null, name, "2026-11-20", "2026-11-20");
+    .run(householdId, kind, status === "active" ? slot : null, status, invitedName, nameKey, surnameKey, name, "2026-11-20", "2026-11-20");
 };
 
 test("D1 song store accepts active invited, RSVP, and named plus-one seats only", async () => {

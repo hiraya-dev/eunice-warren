@@ -2201,7 +2201,7 @@ label.admin_guests_host {
       }
     }
   }
-  [data-song-remove] {
+  .admin-songs_remove {
     justify-self: end;
     margin-block: -0.625rem;
     margin-inline-end: -1rem;
@@ -2248,7 +2248,7 @@ label.admin_guests_host {
     [data-song-sent] {
       grid-area: sent;
     }
-    [data-song-remove] {
+    .admin-songs_remove {
       grid-area: remove;
     }
     [data-song-from],
