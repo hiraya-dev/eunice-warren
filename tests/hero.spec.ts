@@ -41,7 +41,7 @@ test.describe("keepsakes hero", () => {
       expect(metrics.titleSingleLine).toBe(true);
       expect(metrics.intersectsText).toBe(false);
       expect(metrics.keepsakes.every((keepsake) => keepsake.left >= metrics.hero.left && keepsake.right <= metrics.hero.right && keepsake.top >= metrics.hero.top && keepsake.bottom <= metrics.hero.bottom)).toBe(true);
-      expect(metrics.hero.height).toBeLessThanOrEqual(0.56944 * viewport.width + 80 + 2);
+      expect(metrics.hero.height).toBeLessThanOrEqual(0.56944 * viewport.width + 80 + 112 + 2);
     });
   }
 

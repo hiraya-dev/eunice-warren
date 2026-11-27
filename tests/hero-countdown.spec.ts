@@ -34,10 +34,7 @@ test.describe("hero countdown", () => {
         unit === "days" ? String(value) : String(value).padStart(2, "0"),
       );
     }
-    const phone = (page.viewportSize()?.width ?? 0) < 768;
-    await expect(page.locator(".hero_countdown-seconds")).toBeVisible({
-      visible: !phone,
-    });
+    await expect(page.locator('[data-countdown-unit="seconds"]')).toBeVisible();
     await page.clock.runFor(1000);
     const next = countdownState(Date.parse(instant) + 1000);
     if (next.state !== "counting") throw new Error("expected a counting state");
@@ -71,6 +68,39 @@ test.describe("hero countdown", () => {
           );
         }
       });
+    });
+  }
+
+  for (const { width, number } of [
+    { width: 390, number: 44 },
+    { width: 1440, number: 120 },
+  ]) {
+    test(`lays out four equal cells at ${width}px`, async ({ page }) => {
+      await installClock(page, "2027-01-10T12:34:56Z");
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      const cells = page.locator(".hero_countdown-cell");
+      await expect(cells).toHaveCount(4);
+      const boxes = await cells.evaluateAll((elements) =>
+        elements.map((element) => {
+          const { left, right, width } = element.getBoundingClientRect();
+          return { left, right, width };
+        }),
+      );
+      for (const box of boxes)
+        expect(Math.abs(box.width - boxes[0].width)).toBeLessThanOrEqual(1.5);
+      for (let index = 1; index < boxes.length; index += 1)
+        expect(boxes[index].left).toBeGreaterThanOrEqual(
+          boxes[index - 1].right - 1,
+        );
+      expect(boxes[3].right).toBeLessThanOrEqual(width);
+      const size = await page
+        .locator(".hero_countdown-number")
+        .first()
+        .evaluate((element) =>
+          Number.parseFloat(getComputedStyle(element).fontSize),
+        );
+      expect(size).toBeCloseTo(number, 0);
     });
   }
 

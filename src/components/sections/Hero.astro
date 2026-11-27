@@ -74,12 +74,10 @@ const initialCountdown = countdownState(Date.now());
     <p class="hero_subtitle" data-hero-text-item>{data.subtitle}</p>
     <p class="hero_countdown" data-hero-text-item data-hero-countdown data-target="2027-01-14T15:00:00+08:00" role="timer" aria-label={data.countdownAria}>
       <span class="hero_countdown-counting" hidden={initialCountdown.state !== "counting"}>
-        <span data-countdown-unit="days"><span data-countdown-value>{initialCountdown.state === "counting" ? initialCountdown.days : 0}</span> {data.countdownDays}</span>
-        <span aria-hidden="true"> · </span>
-        <span data-countdown-unit="hours"><span data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.hours).padStart(2, "0") : "00"}</span> {data.countdownHours}</span>
-        <span aria-hidden="true"> · </span>
-        <span data-countdown-unit="minutes"><span data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.minutes).padStart(2, "0") : "00"}</span> {data.countdownMinutes}</span>
-        <span class="hero_countdown-seconds" data-countdown-unit="seconds"><span aria-hidden="true"> · </span><span data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.seconds).padStart(2, "0") : "00"}</span> {data.countdownSeconds}</span>
+        <span class="hero_countdown-cell" data-countdown-unit="days"><span class="hero_countdown-number" data-countdown-value>{initialCountdown.state === "counting" ? initialCountdown.days : 0}</span><span class="hero_countdown-label">{data.countdownDays}</span></span>
+        <span class="hero_countdown-cell" data-countdown-unit="hours"><span class="hero_countdown-number" data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.hours).padStart(2, "0") : "00"}</span><span class="hero_countdown-label">{data.countdownHours}</span></span>
+        <span class="hero_countdown-cell" data-countdown-unit="minutes"><span class="hero_countdown-number" data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.minutes).padStart(2, "0") : "00"}</span><span class="hero_countdown-label">{data.countdownMinutes}</span></span>
+        <span class="hero_countdown-cell" data-countdown-unit="seconds"><span class="hero_countdown-number" data-countdown-value>{initialCountdown.state === "counting" ? String(initialCountdown.seconds).padStart(2, "0") : "00"}</span><span class="hero_countdown-label">{data.countdownSeconds}</span></span>
       </span>
       <span class="hero_countdown-today" hidden={initialCountdown.state !== "today"}>{data.countdownToday}</span>
     </p>
@@ -230,7 +228,7 @@ const initialCountdown = countdownState(Date.now());
 
 <style>
   @layer components {
-    .hero { position: relative; display: grid; align-items: center; min-height: calc(56.944vw + 5rem); padding: 2.5rem var(--site-margin); overflow: clip; color: var(--dark-900); isolation: isolate; }
+    .hero { position: relative; display: grid; align-items: center; min-height: calc(56.944vw + 5rem + var(--_stretch, 0px)); padding: 2.5rem var(--site-margin); overflow: clip; color: var(--dark-900); isolation: isolate; }
     .hero_collage { position: absolute; z-index: 0; top: 50%; left: 50%; width: min(100%, 90rem); aspect-ratio: 1440 / 820; container-type: inline-size; transform: translate(-50%, -50%); pointer-events: none; }
     .hero_keepsake { position: absolute; transform-origin: 0 0; }
     .hero_polaroid { background: var(--light-200) url("../../assets/textures/polaroid-paper.jpg") center / 32rem repeat; box-shadow: 0 0.875rem 2rem rgb(31 47 92 / 16%); }
@@ -242,9 +240,9 @@ const initialCountdown = countdownState(Date.now());
     .hero_couple .hero_polaroid { width: 15.972cqw; padding: 0.833cqw 0.833cqw 2.778cqw; }
     .hero_white-beach { top: 4.167cqw; left: 79.861cqw; transform: rotate(6deg); }
     .hero_white-beach .hero_polaroid { width: 14.583cqw; padding: 0.833cqw 0.833cqw 2.778cqw; }
-    .hero_sunset { top: 36.111cqw; left: 77.778cqw; transform: rotate(-4deg); }
+    .hero_sunset { top: calc(36.111cqw + var(--_stretch, 0px)); left: 77.778cqw; transform: rotate(-4deg); }
     .hero_sunset .hero_polaroid { width: 13.889cqw; padding: 0.833cqw 0.833cqw 2.222cqw; }
-    .hero_music { display: none; top: 32.5cqw; left: 76.667cqw; transform: rotate(-4deg); pointer-events: auto; }
+    .hero_music { display: none; top: calc(32.5cqw + var(--_stretch, 0px)); left: 76.667cqw; transform: rotate(-4deg); pointer-events: auto; }
     .hero_music .hero_polaroid { display: flex; flex-direction: column; gap: 0.833cqw; width: 15.972cqw; padding: 0.833cqw 0.833cqw 0.972cqw; }
     .hero_music .hero_polaroid img { aspect-ratio: 1; }
     .music-polaroid_strip { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; padding-inline: 0.139cqw; }
@@ -263,16 +261,24 @@ const initialCountdown = countdownState(Date.now());
     .music-polaroid_progress { display: flex; align-items: center; gap: clamp(0.25rem, 0.556cqw, 0.5rem); padding-inline: 0.139cqw; color: var(--dark-700); font: var(--primary-regular) clamp(0.5rem, 0.694cqw, 0.625rem) / 1.2 var(--mono-family); }
     .music-polaroid_track { flex: 1; height: 0.125rem; background: var(--border); }
     .music-polaroid_track span { display: block; width: 100%; height: 100%; background: var(--accent-500); transform: scaleX(var(--music-progress, 0)); transform-origin: left; }
-    .hero_paraw { top: 36.111cqw; left: 10.417cqw; width: 8.333cqw; height: 10.417cqw; transform: rotate(8deg); }
+    .hero_paraw { top: calc(36.111cqw + var(--_stretch, 0px)); left: 10.417cqw; width: 8.333cqw; height: 10.417cqw; transform: rotate(8deg); }
     .hero_palm { top: 20.833cqw; left: 90cqw; width: 6.667cqw; height: 8.333cqw; transform: rotate(-9deg); }
-    .hero_postmark { top: 44.444cqw; left: 17.361cqw; width: 13.542cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-10deg); opacity: 0.9; }
+    .hero_postmark { top: calc(44.444cqw + var(--_stretch, 0px)); left: 17.361cqw; width: 13.542cqw; height: 8.333cqw; object-fit: contain; transform: rotate(-10deg); opacity: 0.9; }
     .hero_note { top: 4.722cqw; left: 21.597cqw; width: 13.194cqw; height: 7.917cqw; margin: 0; color: var(--accent-500); font: 400 3.3cqw / 1 var(--hand-family); white-space: nowrap; transform: rotate(-8deg); }
     .hero_note-text { position: absolute; top: 0; left: 0; }
     .hero_note-arrow { position: absolute; bottom: -0.15em; left: 12%; width: 62%; height: auto; overflow: visible; }
     .hero_content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); text-align: center; }
-    .hero_countdown, .hero_when { margin: 0; color: var(--dark-700); font: var(--primary-regular) clamp(0.9375rem, calc(0.2915rem + 1.345vw), 1.125rem) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .hero_countdown { --_number: clamp(3.75rem, 8.333vw, 7.5rem); margin: 1.5rem 0 0; color: var(--dark-900); }
     .hero_countdown[hidden], .hero_countdown-today[hidden], .hero_countdown-counting[hidden] { display: none; }
-    .hero_when { margin-top: calc(var(--space-2) - var(--space-4)); }
+    .hero_countdown-counting { display: flex; align-items: stretch; justify-content: center; }
+    .hero_countdown-cell { display: flex; flex: 0 0 calc(var(--_number) * 1.4667); flex-direction: column; align-items: center; gap: calc(var(--_number) * 0.0833); min-width: 0; }
+    .hero_countdown-cell + .hero_countdown-cell { border-left: 0.0625rem solid var(--light-300); }
+    .hero_countdown-number { color: #aeb4c6; font: var(--secondary-ultralight) var(--_number) / 0.9333 var(--secondary-family); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -0.04em; }
+    .hero_countdown-label { color: var(--dark-700); font: var(--primary-regular) 0.875rem / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
+    .hero_countdown-cell:first-child .hero_countdown-number { color: var(--dark-900); font-weight: var(--secondary-regular); }
+    .hero_countdown-cell:first-child .hero_countdown-label { color: var(--accent-500); }
+    .hero_countdown-today { display: block; font: var(--secondary-regular) calc(var(--_number) * 0.55) / 1 var(--secondary-family); letter-spacing: -0.04em; text-align: center; }
+    .hero_when { margin: 0; color: var(--dark-700); font: var(--primary-regular) clamp(0.9375rem, calc(0.2915rem + 1.345vw), 1.125rem) / 1 var(--mono-family); letter-spacing: var(--letter-spacing-wider); text-transform: uppercase; }
     .hero_when-line { display: block; }
     .hero_venue { display: block; margin-top: var(--space-2); font-size: var(--eyebrow); }
     .hero_venue-short { display: none; }
@@ -288,6 +294,8 @@ const initialCountdown = countdownState(Date.now());
   }
 
   @media (min-width: 48rem) {
+    .hero { --_stretch: 7rem; }
+    .hero_collage { box-sizing: content-box; padding-bottom: var(--_stretch); }
     .hero_title { font-size: min(var(--display), 8.9vw); }
   }
 
@@ -297,41 +305,56 @@ const initialCountdown = countdownState(Date.now());
   }
 
   @media (min-width: 48rem) and (max-width: 61.999rem) {
-    .hero_postmark { top: 49.5cqw; }
+    .hero_postmark { top: calc(49.5cqw + var(--_stretch)); }
     .hero_content { gap: var(--space-3); padding-top: 1.25rem; }
+  }
+
+  @media (min-width: 62rem) {
+    .hero { min-height: max(calc(min(51.25rem, 56.944vw) + var(--_stretch)), calc(100svh - var(--nav-height))); }
+    .hero_when { margin-top: 1rem; }
   }
 
   @media (min-width: 62rem) and (max-width: 74.999rem) {
     .hero_content { gap: var(--space-3); }
-    .hero_postmark { top: 47.5cqw; }
+    .hero_postmark { top: calc(47.5cqw + var(--_stretch)); }
   }
 
-  @media (min-width: 62rem) {
-    .hero { min-height: max(min(51.25rem, 56.944vw), calc(100svh - var(--nav-height))); }
+  @media (min-width: 75rem) {
+    .hero { --_stretch: 8rem; }
+  }
+
+  @media (min-width: 83rem) {
+    .hero_when { font-size: var(--eyebrow); }
+    .hero_when-line, .hero_venue { display: inline; margin: 0; font-size: inherit; }
+    .hero_venue::before { content: "\00a0·\00a0"; }
   }
 
   @media (max-width: 47.999rem) {
-    .hero { display: block; min-height: 0; padding: 19rem var(--site-margin) 9.5rem; }
+    .hero { display: block; min-height: 0; padding: 16.5rem var(--site-margin) 9.5rem; }
     .hero_collage { --_center-shift: max(0px, 50% - 12.1875rem); top: 0; left: 0; width: 100%; height: 100%; aspect-ratio: auto; transform: none; }
     .hero_polaroid { box-shadow: 0 0.75rem 1.75rem rgb(31 47 92 / 16%); }
-    .hero_couple { top: 2.5rem; left: calc(1.75rem + var(--_center-shift)); transform: rotate(-6deg); }
-    .hero_couple .hero_polaroid { width: 11rem; padding: 0.5rem 0.5rem 2rem; }
+    .hero_couple { top: 1.75rem; left: calc(2.9375rem + var(--_center-shift)); transform: rotate(-6deg); }
+    .hero_couple .hero_polaroid { width: 9.75rem; padding: 0.4375rem 0.4375rem 1.75rem; }
     .hero_couple .hero_polaroid img { aspect-ratio: 160 / 170; }
-    .hero_white-beach { top: 2.75rem; left: calc(12.875rem + var(--_center-shift)); transform: rotate(7deg); }
-    .hero_white-beach .hero_polaroid { width: 9.375rem; padding: 0.5rem 0.5rem 1.5rem; }
+    .hero_white-beach { top: 2rem; left: calc(12.8125rem + var(--_center-shift)); transform: rotate(7deg); }
+    .hero_white-beach .hero_polaroid { width: 8.25rem; padding: 0.4375rem 0.4375rem 1.375rem; }
     .hero_white-beach .hero_polaroid img { aspect-ratio: 134 / 144; }
-    .hero_note { top: 14.25rem; left: calc(9.375rem + var(--_center-shift)); width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
+    .hero_note { top: 11.75rem; left: calc(9.6875rem + var(--_center-shift)); width: 7.5rem; height: 4.5rem; font-size: 1.875rem; transform: rotate(-8deg); }
     .hero_note-text { top: auto; bottom: 0.5rem; }
     .hero_note-arrow { top: -0.75rem; bottom: auto; width: 54%; transform: scaleY(-1); }
     .hero_sunset, .hero_palm { display: none; }
     .hero_music { display: none; }
     .hero_paraw { top: auto; bottom: 1.75rem; left: 1.125rem; width: 4.5rem; height: 5.625rem; transform: rotate(8deg); }
     .hero_postmark { top: auto; right: 1rem; bottom: 2.5rem; left: auto; width: 8.125rem; height: 5rem; transform: rotate(-10deg); }
-    .hero_countdown, .hero_when-line { font-size: min(1.125rem, calc((100vw - 3rem) / 18.2)); letter-spacing: var(--eyebrow-letter-spacing); white-space: nowrap; }
-    .hero_countdown-seconds { display: none; }
+    .hero_content { gap: var(--space-4); }
+    .hero_countdown { --_number: clamp(2.75rem, 11.3vw, 3.75rem); --_trim-top: 0px; --_trim-bottom: 0px; width: 100%; margin: 0; line-height: 0; }
+    .hero_countdown-cell { flex: 1 1 0; gap: 0.25rem; }
+    .hero_countdown-label { font-size: 0.6875rem; }
+    .hero_venue { margin-top: var(--space-1); }
+    .hero_when-line { font-size: min(1.125rem, calc((100vw - 3rem) / 18.2)); letter-spacing: var(--eyebrow-letter-spacing); white-space: nowrap; }
     .hero_title { line-height: var(--line-height-tight); }
     .hero_title span { display: block; }
-    .hero_actions { flex-direction: column; gap: var(--space-4); }
+    .hero_actions { flex-direction: column; gap: var(--space-4); padding-top: 0; }
     .hero_rsvp :global(.button-016__inner) { padding: var(--space-4); }
     .hero_weekend { font-size: var(--eyebrow); }
   }
