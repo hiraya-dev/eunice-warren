@@ -104,6 +104,104 @@ test.describe("hero countdown", () => {
     });
   }
 
+  for (const { width, height, wide } of [
+    { width: 1440, height: 900, wide: true },
+    { width: 390, height: 844, wide: false },
+  ]) {
+    test(`pins the approved countdown styles at ${width}px`, async ({
+      page,
+    }) => {
+      await installClock(page, "2027-01-10T12:34:56Z");
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      await expect(page.locator(".hero_countdown-cell")).toHaveCount(4);
+      const measured = await page.evaluate(() => {
+        const token = (name: string) => {
+          const probe = document.createElement("span");
+          probe.style.color = `var(${name})`;
+          document.body.append(probe);
+          const colour = getComputedStyle(probe).color;
+          probe.remove();
+          return colour;
+        };
+        const cells = [
+          ...document.querySelectorAll(".hero_countdown-cell"),
+        ].map((cell) => {
+          const style = getComputedStyle(cell);
+          const number = getComputedStyle(
+            cell.querySelector(".hero_countdown-number")!,
+          );
+          const label = getComputedStyle(
+            cell.querySelector(".hero_countdown-label")!,
+          );
+          return {
+            width: cell.getBoundingClientRect().width,
+            borderWidth: Number.parseFloat(style.borderLeftWidth),
+            borderStyle: style.borderLeftStyle,
+            borderColor: style.borderLeftColor,
+            numberColor: number.color,
+            numberWeight: number.fontWeight,
+            numberSize: Number.parseFloat(number.fontSize),
+            labelColor: label.color,
+          };
+        });
+        const whenLine = document
+          .querySelector(".hero_when-line")!
+          .getBoundingClientRect();
+        const venue = document
+          .querySelector(".hero_venue")!
+          .getBoundingClientRect();
+        return {
+          cells,
+          light300: token("--light-300"),
+          dark900: token("--dark-900"),
+          dark700: token("--dark-700"),
+          accent500: token("--accent-500"),
+          whenTop: whenLine.top,
+          whenBottom: whenLine.bottom,
+          whenRight: whenLine.right,
+          venueLeft: venue.left,
+          venueTop: venue.top,
+        };
+      });
+      const [days, ...rest] = measured.cells;
+
+      if (wide) {
+        for (const cell of measured.cells) {
+          expect(Math.abs(cell.width - 176)).toBeLessThanOrEqual(1);
+          expect(cell.numberSize).toBeCloseTo(120, 0);
+        }
+      }
+
+      expect(days.borderWidth).toBe(0);
+      for (const cell of rest) {
+        expect(cell.borderWidth).toBeCloseTo(1, 1);
+        expect(cell.borderStyle).toBe("solid");
+        expect(cell.borderColor).toBe(measured.light300);
+      }
+
+      expect(days.numberColor).toBe(measured.dark900);
+      expect(days.numberWeight).toBe("400");
+      expect(days.labelColor).toBe(measured.accent500);
+      for (const cell of rest) {
+        expect(cell.numberColor).toBe("rgb(174, 180, 198)");
+        expect(cell.numberWeight).toBe("200");
+        expect(cell.labelColor).toBe(measured.dark700);
+      }
+
+      if (wide) {
+        expect(
+          Math.abs(measured.venueTop - measured.whenTop),
+        ).toBeLessThanOrEqual(2);
+        expect(measured.venueLeft).toBeGreaterThanOrEqual(
+          measured.whenRight - 1,
+        );
+      } else {
+        expect(measured.venueTop).toBeGreaterThanOrEqual(measured.whenBottom);
+      }
+    });
+  }
+
   test("shows the today state at Manila morning", async ({ page }) => {
     await installClock(page, "2027-01-14T01:00:00Z");
     await page.goto("/");
