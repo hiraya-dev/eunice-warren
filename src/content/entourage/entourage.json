@@ -22,8 +22,23 @@
       "rows": [
         {
           "roles": [
-            { "label": "Ninongs", "names": ["Loreto C. De Ocampo", "Pedrito Martin M. Dijan Jr.", "Rodrigo D. Garcia", "Leo P. Lajara", "Hon. Mayor Wilson V. Maralit", "Ericson D. Mole", "Nonato R. Monfero", "Bernardino L. Olave Jr.", "Antonio C. Resma", "Atiwong Teachaburanatapaporn"] },
-            { "label": "Ninangs", "names": ["Maia Ruvien D. Nearents", "Florida M. Dijan", "Marjorie Q. Garcia", "Olyn D. Lajara", "Mayora Olalia C. Maralit", "Gina A. Mole", "Ervenilda P. Monfero", "Tita Josie", "Judy M. Macasaet", "May M. Curtis"] }
+            {
+              "labels": ["Ninongs", "Ninangs"],
+              "emptyName": "To be announced",
+              "pairs": [
+                ["Loreto C. De Ocampo", "Maia Ruvien D. Nearents"],
+                ["Cris De Castro", "Josefina Recto-Olave"],
+                ["Pedrito Martin M. Dijan Jr.", "Florida M. Dijan"],
+                ["Rodrigo D. Garcia", "Marjorie Q. Garcia"],
+                ["Leo P. Lajara", "Olyn D. Lajara"],
+                ["Hon. Mayor Wilson V. Maralit", "Mayora Olalia C. Maralit"],
+                ["Ericson D. Mole", "Gina A. Mole"],
+                ["Nonato R. Monfero", "Ervenilda P. Monfero"],
+                ["Bernardino L. Olave Jr.", null],
+                ["Antonio C. Resma", "Judy M. Macasaet"],
+                ["Atiwong Teachaburanatapaporn", "May M. Curtis"]
+              ]
+            }
           ]
         }
       ]
@@ -49,23 +64,45 @@
       "rows": [
         {
           "roles": [
-            { "label": "Best man", "names": ["Ron Vincent Lasaca"] },
+            { "label": "Best man", "names": ["Dr. Ron Vincent Lasaca"] },
             { "label": "Maid of honor", "names": ["Fiona Larra Toledo"] }
           ]
         },
         {
           "roles": [
-            { "label": "Groomsmen", "names": ["Dylan Ray Fish", "Lawrence De Ocampo", "Marc Bryan Peradilla", "Carl Vincent Mole", "Leo Zedrick Lajara", "Marc Christian Garcia"] },
-            { "label": "Bridesmaids", "names": ["Pauline Nicole Duran", "Vestiah Olave-Garcia", "Anjarie Santos", "Nica Ihsabel Centeno", "Fatima Marie Oba", "Patricia Allison Recio"] }
+            {
+              "labels": ["Groomsmen", "Bridesmaids"],
+              "emptyName": "To be announced",
+              "pairs": [
+                ["Lawrence De Ocampo", "Atty. Vestiah Olave-Garcia"],
+                ["Dylan Ray Fish", "Pauline Nicole Duran"],
+                ["Marc Christian Garcia", "Jienalyn Abu-Fernandez"],
+                ["Leo Zedrick Lajara", "Fatima Marie Oba"],
+                ["Carl Vincent Mole", "Nica Ihsabel Centeno"],
+                ["Marc Bryan Peradilla", "Anjarie Santos"]
+              ]
+            }
           ]
         },
         {
           "roles": [
-            { "label": "Ring & Bible bearer", "names": ["Lucas D. Reyes"] },
-            { "label": "Coin bearer", "names": ["Gabriel S. Santos"] },
-            { "label": "Junior groomsman", "names": ["Mateo L. Cruz"] },
-            { "label": "Flower girls", "names": ["Sophia M. Tan", "Isabel C. Aquino"] },
-            { "label": "Readers", "names": ["Andrea P. Lim", "Miguel R. Castro"] }
+            { "label": "Ring bearer", "names": ["Archer Thomas Dickens"] },
+            { "label": "Bible bearer", "names": ["Ron Khalix Malaluan"] }
+          ]
+        },
+        {
+          "roles": [
+            { "label": "Coin bearer", "names": ["Phongkrit \"Oliver\" Teachaburanatapaporn"] }
+          ]
+        },
+        {
+          "roles": [
+            { "label": "Flower girls", "names": ["Charlize Erin Carandang", "Margot Renée Dickens", "Arabella Esther Manalo", "Amanda Zoelle Maulion", "Estelle Gia Monfero", "Sky Eleanna Monfero"] }
+          ]
+        },
+        {
+          "roles": [
+            { "label": "Readers", "names": ["Carl Ethan Roehsler", "Janeil Elyse Manalo"] }
           ]
         }
       ]

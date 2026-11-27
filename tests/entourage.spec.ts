@@ -15,13 +15,20 @@ test.describe("entourage section", () => {
         const box = el.getBoundingClientRect();
         return { top: box.top, left: box.left, width: box.width };
       });
+      const pairNameTops = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(`${selector} .entourage_paired-row`)).flatMap((row) => {
+        const lists = Array.from(row.querySelectorAll<HTMLUListElement>("ul"));
+        return Array.from(lists[0].querySelectorAll("li"), (item, index) => Math.abs(item.getBoundingClientRect().top - lists[1].querySelectorAll("li")[index].getBoundingClientRect().top));
+      });
       return {
         principal: boxes(`${selectors.principal} .entourage_role`),
+        principalPairNameTops: pairNameTops(selectors.principal),
+        bridalPairNameTops: pairNameTops(`${selectors.bridal} .entourage_row:nth-child(2)`),
         secondary: boxes(`${selectors.secondary} .entourage_role`),
         honour: boxes(`${selectors.bridal} .entourage_row:first-child .entourage_role`),
       };
     }, selectors);
     expect(positions.principal[0].top).toBe(positions.principal[1].top);
+    for (const pairNameTops of [positions.principalPairNameTops, positions.bridalPairNameTops]) expect(pairNameTops.every((difference) => difference <= 6)).toBeTruthy();
     expect(positions.secondary).toHaveLength(3);
     expect(positions.secondary[1].top).toBeGreaterThan(positions.secondary[0].top);
     expect(positions.secondary[2].top).toBeGreaterThan(positions.secondary[1].top);

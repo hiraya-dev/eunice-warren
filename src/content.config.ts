@@ -13,10 +13,17 @@ const entourage = defineCollection({
         rows: z.array(
           z.object({
             roles: z.array(
-              z.object({
-                label: z.string(),
-                names: z.array(z.string()),
-              }),
+              z.union([
+                z.object({
+                  label: z.string(),
+                  names: z.array(z.string()),
+                }).strict(),
+                z.object({
+                  labels: z.tuple([z.string(), z.string()]),
+                  pairs: z.array(z.tuple([z.string(), z.string().nullable()])),
+                  emptyName: z.string(),
+                }).strict(),
+              ]),
             ),
           }),
         ),
