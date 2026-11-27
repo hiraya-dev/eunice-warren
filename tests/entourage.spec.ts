@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
-const { groups } = JSON.parse(readFileSync("src/content/entourage/entourage.json", "utf8")) as { groups: Array<{ id: string; title?: string }> };
+type Role = { label?: string; labels?: [string, string]; pairs?: Array<[string, string | null]>; emptyName?: string };
+const { groups } = JSON.parse(readFileSync("src/content/entourage/entourage.json", "utf8")) as { groups: Array<{ id: string; title?: string; rows: Array<{ roles: Role[] }> }> };
 const [principal, secondary, bridal] = groups.filter((group) => group.title).map((group) => `.entourage_${group.id}`);
 const selectors = { principal, secondary, bridal };
 
@@ -20,13 +21,14 @@ test.describe("entourage section", () => {
         return Array.from(lists[0].querySelectorAll("li"), (item, index) => Math.abs(item.getBoundingClientRect().top - lists[1].querySelectorAll("li")[index].getBoundingClientRect().top));
       });
       return {
-        principal: boxes(`${selectors.principal} .entourage_role`),
+        principal: boxes(`${selectors.principal} .entourage_paired-row h4`),
         principalPairNameTops: pairNameTops(selectors.principal),
         bridalPairNameTops: pairNameTops(`${selectors.bridal} .entourage_row:nth-child(2)`),
         secondary: boxes(`${selectors.secondary} .entourage_role`),
         honour: boxes(`${selectors.bridal} .entourage_row:first-child .entourage_role`),
       };
     }, selectors);
+    expect(positions.principal).toHaveLength(2);
     expect(positions.principal[0].top).toBe(positions.principal[1].top);
     for (const pairNameTops of [positions.principalPairNameTops, positions.bridalPairNameTops]) expect(pairNameTops.every((difference) => difference <= 6)).toBeTruthy();
     expect(positions.secondary).toHaveLength(3);
@@ -51,6 +53,26 @@ test.describe("entourage section", () => {
     expect(heading.height).toBeLessThan(heading.lineHeight * 2.5);
     expect(heading.headingWidth).toBeLessThanOrEqual(heading.sectionWidth);
     expect(heading.fontSize).toBe("120px");
+  });
+
+  test("keeps paired names level when one wraps and fills a missing partner", { tag: ["@single"] }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+
+    const paired = groups.flatMap((group) => group.rows.flatMap((row, rowIndex) => row.roles.filter((role) => role.pairs).map((role) => ({ selector: `.entourage_${group.id} .entourage_row:nth-child(${rowIndex + 1}) .entourage_paired-row`, role }))));
+    expect(paired.length).toBeGreaterThan(0);
+    for (const { selector, role } of paired) {
+      const offsets = await page.locator(selector).evaluate((row) => {
+        const [left, right] = Array.from(row.querySelectorAll("ul"), (list) => Array.from(list.querySelectorAll("li")));
+        left[0].textContent = Array(6).fill(left[0].textContent).join(" ");
+        return left.map((item, index) => Math.abs(item.getBoundingClientRect().top - right[index].getBoundingClientRect().top));
+      });
+      expect(offsets.every((offset) => offset <= 6)).toBeTruthy();
+
+      const emptyIndex = role.pairs!.findIndex((pair) => pair[1] === null);
+      if (emptyIndex === -1) continue;
+      await expect(page.locator(`${selector} .entourage_role:last-child li`).nth(emptyIndex)).toHaveText(role.emptyName!);
+    }
   });
 
   test("matches the mobile programme layout", { tag: ["@single"] }, async ({ page }) => {
