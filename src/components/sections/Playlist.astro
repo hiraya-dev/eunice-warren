@@ -146,19 +146,20 @@ const copy = data.copy;
         </div>
       </div>
     </div>
-    <Form
-      name="song-request"
-      successMessage={copy.success}
-      class="playlist_form-wrap"
-      data-fade-in
-      data-fade-in-item
-      aria-labelledby="playlist-postcard-title"
-      data-action-form="true"
-    >
-      <div
-        class="playlist_postcard"
-        style={`--postcard-texture: url("${postcardPaper.src}")`}
+    <div class="playlist_form-column">
+      <Form
+        name="song-request"
+        successMessage={copy.success}
+        class="playlist_form-wrap"
+        data-fade-in
+        data-fade-in-item
+        aria-labelledby="playlist-postcard-title"
+        data-action-form="true"
       >
+        <div
+          class="playlist_postcard"
+          style={`--postcard-texture: url("${postcardPaper.src}")`}
+        >
         <div class="playlist_stamp"><Stamp><Image src={stamp} alt="" width={72} height={93} densities={[1, 2]} aria-hidden="true" /></Stamp></div><div class="playlist_postcard-intro">
           <h3 class="playlist_postcard-title" id="playlist-postcard-title">
             {copy.requestTitle}
@@ -201,8 +202,12 @@ const copy = data.copy;
           maxlength="500"
         /><button class="playlist_submit" type="submit">{copy.submit}</button
         ><div class="playlist_turnstile" data-playlist-turnstile></div>
-      </div>
-    </Form>
+        </div>
+      </Form>
+      <button class="playlist_another" type="button" data-playlist-another hidden>
+        {copy.requestAnother}
+      </button>
+    </div>
   </div>
   <div class="playlist_scallop" aria-hidden="true"></div>
 </section>}
@@ -219,6 +224,7 @@ const copy = data.copy;
     const nameInput = section.querySelector<HTMLInputElement>('input[name="name"]');
     const form = section.querySelector<HTMLFormElement>("form[name='song-request']");
     const wrap = section.querySelector<HTMLElement>(".form_wrap");
+    const another = section.querySelector<HTMLButtonElement>("[data-playlist-another]");
     const submit = form?.querySelector<HTMLButtonElement>("button[type='submit']");
     const failed = wrap?.querySelector<HTMLElement>(".form_note-failed");
     const songInput = form?.querySelector<HTMLInputElement>('input[name="song"]');
@@ -229,6 +235,7 @@ const copy = data.copy;
     const credit = form?.querySelector<HTMLAnchorElement>("[data-song-search-credit]");
     const spotifyTrackId = form?.querySelector<HTMLInputElement>('input[name="spotifyTrackId"]');
     const coverUrl = form?.querySelector<HTMLInputElement>('input[name="coverUrl"]');
+    const maxSearchLength = 100;
     type Suggestion = { id: string; title: string; artist: string; album: string; cover: string | null };
     let suggestions: Suggestion[] = [], highlighted = -1, timer: number | undefined, sequence = 0, searchController: AbortController | undefined;
     const closeSuggestions = () => { if (!list || !songInput) return; if (popup) popup.hidden = true; songInput.setAttribute("aria-expanded", "false"); songInput.removeAttribute("aria-activedescendant"); highlighted = -1; };
@@ -249,7 +256,7 @@ const copy = data.copy;
     const cancelSearch = () => { sequence++; if (timer) window.clearTimeout(timer); searchController?.abort(); };
     const dismissSuggestions = () => { cancelSearch(); closeSuggestions(); };
     const pickSuggestion = (item: Suggestion) => { if (!songInput || !artistInput) return; cancelSearch(); songInput.value = item.title; artistInput.value = item.artist; if (spotifyTrackId) spotifyTrackId.value = item.id; if (coverUrl) coverUrl.value = item.cover ?? ""; closeSuggestions(); };
-    songInput?.addEventListener("input", () => { clearPicked(); cancelSearch(); const query = songInput.value.trim(); if (query.length < 2) { suggestions = []; renderSuggestions(); return; } const current = sequence; timer = window.setTimeout(async () => { const requestController = new AbortController(); searchController = requestController; try { const response = await fetch(`/api/songs/search?q=${encodeURIComponent(query)}`, { signal: requestController.signal }); if (!response.ok) throw new Error("search failed"); const data = await response.json() as { results?: Suggestion[] }; if (current !== sequence) return; suggestions = (data.results ?? []).slice(0, 5); highlighted = -1; renderSuggestions(); } catch { if (current === sequence) { suggestions = []; renderSuggestions(); } } }, 250); });
+    songInput?.addEventListener("input", () => { clearPicked(); cancelSearch(); const query = songInput.value.trim(); if (query.length < 2 || query.length > maxSearchLength) { suggestions = []; dismissSuggestions(); renderSuggestions(); return; } const current = sequence; timer = window.setTimeout(async () => { const requestController = new AbortController(); searchController = requestController; try { const response = await fetch(`/api/songs/search?q=${encodeURIComponent(query)}`, { signal: requestController.signal }); if (!response.ok) throw new Error("search failed"); const data = await response.json() as { results?: Suggestion[] }; if (current !== sequence) return; suggestions = (data.results ?? []).slice(0, 5); highlighted = -1; renderSuggestions(); } catch { if (current === sequence) { suggestions = []; renderSuggestions(); } } }, 250); });
     songInput?.addEventListener("keydown", (event) => { if (event.key === "Escape") { if (!popup?.hidden) event.preventDefault(); dismissSuggestions(); return; } if (!suggestions.length || popup?.hidden) return; if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); highlighted = highlighted < 0 ? (event.key === "ArrowDown" ? 0 : suggestions.length - 1) : (highlighted + (event.key === "ArrowDown" ? 1 : -1) + suggestions.length) % suggestions.length; songInput.setAttribute("aria-activedescendant", `song-search-option-${highlighted}`); renderSuggestions(); } else if (event.key === "Enter" && highlighted >= 0) { event.preventDefault(); pickSuggestion(suggestions[highlighted]); } });
     popup?.addEventListener("pointerdown", (event) => { event.preventDefault(); const option = (event.target as HTMLElement).closest<HTMLElement>("[data-index]"); if (!option) return; pickSuggestion(suggestions[Number(option.dataset.index)]!); });
     const leavesSearch = (next: EventTarget | null) => !(next instanceof Node && (popup?.contains(next) || next === songInput));
@@ -257,6 +264,7 @@ const copy = data.copy;
     popup?.addEventListener("focusout", (event) => { if (leavesSearch(event.relatedTarget)) dismissSuggestions(); }); artistInput?.addEventListener("input", clearPicked); document.addEventListener("pointerdown", (event) => { if (!form?.contains(event.target as Node)) dismissSuggestions(); });
     const turnstile = createTurnstileController(isFakeTurnstileMode(import.meta.env.PUBLIC_RSVP_STORE, import.meta.env.DEV));
     const remembered = getGuest();
+    let lastSubmittedName = "";
     if (nameInput && remembered && "name" in remembered && !nameInput.value) nameInput.value = remembered.name;
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -272,12 +280,25 @@ const copy = data.copy;
           if (isInputError(result.error)) throw new Error(copy.copy.fieldsTooLong);
           throw new Error(result.error.message);
         }
+        lastSubmittedName = value("name");
         if (wrap) wrap.dataset.state = "sent";
         form.reset(); clearPicked(); dismissSuggestions();
+        if (another) another.hidden = false;
       } catch (error) {
         if (wrap) wrap.dataset.state = "failed";
         if (failed) { failed.textContent = error instanceof Error ? error.message : copy.copy.error; failed.hidden = false; }
       } finally { turnstile.reset(); submit.disabled = false; }
+    });
+    another?.addEventListener("click", () => {
+      const guestName = lastSubmittedName || nameInput?.value || (remembered && "name" in remembered ? remembered.name : "");
+      if (wrap) wrap.dataset.state = "idle";
+      if (failed) failed.hidden = true;
+      form?.reset();
+      if (nameInput) nameInput.value = guestName;
+      clearPicked();
+      dismissSuggestions();
+      if (another) another.hidden = true;
+      songInput?.focus();
     });
     const onGuest = (event: Event) => {
       const guestName = (event as CustomEvent<{ name?: string }>).detail?.name;
@@ -680,6 +701,26 @@ const copy = data.copy;
     }
     .playlist_form-wrap {
       min-width: 0;
+    }
+    .playlist_form-column {
+      display: grid;
+      gap: var(--space-4);
+      min-width: 0;
+    }
+    .playlist_another {
+      width: fit-content;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--dark-900);
+      font: var(--primary-medium) var(--text-main) / var(--line-height-huge) var(--primary-family);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 0.25rem;
+    }
+    .playlist_another:focus-visible {
+      outline: var(--focus-width) solid var(--dark-900);
+      outline-offset: var(--focus-offset);
     }
     .song-search_field {
       position: relative;
