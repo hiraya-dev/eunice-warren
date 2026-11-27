@@ -370,12 +370,16 @@ const [{ data: rsvpData }] = await getCollection("rsvp");
         onComplete: () => { settled = true; },
       });
       if (stage) timeline.fromTo(stage, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", clearProps: "opacity,transform" });
-      timeline.fromTo(
-        props,
-        { autoAlpha: 0, y: -24, scale: 1.06, rotation: (index: number) => (index % 2 ? 4 : -4) },
-        { autoAlpha: 1, y: 0, scale: 1, rotation: 0, duration: 0.9, stagger: 0.07, ease: "power3.out", clearProps: "visibility,opacity,transform" },
-        stage ? "<0.1" : 0,
-      );
+      if (props.length) {
+        timeline.fromTo(
+          props,
+          { autoAlpha: 0, y: -24, scale: 1.06, rotation: (index: number) => (index % 2 ? 4 : -4) },
+          { autoAlpha: 1, y: 0, scale: 1, rotation: 0, duration: 0.9, stagger: 0.07, ease: "power3.out", clearProps: "visibility,opacity,transform" },
+          stage ? "<0.1" : 0,
+        );
+      } else if (!stage) {
+        settled = true;
+      }
       overlay.removeAttribute("data-preloader-motion");
       return () => timeline.kill();
     });
