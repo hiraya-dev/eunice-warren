@@ -52,7 +52,7 @@ const { render = true } = Astro.props;
           </p>
           <div class="footer_meta-links">
             <p class="footer_hashtag">{copy.hashtag}</p>
-            <a class="footer_top-link button_wrap link" href="#hero">{copy.backToTop}</a>
+            <a class="footer_top-link button_wrap link" href="#main">{copy.backToTop}</a>
           </div>
         </div>
       </footer>
@@ -266,6 +266,17 @@ const { render = true } = Astro.props;
         left: 4.125rem;
         width: 7.5rem;
         height: 5.75rem;
+      }
+    }
+
+    @media (width >= 48rem) {
+      .footer_contact {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: 0.5em;
+        &::before,
+        &::after { display: none; }
       }
     }
 
