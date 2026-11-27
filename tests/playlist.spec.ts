@@ -187,6 +187,54 @@ test.describe("Playlist section", () => {
     await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
   });
 
+  test("requests another song after a successful request", async ({ page }) => {
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    const name = form.locator('input[name="name"]');
+    const song = form.locator('input[name="song"]');
+    await name.fill("Another Song Tester");
+    await song.fill("Dancing Queen");
+    await form.locator("button[type=submit]").click();
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+    const another = page.locator("[data-playlist-another]");
+    await expect(another).toBeVisible();
+    await another.click();
+    await expect(form).toBeVisible();
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeHidden();
+    await expect(another).toBeHidden();
+    await expect(name).toHaveValue("Another Song Tester");
+    await expect(song).toHaveValue("");
+    await expect(song).toBeFocused();
+    await song.fill("Mamma Mia");
+    await form.locator("button[type=submit]").click();
+    await expect(page.locator('.playlist_form-wrap .form_note-sent[role="status"]')).toBeVisible();
+  });
+
+  test("skips song search for queries longer than the server limit", async ({ page }) => {
+    let searchRequests = 0;
+    await page.route("**/api/songs/search?**", async (route) => {
+      searchRequests += 1;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ results: fakeSongSearch("danc") }),
+      });
+    });
+    await page.goto("/");
+    const form = page.locator('form[name="song-request"]');
+    await reveal(form);
+    const song = form.locator('input[name="song"]');
+    const acceptedSearch = page.waitForRequest("**/api/songs/search?**");
+    await song.fill("x".repeat(100));
+    await acceptedSearch;
+    await expect.poll(() => searchRequests).toBe(1);
+    await expect(form.locator('[role="listbox"]')).toBeVisible();
+    await song.fill("x".repeat(101));
+    await expect(form.locator('[role="listbox"]')).toBeHidden();
+    await page.waitForTimeout(350);
+    expect(searchRequests).toBe(1);
+  });
+
   test("renders a passive turntable and a dark Spotify controller", { tag: ["@single"] }, async ({
     page,
   }) => {

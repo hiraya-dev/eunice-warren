@@ -137,6 +137,7 @@ const playlist = defineCollection({
       spotifyLabel: z.string(),
       unavailable: z.string(),
       success: z.string(),
+      requestAnother: z.string(),
       requestTitle: z.string(),
       requestBody: z.string(),
       nameLabel: z.string(),
